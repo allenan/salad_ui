@@ -150,7 +150,8 @@ async function runItem(item, runSet) {
   const impl = await agent(`SaladUI shadcn-parity item "${item.id}".
 Task: ${item.spec}
 ${refs}
-Start: you are in a fresh git worktree of ${CFG.repo}. git fetch origin. If local branch parity/${item.id} exists, a previous run did part of this: \`git checkout -B work parity/${item.id} && git merge --no-edit origin/${CFG.branch}\`, then review what's there against the task and finish it. Otherwise \`git checkout -B work origin/${CFG.branch}\`.
+Start: you are in a fresh git worktree of ${CFG.repo}. git fetch origin. If local branch parity/${item.id} exists, a previous run did part of this: \`git checkout -B work-${item.id} parity/${item.id} && git merge --no-edit origin/${CFG.branch}\`, then review what's there against the task and finish it. Otherwise \`git checkout -B work-${item.id} origin/${CFG.branch}\`.
+Checkpoint as you go: after each meaningful step run \`git add -A && git commit -qm 'wip(parity/${item.id})' && git branch -f parity/${item.id} HEAD\` so an interrupted session can resume from parity/${item.id} (the final squash folds these away).
 ${SETUP}
 ${SHADCN}
 ${CONVENTIONS}
@@ -171,7 +172,7 @@ ${PUSH(item.id, subject)}`,
     const review = agent(`Review-and-fix SaladUI parity item "${item.id}", already pushed to ${CFG.branch} as commit ${impl.commit || `(subject "${subject}")`}.
 Task it implemented: ${item.spec}
 ${refs}
-You are in a fresh worktree: git fetch origin && git checkout -B work origin/${CFG.branch}. ${SETUP}
+You are in a fresh worktree: git fetch origin && git checkout -B review-${item.id} origin/${CFG.branch}. ${SETUP}
 Inspect: git show ${impl.commit || `$(git log origin/${CFG.branch} --grep '^feat(parity/${item.id})' --format=%H -1)`}.
 ${SHADCN}
 Find and FIX directly (don't just report), limited to this item's code: WAI-ARIA pattern + keyboard behaviour; LiveView integration (FormField, on-* events, send_command, survives re-render/patch, phx-update="stream" where relevant); parity gaps vs shadcn docs examples; tests that only check rendering rather than behaviour. Ignore cosmetic nits and anything outside this item.
@@ -207,7 +208,7 @@ while (true) {
   phase('Critique')
   const known = Object.keys(results)
   const critic = await agent(`${last ? 'FINAL REPORT' : `Completeness critic round ${round + 1}`} for SaladUI ↔ shadcn/ui parity.
-Fresh worktree: git fetch origin && git checkout -B work origin/${CFG.branch}. ${SETUP}
+Fresh worktree: git fetch origin && git checkout -B critic-${round} origin/${CFG.branch}. ${SETUP}
 ${last ? '' : `${SHADCN}
 Compare every shadcn ui file + docs page (registry/new-york-v4/ui, content/docs/components/radix) against SaladUI on this branch: missing components/sub-parts/variants/props, and docs examples that can't be expressed. React-only concepts (Portal, Provider, asChild internals) are not gaps. Known items (don't re-propose unless clearly broken; then use id "<old>-followup"): ${known.join(', ')}.
 Return only REAL remaining gaps as small, precise work items (group related ones). Empty list = parity reached.`}
