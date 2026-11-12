@@ -24,8 +24,11 @@ defmodule SaladUI.ToggleGroup do
         <.toggle_group_item value="right" builder={builder}>Right</.toggle_group_item>
       </.toggle_group>
 
-  With a form field, a `"single"` group submits the pressed value under the
-  field name and a `"multiple"` group submits a list under `name[]`:
+  With a form field (or a `name`), a `"single"` group submits the pressed value
+  under the field name and a `"multiple"` group submits a list under `name[]`.
+  An unpressed radio submits nothing, so a `"single"` group also renders a
+  hidden input with an empty value ahead of its items (as `SaladUI.RadioGroup`
+  does): releasing the pressed item submits `""` and reaches the changeset.
 
       <.toggle_group :let={builder} field={@form[:style]} type="multiple">
         ...
@@ -49,6 +52,10 @@ defmodule SaladUI.ToggleGroup do
 
   Toggle group does not support `SaladUI.LiveView.send_command/4`. To change the
   pressed items from the server, update the `value` assign and let LiveView re-render.
+
+  The pressed items survive unrelated LiveView re-renders: while the server
+  keeps rendering the same `value`, the hook keeps what the user pressed; a
+  new `value` from the server replaces it.
   """
   use SaladUI, :component
 
@@ -109,9 +116,11 @@ defmodule SaladUI.ToggleGroup do
     value = normalize_value!(assigns.value, multiple)
     id = assigns.id || "toggle-group-#{System.unique_integer([:positive])}"
 
+    name = input_name(assigns.name, multiple)
+
     builder = %{
       id: id,
-      name: assigns.name,
+      name: name,
       type: if(multiple, do: "multiple", else: "single"),
       multiple: multiple,
       value: value,
@@ -128,6 +137,7 @@ defmodule SaladUI.ToggleGroup do
     assigns =
       assign(assigns,
         id: id,
+        name: name,
         builder: builder,
         rest: rest,
         style: Enum.join(["--gap: #{assigns.spacing}" | List.wrap(style)], "; "),
@@ -166,10 +176,21 @@ defmodule SaladUI.ToggleGroup do
       }
       {@rest}
     >
+      <input :if={@name && !@multiple} type="hidden" name={@name} value="" />
       {render_slot(@inner_block, @builder)}
     </div>
     """
   end
+
+  # A multiple group submits a list, so its checkboxes need a `name[]`.
+  defp input_name(name, _multiple) when name in [nil, ""], do: nil
+
+  defp input_name(name, true = _multiple) do
+    name = to_string(name)
+    if String.ends_with?(name, "[]"), do: name, else: name <> "[]"
+  end
+
+  defp input_name(name, _multiple), do: to_string(name)
 
   defp normalize_value!(value, true = _multiple) do
     case value do

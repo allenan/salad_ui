@@ -28,7 +28,58 @@ class ToggleGroupComponent extends Component {
       "End",
     ];
 
+    // What the server rendered, and what the user has pressed since (see
+    // skipReinitialize).
+    this._serverState = this.readServerState();
+    this.pressedValues = new Set(
+      this.getItems()
+        .filter((item) => this.isPressed(item))
+        .map((item) => item.getAttribute("data-value")),
+    );
+
     this.initTabStop();
+  }
+
+  /** The pressed state of every item, as currently in the DOM. */
+  readServerState() {
+    return JSON.stringify(
+      this.getItems().map((item) => [
+        item.getAttribute("data-value"),
+        item.getAttribute("data-state"),
+      ]),
+    );
+  }
+
+  /**
+   * A LiveView patch reverts every item to the pressed state the server
+   * rendered (data-state, aria-*, the hidden inputs) and drops the roving
+   * tabindex. When the server still renders what it rendered last time (it
+   * never stored the user's choice, e.g. a static `value` and an unrelated
+   * re-render) and the options are unchanged, keep this instance and
+   * re-apply the user's choice. A new server value rebuilds from the server.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (el.getAttribute("data-options") !== this._optionsRaw) return false;
+    if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
+      return false;
+    }
+    if (this.readServerState() !== this._serverState) return false;
+
+    this.getItems().forEach((item) =>
+      this.setItemPressed(
+        item,
+        this.pressedValues.has(item.getAttribute("data-value")),
+      ),
+    );
+
+    const tabStop = this.getItems().find(
+      (item) => item === this.tabStopItem && !this.isItemDisabled(item),
+    );
+    if (tabStop) this.setTabStop(tabStop);
+    else this.initTabStop();
+
+    return true;
   }
 
   getType() {
@@ -140,6 +191,7 @@ class ToggleGroupComponent extends Component {
   }
 
   setTabStop(target) {
+    this.tabStopItem = target;
     this.getItems().forEach((item) => {
       item.tabIndex = item === target ? 0 : -1;
     });
@@ -187,6 +239,10 @@ class ToggleGroupComponent extends Component {
       item.setAttribute("aria-pressed", String(pressed));
     }
 
+    const value = item.getAttribute("data-value");
+    if (pressed) this.pressedValues?.add(value);
+    else this.pressedValues?.delete(value);
+
     const input = item.querySelector("input");
     if (input) input.checked = pressed;
   }
@@ -195,7 +251,10 @@ class ToggleGroupComponent extends Component {
     const items = this.getEnabledItems();
     if (items.length === 0) return;
 
+    // Keys from anything but one of this group's items (e.g. an item of a
+    // nested toggle group, whose keydown bubbles up here) are not ours.
     const index = items.indexOf(this.itemFromEvent(event));
+    if (index === -1) return;
     const last = items.length - 1;
     let next = null;
 
@@ -212,7 +271,7 @@ class ToggleGroupComponent extends Component {
         break;
       case "prev":
         if (index > 0) next = items[index - 1];
-        else if (index === -1 || this.shouldLoop()) next = items[last];
+        else if (this.shouldLoop()) next = items[last];
         break;
     }
 

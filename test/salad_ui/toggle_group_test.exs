@@ -92,6 +92,47 @@ defmodule SaladUI.ToggleGroupTest do
       assert html =~ ~s(id="styles")
       assert html =~ ~r/<input type="checkbox"[^>]*name="styles\[\]"[^>]*value="bold"[^>]*checked/
       assert item(html, "italic") =~ ~s(aria-pressed="false")
+      refute html =~ ~s(type="hidden")
+    end
+
+    test "a single group submits an empty value when nothing is pressed" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle_group :let={builder} id="tg" name="align">
+          <.toggle_group_item value="left" builder={builder}>L</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      # The empty hidden input comes first, so a pressed radio overrides it.
+      assert html =~ ~r/<input type="hidden" name="align" value="">.*<input type="radio"[^>]*name="align"/s
+    end
+
+    test "a single group without a name renders no hidden input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle_group :let={builder} id="tg">
+          <.toggle_group_item value="left" builder={builder}>L</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      refute html =~ ~s(type="hidden")
+    end
+
+    test "a multiple group with a plain name submits a list" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle_group :let={builder} id="tg" name="styles" type="multiple">
+          <.toggle_group_item value="bold" builder={builder}>B</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      assert html =~ ~r/<input type="checkbox"[^>]*name="styles\[\]"/
     end
 
     test "raises for a non-list value in multiple mode" do

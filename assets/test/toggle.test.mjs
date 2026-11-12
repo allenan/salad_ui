@@ -103,3 +103,30 @@ test("destroy removes the click listener", () => {
 
   assert.equal(el.getAttribute("data-state"), "off");
 });
+
+// What a LiveView patch does to the toggle: it re-applies the server render.
+function patchFromServer(el, pressed) {
+  el.setAttribute("data-state", pressed ? "on" : "off");
+  el.setAttribute("aria-pressed", String(pressed));
+  el.querySelector('input[type="checkbox"]').checked = pressed;
+}
+
+test("a patch that re-renders the same server state keeps the user's click", () => {
+  const { el, input, component } = buildToggle();
+
+  click(el);
+  patchFromServer(el, false);
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(el.getAttribute("data-state"), "on");
+  assert.equal(el.getAttribute("aria-pressed"), "true");
+  assert.equal(input.checked, true);
+});
+
+test("a patch with a new server state rebuilds the toggle", () => {
+  const { el, component } = buildToggle();
+
+  patchFromServer(el, true);
+
+  assert.equal(component.skipReinitialize(el), false);
+});

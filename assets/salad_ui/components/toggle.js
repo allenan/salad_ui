@@ -10,6 +10,34 @@ import SaladUI from "../index.js";
 class ToggleComponent extends Component {
   constructor(el, hookContext) {
     super(el, { hookContext, initialState: "off" });
+
+    // The state the server rendered (see skipReinitialize).
+    this._serverState = this.el.getAttribute("data-state");
+  }
+
+  /**
+   * A LiveView patch reverts data-state, aria-pressed and the checkbox to what
+   * the server rendered. When that is still what it rendered last time (it
+   * never stored the user's click, e.g. a static `value` and an unrelated
+   * re-render), keep this instance and re-apply the current state. A new
+   * server state rebuilds the toggle from the server.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (el.getAttribute("data-options") !== this._optionsRaw) return false;
+    if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
+      return false;
+    }
+    if (el.getAttribute("data-state") !== this._serverState) return false;
+
+    this.updateUI();
+    const input = this.getInput();
+    if (input) input.checked = this.state === "on";
+    return true;
+  }
+
+  getInput() {
+    return this.el.querySelector('input[type="checkbox"]');
   }
 
   getComponentConfig() {
@@ -51,7 +79,7 @@ class ToggleComponent extends Component {
 
   onPressedChange() {
     const pressed = this.state === "on";
-    const input = this.el.querySelector('input[type="checkbox"]');
+    const input = this.getInput();
     if (input && input.checked !== pressed) {
       input.checked = pressed;
       input.dispatchEvent(new Event("input", { bubbles: true }));

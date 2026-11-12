@@ -293,3 +293,95 @@ test("destroy removes the click listener", () => {
   assert.equal(item.getAttribute("data-state"), "off");
   assert.equal(pushed.length, 0);
 });
+
+// What a LiveView patch does to the items: it re-applies the server render
+// (pressed state, aria, inputs) and drops the client-only tabindex.
+function patchFromServer(el, pressedValues, type = "single") {
+  el.querySelectorAll('[data-part="item"]').forEach((item) => {
+    const pressed = pressedValues.includes(item.getAttribute("data-value"));
+    item.setAttribute("data-state", pressed ? "on" : "off");
+    item.setAttribute(
+      type === "single" ? "aria-checked" : "aria-pressed",
+      String(pressed),
+    );
+    item.querySelector("input").checked = pressed;
+    item.removeAttribute("tabindex");
+  });
+}
+
+test("a patch that re-renders the same server value keeps the user's choice", () => {
+  const { el, component, getItem } = buildGroup({
+    type: "multiple",
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+
+  click(getItem("italic"));
+  patchFromServer(el, ["bold"], "multiple");
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(getItem("italic").getAttribute("data-state"), "on");
+  assert.equal(getItem("italic").getAttribute("aria-pressed"), "true");
+  assert.equal(getItem("italic").querySelector("input").checked, true);
+  assert.equal(getItem("bold").getAttribute("data-state"), "on");
+  assert.deepEqual(tabIndexes(el), [-1, 0]);
+});
+
+test("a single group keeps a released item released across a patch", () => {
+  const { el, component, getItem } = buildGroup({
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+
+  click(getItem("bold"));
+  patchFromServer(el, ["bold"]);
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(getItem("bold").getAttribute("data-state"), "off");
+  assert.equal(getItem("bold").getAttribute("aria-checked"), "false");
+  assert.equal(getItem("bold").querySelector("input").checked, false);
+});
+
+test("a patch with a new server value rebuilds from the server", () => {
+  const { el, component, getItem } = buildGroup();
+
+  click(getItem("bold"));
+  patchFromServer(el, ["italic"]);
+
+  assert.equal(component.skipReinitialize(el), false);
+});
+
+test("a patch with new options rebuilds even if the value is the same", () => {
+  const { el, component } = buildGroup();
+
+  el.setAttribute(
+    "data-options",
+    JSON.stringify({ type: "single", orientation: "vertical", loop: true }),
+  );
+
+  assert.equal(component.skipReinitialize(el), false);
+});
+
+test("arrow keys from a nested toggle group do not move the outer focus", () => {
+  const { el } = buildGroup();
+  const nested = document.createElement("div");
+  nested.id = "nested";
+  nested.setAttribute("data-component", "toggle-group");
+  nested.setAttribute("data-part", "root");
+  nested.setAttribute("data-state", "idle");
+  nested.setAttribute(
+    "data-options",
+    JSON.stringify({ type: "single", orientation: "horizontal", loop: true }),
+  );
+  nested.innerHTML = `
+    <button type="button" data-part="item" data-value="x" data-state="off">x</button>
+    <button type="button" data-part="item" data-value="y" data-state="off">y</button>`;
+  el.appendChild(nested);
+  registry.create("toggle-group", nested, {});
+
+  const x = nested.querySelector('[data-value="x"]');
+  const y = nested.querySelector('[data-value="y"]');
+  x.focus();
+  keydown(x, "ArrowRight");
+
+  assert.equal(document.activeElement, y);
+  assert.deepEqual(tabIndexes(el).slice(0, 3), [0, -1, -1]);
+});

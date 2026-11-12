@@ -6,7 +6,9 @@ defmodule SaladUI.Toggle do
 
   The `<button>` carries Radix's `data-state="on|off"` and `aria-pressed`, and the
   `toggle` JS component keeps both in sync with a hidden checkbox when it is
-  clicked, so the toggle submits like a checkbox inside a form.
+  clicked, so the toggle submits like a checkbox inside a form. The pressed
+  state survives unrelated LiveView re-renders: while the server keeps
+  rendering the same `value`, the hook keeps the user's choice.
 
   ## Examples:
 
