@@ -73,6 +73,51 @@ defmodule SaladUI.Select do
   Changing the selected value from the server is done through the controlled
   `value` assign rather than `SaladUI.LiveView.send_command/4`.
 
+  ## Disabled
+
+  `disabled` on `select/1` disables the whole select, like Radix's
+  `<Select disabled>`: the root renders `data-disabled="true"`, the trigger
+  gets the disabled styling, the hook sets `disabled` on the trigger button
+  and on the hidden inputs (so, like a disabled native select, nothing is
+  submitted) and refuses to open, whether from a click, the keyboard or an
+  `"open"`/`"toggle"` command.
+
+      <.select id="disabled-select" name="fruit" disabled>
+        <.select_trigger class="w-full max-w-48">
+          <.select_value placeholder="Select a fruit" />
+        </.select_trigger>
+        <.select_content>
+          <.select_item value="apple">Apple</.select_item>
+          <.select_item value="grapes" disabled>Grapes</.select_item>
+        </.select_content>
+      </.select>
+
+  ## Position
+
+  `select_content/1` takes Radix's two positioning modes:
+
+  * `position="popper"` (SaladUI's default, kept for backward compatibility)
+    places the panel beside the trigger, on `side` (`top`, `right`, `bottom`
+    or `left`, flipping when there is no room) with `align` (`start`, `center`
+    or `end`). It is at least as wide as the trigger.
+  * `position="item-aligned"` (the default in shadcn/ui and Radix) places the
+    panel over the trigger so the selected item (or the first enabled one)
+    sits exactly where the trigger shows its value, scrolling a long list so
+    it can. `side` and `align` are ignored; when the panel cannot line up
+    without leaving the window (the trigger is close to an edge), it falls
+    back to popper placement.
+
+      <.select id="fruit" default-value="banana">
+        <.select_trigger class="w-[180px]">
+          <.select_value />
+        </.select_trigger>
+        <.select_content position="item-aligned">
+          <.select_item value="apple">Apple</.select_item>
+          <.select_item value="banana">Banana</.select_item>
+          <.select_item value="blueberry">Blueberry</.select_item>
+        </.select_content>
+      </.select>
+
   ## Validation
 
   When `field` has errors the root renders `data-invalid="true"`: the trigger
@@ -83,18 +128,33 @@ defmodule SaladUI.Select do
   the styling.
 
   Only errors on inputs the user has interacted with count, following
-  `Phoenix.Component.used_input?/1`. The trigger's `aria-invalid` is added by
-  the hook, so it is missing from a dead render.
+  `Phoenix.Component.used_input?/1`.
+
+  To render the trigger's `aria-invalid` (and `disabled`) on the server too,
+  so they are already there in the dead render and before the hook mounts,
+  take the select's state with `:let` and hand it to the trigger:
+
+      <.select :let={select} field={@form[:fruit]}>
+        <.select_trigger aria-invalid={select.invalid} disabled={select.disabled}>
+          <.select_value placeholder="Select a fruit" />
+        </.select_trigger>
+        <.select_content>
+          <.select_item value="apple">Apple</.select_item>
+        </.select_content>
+      </.select>
 
   The selected value is submitted through hidden inputs that the hook manages.
   LiveView never reports hidden-only fields as unused, and an empty select
   submits no value at all, so when `name` (or `field`) is set the root also
   renders a text input with the `hidden` attribute and the same name. For a
   single select it submits `""` ahead of the selected value, so an empty
-  required select still reaches the changeset. For a multiple select it is
-  `disabled` and only takes part in LiveView's used-input tracking. The hook
-  dispatches its form `change` events from that input, so the select counts as
-  used once the user picks a value or submits the form.
+  required select still reaches the changeset. For a multiple select it
+  submits `name=""` (without `[]`) while nothing is selected, so clearing a
+  multiple select reaches the changeset as an empty value and an empty
+  required one is flagged after a submit; once something is selected it is
+  `disabled`, named `name[]`, and only takes part in LiveView's used-input
+  tracking. The hook dispatches its form `change` events from that input, so
+  the select counts as used once the user picks a value or submits the form.
 
   ## Re-renders
 
@@ -102,8 +162,9 @@ defmodule SaladUI.Select do
   form) keeps an open dropdown open, with its highlighted item and selection,
   and without firing `on-open` again; items the server adds or removes are
   picked up. A new `value` is selected in place without firing
-  `on-value-changed`. Changing other options rebuilds the select from the new
-  markup.
+  `on-value-changed`. A new `position`, `side` or `align` on `select_content/1`
+  re-places an open dropdown. Changing other options (including `disabled`)
+  rebuilds the select from the new markup.
   """
   use SaladUI, :component
 
@@ -128,6 +189,11 @@ defmodule SaladUI.Select do
   attr :value, :any, default: nil, doc: "The value of the select"
   attr :"default-value", :any, default: nil, doc: "The default value of the select"
   attr :multiple, :boolean, default: false, doc: "Allow multiple selection"
+
+  attr :disabled, :boolean,
+    default: false,
+    doc: "Disable the select: the trigger and hidden inputs are disabled and it cannot be opened"
+
   attr :"use-portal", :boolean, default: false, doc: "Whether to render the content in a portal"
   attr :"portal-container", :string, default: nil, doc: "CSS selector for the portal container"
   attr :"on-value-changed", :any, default: nil, doc: "Handler for value changed event"
@@ -143,7 +209,11 @@ defmodule SaladUI.Select do
   attr :placeholder, :string, default: nil, doc: "The placeholder text when no value is selected."
 
   attr :class, :string, default: nil
-  slot :inner_block, required: true
+
+  slot :inner_block,
+    required: true,
+    doc: "Receives `%{invalid: boolean, disabled: boolean}` via `:let`, to hand on to `select_trigger/1`"
+
   attr :rest, :global
 
   def select(assigns) do
@@ -152,7 +222,8 @@ defmodule SaladUI.Select do
     assigns =
       assign(assigns,
         invalid: invalid?(assigns),
-        tracking_name: tracking_name(assigns.name, assigns.multiple)
+        tracking_name: tracking_name(assigns.name, assigns.multiple, assigns.value),
+        tracking_disabled: assigns.disabled or (assigns.multiple and not empty_value?(assigns.value))
       )
 
     # Collect event mappings
@@ -168,6 +239,7 @@ defmodule SaladUI.Select do
           value: assigns.value,
           name: assigns.name,
           multiple: assigns.multiple,
+          disabled: assigns.disabled,
           usePortal: assigns[:"use-portal"],
           portalContainer: assigns[:"portal-container"],
           animations: get_animation_config()
@@ -182,6 +254,7 @@ defmodule SaladUI.Select do
       data-part="root"
       data-component="select"
       data-invalid={@invalid && "true"}
+      data-disabled={@disabled && "true"}
       data-state="closed"
       data-options={@options}
       data-event-mappings={@event_map}
@@ -194,27 +267,31 @@ defmodule SaladUI.Select do
         hidden
         name={@tracking_name}
         value=""
-        disabled={@multiple}
+        disabled={@tracking_disabled}
         tabindex="-1"
         autocomplete="off"
         aria-hidden="true"
         data-salad-ui-select-tracker="true"
       />
-      {render_slot(@inner_block)}
+      {render_slot(@inner_block, %{invalid: @invalid, disabled: @disabled})}
     </div>
     """
   end
 
   # The input that lets LiveView's used-input tracking see the select (see
-  # "Validation" in the moduledoc). Mirrors `getInputName()` in select.js.
-  defp tracking_name(name, _multiple) when name in [nil, ""], do: nil
+  # "Validation" in the moduledoc). Mirrors `syncTrackingInput()` in
+  # select.js: an empty multiple select submits `name=""`, otherwise the
+  # tracker is disabled and named like the hidden inputs (`name[]`).
+  defp tracking_name(name, _multiple, _value) when name in [nil, ""], do: nil
 
-  defp tracking_name(name, true) do
-    name = to_string(name)
-    if String.ends_with?(name, "[]"), do: name, else: name <> "[]"
+  defp tracking_name(name, true, value) do
+    base = name |> to_string() |> String.replace_suffix("[]", "")
+    if empty_value?(value), do: base, else: base <> "[]"
   end
 
-  defp tracking_name(name, _multiple), do: to_string(name)
+  defp tracking_name(name, _multiple, _value), do: to_string(name)
+
+  defp empty_value?(value), do: value in [nil, "", []]
 
   @doc """
   The button that opens the dropdown and shows the selected value.
@@ -222,14 +299,28 @@ defmodule SaladUI.Select do
   ## Options
 
   * `:size` - `"default"` (`h-9`) or `"sm"` (`h-8`).
+  * `:aria-invalid` - Error state. The hook mirrors a `field` error onto the
+    trigger; pass `aria-invalid={select.invalid}` (from `:let` on `select/1`)
+    to render it on the server too. `true` renders as `"true"`.
+  * `:disabled` - Disables the button. `disabled` on `select/1` already does
+    this from the hook; pass `disabled={select.disabled}` to render it on the
+    server too.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
   attr :size, :string, values: ~w(default sm), default: "default", doc: "the trigger height"
   slot :inner_block, required: true
-  attr :rest, :global
+  attr :rest, :global, include: ~w(disabled form name value)
 
   def select_trigger(assigns) do
+    # A boolean `aria-invalid` renders as `aria-invalid=""`, which the
+    # `aria-invalid:` variant (`[aria-invalid="true"]`) does not match.
+    assigns =
+      case assigns.rest do
+        %{"aria-invalid": true} -> assign(assigns, :rest, Map.put(assigns.rest, :"aria-invalid", "true"))
+        _ -> assigns
+      end
+
     ~H"""
     <button
       type="button"
@@ -240,6 +331,7 @@ defmodule SaladUI.Select do
         classes([
           "flex w-fit items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[placeholder]:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
           "group-data-[invalid=true]/select:not-aria-[invalid=false]:border-destructive group-data-[invalid=true]/select:not-aria-[invalid=false]:ring-destructive/20 dark:group-data-[invalid=true]/select:not-aria-[invalid=false]:ring-destructive/40",
+          "group-data-[disabled=true]/select:cursor-not-allowed group-data-[disabled=true]/select:opacity-50",
           @class
         ])
       }
@@ -291,36 +383,54 @@ defmodule SaladUI.Select do
 
   ## Options
 
-  * `:side` - Preferred side of the trigger (`"top"` or `"bottom"`). Flips when there is no room.
+  * `:position` - `"popper"` (default) places the panel beside the trigger,
+    on `side` with `align`; `"item-aligned"` (shadcn's and Radix's default)
+    places it over the trigger with the selected item lined up on the
+    trigger's value, falling back to popper near the window edges. See
+    "Position" in `SaladUI.Select`.
+  * `:side` - Preferred side of the trigger in popper mode (`"top"`,
+    `"right"`, `"bottom"` or `"left"`). Flips when there is no room.
+  * `:align` - Alignment against the trigger in popper mode (`"start"`,
+    `"center"` or `"end"`). Defaults to `"start"` (shadcn uses `"center"`;
+    the two only differ when the panel is wider than the trigger).
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
-  attr :side, :string, values: ~w(top bottom), default: "bottom"
+  attr :position, :string, values: ~w(popper item-aligned), default: "popper"
+  attr :side, :string, values: ~w(top right bottom left), default: "bottom"
+  attr :align, :string, values: ~w(start center end), default: "start"
   slot :inner_block, required: true
 
   attr :rest, :global
 
   def select_content(assigns) do
+    # Where the panel sits before the hook positions it (it is hidden until
+    # then, so this only matters without JS).
     position_class =
       case assigns.side do
         "top" -> "bottom-full mb-1"
         "bottom" -> "top-full mt-1"
+        "left" -> "right-full top-0 mr-1"
+        "right" -> "left-full top-0 ml-1"
       end
 
-    assigns =
-      assign(assigns, :position_class, position_class)
+    assigns = assign(assigns, :position_class, position_class)
 
     ~H"""
     <div
       data-slot="select-content"
       data-part="content"
+      data-position={@position}
       data-side={@side}
+      data-align={@align}
       style="min-width: var(--salad-reference-width)"
       hidden
       class={
         classes([
           "absolute flex min-w-full flex-col",
           "z-50 max-h-[min(24rem,var(--salad-select-content-available-height,24rem))] min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          @position == "popper" &&
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           @position_class,
           @class
         ])
@@ -330,7 +440,13 @@ defmodule SaladUI.Select do
       <.select_scroll_up_button />
       <div
         data-part="viewport"
-        class="relative min-h-0 w-full flex-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        class={
+          classes([
+            "relative min-h-0 w-full flex-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            @position == "popper" &&
+              "h-[var(--salad-select-trigger-height)] min-w-[var(--salad-select-trigger-width)] scroll-my-1"
+          ])
+        }
       >
         {render_slot(@inner_block)}
       </div>

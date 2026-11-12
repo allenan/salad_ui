@@ -90,8 +90,8 @@ defmodule SaladUI.InvalidStateTest do
       refute tracker =~ "disabled"
     end
 
-    test "a multiple select's tracking input is disabled and uses the [] name" do
-      assigns = %{field: field([])}
+    test "a filled multiple select's tracking input is disabled and uses the [] name" do
+      assigns = %{field: field([], ["a"])}
 
       html =
         rendered_to_string(~H"""
@@ -103,6 +103,93 @@ defmodule SaladUI.InvalidStateTest do
       tracker = input_tag(html, "data-salad-ui-select-tracker")
       assert tracker =~ ~s(name="user[email][]")
       assert tracker =~ "disabled"
+    end
+
+    # An empty multiple select has no hidden value inputs, so without this it
+    # would submit nothing and never count as used.
+    test "an empty multiple select's tracking input submits the bare name" do
+      assigns = %{field: field([])}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit" multiple>
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      tracker = input_tag(html, "data-salad-ui-select-tracker")
+      assert tracker =~ ~s(name="user[email]")
+      refute tracker =~ "disabled"
+    end
+
+    test "an empty multiple select is data-invalid after submit" do
+      # On submit the tracking input sends `user[email]=""`.
+      submitted = field([{"can't be blank", []}], nil, %{"email" => ""})
+      assigns = %{field: submitted}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit" multiple>
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      assert html =~ ~s(data-invalid="true")
+    end
+
+    test "an untouched empty multiple select is not data-invalid" do
+      untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
+      assigns = %{field: untouched}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit" multiple>
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      refute html =~ "data-invalid"
+    end
+
+    test "a disabled select's tracking input is disabled" do
+      assigns = %{field: field([])}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit" disabled>
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      assert input_tag(html, "data-salad-ui-select-tracker") =~ "disabled"
+    end
+
+    test "the trigger renders aria-invalid on the server through :let" do
+      assigns = %{field: invalid_field()}
+
+      html =
+        rendered_to_string(~H"""
+        <.select :let={select} field={@field} id="fruit">
+          <.select_trigger aria-invalid={select.invalid}>
+            <.select_value placeholder="Pick" />
+          </.select_trigger>
+        </.select>
+        """)
+
+      assert html =~ ~r/<button[^>]*aria-invalid="true"/
+
+      assigns = %{field: valid_field()}
+
+      html =
+        rendered_to_string(~H"""
+        <.select :let={select} field={@field} id="fruit">
+          <.select_trigger aria-invalid={select.invalid}>
+            <.select_value placeholder="Pick" />
+          </.select_trigger>
+        </.select>
+        """)
+
+      refute html =~ ~s(aria-invalid=")
     end
 
     test "a select without a name renders no tracking input" do

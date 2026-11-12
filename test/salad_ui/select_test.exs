@@ -26,6 +26,45 @@ defmodule SaladUI.SelectTest do
       assert html =~ ~s(&quot;value-changed&quot;:&quot;changed&quot;)
       assert html =~ ~s(data-salad-ui-select-tracker="true")
       assert html =~ ~s(name="fruit")
+      refute html =~ "data-disabled"
+      assert html =~ ~s(&quot;disabled&quot;:false)
+    end
+
+    test "disabled marks the root and options, and disables the tracking input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select id="fruit" name="fruit" disabled>
+          <.select_trigger>
+            <.select_value placeholder="Select a fruit" />
+          </.select_trigger>
+          <.select_content>
+            <.select_item value="banana">Banana</.select_item>
+          </.select_content>
+        </.select>
+        """)
+
+      assert html =~ ~r/<div[^>]*data-slot="select"[^>]*data-disabled="true"/
+      assert html =~ ~s(&quot;disabled&quot;:true)
+      assert html =~ ~r/<input[^>]*disabled[^>]*data-salad-ui-select-tracker/
+      # The trigger picks up the disabled styling from the root.
+      assert html =~ "group-data-[disabled=true]/select:opacity-50"
+    end
+
+    test ":let hands the disabled state to the trigger" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select :let={select} id="fruit" disabled>
+          <.select_trigger disabled={select.disabled}>
+            <.select_value placeholder="Select a fruit" />
+          </.select_trigger>
+        </.select>
+        """)
+
+      assert html =~ ~r/<button[^>]*\sdisabled[\s>]/
     end
   end
 
@@ -43,6 +82,18 @@ defmodule SaladUI.SelectTest do
       html = render_component(&select_trigger/1, %{size: "sm", inner_block: []})
 
       assert html =~ ~s(data-size="sm")
+    end
+
+    test "a boolean aria-invalid renders as \"true\"" do
+      html = render_component(&select_trigger/1, %{"aria-invalid": true, inner_block: []})
+
+      assert html =~ ~s(aria-invalid="true")
+    end
+
+    test "passes disabled to the button" do
+      html = render_component(&select_trigger/1, %{disabled: true, inner_block: []})
+
+      assert html =~ ~r/<button[^>]*\sdisabled[\s>]/
     end
   end
 
@@ -70,6 +121,57 @@ defmodule SaladUI.SelectTest do
       assert between =~ "overflow-y-auto"
       assert between =~ "Eastern Standard Time"
       refute after_down =~ "Eastern Standard Time"
+    end
+
+    test "defaults to popper placement with shadcn's popper classes" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select_content>
+          <.select_item value="a">A</.select_item>
+        </.select_content>
+        """)
+
+      assert html =~ ~s(data-position="popper")
+      assert html =~ ~s(data-side="bottom")
+      assert html =~ ~s(data-align="start")
+
+      assert html =~
+               "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"
+
+      assert html =~
+               "h-[var(--salad-select-trigger-height)] min-w-[var(--salad-select-trigger-width)] scroll-my-1"
+    end
+
+    test "item-aligned drops the popper classes" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select_content position="item-aligned">
+          <.select_item value="a">A</.select_item>
+        </.select_content>
+        """)
+
+      assert html =~ ~s(data-position="item-aligned")
+      refute html =~ "translate-y-1"
+      refute html =~ "--salad-select-trigger-height"
+    end
+
+    test "renders side and align" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select_content side="right" align="center">
+          <.select_item value="a">A</.select_item>
+        </.select_content>
+        """)
+
+      assert html =~ ~s(data-side="right")
+      assert html =~ ~s(data-align="center")
+      assert html =~ "left-full"
     end
   end
 

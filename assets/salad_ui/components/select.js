@@ -23,6 +23,91 @@ const STABLE_PARTS = [
   "scroll-up-button",
   "scroll-down-button",
 ];
+// Radix's CONTENT_MARGIN: how close an item-aligned panel may get to the
+// window edges before it falls back to popper placement.
+const ITEM_ALIGNED_MARGIN = 10;
+
+/**
+ * Placement math for `position="item-aligned"` (Radix's
+ * SelectItemAlignedPosition, simplified): put the panel over the trigger so
+ * the selected item's middle sits on the trigger's middle and the item text
+ * starts where the trigger's value text does. The panel is made at least wide
+ * enough to cover the trigger. When the list scrolls, the viewport may be
+ * scrolled to bring the item into line.
+ *
+ * All rects are viewport (client) coordinates.
+ *
+ * @param {Object} m
+ * @param {DOMRect} m.trigger - the trigger button
+ * @param {DOMRect} [m.value] - the value text inside the trigger
+ * @param {number} m.contentWidth - the panel's rendered width
+ * @param {number} m.contentHeight - the panel's rendered (capped) height
+ * @param {number} m.itemTextOffset - from the panel's start edge (left, or
+ *   right under RTL) to the selected item text's start edge
+ * @param {number} m.itemMiddle - from the top of the viewport's scrollable
+ *   content to the selected item's vertical middle
+ * @param {number} [m.viewportTop] - from the panel's top to the viewport's top
+ * @param {number} [m.scrollHeight] - the viewport's scrollHeight
+ * @param {number} [m.clientHeight] - the viewport's clientHeight
+ * @param {number} m.windowWidth
+ * @param {number} m.windowHeight
+ * @param {number} [m.margin] - minimum distance from the window edges
+ * @param {"ltr"|"rtl"} [m.dir]
+ * @returns {{x: number, y: number, scrollTop: number, minWidth: number} | null}
+ *   the panel's top-left corner, the viewport scroll that lines the item up
+ *   and the panel's minimum width; null when it cannot line up inside the
+ *   window (fall back to popper placement).
+ */
+export function itemAlignedPosition({
+  trigger,
+  value = trigger,
+  contentWidth,
+  contentHeight,
+  itemTextOffset,
+  itemMiddle,
+  viewportTop = 0,
+  scrollHeight = 0,
+  clientHeight = 0,
+  windowWidth,
+  windowHeight,
+  margin = ITEM_ALIGNED_MARGIN,
+  dir = "ltr",
+}) {
+  // With the viewport scrolled by s, the item's middle is at
+  // y + viewportTop + itemMiddle - s, which must equal the trigger's middle.
+  const triggerMiddle = trigger.top + trigger.height / 2;
+  const unscrolledY = triggerMiddle - viewportTop - itemMiddle;
+  const maxScroll = Math.max(0, scrollHeight - clientHeight);
+
+  // y = unscrolledY + s, for 0 <= s <= maxScroll, inside the window margins.
+  // Take the least scrolling that works.
+  const minY = Math.max(margin, unscrolledY);
+  const maxY = Math.min(
+    windowHeight - margin - contentHeight,
+    unscrolledY + maxScroll,
+  );
+  if (minY > maxY) return null;
+
+  const y = minY;
+  const scrollTop = y - unscrolledY;
+
+  let x;
+  let minWidth;
+  if (dir === "rtl") {
+    const right = value.right + itemTextOffset;
+    minWidth = right - trigger.left;
+    x = right - Math.max(minWidth, contentWidth);
+  } else {
+    x = value.left - itemTextOffset;
+    minWidth = trigger.right - x;
+  }
+
+  const width = Math.max(minWidth, contentWidth);
+  const maxX = Math.max(margin, windowWidth - margin - width);
+  x = Math.min(Math.max(x, margin), maxX);
+
+  return { x, y, scrollTop, minWidth };
+}
 
 /**
  * SelectItem class to manage individual select options
@@ -181,7 +266,8 @@ class SelectComponent extends Component {
     this.scrollUpButton = this.getPart("scroll-up-button");
     this.scrollDownButton = this.getPart("scroll-down-button");
     this.autoScrollTimer = null;
-    this.disabled = this.el.dataset.disabled === "true";
+    this.disabled = this.readDisabled(this.el);
+    this.readPlacement();
     this.handleTriggerClick = this.handleTriggerClick.bind(this);
     this.handleTriggerKeydown = this.handleTriggerKeydown.bind(this);
     this.handleContentKeydown = this.handleContentKeydown.bind(this);
@@ -226,6 +312,78 @@ class SelectComponent extends Component {
     this.initializeItems();
     this.initializePlaceholder();
     this.syncInvalidState();
+    this.syncDisabledState();
+  }
+
+  /**
+   * `disabled` on select/1 renders data-disabled="true" (and `disabled` in
+   * the options); a bare data-disabled (Radix renders "") counts too,
+   * "false" does not.
+   */
+  readDisabled(el) {
+    const dataDisabled = el.getAttribute("data-disabled");
+    return (
+      this.options?.disabled === true ||
+      (dataDisabled !== null && dataDisabled !== "false")
+    );
+  }
+
+  /**
+   * Read the content's server-rendered position, side and align. Returns
+   * whether they changed. data-side is rewritten with the placed side while
+   * open, so this runs only at mount and after a patch has restored it.
+   */
+  readPlacement() {
+    const placement = {
+      position: this.content?.dataset.position || "popper",
+      side: this.content?.dataset.side || "bottom",
+      align: this.content?.dataset.align || "start",
+    };
+    const changed =
+      placement.position !== this.position ||
+      placement.side !== this.side ||
+      placement.align !== this.align;
+    Object.assign(this, placement);
+    return changed;
+  }
+
+  /**
+   * A disabled select never opens, whatever asks it to: the trigger, the
+   * keyboard, a `SaladUI.JS.dispatch_command/3` or a server command.
+   */
+  transition(event, params = {}) {
+    if (
+      this.disabled &&
+      this.state !== "open" &&
+      (event === "open" || event === "toggle")
+    ) {
+      return false;
+    }
+
+    return super.transition(event, params);
+  }
+
+  /**
+   * Mirror `disabled` on the root onto the trigger button, as Radix does.
+   * Like `syncInvalidState`, a `data-disabled-synced` marker tells our own
+   * attribute apart from a `disabled` passed to the trigger explicitly, so
+   * it is removed again when a patch enables the select.
+   */
+  syncDisabledState() {
+    if (!this.trigger) return;
+
+    const synced = this.trigger.hasAttribute("data-disabled-synced");
+    if (this.disabled) {
+      if (synced || !this.trigger.hasAttribute("disabled")) {
+        this.trigger.setAttribute("disabled", "");
+        this.trigger.setAttribute("data-disabled", "");
+        this.trigger.setAttribute("data-disabled-synced", "");
+      }
+    } else if (synced) {
+      this.trigger.removeAttribute("disabled");
+      this.trigger.removeAttribute("data-disabled");
+      this.trigger.removeAttribute("data-disabled-synced");
+    }
   }
 
   /**
@@ -278,7 +436,12 @@ class SelectComponent extends Component {
     if (!this.refreshParts(STABLE_PARTS)) return false;
 
     const changed = this.adoptOptions(el, ["value"]);
-    this.disabled = el.dataset.disabled === "true";
+    this.disabled = this.readDisabled(el);
+    // e.g. shadcn's align-item example toggles `position` from the server.
+    if (this.readPlacement() && this.positionedElement) {
+      this.positionedElement.destroy();
+      this.positionedElement = null;
+    }
 
     const itemElements = Array.from(el.querySelectorAll("[data-part='item']"));
     const sameItems =
@@ -309,11 +472,16 @@ class SelectComponent extends Component {
 
     this.initializePlaceholder();
     this.syncInvalidState();
+    this.syncDisabledState();
     this.reapplyState();
 
     const resume = this.suspendedForPatch || this.positionedElement?.active;
     this.suspendedForPatch = false;
-    if (this.state === "open" && resume) {
+    if (this.state === "open" && (resume || !this.positionedElement)) {
+      this.initializePositionedElement();
+      // The patch dropped the content's inline style variables.
+      this.updateTriggerSize();
+      this.updateAvailableHeight();
       this.positionedElement.deactivate();
       this.positionedElement.activate();
       this.updateScrollButtons();
@@ -620,49 +788,177 @@ class SelectComponent extends Component {
 
   initializePositionedElement() {
     if (this.content && this.trigger && !this.positionedElement) {
-      // Extract position config from content attributes
-      const side = this.content.getAttribute("data-side") || "bottom";
-
       // Get portal container if specified
       let portalContainer = null;
       if (this.portalContainer) {
         portalContainer = document.querySelector(this.portalContainer);
       }
 
+      const itemAligned = this.position === "item-aligned";
+
       // Create positioned element with modular architecture
       this.positionedElement = new PositionedElement(this.content, this.el, {
-        placement: side,
-        alignment: "start",
-        sideOffset: 4,
+        placement: this.side,
+        alignment: this.align,
+        // Popper content is pushed 4px off the trigger by shadcn's
+        // data-[side=*]:translate-* classes; an item-aligned panel that
+        // falls back to popper placement has no such classes.
+        sideOffset: itemAligned ? 4 : 0,
         flip: true,
         usePortal: this.usePortal,
         portalContainer: portalContainer || document.body,
         trapFocus: false,
         onOutsideClick: () => this.transition("close"),
-        onPosition: () => this.updateAvailableHeight(),
+        computePosition: itemAligned
+          ? () => this.computeItemAlignedPosition()
+          : null,
+        onPosition: ({ placement }) => {
+          if (placement === "item-aligned") {
+            // Like Radix, an item-aligned panel has no side to slide from.
+            this.content?.removeAttribute("data-side");
+          } else {
+            this.content?.setAttribute("data-side", placement);
+            this.updateAvailableHeight();
+          }
+        },
       });
     }
   }
 
   /**
+   * The item an item-aligned panel lines up with the trigger: the first
+   * selected one, else the first enabled one (as in Radix).
+   */
+  alignedItemElement() {
+    const selected = this.selection.getValue(true)[0];
+    const item =
+      this.registry.getItemByValue(selected) || this.registry.getItem("first");
+    return item?.instance?.el || null;
+  }
+
+  measureItemAligned(item) {
+    const content = this.content;
+    const viewport = this.viewport;
+    const contentRect = content.getBoundingClientRect();
+    const viewportRect = (viewport || content).getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const textRect = (
+      item.querySelector("[data-part='item-text']") || item
+    ).getBoundingClientRect();
+    const rtl = this.isRtl();
+
+    return {
+      trigger: this.trigger.getBoundingClientRect(),
+      value: (this.valueDisplay || this.trigger).getBoundingClientRect(),
+      contentWidth: contentRect.width,
+      contentHeight: contentRect.height,
+      itemTextOffset: rtl
+        ? contentRect.right - textRect.right
+        : textRect.left - contentRect.left,
+      itemMiddle:
+        itemRect.top -
+        viewportRect.top +
+        (viewport?.scrollTop || 0) +
+        itemRect.height / 2,
+      viewportTop: viewport ? viewportRect.top - contentRect.top : 0,
+      scrollHeight: viewport?.scrollHeight || 0,
+      clientHeight: viewport?.clientHeight || 0,
+      dir: rtl ? "rtl" : "ltr",
+    };
+  }
+
+  /**
+   * `computePosition` for `position="item-aligned"`: lines the selected item
+   * up with the trigger (see `itemAlignedPosition`), or returns null to fall
+   * back to popper placement when it cannot fit in the window.
+   */
+  computeItemAlignedPosition() {
+    const item = this.alignedItemElement();
+    if (!this.content || !this.trigger || !item) return null;
+
+    // Cap at the window rather than at one side of the trigger.
+    this.setAvailableHeight(window.innerHeight - 2 * ITEM_ALIGNED_MARGIN);
+    this.content.style.minWidth = "var(--salad-reference-width)";
+    this.updateScrollButtons();
+
+    let result = null;
+    // Scrolling the list can show the scroll-up button, which moves the
+    // viewport down; measure again until the layout settles.
+    for (let pass = 0; pass < 3; pass++) {
+      result = itemAlignedPosition({
+        ...this.measureItemAligned(item),
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        margin: ITEM_ALIGNED_MARGIN,
+      });
+      if (!result || !this.viewport) break;
+      if (Math.abs(this.viewport.scrollTop - result.scrollTop) < 1) break;
+
+      this.viewport.scrollTop = result.scrollTop;
+      this.updateScrollButtons();
+    }
+
+    if (!result) {
+      this.updateAvailableHeight();
+      return null;
+    }
+
+    this.content.style.minWidth = `${result.minWidth}px`;
+    return { x: result.x, y: result.y, placement: "item-aligned" };
+  }
+
+  /**
    * Like Radix's --radix-select-content-available-height: cap the content at
-   * the room left in the window on the roomier side of the trigger, so a long
-   * list scrolls in its viewport instead of running off-screen (the content
-   * is position: fixed, so off-screen items could not be reached). It is the
-   * larger of the two sides rather than the placed side, so capping cannot
-   * flip the placement back and forth.
+   * the room left in the window beside the trigger, so a long list scrolls in
+   * its viewport instead of running off-screen (the content is position:
+   * fixed, so off-screen items could not be reached). Above or below the
+   * trigger it is the larger of the two sides rather than the placed side,
+   * so capping cannot flip the placement back and forth. Beside it (left or
+   * right) it is the room in the direction the panel grows from its `align`.
    */
   updateAvailableHeight() {
     if (!this.content || !this.el || typeof window === "undefined") return;
 
     const rect = this.el.getBoundingClientRect();
-    const room = Math.max(rect.top, window.innerHeight - rect.bottom);
-    const available = Math.max(0, Math.floor(room - SELECT_COLLISION_MARGIN));
-    const value = `${available}px`;
+    const height = window.innerHeight;
+    let room;
+    if (this.side === "left" || this.side === "right") {
+      const middle = rect.top + rect.height / 2;
+      room = {
+        start: height - rect.top,
+        end: rect.bottom,
+        center: 2 * Math.min(middle, height - middle),
+      }[this.align];
+    } else {
+      room = Math.max(rect.top, height - rect.bottom);
+    }
+
+    this.setAvailableHeight(room - SELECT_COLLISION_MARGIN);
+  }
+
+  setAvailableHeight(px) {
+    const value = `${Math.max(0, Math.floor(px))}px`;
 
     if (this.content.style.getPropertyValue(AVAILABLE_HEIGHT_VAR) !== value) {
       this.content.style.setProperty(AVAILABLE_HEIGHT_VAR, value);
     }
+  }
+
+  /**
+   * shadcn's popper viewport is `min-w-[--radix-select-trigger-width]` and
+   * `h-[--radix-select-trigger-height]`; these are SaladUI's equivalents.
+   */
+  updateTriggerSize() {
+    if (!this.content || !this.trigger) return;
+
+    this.content.style.setProperty(
+      "--salad-select-trigger-width",
+      `${this.trigger.offsetWidth}px`,
+    );
+    this.content.style.setProperty(
+      "--salad-select-trigger-height",
+      `${this.trigger.offsetHeight}px`,
+    );
   }
 
   // State machine handlers
@@ -677,6 +973,7 @@ class SelectComponent extends Component {
 
     // Initialize positioned element
     this.initializePositionedElement();
+    this.updateTriggerSize();
     // Before the first position pass, so it measures the capped height.
     this.updateAvailableHeight();
 
@@ -839,6 +1136,8 @@ class SelectComponent extends Component {
     );
     existingInputs.forEach((input) => input.remove());
 
+    this.syncTrackingInput(values.length === 0);
+
     if (!name) return;
 
     // Create new hidden inputs
@@ -850,6 +1149,29 @@ class SelectComponent extends Component {
       // Single select - create one input
       this.el.appendChild(this.createHiddenInput(name, values[0]));
     }
+  }
+
+  /**
+   * The server-rendered tracking input (see "Validation" in select.ex,
+   * which renders the same name and disabled state). A single select's
+   * submits "" ahead of the value. A multiple select's submits `name=""`
+   * (no brackets) while nothing is selected, so an empty multiple select
+   * still reaches the server and counts as used after a submit; once
+   * something is selected it is named `name[]` and disabled, taking part
+   * only in LiveView's used-input tracking. A disabled select submits
+   * nothing.
+   */
+  syncTrackingInput(empty) {
+    const tracker = this.el.querySelector(
+      "input[data-salad-ui-select-tracker='true']",
+    );
+    if (!tracker) return;
+
+    if (this.multiple) {
+      const name = this.getInputName();
+      tracker.name = empty ? name.replace(/\[\]$/, "") : name;
+    }
+    tracker.disabled = this.disabled || (this.multiple && !empty);
   }
 
   getInputName() {
@@ -864,6 +1186,8 @@ class SelectComponent extends Component {
     input.type = "hidden";
     input.name = name;
     input.value = value;
+    // Like a disabled native select, a disabled select submits nothing.
+    input.disabled = this.disabled;
     input.dataset.saladUiSelectInput = "true";
     return input;
   }

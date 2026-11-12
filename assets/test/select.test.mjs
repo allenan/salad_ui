@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
-import "../salad_ui/components/select.js"; // self-registers "select"
+// Self-registers "select".
+import { itemAlignedPosition } from "../salad_ui/components/select.js";
 import {
   hookFor,
   installDom,
@@ -55,11 +56,26 @@ function buildSelect({
   disabled = false,
   invalid = false,
   triggerAttrs = "",
+  triggerDisabled = disabled,
+  optionsDisabled = false,
+  contentAttrs = "",
+  tracker = null,
   scrollable = false,
   eventMappings = { "value-changed": "value_changed" },
   usePortal = false,
 } = {}) {
-  const options = { name, multiple, value, defaultValue, usePortal };
+  const options = {
+    name,
+    multiple,
+    value,
+    defaultValue,
+    disabled: optionsDisabled,
+    usePortal,
+  };
+  // What select.ex renders as the root's first child when a name is set.
+  const trackerMarkup = tracker
+    ? `<input type="text" hidden name="${tracker.name}" value="" ${tracker.disabled ? "disabled" : ""} data-salad-ui-select-tracker="true">`
+    : "";
   const root = `
     <div id="${id}" data-component="select" data-state="closed"
          data-disabled="${disabled}"
@@ -67,10 +83,11 @@ function buildSelect({
          data-options='${JSON.stringify(options)}'
          data-event-mappings='${JSON.stringify(eventMappings)}'
          data-part="root">
-      <button type="button" data-part="trigger" ${disabled ? "disabled" : ""} ${triggerAttrs}>
+      ${trackerMarkup}
+      <button type="button" data-part="trigger" ${triggerDisabled ? "disabled" : ""} ${triggerAttrs}>
         <span data-part="value" data-placeholder="Choose one">Choose one</span>
       </button>
-      <div data-part="content" hidden>
+      <div data-part="content" ${contentAttrs} hidden>
         ${
           scrollable
             ? `<div data-part="scroll-up-button" aria-hidden="true" hidden></div>
@@ -844,6 +861,7 @@ test("a multiple select stays open while the form round-trips its value", () => 
     multiple: true,
     value: ["apple"],
     defaultValue: null,
+    disabled: false,
     usePortal: false,
   });
   hook.updated();
@@ -868,6 +886,7 @@ test("a new server value is selected in place without value-changed", () => {
     multiple: false,
     value: "orange",
     defaultValue: null,
+    disabled: false,
     usePortal: false,
   });
   hook.updated();
@@ -943,5 +962,391 @@ test("portaled content is handed back for the patch and portaled again", () => {
   assert.equal(el.contains(content), false);
   assert.equal(content.hidden, false);
   assert.equal(document.activeElement, orange);
+
+  component.destroy();
+});
+
+// --- disabled -------------------------------------------------------------
+
+test("a disabled select ignores open and toggle commands", () => {
+  const { component, content } = buildSelect({ disabled: true });
+
+  component.handleCommand("open");
+  assert.equal(component.state, "closed");
+  component.handleCommand("toggle");
+  assert.equal(component.state, "closed");
+  assert.equal(content.hidden, true);
+
+  component.destroy();
+});
+
+test("disabled disables the trigger, the hidden inputs and the tracker", () => {
+  const { component, form, hiddenInputs, trigger } = buildSelect({
+    optionsDisabled: true,
+    triggerDisabled: false,
+    value: "banana",
+    inForm: true,
+    tracker: { name: "fruit" },
+  });
+
+  assert.equal(component.disabled, true);
+  assert.equal(trigger.disabled, true);
+  assert.equal(trigger.hasAttribute("data-disabled"), true);
+  assert.equal(hiddenInputs().length, 1);
+  assert.equal(hiddenInputs()[0].disabled, true);
+  // Like a disabled native select, nothing is submitted.
+  assert.deepEqual([...new window.FormData(form).entries()], []);
+
+  click(trigger);
+  assert.equal(component.state, "closed");
+
+  component.destroy();
+});
+
+test("enabling the select on a patch removes the mirrored disabled", () => {
+  const { component, el, trigger } = buildSelect({
+    disabled: true,
+    triggerDisabled: false,
+  });
+  assert.equal(trigger.disabled, true);
+
+  el.setAttribute("data-disabled", "false");
+  const rebuilt = rebuild(component, el);
+
+  assert.equal(trigger.disabled, false);
+  assert.equal(trigger.hasAttribute("data-disabled"), false);
+  assert.equal(trigger.hasAttribute("data-disabled-synced"), false);
+
+  rebuilt.destroy();
+});
+
+test("an explicit trigger disabled survives a patch that enables the select", () => {
+  const { component, el, trigger } = buildSelect({ disabled: true });
+
+  el.setAttribute("data-disabled", "false");
+  const rebuilt = rebuild(component, el);
+
+  assert.equal(trigger.disabled, true);
+
+  rebuilt.destroy();
+});
+
+// --- multiple select tracking input --------------------------------------
+
+test("an empty multiple select submits name= and switches to name[] once filled", () => {
+  const { component, form, item, el } = buildSelect({
+    multiple: true,
+    inForm: true,
+    tracker: { name: "fruit" },
+  });
+  const tracker = el.querySelector("[data-salad-ui-select-tracker]");
+  const entries = () => [...new window.FormData(form).entries()];
+
+  assert.deepEqual(entries(), [["fruit", ""]]);
+
+  click(item("banana"));
+  assert.equal(tracker.name, "fruit[]");
+  assert.equal(tracker.disabled, true);
+  assert.deepEqual(entries(), [["fruit[]", "banana"]]);
+
+  click(item("banana"));
+  assert.equal(tracker.name, "fruit");
+  assert.equal(tracker.disabled, false);
+  assert.deepEqual(entries(), [["fruit", ""]]);
+
+  component.destroy();
+});
+
+test("a preselected multiple select keeps the tracker disabled as name[]", () => {
+  const { component, el } = buildSelect({
+    multiple: true,
+    value: ["banana"],
+    tracker: { name: "fruit[]", disabled: true },
+  });
+  const tracker = el.querySelector("[data-salad-ui-select-tracker]");
+
+  assert.equal(tracker.name, "fruit[]");
+  assert.equal(tracker.disabled, true);
+
+  component.destroy();
+});
+
+// --- position="item-aligned" math ----------------------------------------
+
+const WINDOW = { windowWidth: 1024, windowHeight: 768 };
+const TRIGGER = { top: 300, height: 36, left: 100, right: 280, width: 180 };
+const VALUE = { left: 112, right: 250 };
+
+test("item-aligned: the selected item's middle lands on the trigger's middle", () => {
+  const position = itemAlignedPosition({
+    ...WINDOW,
+    trigger: TRIGGER,
+    value: VALUE,
+    contentWidth: 150,
+    contentHeight: 120,
+    itemTextOffset: 33,
+    itemMiddle: 52,
+    viewportTop: 1,
+    scrollHeight: 110,
+    clientHeight: 110,
+  });
+
+  // 318 (trigger middle) - 1 (viewport top) - 52 (item middle)
+  assert.equal(position.y, 265);
+  assert.equal(position.scrollTop, 0);
+  // The item text starts where the value text does...
+  assert.equal(position.x, VALUE.left - 33);
+  // ...and the panel is wide enough to cover the trigger.
+  assert.equal(position.minWidth, TRIGGER.right - position.x);
+});
+
+test("item-aligned: a long list is scrolled to bring the item into line", () => {
+  const position = itemAlignedPosition({
+    ...WINDOW,
+    trigger: TRIGGER,
+    value: VALUE,
+    contentWidth: 150,
+    contentHeight: 400,
+    itemTextOffset: 33,
+    itemMiddle: 600,
+    viewportTop: 1,
+    scrollHeight: 900,
+    clientHeight: 380,
+  });
+
+  assert.equal(position.y, 10);
+  assert.equal(position.scrollTop, 293);
+  assert.equal(position.y + 1 + 600 - position.scrollTop, 318);
+});
+
+test("item-aligned: returns null (popper fallback) near the window edges", () => {
+  const near = (top) =>
+    itemAlignedPosition({
+      ...WINDOW,
+      trigger: { ...TRIGGER, top },
+      value: VALUE,
+      contentWidth: 150,
+      contentHeight: 120,
+      itemTextOffset: 33,
+      itemMiddle: 52,
+      viewportTop: 1,
+      scrollHeight: 110,
+      clientHeight: 110,
+    });
+
+  assert.equal(near(5), null);
+  assert.equal(near(700), null);
+  assert.notEqual(near(300), null);
+});
+
+test("item-aligned: the panel is kept inside the window horizontally", () => {
+  const position = itemAlignedPosition({
+    ...WINDOW,
+    trigger: { ...TRIGGER, left: 5, right: 185 },
+    value: { left: 17, right: 160 },
+    contentWidth: 150,
+    contentHeight: 120,
+    itemTextOffset: 33,
+    itemMiddle: 52,
+  });
+
+  assert.equal(position.x, 10);
+});
+
+test("item-aligned: right-to-left lines up the right edges", () => {
+  const position = itemAlignedPosition({
+    ...WINDOW,
+    trigger: { top: 300, height: 36, left: 700, right: 880, width: 180 },
+    value: { left: 730, right: 868 },
+    contentWidth: 250,
+    contentHeight: 120,
+    itemTextOffset: 33,
+    itemMiddle: 52,
+    dir: "rtl",
+  });
+
+  // The panel's right edge sits 33px past the value text's right edge.
+  assert.equal(position.x + 250, 868 + 33);
+  assert.equal(position.minWidth, 868 + 33 - 700);
+});
+
+// --- positioning in the component ----------------------------------------
+
+function layOutItemAligned(
+  { el, trigger, valueDisplay, content, viewport, item },
+  triggerTop,
+) {
+  setRect(el, {
+    top: triggerTop,
+    bottom: triggerTop + 36,
+    height: 36,
+    left: 100,
+    right: 280,
+    width: 180,
+  });
+  setRect(trigger, {
+    top: triggerTop,
+    bottom: triggerTop + 36,
+    height: 36,
+    left: 100,
+    right: 280,
+    width: 180,
+  });
+  setRect(valueDisplay, { left: 112, right: 250, top: triggerTop + 8 });
+  setRect(content, {
+    top: 0,
+    left: 0,
+    right: 150,
+    bottom: 120,
+    width: 150,
+    height: 120,
+  });
+  setRect(viewport, { top: 1, left: 1 });
+  setRect(item("banana"), { top: 37, height: 32, left: 5 });
+  setRect(item("banana").querySelector('[data-part="item-text"]'), {
+    left: 33,
+  });
+}
+
+test("item-aligned content opens over the trigger with the selected item in line", () => {
+  const parts = buildSelect({
+    value: "banana",
+    scrollable: true,
+    contentAttrs:
+      'data-position="item-aligned" data-side="bottom" data-align="start"',
+  });
+  layOutItemAligned(parts, 300);
+
+  click(parts.trigger);
+
+  assert.equal(parts.component.state, "open");
+  assert.equal(parts.content.style.top, "265px");
+  assert.equal(parts.content.style.left, "79px");
+  assert.equal(parts.content.style.minWidth, "201px");
+  assert.equal(parts.content.hasAttribute("data-side"), false);
+
+  parts.component.destroy();
+});
+
+test("item-aligned content falls back to popper placement near the window edge", () => {
+  const parts = buildSelect({
+    value: "banana",
+    scrollable: true,
+    contentAttrs:
+      'data-position="item-aligned" data-side="bottom" data-align="start"',
+  });
+  layOutItemAligned(parts, 5);
+
+  click(parts.trigger);
+
+  assert.equal(parts.content.getAttribute("data-side"), "bottom");
+  // Below the trigger (5 + 36), 4px off it.
+  assert.equal(parts.content.style.top, "45px");
+  assert.equal(parts.content.style.left, "100px");
+  assert.equal(parts.content.style.minWidth, "var(--salad-reference-width)");
+
+  parts.component.destroy();
+});
+
+test("popper content takes side and align and the trigger size variables", () => {
+  const { component, el, trigger, content } = buildSelect({
+    contentAttrs:
+      'data-position="popper" data-side="right" data-align="center"',
+  });
+  const rect = {
+    top: 100,
+    bottom: 136,
+    height: 36,
+    left: 50,
+    right: 250,
+    width: 200,
+  };
+  setRect(el, rect);
+  setRect(trigger, rect);
+
+  click(trigger);
+
+  assert.equal(content.getAttribute("data-side"), "right");
+  // No sideOffset: shadcn's data-[side=right]:translate-x-1 adds the gap.
+  assert.equal(content.style.left, "250px");
+  assert.equal(content.style.top, "118px");
+  assert.equal(
+    content.style.getPropertyValue("--salad-select-trigger-width"),
+    "200px",
+  );
+  assert.equal(
+    content.style.getPropertyValue("--salad-select-trigger-height"),
+    "36px",
+  );
+  // Centred beside the trigger, the cap is twice the room to the nearer
+  // window edge from the trigger's middle.
+  assert.equal(
+    content.style.getPropertyValue(AVAILABLE_HEIGHT),
+    `${2 * 118 - 12}px`,
+  );
+
+  component.destroy();
+});
+
+// --- select deltas across LiveView patches --------------------------------
+
+test("a patch keeps a disabled select's trigger disabled", () => {
+  const { component, el, trigger } = buildSelect({
+    disabled: true,
+    triggerDisabled: false,
+  });
+  const hook = hookFor(el, component);
+
+  hook.beforeUpdate();
+  patch(el);
+  // morphdom drops the hook-set attributes the server did not render.
+  ["disabled", "data-disabled", "data-disabled-synced"].forEach((name) =>
+    trigger.removeAttribute(name),
+  );
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(trigger.disabled, true);
+  click(trigger);
+  assert.equal(component.state, "closed");
+  component.destroy();
+});
+
+test("a patch re-places an open item-aligned select, and follows a new position", () => {
+  const parts = buildSelect({
+    value: "banana",
+    scrollable: true,
+    contentAttrs:
+      'data-position="item-aligned" data-side="bottom" data-align="start"',
+  });
+  const { component, el, trigger, content } = parts;
+  const hook = hookFor(el, component);
+  layOutItemAligned(parts, 300);
+  click(trigger);
+  assert.equal(content.style.top, "265px");
+
+  hook.beforeUpdate();
+  patch(el);
+  content.setAttribute("data-side", "bottom");
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.style.top, "265px");
+  assert.equal(content.style.minWidth, "201px");
+  assert.equal(content.hasAttribute("data-side"), false);
+
+  // The server switches the content to popper placement.
+  hook.beforeUpdate();
+  patch(el);
+  content.setAttribute("data-position", "popper");
+  content.setAttribute("data-side", "bottom");
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.getAttribute("data-side"), "bottom");
+  // Below the trigger (300 + 36), with no sideOffset in popper mode.
+  assert.equal(content.style.top, "336px");
   component.destroy();
 });

@@ -144,12 +144,72 @@ defmodule Storybook.SaladUIComponents.Select do
         ]
       },
       %Variation{
-        id: :disabled,
-        description: "A disabled select (data-disabled on the root, disabled on the trigger) and a disabled item",
-        attributes: %{id: "disabled-select", name: "fruit", "data-disabled": "true", "use-portal": false},
+        id: :align_item,
+        description:
+          ~s|`position="item-aligned"` (shadcn's default) lines the selected item up over the trigger; `position="popper"` (SaladUI's default) opens below it|,
+        template: """
+        <div class="flex w-full max-w-xs flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-medium">Item aligned</span>
+            <.select id="align-item-select" name="fruit" default-value="banana">
+              <.select_trigger class="w-full">
+                <.select_value />
+              </.select_trigger>
+              <.select_content position="item-aligned">
+                <.select_group>
+                  <.select_item value="apple">Apple</.select_item>
+                  <.select_item value="banana">Banana</.select_item>
+                  <.select_item value="blueberry">Blueberry</.select_item>
+                  <.select_item value="grapes">Grapes</.select_item>
+                  <.select_item value="pineapple">Pineapple</.select_item>
+                </.select_group>
+              </.select_content>
+            </.select>
+          </div>
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-medium">Popper</span>
+            <.select id="popper-select" name="fruit" default-value="banana">
+              <.select_trigger class="w-full">
+                <.select_value />
+              </.select_trigger>
+              <.select_content position="popper">
+                <.select_group>
+                  <.select_item value="apple">Apple</.select_item>
+                  <.select_item value="banana">Banana</.select_item>
+                  <.select_item value="blueberry">Blueberry</.select_item>
+                  <.select_item value="grapes">Grapes</.select_item>
+                  <.select_item value="pineapple">Pineapple</.select_item>
+                </.select_group>
+              </.select_content>
+            </.select>
+          </div>
+        </div>
+        """
+      },
+      %Variation{
+        id: :side_and_align,
+        description: ~s|Popper placement on another `side`, with `align`|,
+        attributes: %{id: "side-select", name: "fruit", "use-portal": false},
         slots: [
           """
-            <.select_trigger class="w-full max-w-48" disabled>
+            <.select_trigger class="w-[180px]">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content side="right" align="center">
+              <.select_item value="apple">Apple</.select_item>
+              <.select_item value="banana">Banana</.select_item>
+              <.select_item value="blueberry">Blueberry</.select_item>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :disabled,
+        description: "`disabled` on the select, and a disabled item",
+        attributes: %{id: "disabled-select", name: "fruit", disabled: true, "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-48">
               <.select_value placeholder="Select a fruit" />
             </.select_trigger>
             <.select_content>
@@ -287,6 +347,36 @@ defmodule Storybook.SaladUIComponents.Select do
             </.select_content>
           """
         ]
+      },
+      %Variation{
+        id: :rtl,
+        description: "Right-to-left",
+        template: """
+        <div dir="rtl">
+          <.select id="rtl-select" name="fruit">
+            <.select_trigger class="w-32">
+              <.select_value placeholder="اختر فاكهة" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_label>الفواكه</.select_label>
+                <.select_item value="apple">تفاح</.select_item>
+                <.select_item value="banana">موز</.select_item>
+                <.select_item value="blueberry">توت أزرق</.select_item>
+                <.select_item value="grapes">عنب</.select_item>
+                <.select_item value="pineapple">أناناس</.select_item>
+              </.select_group>
+              <.select_separator />
+              <.select_group>
+                <.select_label>الخضروات</.select_label>
+                <.select_item value="carrot">جزر</.select_item>
+                <.select_item value="broccoli">بروكلي</.select_item>
+                <.select_item value="spinach">سبانخ</.select_item>
+              </.select_group>
+            </.select_content>
+          </.select>
+        </div>
+        """
       }
     ]
   end

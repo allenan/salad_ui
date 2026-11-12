@@ -40,6 +40,9 @@ class PositionedElement {
       // Event handlers
       onOutsideClick: null,
       onPosition: null,
+      // (element, reference) => {x, y, placement} | null: custom placement,
+      // tried before the side/align placement on every position pass.
+      computePosition: null,
       scrollPassThrough: false,
 
       ...options,
@@ -188,10 +191,15 @@ class PositionedElement {
    * Calculate and apply position to the element
    */
   calculateAndApplyPosition() {
-    const position = Positioner.calculate(this.element, this.reference, {
-      ...this.options,
-      dir: this.direction(),
-    });
+    // A component can place the element its own way (e.g. select's
+    // item-aligned mode) by returning `{x, y, placement}` from
+    // `computePosition`; returning null falls back to side/align placement.
+    const position =
+      this.options.computePosition?.(this.element, this.reference) ||
+      Positioner.calculate(this.element, this.reference, {
+        ...this.options,
+        dir: this.direction(),
+      });
 
     // Apply positioning - with fixed positioning, we no longer need to
     // adjust for scroll position since fixed is relative to the viewport
