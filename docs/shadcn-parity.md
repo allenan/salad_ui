@@ -2,64 +2,156 @@
 
 ## Status
 
-Run against shadcn/ui ref `dd41d19e2f80ff6891951f7ced74c2c9a650b065`. All four
-items below are on `parity/integration`; the rest of the catalog (Tier 1–3
-components, dropdown sub-menus/radio, slider range, chart theming, `mix salad.add`)
-was not part of this run.
+Compared against shadcn/ui `dd41d19e2f80ff6891951f7ced74c2c9a650b065`
+(`apps/v4/registry/new-york-v4/ui` and `apps/v4/content/docs/components/radix`).
+Every item below is on `parity/integration`. `parity-audit.sh` reports no bad
+squashes as of `3e86ea6`. The two earlier bad squashes (9b34b26 and 856a69d) were
+repaired by `c01934d` and `029e138`.
 
-| Item | Status | Commit | What landed |
+| Item | Status | Commit (feat / review fix) | What landed |
 |---|---|---|---|
-| `tailwind-drift` | pushed | `696806c` | v4 shadow scale; `aria-invalid:` styling + automatic `aria-invalid="true"` on touched FormFields (input, textarea, select trigger, checkbox, radio, switch, toggle); destructive `text-white`; `size-N`; button xs/icon-* sizes; badge ghost/link; switch `size`; tooltip `bg-foreground` style; sidebar `hsl(oklch)` bug fixed. |
-| `data-slot` | pushed | `32390fc` | shadcn `data-slot` on every part of every component; `put_data_slot/2` helper; `data_slot_test.exs`. |
-| `overlay-deltas` | pushed + reviewed | `67f6c67`, review fix `ac341c8` | Popover header/title/description/anchor; tabs vertical + `line` variant; select scroll buttons + viewport, capped to available window height. |
-| `small-deltas` | pushed | `3c5f6de` | Button/badge as `<a>`; card action/size/spacing; dialog close parts; alert-dialog media/size; command separator; avatar sizes/badge/group; scroll-area orientation. |
+| `tailwind-drift` | pushed | `696806c` | v4 shadow scale, `aria-invalid:` styling plus automatic `aria-invalid` on touched FormFields, button `xs`/`icon-*` sizes, badge ghost/link, switch `size`, sidebar `hsl(oklch)` fix |
+| `data-slot` | pushed | `32390fc` | shadcn `data-slot` on every part; `put_data_slot/2` |
+| `overlay-deltas` | pushed, reviewed | `67f6c67` / `ac341c8` | Popover header/title/description/anchor; tabs vertical and `line`; select scroll buttons and viewport |
+| `small-deltas` | pushed | `3c5f6de` | Button/badge as links, card action/size, dialog close parts, alert-dialog media/size, command separator, avatar sizes/badge/group, scroll-area orientation |
+| `slider-range` | pushed, reviewed | `2f37711` / `c0dd9f0` | Range and multi-thumb, vertical, inverted, RTL, fractional step |
+| `display-primitives` | pushed | `96a92ba` | Item, Empty, Kbd, Spinner, AspectRatio, Typography |
+| `resizable` | pushed, reviewed | `562a44d` / `856a69d` | Resizable panel group/panel/handle with keyboard, persistence, setLayout |
+| `form-primitives` | pushed | `3b0a649` (restored in `029e138`) | Field family, NativeSelect |
+| `code-block` | pushed, reviewed | `c7b7ef6` / `eb2aa56` | CodeBlock with Makeup highlighting, line numbers, diff, ANSI, copy button |
+| `dropdown-menu-sub-radio` | pushed, reviewed | `24c795a` / `e033dd7` | Sub-menus, radio group/items, pointer grace, state kept across patches |
+| `navigation-menu` | pushed, reviewed | `d4f2a05` / `755c2a5` | NavigationMenu with shared viewport, indicator, keyboard, RTL |
+| `input-otp` | pushed, reviewed | `be64659` / `61f9495` | InputOTP with one real input, paste, pattern, form reset |
+| `carousel` | pushed, reviewed | `a5858d0` / `efd7440` | Scroll-snap carousel, loop, autoplay, server commands |
+| `drawer` | pushed, reviewed | `3fde18d` / `d21661e` | Vaul-style drawer with drag-to-dismiss and snap points |
+| `group-primitives` | pushed | `5ec858e` (restored in `c01934d`) | InputGroup, ButtonGroup |
+| `chat-kit` | pushed | `9b34b26` | Message, Bubble, Marker, Attachment (UploadEntry aware), Trace |
+| `chart-theming` | pushed, reviewed | `ffed150` / `bc584d4` | shadcn chart config, `chart/1` for area/bar/line/pie/radar/radial, HTML tooltip and legend |
+| `calendar-date-picker` | pushed, reviewed | `c04c5c9` / `db2e424` | Server-rendered Calendar (single/multiple/range, dropdown captions, presets), DatePicker |
+| `data-table` | pushed, reviewed | `76708ad` / `573bcd6` | `SaladUI.DataTable` state helpers, column header, view options, pagination; checkbox `indeterminate` |
+| `context-menu-menubar` | pushed, reviewed | `4f565fd` / `73da22a` | ContextMenu and Menubar on the shared menu internals |
+| `combobox` | pushed, reviewed | `b15ef50` / `6651909` | Combobox: single, multiple with chips, groups, clear, client or server filtering |
+| `questionnaire` | pushed, reviewed | `d1a74ce` / `0fa2c91` | Questionnaire with `Questionnaire.State` for server-driven and no-JS flows |
+| `message-scroller` | pushed, reviewed | `5110b6d` / `c7384fb` | MessageScroller: turn anchoring, follow output, history prepend, stream aware |
+| `direction-rtl` | pushed, reviewed | `4e4089c` / `c0ab4df` | `direction_provider/1`, shared `core/direction.js`, RTL across positioned and keyboard components |
+| `blocks` | pushed | `c4a05cd` | dashboard-01, sidebar-07, login-03, signup-03, chat-01 as storybook LiveViews |
+| `mix-salad-add` | pushed | `3e86ea6` | `mix salad.add <component...>` with a dependency map derived from the source |
 
-### Not covered
+### Not covered (by item)
 
-**tailwind-drift**
-- Tooltip has no arrow part (shadcn renders `TooltipPrimitive.Arrow`).
-- `toggle_group` items have no `aria-invalid:` styling (only `toggle` was in scope).
-- Checkbox custom colors use `checked:` rather than `data-[state=checked]:` (native input; documented in moduledoc).
+Deliberate omissions and limits the implementers recorded. React-only concepts
+(Portal, Provider, asChild internals) are left out of this list.
 
-**data-slot**
-- `form_control` has no `form-control` slot: it renders no wrapper, and adding one breaks `form_item`'s `space-y` layout.
-- `menu` has no shadcn counterpart; its parts use invented `menu-*` names.
-- No slot on toast/toaster (sonner has none either) or `icon`.
-- No slots for parts SaladUI lacks: `checkbox-indicator`, `scroll-area-scrollbar/thumb`, `table-container`, dropdown-menu radio/sub/portal. Popover and dropdown positioner wrappers have none, matching Radix.
-
-**overlay-deltas**
-- Select: no `position="item-aligned"` (always popper); no first-class `disabled` attr on `select/1` (story uses `data-disabled`).
-- `popover-form` example uses plain label/input (no `field` component yet).
-- RTL examples (popover, tabs, select) not covered.
-- Out of scope, still differs: `popover_content` default side-offset 8 (shadcn 4); `select_label`/`select_item` classes and check-indicator side.
-
-**small-deltas**
-- RTL examples for button, badge, card, dialog, alert-dialog, command, switch, avatar, scroll-area (→ `direction`).
-- `button-group-demo` (→ `button_group`); `switch-description`/`switch-choice-card` (→ `field`).
-- No `spinner` yet: button/badge spinner examples use an `animate-spin` icon.
-- No separate `scroll_bar` part: horizontal scroll is `orientation="horizontal"` with styled native scrollbars.
-- `card-spacing` example shows two fixed spacings, not the interactive ToggleGroup switcher.
+- **tailwind-drift**: tooltip has no arrow; `toggle_group` items have no
+  `aria-invalid:` styling; checkbox colors use `checked:` (native input).
+- **data-slot**: no `form-control` slot (no wrapper element); `menu-*` slots are
+  SaladUI's own; no slot on toast or icon; no `scroll-area-scrollbar/thumb` or
+  `table-container`, because SaladUI has no such elements.
+- **overlay-deltas**: select has no `position="item-aligned"` and no `disabled` attr
+  on `select/1`; `popover_content` side offset defaults to 8 (shadcn uses 4).
+- **small-deltas**: no separate `scroll_bar` part (native scrollbars are styled
+  instead); `card-spacing` shows fixed spacings instead of shadcn's interactive switcher.
+- **chart-theming**: no dedicated chart RTL story; no `formatter`/`labelFormatter`
+  callbacks (server functions can't reach the client); the chart-demo preview is
+  only approximated.
+- **calendar-date-picker**: Gregorian only (no Hijri/Persian); only month and
+  weekday names are localized; natural-language picker uses a small stand-in
+  parser; presets are buttons, not a Select; `date_picker/1` doesn't pass popover
+  offsets through.
+- **data-table**: no RTL example; single-column sort; the "Copy payment ID" action
+  uses a storybook-only clipboard listener.
+- **context-menu-menubar**: no typeahead; no per-item pointer-leave unhighlight;
+  `context_menu` has no `open` attr; transform-origin classes dropped.
+- **combobox**: chips always show the item label (no ComboboxValue render prop); no
+  `ComboboxCollection`; no `use-portal`; older examples (dropdown-menu, responsive,
+  popover+command) have no stories.
+- **questionnaire**: no `render` prop (only `as` on the title); one root
+  `on-status-change` instead of per-item; conditional items and controlled choices
+  need a server render; the form is always `novalidate`.
+- **message-scroller**: no inline anti-flash `<script>` recipe, no virtualization
+  example; the group-chat and animation examples are simplified.
+- **direction-rtl**: logical-class sweep covers only the menu family and pagination;
+  chart keyboard navigation and toast swipe are not mirrored; a slider that
+  inherits RTL renders LTR until the hook mounts.
+- **blocks**: dashboard-01 has no drag-to-reorder rows, no mobile viewport
+  switching and no gradient area fill; toast.promise is replaced by a single
+  success toast; collapsed-sidebar tooltips and a mobile sidebar don't work (see
+  `sidebar-behaviour` below); chat-01 replies are plain text.
+- **mix-salad-add**: no `--all`/`--path`/`--cwd`/`--silent`; adding `chart` prints
+  an npm notice and does not run npm.
 
 ### Remaining review issues
 
-From the `overlay-deltas` review (none block merge):
-1. Tabs: no RTL key swap (`dir=rtl` should swap Left/Right). Belongs to a cross-cutting `direction` item.
-2. Tabs: Radix also puts `data-orientation` on list/triggers/content; shadcn's classes only read the root, so low value.
-3. Popover anchor: clicking the anchor keeps the popover open (Radix closes it). Kept deliberately — friendlier when the anchor wraps an input.
-4. Popover title/description are not wired to `aria-labelledby`/`aria-describedby` (Radix doesn't either; client-generated ids break LiveView patching).
-5. Select (pre-existing): any LiveView patch re-renders `data-state="closed"`, so an open select closes on patch.
+Issues reviewers found but didn't fix. None blocks a merge.
 
-Carried over from the earlier `tailwind-drift` review, still open:
-- `docs/manual_install.md` still maps colors as `hsl(var(--x))`; switch to `var(--x)` / `@theme inline` and add sidebar, radius and chart tokens.
-- `checkbox` has `indeterminate:` styles but no attr sets `el.indeterminate`.
-- Token naming: `--sidebar-background` vs shadcn's `--sidebar`.
-- Empty `multiple` select is never flagged invalid after submit (its tracking input is `disabled`, so `used_input?/1` is false).
-- Select trigger `aria-invalid` is set only by the JS hook, so it is missing on dead render and briefly on each patch.
-- Leftover `h-4 w-4` pairs in `test/salad_ui/dropdown_menu_test.exs` (cosmetic).
+- **Patch survival outside the reviewed items**: `dialog.js` (so dialog, sheet and
+  alert dialog), `select.js`, `tabs.js`, `accordion.js`, `collapsible.js`,
+  `tooltip.js`, `hover-card.js` and `command.js` have no `skipReinitialize`. Any
+  LiveView patch inside them rebuilds the instance from server state. For example,
+  a client-opened dialog with a `phx-change` form closes on the first keystroke.
+  The dropdown menu still runs `on-close` and focus return after its exit
+  animation, the same race the context-menu review fixed. Tracked as
+  `legacy-patch-survival`.
+- **Menus**: no typeahead in the dropdown menu, context menu, menubar or select.
+  Radio and checkbox items keep the menu open when picked, unlike Radix. Radio
+  indicators render only on the client.
+- **Carousel**: no autoplay pause button and no `aria-controls` on previous/next
+  (shadcn has neither).
+- **Code block**: "Copy"/"Copied" labels are hard-coded; hunk headers go through
+  the language lexer; `scroll-fade-x/y` is not ported.
+- **Drawer**: the overlay doesn't follow `fadeFromIndex` with snap points; snap
+  offsets are not recalculated on resize.
+- **Input OTP**: `<.form_label field={...}>` points at the hook root, not the
+  `-input` element, so it doesn't focus the input. Not checked in a real browser or
+  with SMS autofill.
+- **Navigation menu**: the indicator doesn't follow resizes; no ArrowUp/ArrowDown
+  between closed top-level triggers.
+- **Chart**: tooltip, legend and icon `<template>`s don't update on patch until the
+  chart remounts.
+- **Calendar**: month-crossing keyboard and form round-trip were not tested in a
+  live browser; there is no `live_isolated` test infrastructure.
+- **Data table**: the rows-per-page select ignores `target`; view-option toggles
+  bake `visible` in at render time.
+- **Combobox**: with server filtering in single mode, reopening shows the last
+  query's results; no PageUp/PageDown/Home/End keys; no listbox accessible name.
+- **Questionnaire**: in server-driven mode, freeform text is lost when a fixed
+  choice is picked; no server-rendered `aria-describedby`.
+- **Message scroller**: LiveView 1.0 only, a focused scroll button loses focus on
+  patch; a tail spacer after `scroll_to_message` without `auto_scroll` stays (as in
+  shadcn).
+- **Direction**: physical classes remain in dialog/sheet close buttons, the
+  navigation-menu viewport, the sidebar rail and input-group; toggle group has no
+  arrow keys to mirror; `tw_merge` doesn't treat `pl-*` as conflicting with `ps-*`.
+- **Tooling**: `docs/manual_install.md` still maps colors as
+  `hsl(var(--x))`; the sidebar token is `--sidebar-background` where shadcn uses
+  `--sidebar`; an empty `multiple` select is never flagged invalid; select trigger
+  `aria-invalid` is set only by JS; 10 leftover `h-4 w-4` in
+  `test/salad_ui/dropdown_menu_test.exs`. (The storybook format failures seen
+  during `blocks` were fixed in `7fc81ae`.)
+- **Attribution**: every parity commit leaves out the harness's Co-Authored-By
+  trailer, following the user's CLAUDE.md.
 
-Resolved since that review: installer `hsl(var(--border))` (now `var(--border)` + `@apply border-border outline-ring/50`), toggle `aria-invalid`/`data-slot`, tooltip shadow, badge/button link rendering, CHANGELOG entry.
+### Completeness critic, round 1
+
+Each shadcn ui file and radix docs page was checked against this branch for
+exported parts, data-slots, cva variants, class strings and docs examples. All 61 ui
+files and 67 docs pages have a SaladUI counterpart, and every exported part maps to
+a function except React-only ones. Remaining gaps, as work items:
+
+| Id | Kind | Gap |
+|---|---|---|
+| `legacy-patch-survival` | JS | Keep dialog/sheet/alert-dialog, select, tabs, accordion, collapsible, tooltip, hover-card and command state across LiveView patches; fix the dropdown close-animation race |
+| `toggle-group-v4` | JS | Toggle group still uses v3 classes; add `spacing`, `orientation`, data-variant/size/spacing, roving arrow keys (RTL), and `aria-pressed`/`data-state` on toggle and items |
+| `legacy-class-sync` | CSS | v3 markup in accordion, alert, label, progress, separator, sheet (plus `show_close_button`), table (plus container), command dialog title; tooltip arrow |
+| `select-deltas` | JS | `disabled` on `select/1`, `position="item-aligned"` (shadcn's default), `align` on content |
+| `sidebar-behaviour` | JS | Responsive mobile sheet without the server `is_mobile`, Cmd/Ctrl+B, cookie persistence, collapsed tooltips that follow client toggles, component story |
+| `toast-loading-promise` | JS | Sonner `loading` type and promise flow, shadcn's icons and popover tokens, stories for sonner docs examples |
+| `menu-typeahead` | JS | Typeahead in dropdown, context menu, menubar and select |
+| `tailwind-drift-followup` | CSS | `docs/manual_install.md` on v4 tokens; accept shadcn's `--sidebar` token name |
 
 ---
+
+_The catalog below is the original snapshot that planned the work above; the Status section is current._
 
 Snapshot: 2026-11-12. SaladUI `v1.0.0` (main @ `64090ea`) vs shadcn/ui `main`
 (last commit 2026-11-11, `apps/v4/registry/new-york-v4/ui` + `apps/v4/content/docs/components/radix`).
