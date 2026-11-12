@@ -78,12 +78,14 @@ defmodule Mix.Tasks.Salad.Setup do
   """
   use Igniter.Mix.Task
 
+  alias SaladUI.Patcher.TailwindPatcher
+
   @impl Igniter.Mix.Task
   def igniter(igniter) do
     {opts, _args} =
       OptionParser.parse!(igniter.args.argv,
-        strict: [color_scheme: :string],
-        aliases: [c: :color_scheme]
+        strict: [color_scheme: :string, yes: :boolean],
+        aliases: [c: :color_scheme, y: :yes]
       )
 
     color_scheme = opts[:color_scheme] || "gray"
@@ -105,22 +107,11 @@ defmodule Mix.Tasks.Salad.Setup do
 
   defp patch_css_color_scheme(igniter, color_scheme) do
     css_file = "./assets/css/app.css"
-    content = File.read!(css_file)
-
     IO.puts("Patching #{css_file}")
 
-    color_scheme_code = "colors/#{color_scheme}.css" |> assets_path() |> File.read!()
+    scheme_css = "colors/#{color_scheme}.css" |> assets_path() |> File.read!()
+    TailwindPatcher.patch_color_scheme(css_file, scheme_css)
 
-    new_base_layer = """
-    @layer base {
-      #{color_scheme_code}
-      *, ::after, ::before, ::backdrop, ::file-selector-button {
-        border-color: hsl(var(--border));
-      }
-    }\n
-    """
-
-    File.write!(css_file, content <> "\n\n" <> new_base_layer)
     igniter
   end
 
@@ -176,7 +167,7 @@ defmodule Mix.Tasks.Salad.Setup do
 
   defp patch_tailwind_config(igniter) do
     css_path = "./assets/css/app.css"
-    SaladUI.Patcher.TailwindPatcher.patch(css_path)
+    TailwindPatcher.patch(css_path)
 
     igniter
   end
