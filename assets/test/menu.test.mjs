@@ -268,6 +268,45 @@ test("the typeahead search clears 1s after the last key", async () => {
   menu.destroy();
 });
 
+test("a typeahead search survives the rebuild a LiveView patch causes", () => {
+  const { menu, content } = buildTypeaheadMenu();
+  menu.activate();
+
+  type(["b"]);
+  assert.equal(focusedValue(), "banana");
+
+  // The hook destroys and rebuilds the component on the same element.
+  menu.destroy();
+  const rebuilt = new Menu(content, {
+    hookContext: {
+      pushEventTo: () => {},
+      liveSocket: { execJS: () => {} },
+    },
+    rootEl: document.getElementById("menu-root"),
+  });
+
+  // "bl", not a fresh "l" (which matches nothing).
+  type(["l"]);
+  assert.equal(focusedValue(), "blueberry");
+
+  rebuilt.destroy();
+});
+
+test("reopening the menu starts a fresh search", () => {
+  const { menu } = buildTypeaheadMenu();
+  menu.activate();
+
+  type(["b"]);
+  assert.equal(focusedValue(), "banana");
+
+  menu.activate();
+  assert.equal(menu.typeahead.isSearching, false);
+  type(["c"]);
+  assert.equal(focusedValue(), "cherry");
+
+  menu.destroy();
+});
+
 test("typeahead ignores Ctrl/Alt/Meta shortcuts", () => {
   const { menu } = buildTypeaheadMenu();
   menu.activate();

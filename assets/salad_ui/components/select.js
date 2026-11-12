@@ -7,7 +7,7 @@ import {
   Selection,
 } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
-import { Typeahead, getTextValue } from "../core/typeahead.js";
+import { getTextValue, typeaheadFor } from "../core/typeahead.js";
 
 // Matches the `max-h-[min(24rem,var(...))]` class on select_content.
 const AVAILABLE_HEIGHT_VAR = "--salad-select-content-available-height";
@@ -188,8 +188,9 @@ class SelectComponent extends Component {
     this.updateScrollButtons = this.updateScrollButtons.bind(this);
     this.scrollButtonHandlers = new Map();
     // Radix keeps separate searches for the open list and the closed trigger.
-    this.typeahead = new Typeahead();
-    this.triggerTypeahead = new Typeahead();
+    // Both live on their elements so a search survives a LiveView patch.
+    this.typeahead = typeaheadFor(this.content);
+    this.triggerTypeahead = typeaheadFor(this.trigger);
 
     // Get configuration from options
     this.multiple = this.options.multiple || false;
@@ -885,9 +886,6 @@ class SelectComponent extends Component {
 
   // Cleanup
   beforeDestroy() {
-    this.typeahead?.destroy();
-    this.triggerTypeahead?.destroy();
-
     if (this.positionedElement) {
       this.positionedElement.destroy();
       this.positionedElement = null;

@@ -705,6 +705,29 @@ test("typing on the focused closed trigger selects the matching item", () => {
   component.destroy();
 });
 
+test("a closed-trigger search survives the rebuild its value-changed patch causes", () => {
+  const { component, el, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  trigger.focus();
+  keydown(trigger, "b");
+  assert.equal(component.selection.getValue(), "banana");
+
+  // The server echoes the value back and the hook rebuilds the component.
+  const options = JSON.parse(el.dataset.options);
+  el.dataset.options = JSON.stringify({ ...options, value: "banana" });
+  component.destroy();
+  const rebuilt = registry.create("select", el, {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  });
+
+  // "bl" moves on to Blueberry; a fresh "l" would match nothing.
+  keydown(trigger, "l");
+  assert.equal(rebuilt.selection.getValue(), "blueberry");
+
+  rebuilt.destroy();
+});
+
 test("Space on the closed trigger mid-search does not open; after the timeout it does", async () => {
   const { component, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
 

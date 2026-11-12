@@ -3,7 +3,7 @@ import Component from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import { CollectionRegistry, RovingFocus } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
-import { Typeahead, getTextValue } from "../core/typeahead.js";
+import { getTextValue, typeaheadFor } from "../core/typeahead.js";
 
 // Parts that are navigable menu items, and parts that are menu panels.
 const ITEM_SELECTOR = [
@@ -622,8 +622,9 @@ class Menu extends Component {
     this.subTrigger = subTrigger;
     this.menuItems = [];
     this.radioGroups = new Map();
-    // Per panel, so a sub-menu searches only its own items.
-    this.typeahead = new Typeahead();
+    // Per panel, so a sub-menu searches only its own items; kept on the
+    // element so a search survives the rebuild a LiveView patch causes.
+    this.typeahead = typeaheadFor(el);
 
     // Set keyboard navigation defaults
     this.config.preventDefaultKeys = ["ArrowDown", "ArrowUp", "Home", "End"];
@@ -763,7 +764,9 @@ class Menu extends Component {
 
   // Forget the roving-focus pointer without moving focus, so the next
   // ArrowDown starts from the first item (ArrowUp from the last).
+  // Also drops any typeahead search, so a reopened menu starts afresh.
   reset() {
+    this.typeahead.reset();
     if (this.rovingFocus.focusedItem) {
       this.rovingFocus.focusedItem.focused = false;
       this.rovingFocus.reset();
@@ -912,8 +915,6 @@ class Menu extends Component {
 
     this.radioGroups?.forEach((group) => group.destroy());
     this.radioGroups = null;
-
-    this.typeahead?.destroy();
 
     // Clean up registry and focus manager
     this.registry = null;

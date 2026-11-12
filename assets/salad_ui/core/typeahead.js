@@ -105,4 +105,27 @@ export class Typeahead {
   }
 }
 
+// A LiveView patch rebuilds the component on the same element (see
+// core/hook.js), e.g. the patch answering the `value-changed` a closed select
+// trigger's match just pushed. The search must outlive that rebuild, or the
+// next key would start a new search ("ba" would jump to "Apple" instead of
+// staying on "Banana"), so searches are kept per owning element.
+const searches = new WeakMap();
+
+/**
+ * The search owned by `element` (a menu panel, a select's content or
+ * trigger), shared by every component instance built on it. Components
+ * should not destroy() it on teardown; its timer clears it on its own.
+ */
+export function typeaheadFor(element) {
+  if (!element) return new Typeahead();
+
+  let typeahead = searches.get(element);
+  if (!typeahead) {
+    typeahead = new Typeahead();
+    searches.set(element, typeahead);
+  }
+  return typeahead;
+}
+
 export default Typeahead;
