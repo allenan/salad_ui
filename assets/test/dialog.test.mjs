@@ -4,7 +4,7 @@ import { after, afterEach, before, test } from "node:test";
 import "../salad_ui/components/dialog.js";
 import { registry } from "../salad_ui/core/factory.js";
 import { SaladUIHook } from "../salad_ui/core/hook.js";
-import { installDom, uninstallDom, wait } from "./helpers/dom.mjs";
+import { installDom, uninstallDom, wait, waitFor } from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -177,12 +177,10 @@ test("focuses first dialog control and restores prior focus on close", async () 
   outsideTrigger.focus();
   click(trigger);
 
-  await wait(60);
-  assert.equal(document.activeElement, closeTrigger);
+  await waitFor(() => document.activeElement === closeTrigger);
 
   component.transition("close");
-  await wait(10);
-  assert.equal(document.activeElement, outsideTrigger);
+  await waitFor(() => document.activeElement === outsideTrigger);
   component.destroy();
 });
 
