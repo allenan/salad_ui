@@ -190,6 +190,17 @@ defmodule SaladUI.DataSlotTest do
              """,
              ~w(chart)
            ) == {[], []}
+
+    assert check(
+             ~H"""
+             <.chart_container id="c" config={%{a: %{label: "A"}}}>
+               <.chart type="bar" data={[]} />
+               <.chart_tooltip indicator="line" />
+               <.chart_legend />
+             </.chart_container>
+             """,
+             ~w(chart chart-canvas chart-tooltip chart-tooltip-label chart-tooltip-items chart-tooltip-item chart-tooltip-indicator chart-tooltip-name chart-tooltip-value chart-legend chart-legend-item chart-legend-indicator chart-legend-label)
+           ) == {[], []}
   end
 
   test "code block" do
