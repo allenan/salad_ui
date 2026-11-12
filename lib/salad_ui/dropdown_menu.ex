@@ -96,6 +96,16 @@ defmodule SaladUI.DropdownMenu do
   between items, `Enter`/`Space` activate, `ArrowRight` opens a sub-menu and
   `ArrowLeft` closes it (mirrored under `dir="rtl"`), `Escape` closes the menu.
 
+  Typeahead: typing moves focus to the next enabled item whose text starts
+  with what was typed (the search clears after 1s; typing one letter
+  repeatedly cycles through the items starting with it). Each sub-menu
+  searches only its own items. Match on other text than the item's label with
+  `data-text-value`:
+
+      <.dropdown_menu_item data-text-value="Settings">
+        <span aria-hidden="true">⚙</span> Settings
+      </.dropdown_menu_item>
+
   ## Component events
 
   * `:on-open` - Maps the `open` event. Fired when the dropdown menu enters open state.

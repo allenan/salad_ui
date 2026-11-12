@@ -48,6 +48,16 @@ defmodule SaladUI.Select do
   one only while there is more to scroll in its direction, and hovering one
   scrolls the list.
 
+  ## Typeahead
+
+  While the list is open, typing highlights the next enabled item whose text
+  starts with what was typed. Typing on the focused trigger while the list is
+  closed selects that item directly (single selects only). The search clears
+  after 1s, and typing one letter repeatedly cycles through the items starting
+  with it. Match on other text than the item's label with `data-text-value`:
+
+      <.select_item value="us" data-text-value="United States">🇺🇸 United States</.select_item>
+
   ## Component events
 
   * `:on-value-changed` - Maps the `value-changed` event. Fired when the selected value changes.

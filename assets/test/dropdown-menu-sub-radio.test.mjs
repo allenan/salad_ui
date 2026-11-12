@@ -635,3 +635,49 @@ test("moving the pointer from an open sub-trigger toward its sub-menu does not c
 
   component.destroy();
 });
+
+test("typeahead is scoped to each menu panel: a sub-menu searches only its own items", () => {
+  const { component, email, invite, message, more, newTeam, team, trigger } =
+    build();
+
+  click(trigger);
+  assert.equal(document.activeElement, team);
+
+  keydown(team, "ArrowDown");
+  assert.equal(document.activeElement, invite);
+
+  keydown(invite, "ArrowRight");
+  assert.equal(document.activeElement, email);
+
+  keydown(email, "m");
+  assert.equal(document.activeElement, message);
+  keydown(message, "m");
+  assert.equal(document.activeElement, more, "repeated letter cycles");
+
+  // "Team"/"Top" live in the parent panel: the sub-menu search finds nothing.
+  keydown(more, "t");
+  assert.equal(document.activeElement, more);
+  assert.equal(invite.getAttribute("data-state"), "open");
+  assert.equal(component.menu.typeahead.isSearching, false);
+
+  keydown(more, "ArrowLeft");
+  assert.equal(document.activeElement, invite);
+
+  keydown(invite, "n");
+  assert.equal(document.activeElement, newTeam);
+
+  component.destroy();
+});
+
+test("typeahead skips disabled items in the parent panel", () => {
+  const { component, team, trigger } = build();
+
+  click(trigger);
+  keydown(team, "r");
+  // "Right" is disabled and nothing else starts with "r".
+  assert.equal(document.activeElement, team);
+
+  assert.equal(component.menu.typeahead.search, "r");
+
+  component.destroy();
+});

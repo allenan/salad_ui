@@ -55,7 +55,9 @@ defmodule SaladUI.ContextMenu do
 
   `ArrowUp`/`ArrowDown`/`Home`/`End` move between items, `Enter`/`Space`
   activate, `ArrowRight` opens a sub-menu and `ArrowLeft` closes it (mirrored
-  under `dir="rtl"`), `Escape` closes the menu.
+  under `dir="rtl"`), `Escape` closes the menu. Typing jumps to the next
+  enabled item whose text starts with what was typed (per menu panel; an
+  item's `data-text-value` overrides its text), as in `SaladUI.DropdownMenu`.
 
   ## Component events
 

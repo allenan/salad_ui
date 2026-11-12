@@ -14,7 +14,10 @@ function itemMarkup({
   disabled = false,
   ariaDisabled = false,
   dataDisabled,
+  textValue,
 }) {
+  const textValueAttr =
+    textValue !== undefined ? `data-text-value="${textValue}"` : "";
   const dataDisabledAttr =
     dataDisabled !== undefined
       ? `data-disabled="${dataDisabled}"`
@@ -22,7 +25,7 @@ function itemMarkup({
         ? 'data-disabled="true"'
         : "";
   return `
-    <div data-part="item" data-value="${value}" ${dataDisabledAttr} ${ariaDisabled ? 'aria-disabled="true"' : ""} tabindex="${disabled ? "-1" : "0"}">
+    <div data-part="item" data-value="${value}" ${dataDisabledAttr} ${textValueAttr}${ariaDisabled ? 'aria-disabled="true"' : ""} tabindex="${disabled ? "-1" : "0"}">
       <span data-part="item-indicator" hidden></span>
       <span data-part="item-text">${label}</span>
     </div>
@@ -565,4 +568,165 @@ test("the cap follows the trigger when the content is repositioned", () => {
   );
 
   component.destroy();
+});
+
+const TYPEAHEAD_ITEMS = [
+  { value: "apple", label: "Apple" },
+  { value: "banana", label: "Banana" },
+  { value: "blueberry", label: "Blueberry" },
+  { value: "blackberry", label: "Blackberry", disabled: true },
+  { value: "brown-pear", label: "Brown Pear" },
+  { value: "cherry", label: "★ Cherry", textValue: "Cherry" },
+];
+
+function keydownWith(el, key, init) {
+  const event = new window.KeyboardEvent("keydown", {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  });
+  el.dispatchEvent(event);
+  return event;
+}
+
+const focusedValue = () => document.activeElement?.getAttribute("data-value");
+
+test("typing in the open list highlights the matching item", () => {
+  const { component, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  click(trigger);
+  assert.equal(focusedValue(), "apple");
+
+  keydown(document.activeElement, "b");
+  assert.equal(focusedValue(), "banana");
+  keydown(document.activeElement, "l");
+  assert.equal(focusedValue(), "blueberry");
+  assert.equal(component.state, "open", "highlighting does not select");
+  assert.equal(component.selection.getValue(), null);
+
+  component.destroy();
+});
+
+test("a repeated letter cycles through the open list, skipping disabled items", () => {
+  const { component, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  click(trigger);
+  const seen = [];
+  for (let i = 0; i < 4; i++) {
+    keydown(document.activeElement, "b");
+    seen.push(focusedValue());
+  }
+  assert.deepEqual(seen, ["banana", "blueberry", "brown-pear", "banana"]);
+
+  component.destroy();
+});
+
+test("typeahead matches data-text-value and ignores Ctrl/Alt/Meta", () => {
+  const { component, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  click(trigger);
+  keydownWith(document.activeElement, "c", { metaKey: true });
+  keydownWith(document.activeElement, "c", { ctrlKey: true });
+  keydownWith(document.activeElement, "c", { altKey: true });
+  assert.equal(focusedValue(), "apple");
+  assert.equal(component.typeahead.isSearching, false);
+
+  keydown(document.activeElement, "c");
+  assert.equal(focusedValue(), "cherry");
+
+  component.destroy();
+});
+
+test("the open-list search clears 1s after the last key", async () => {
+  const { component, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  click(trigger);
+  keydown(document.activeElement, "b");
+  keydown(document.activeElement, "c");
+  assert.equal(focusedValue(), "banana", '"bc" matches nothing');
+
+  await waitFor(() => !component.typeahead.isSearching, { timeout: 3000 });
+
+  keydown(document.activeElement, "c");
+  assert.equal(focusedValue(), "cherry");
+
+  component.destroy();
+});
+
+test("Space mid-search types a space instead of selecting", () => {
+  const { component, pushed, trigger } = buildSelect({
+    items: TYPEAHEAD_ITEMS,
+  });
+
+  click(trigger);
+  for (const key of ["b", "r", "o", "w", "n", " ", "p"]) {
+    keydown(document.activeElement, key);
+  }
+  assert.equal(focusedValue(), "brown-pear");
+  assert.equal(component.typeahead.search, "brown p");
+  assert.equal(component.state, "open");
+  assert.equal(
+    pushed.some(({ event }) => event === "value_changed"),
+    false,
+  );
+
+  component.destroy();
+});
+
+test("typing on the focused closed trigger selects the matching item", () => {
+  const { component, hiddenInputs, pushed, trigger, valueDisplay } =
+    buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  trigger.focus();
+  keydown(trigger, "b");
+  assert.equal(component.state, "closed", "stays closed");
+  assert.equal(component.selection.getValue(), "banana");
+  assert.equal(valueDisplay.textContent, "Banana");
+  assert.equal(hiddenInputs()[0].value, "banana");
+  assert.deepEqual(pushed.at(-1).payload.value, "banana");
+  assert.equal(pushed.at(-1).event, "value_changed");
+
+  // Repeated letters cycle from the selected item, skipping disabled ones.
+  keydown(trigger, "b");
+  assert.equal(component.selection.getValue(), "blueberry");
+  keydown(trigger, "b");
+  assert.equal(component.selection.getValue(), "brown-pear");
+
+  component.destroy();
+});
+
+test("Space on the closed trigger mid-search does not open; after the timeout it does", async () => {
+  const { component, trigger } = buildSelect({ items: TYPEAHEAD_ITEMS });
+
+  trigger.focus();
+  keydown(trigger, "b");
+  keydown(trigger, "r");
+  const space = keydown(trigger, " ");
+  assert.equal(space.defaultPrevented, true);
+  assert.equal(component.state, "closed");
+  keydown(trigger, "p");
+  assert.equal(component.selection.getValue(), "brown-pear");
+
+  await waitFor(() => !component.triggerTypeahead.isSearching, {
+    timeout: 3000,
+  });
+
+  keydown(trigger, " ");
+  assert.equal(component.state, "open");
+
+  component.destroy();
+});
+
+test("closed-trigger typeahead leaves disabled and multiple selects alone", () => {
+  const disabled = buildSelect({ items: TYPEAHEAD_ITEMS, disabled: true });
+  keydown(disabled.trigger, "b");
+  assert.equal(disabled.component.selection.getValue(), null);
+  disabled.component.destroy();
+
+  const multiple = buildSelect({ items: TYPEAHEAD_ITEMS, multiple: true });
+  keydown(multiple.trigger, "b");
+  assert.deepEqual(multiple.component.selection.getValue(true), []);
+  assert.equal(multiple.component.state, "closed");
+  multiple.component.destroy();
 });

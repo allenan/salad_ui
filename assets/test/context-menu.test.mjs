@@ -285,6 +285,47 @@ test("sub-menus open with ArrowRight inside a context menu", () => {
   component.destroy();
 });
 
+test("typing from the focused panel jumps to the matching item", () => {
+  const { component, content, reload, trigger } = build();
+
+  contextmenu(trigger, 200, 150);
+  assert.equal(document.activeElement, content);
+
+  keydown(content, "r");
+  assert.equal(document.activeElement, reload);
+
+  component.destroy();
+});
+
+test("typeahead skips disabled items", () => {
+  const { component, content, trigger } = build();
+
+  contextmenu(trigger, 200, 150);
+  // Only the disabled "Forward" starts with "f".
+  keydown(content, "f");
+  assert.equal(document.activeElement, content);
+
+  component.destroy();
+});
+
+test("typeahead inside a context sub-menu searches only the sub-menu", () => {
+  const { component, content, save, subTrigger, trigger } = build();
+
+  contextmenu(trigger, 200, 150);
+  keydown(content, "End");
+  keydown(document.activeElement, "ArrowUp");
+  keydown(subTrigger, "ArrowRight");
+  assert.equal(document.activeElement, save);
+
+  // "Back" and "Show Bookmarks" are in the parent panel.
+  keydown(save, "b");
+  assert.equal(document.activeElement, save);
+  keydown(save, "s");
+  assert.equal(document.activeElement, save, "no other sub-menu match");
+
+  component.destroy();
+});
+
 test("clicking outside closes without moving focus back", () => {
   const { component, outside, trigger } = build();
 

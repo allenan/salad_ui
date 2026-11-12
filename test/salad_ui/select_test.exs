@@ -104,5 +104,16 @@ defmodule SaladUI.SelectTest do
       assert html =~ ~s(data-disabled="true")
       assert html =~ ~s(data-slot="select-item-indicator")
     end
+
+    test "passes data-text-value through for typeahead" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select_item value="us" data-text-value="United States">🇺🇸 United States</.select_item>
+        """)
+
+      assert html =~ ~s(data-text-value="United States")
+    end
   end
 end

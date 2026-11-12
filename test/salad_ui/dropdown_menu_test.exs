@@ -135,6 +135,23 @@ defmodule SaladUI.DropdownMenuTest do
     end
   end
 
+  describe "typeahead" do
+    test "items pass data-text-value through" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_item data-text-value="Settings">⚙ Settings</.dropdown_menu_item>
+        <.dropdown_menu_checkbox_item data-text-value="Bold">B Bold</.dropdown_menu_checkbox_item>
+        <.dropdown_menu_sub_trigger data-text-value="Share">↗ Share</.dropdown_menu_sub_trigger>
+        """)
+
+      assert html =~ ~s(data-text-value="Settings")
+      assert html =~ ~s(data-text-value="Bold")
+      assert html =~ ~s(data-text-value="Share")
+    end
+  end
+
   describe "sub-menus" do
     test "renders sub, sub-trigger with chevron and a hidden sub-content panel" do
       assigns = %{}

@@ -57,6 +57,9 @@ defmodule SaladUI.Menubar do
     `ArrowRight`/`ArrowLeft` open the next/previous menu. `Escape` closes the
     menu and returns focus to its trigger. All horizontal keys are mirrored
     under `dir="rtl"`.
+  * Typing inside a menu jumps to the next enabled item whose text starts with
+    what was typed (per menu panel; an item's `data-text-value` overrides its
+    text), as in `SaladUI.DropdownMenu`.
 
   ## Component events
 

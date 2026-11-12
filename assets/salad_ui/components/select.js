@@ -7,6 +7,7 @@ import {
   Selection,
 } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
+import { Typeahead, getTextValue } from "../core/typeahead.js";
 
 // Matches the `max-h-[min(24rem,var(...))]` class on select_content.
 const AVAILABLE_HEIGHT_VAR = "--salad-select-content-available-height";
@@ -65,7 +66,7 @@ class SelectItem extends Component {
           },
           keyMap: {
             Enter: "handleActivation",
-            " ": "handleActivation",
+            " ": "handleSpaceKey",
           },
         },
         checked: {
@@ -78,7 +79,7 @@ class SelectItem extends Component {
           },
           keyMap: {
             Enter: "handleActivation",
-            " ": "handleActivation",
+            " ": "handleSpaceKey",
           },
         },
       },
@@ -131,6 +132,14 @@ class SelectItem extends Component {
     }
   }
 
+  // While a typeahead search is in progress, Space types a space (handled by
+  // the content) instead of selecting the item.
+  handleSpaceKey(event) {
+    if (this.parent.typeahead?.isSearching) return;
+
+    this.handleActivation(event);
+  }
+
   handleMouseEnter() {
     if (!this.disabled) {
       this.parent.handleItemFocus(this);
@@ -157,8 +166,12 @@ class SelectComponent extends Component {
     this.disabled = this.el.dataset.disabled === "true";
     this.handleTriggerClick = this.handleTriggerClick.bind(this);
     this.handleTriggerKeydown = this.handleTriggerKeydown.bind(this);
+    this.handleContentKeydown = this.handleContentKeydown.bind(this);
     this.updateScrollButtons = this.updateScrollButtons.bind(this);
     this.scrollButtonHandlers = new Map();
+    // Radix keeps separate searches for the open list and the closed trigger.
+    this.typeahead = new Typeahead();
+    this.triggerTypeahead = new Typeahead();
 
     // Get configuration from options
     this.multiple = this.options.multiple || false;
@@ -246,7 +259,11 @@ class SelectComponent extends Component {
             ArrowDown: () => this.openIfEnabled(),
             ArrowUp: () => this.openIfEnabled(),
             Enter: () => this.openIfEnabled(),
-            " ": () => this.openIfEnabled(),
+            // Mid-search, Space is part of the search (see
+            // handleTriggerKeydown), not an open key.
+            " ": () => {
+              if (!this.triggerTypeahead.isSearching) this.openIfEnabled();
+            },
           },
         },
         open: {
@@ -294,6 +311,7 @@ class SelectComponent extends Component {
 
     this.trigger?.addEventListener("click", this.handleTriggerClick);
     this.trigger?.addEventListener("keydown", this.handleTriggerKeydown);
+    this.content?.addEventListener("keydown", this.handleContentKeydown);
     this.setupScrollButtons();
   }
 
@@ -302,6 +320,7 @@ class SelectComponent extends Component {
 
     this.trigger?.removeEventListener("click", this.handleTriggerClick);
     this.trigger?.removeEventListener("keydown", this.handleTriggerKeydown);
+    this.content?.removeEventListener("keydown", this.handleContentKeydown);
     this.teardownScrollButtons();
   }
 
@@ -400,8 +419,12 @@ class SelectComponent extends Component {
   }
 
   handleTriggerKeydown(event) {
-    if (event.defaultPrevented || this.disabled || this.state !== "open")
+    if (this.disabled) return;
+    if (this.state !== "open") {
+      this.handleTriggerTypeahead(event);
       return;
+    }
+    if (event.defaultPrevented || this.handleListTypeahead(event)) return;
 
     const keyActions = {
       ArrowUp: () => this.navigateItem("prev"),
@@ -418,6 +441,39 @@ class SelectComponent extends Component {
     event.preventDefault();
     event.stopPropagation();
     action();
+  }
+
+  handleContentKeydown(event) {
+    if (this.state === "open") this.handleListTypeahead(event);
+  }
+
+  // Typing while open highlights the next enabled item whose text starts with
+  // what was typed (Radix select typeahead).
+  handleListTypeahead(event) {
+    const items = this.registry.enabledItems();
+    const active = document.activeElement;
+    return this.typeahead.handleKey(event, {
+      items,
+      current: items.find((item) => item.instance.el === active) || null,
+      getText: (item) => getTextValue(item.instance.el),
+      onMatch: (item) => this.rovingFocus.focus(item),
+    });
+  }
+
+  // Typing on the focused, closed trigger selects the matching item without
+  // opening, as Radix does. Radix's select is single-value, so a multiple
+  // select leaves its selection alone.
+  handleTriggerTypeahead(event) {
+    if (this.multiple) return false;
+
+    const items = this.registry.enabledItems();
+    const selected = this.selection.getValue(true)[0];
+    return this.triggerTypeahead.handleKey(event, {
+      items,
+      current: items.find((item) => item.value === selected) || null,
+      getText: (item) => getTextValue(item.instance.el),
+      onMatch: (item) => this.selectValue(item.value, { close: false }),
+    });
   }
 
   initializeItems() {
@@ -510,6 +566,8 @@ class SelectComponent extends Component {
   }
 
   onOpenEnter() {
+    this.triggerTypeahead.reset();
+
     // Initialize positioned element
     this.initializePositionedElement();
     // Before the first position pass, so it measures the capped height.
@@ -540,6 +598,7 @@ class SelectComponent extends Component {
 
   onOpenExit() {
     this.stopAutoScroll();
+    this.typeahead.reset();
 
     // Deactivate positioned element
     if (this.positionedElement) {
@@ -550,7 +609,7 @@ class SelectComponent extends Component {
   }
 
   // Item management
-  selectValue(value) {
+  selectValue(value, { close = true } = {}) {
     const collectionItem = this.registry.getItemByValue(value);
     if (!collectionItem) return;
 
@@ -565,7 +624,7 @@ class SelectComponent extends Component {
     this.dispatchFormEvents();
 
     // Close dropdown if single select
-    if (!this.multiple) {
+    if (!this.multiple && close) {
       this.transition("select");
     }
 
@@ -720,6 +779,9 @@ class SelectComponent extends Component {
 
   // Cleanup
   beforeDestroy() {
+    this.typeahead?.destroy();
+    this.triggerTypeahead?.destroy();
+
     if (this.positionedElement) {
       this.positionedElement.destroy();
       this.positionedElement = null;

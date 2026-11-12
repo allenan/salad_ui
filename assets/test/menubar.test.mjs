@@ -379,6 +379,45 @@ test("sub-menus keep their own ArrowRight/ArrowLeft inside a menubar", () => {
   component.destroy();
 });
 
+test("typing inside an open menu jumps to the matching item", () => {
+  const { component, file, item } = build();
+
+  file.trigger.focus();
+  keydown(file.trigger, "ArrowDown");
+  keydown(item("new-tab"), "p");
+  assert.equal(document.activeElement, item("print"));
+  assert.equal(file.positioner.hidden, false);
+
+  // The repeated letter cycles: "pp" has only one match, so focus stays.
+  keydown(item("print"), "p");
+  assert.equal(document.activeElement, item("print"));
+
+  component.destroy();
+});
+
+test("typeahead in a menubar sub-menu searches only the sub-menu", () => {
+  const { component, file, item } = build();
+  const share = file.content.querySelector("[data-part='sub-trigger']");
+
+  file.trigger.focus();
+  keydown(file.trigger, "ArrowDown");
+  keydown(item("new-tab"), "s");
+  assert.equal(document.activeElement, share);
+  assert.equal(share.getAttribute("data-state"), "closed");
+
+  keydown(share, "ArrowRight");
+  assert.equal(document.activeElement, item("email"));
+
+  // "Print" and "New Tab" are in the parent panel.
+  keydown(item("email"), "p");
+  assert.equal(document.activeElement, item("email"));
+  keydown(item("email"), "n");
+  assert.equal(document.activeElement, item("email"));
+  assert.equal(file.positioner.hidden, false);
+
+  component.destroy();
+});
+
 test("RTL mirrors the horizontal keys", () => {
   const { component, edit, file, item } = build({ dir: "rtl" });
 

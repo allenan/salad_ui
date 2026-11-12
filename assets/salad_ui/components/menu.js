@@ -3,6 +3,7 @@ import Component from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import { CollectionRegistry, RovingFocus } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
+import { Typeahead, getTextValue } from "../core/typeahead.js";
 
 // Parts that are navigable menu items, and parts that are menu panels.
 const ITEM_SELECTOR = [
@@ -110,7 +111,7 @@ class MenuItemBase extends Component {
             },
           },
           keyMap: {
-            " ": "handleActivation",
+            " ": "handleSpaceKey",
             Enter: "handleActivation",
           },
         },
@@ -142,6 +143,14 @@ class MenuItemBase extends Component {
     if (!this.notifyActivation(event)) return;
 
     this.parent.selectItem(this);
+  }
+
+  // While a typeahead search is in progress, Space types a space (handled by
+  // the panel) instead of activating the item.
+  handleSpaceKey(event) {
+    if (this.parent.typeahead?.isSearching) return;
+
+    this.handleActivation(event);
   }
 
   // Shared activation bookkeeping: guards, prevents the native action, and
@@ -206,7 +215,7 @@ function checkableConfig(component, part, role) {
       },
     },
     keyMap: {
-      " ": "handleActivation",
+      " ": "handleSpaceKey",
       Enter: "handleActivation",
     },
   };
@@ -418,7 +427,7 @@ class MenuSubTrigger extends MenuItemBase {
       events: {
         _all: {
           keyMap: {
-            " ": "handleActivation",
+            " ": "handleSpaceKey",
             Enter: "handleActivation",
             ArrowRight: "handleHorizontalKey",
             ArrowLeft: "handleHorizontalKey",
@@ -613,6 +622,8 @@ class Menu extends Component {
     this.subTrigger = subTrigger;
     this.menuItems = [];
     this.radioGroups = new Map();
+    // Per panel, so a sub-menu searches only its own items.
+    this.typeahead = new Typeahead();
 
     // Set keyboard navigation defaults
     this.config.preventDefaultKeys = ["ArrowDown", "ArrowUp", "Home", "End"];
@@ -649,6 +660,36 @@ class Menu extends Component {
   // The panel's data-state is owned by whoever opens it (the dropdown root
   // or a sub-trigger), so the menu itself never stamps one.
   updateUI() {}
+
+  setupComponentEvents() {
+    super.setupComponentEvents();
+    this.el.addEventListener("keydown", this.handleTypeaheadKeydown);
+  }
+
+  teardownComponentEvents() {
+    super.teardownComponentEvents();
+    this.el.removeEventListener("keydown", this.handleTypeaheadKeydown);
+  }
+
+  // Typing moves focus to the next enabled item whose text starts with what
+  // was typed (Radix menu typeahead).
+  handleTypeaheadKeydown = (event) => {
+    // A nested sub-menu's keys bubble through this panel; it has its own.
+    if (event.target?.closest?.(MENU_SELECTOR) !== this.el) return;
+    if (!this.menuItems) return;
+
+    const items = this.menuItems.filter((item) => !item.disabled);
+    const active = document.activeElement;
+    this.typeahead.handleKey(event, {
+      items,
+      current: items.find((item) => item.el === active) || null,
+      getText: (item) => getTextValue(item.el),
+      onMatch: (item) => {
+        this.handleItemFocus(item);
+        if (document.activeElement !== item.el) item.el.focus();
+      },
+    });
+  };
 
   initializeItems() {
     // Only this panel's own items, in DOM order; nested sub-menu items are
@@ -871,6 +912,8 @@ class Menu extends Component {
 
     this.radioGroups?.forEach((group) => group.destroy());
     this.radioGroups = null;
+
+    this.typeahead?.destroy();
 
     // Clean up registry and focus manager
     this.registry = null;
