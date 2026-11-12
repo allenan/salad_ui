@@ -3,6 +3,7 @@ import { after, afterEach, before, test } from "node:test";
 
 import "../salad_ui/components/drawer.js";
 import { registry } from "../salad_ui/core/factory.js";
+import { SaladUIHook } from "../salad_ui/core/hook.js";
 import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
 const realNow = Date.now;
@@ -38,6 +39,7 @@ function buildDrawer({
   animations,
   size = { width: 300, height: 400 },
   extraPanelHtml = "",
+  triggerHtml = '<button data-part="trigger" data-action="open" type="button">Open</button>',
 } = {}) {
   const options = JSON.stringify({
     direction,
@@ -55,7 +57,7 @@ function buildDrawer({
          data-options='${options}'
          data-event-mappings='{"open":"open","close":"close","snap-point-change":"snap"}'
          data-part="root">
-      <button data-part="trigger" data-action="open" type="button">Open</button>
+      ${triggerHtml}
       <div data-part="content" hidden>
         <div data-part="overlay"></div>
         <div data-part="content-panel">
@@ -101,7 +103,34 @@ function buildDrawer({
     handle: el.querySelector('[data-part="handle"]'),
     trigger: el.querySelector('[data-part="trigger"]'),
     pushed,
+    hookContext,
   };
+}
+
+// What a LiveView patch does to the drawer's DOM: everything the client wrote
+// reverts to the server-rendered markup.
+function simulatePatch(el) {
+  const content = el.querySelector('[data-part="content"]');
+  content.hidden = true;
+  [el, ...el.querySelectorAll("[data-part]")].forEach((node) => {
+    node.removeAttribute("style");
+    node.removeAttribute("data-state");
+    node.removeAttribute("data-dragging");
+    for (const { name } of [...node.attributes]) {
+      if (name.startsWith("aria-") || name === "role") {
+        node.removeAttribute(name);
+      }
+    }
+    if (node !== el) {
+      // Part ids (title, panel) are assigned client-side for ARIA references.
+      node.removeAttribute("id");
+      node.removeAttribute("data-vaul-drawer-direction");
+    }
+  });
+}
+
+function hookFor(el, component) {
+  return { ...SaladUIHook, el, component, handleEvent() {} };
 }
 
 function click(el) {
@@ -434,4 +463,139 @@ test("removes document listeners on destroy mid-drag", () => {
   // A stray move after destroy must not throw or move the panel.
   pointer(document.body, "pointermove", 100, 300);
   assert.equal(panel.style.transform, "translateY(40px)");
+});
+
+test("the wrapped trigger button gets dialog trigger ARIA", () => {
+  const { component, panel } = buildDrawer({
+    triggerHtml: `
+      <div data-part="trigger" data-action="open">
+        <button id="open-btn" type="button">Open</button>
+      </div>`,
+  });
+  const wrapper = document.querySelector('[data-part="trigger"]');
+  const button = document.getElementById("open-btn");
+
+  assert.equal(button.getAttribute("aria-haspopup"), "dialog");
+  assert.equal(button.getAttribute("aria-expanded"), "false");
+  assert.equal(button.getAttribute("aria-controls"), panel.id);
+  assert.equal(wrapper.hasAttribute("aria-expanded"), false);
+
+  click(button);
+  assert.equal(component.state, "open");
+  assert.equal(button.getAttribute("aria-expanded"), "true");
+
+  component.handleCommand("close");
+  assert.equal(button.getAttribute("aria-expanded"), "false");
+  component.destroy();
+});
+
+test("a LiveView patch keeps a client-opened drawer open at its snap point", () => {
+  const { component, el, panel, content, trigger, pushed } = buildDrawer({
+    snapPoints: ["100px", "250px", 1],
+    activeSnapPoint: "250px",
+  });
+  const hook = hookFor(el, component);
+
+  click(trigger);
+  assert.equal(panel.style.transform, "translateY(150px)");
+  const opens = pushed.filter(({ event }) => event === "open").length;
+
+  // The server still renders data-open="false"; an unrelated re-render
+  // (a phx-change inside the drawer, a flash) must not close it.
+  simulatePatch(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(panel.getAttribute("data-state"), "open");
+  assert.equal(panel.getAttribute("data-vaul-drawer-direction"), "bottom");
+  assert.equal(panel.style.transform, "translateY(150px)");
+  assert.equal(panel.getAttribute("role"), "dialog");
+  assert.equal(panel.getAttribute("aria-modal"), "true");
+  assert.equal(panel.getAttribute("aria-labelledby"), "drawer-1-title");
+  assert.equal(document.getElementById("drawer-1-title").tagName, "H2");
+  assert.equal(trigger.getAttribute("aria-expanded"), "true");
+  assert.equal(trigger.getAttribute("aria-controls"), panel.id);
+  assert.equal(pushed.filter(({ event }) => event === "open").length, opens);
+
+  // Still fully interactive after the patch.
+  component.handleCommand("snap_to", { index: 0 });
+  assert.equal(panel.style.transform, "translateY(300px)");
+  component.handleCommand("close");
+  assert.equal(component.state, "closed");
+  component.destroy();
+});
+
+test("a patch mid-drag keeps the gesture going", () => {
+  useClock();
+  const { component, el, panel } = buildDrawer({ open: true });
+  const hook = hookFor(el, component);
+  const body = document.getElementById("body");
+
+  pointer(body, "pointerdown", 100, 100);
+  now += 100;
+  pointer(body, "pointermove", 100, 140);
+  simulatePatch(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(panel.style.transform, "translateY(40px)");
+  assert.equal(el.getAttribute("data-dragging"), "true");
+
+  now += 400;
+  pointer(body, "pointermove", 100, 300);
+  pointer(body, "pointerup", 100, 300);
+  assert.equal(component.state, "closed");
+  component.destroy();
+});
+
+test("a new server open value opens and closes the live drawer", () => {
+  const { component, el, content, pushed } = buildDrawer();
+  const hook = hookFor(el, component);
+
+  el.dataset.open = "true";
+  hook.updated();
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(pushed.at(-1).event, "open");
+
+  simulatePatch(el);
+  el.dataset.open = "false";
+  hook.updated();
+  assert.equal(component.state, "closed");
+  assert.equal(content.hidden, true);
+  assert.equal(pushed.at(-1).event, "close");
+  component.destroy();
+});
+
+test("changed options rebuild the drawer from the server state", () => {
+  const { component, el, panel } = buildDrawer({ direction: "bottom" });
+  const hook = hookFor(el, component);
+
+  el.setAttribute(
+    "data-options",
+    JSON.stringify({ direction: "left", closeOnOutsideClick: true }),
+  );
+  hook.updated();
+
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  assert.equal(panel.getAttribute("data-vaul-drawer-direction"), "left");
+  hook.destroyed();
+});
+
+test("dragging disables text selection on the panel until release", () => {
+  useClock();
+  const { component, panel } = buildDrawer({ open: true });
+  const body = document.getElementById("body");
+
+  pointer(body, "pointerdown", 100, 100);
+  now += 100;
+  pointer(body, "pointermove", 100, 120);
+  assert.equal(panel.style.userSelect, "none");
+  pointer(body, "pointerup", 100, 120);
+  assert.equal(panel.style.userSelect, "");
+  component.destroy();
 });

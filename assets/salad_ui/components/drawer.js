@@ -22,6 +22,14 @@ const SETTLE_TRANSITION = "0.5s cubic-bezier(0.32, 0.72, 0, 1)";
 const NO_DRAG_SELECTOR =
   "input, textarea, select, [contenteditable=''], [contenteditable='true'], [data-vaul-no-drag]";
 
+// The element inside a trigger wrapper that carries the trigger's ARIA.
+const TRIGGER_TARGET_SELECTOR =
+  "button, a[href], [role='button'], input[type='button'], input[type='submit']";
+
+// Parts whose identity must survive a LiveView patch for the live instance
+// to be kept (see skipReinitialize).
+const STABLE_PARTS = ["content", "content-panel", "overlay", "handle"];
+
 class DrawerComponent extends DialogComponent {
   constructor(el, hookContext) {
     super(el, hookContext);
@@ -36,6 +44,7 @@ class DrawerComponent extends DialogComponent {
     this.activeSnapIndex = this.initialSnapIndex;
     this.dismissible = this.options.dismissible !== false;
     this.overlay = this.getPart("overlay");
+    this._serverOpen = el.dataset.open;
 
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
@@ -48,10 +57,81 @@ class DrawerComponent extends DialogComponent {
   getComponentConfig() {
     const config = super.getComponentConfig();
 
-    config.ariaConfig["close-trigger"] = { all: { label: "Close drawer" } };
     config.ariaConfig.handle = { all: { hidden: "true" } };
 
     return config;
+  }
+
+  updateUI() {
+    super.updateUI();
+    this.applyTriggerAria();
+  }
+
+  // Radix's DialogTrigger (which vaul uses) marks the trigger as opening a
+  // dialog and reports whether it is open. The trigger part is usually a
+  // wrapper around a button, so the ARIA goes on that button.
+  applyTriggerAria() {
+    const panelId = this.getPartId("content-panel");
+    const expanded = String(this.state === "open");
+
+    this.getAllParts("trigger").forEach((trigger) => {
+      const target = trigger.matches(TRIGGER_TARGET_SELECTOR)
+        ? trigger
+        : trigger.querySelector(TRIGGER_TARGET_SELECTOR);
+      if (!target) return;
+
+      target.setAttribute("aria-haspopup", "dialog");
+      target.setAttribute("aria-expanded", expanded);
+      if (panelId) target.setAttribute("aria-controls", panelId);
+    });
+  }
+
+  /**
+   * A LiveView patch (a form inside the drawer validating, a flash anywhere
+   * on the page) reverts everything this component wrote to the DOM: the
+   * content goes back to `hidden`, and the drag offset, direction stamps and
+   * ARIA are dropped. Rebuilding would close a drawer the user opened (the
+   * server still renders `data-open="false"`), or re-run the open sequence
+   * and steal focus from the field being typed in. Keep the instance and
+   * re-apply its state instead, unless the drawer's options or structure
+   * changed. A new server `open` value is applied as an open/close.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (el.getAttribute("data-options") !== this._optionsRaw) return false;
+    if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
+      return false;
+    }
+
+    const parts = this.queryParts().filter(
+      (part) =>
+        !part.dataset.part.startsWith("item") &&
+        !part.dataset.part.endsWith("-item"),
+    );
+    const sameParts = STABLE_PARTS.every(
+      (name) =>
+        parts.find((part) => part.dataset.part === name) === this.getPart(name),
+    );
+    if (!sameParts) return false;
+
+    this.allParts = parts;
+    this.stampDirection();
+    this.updateUI();
+    this.updatePartsVisibility();
+    if (this.state === "open") {
+      this.applyOffset(this.currentOffset || 0, false);
+      if (this.drag?.active) this.markDragging();
+    }
+
+    if (el.dataset.open !== this._serverOpen) {
+      this._serverOpen = el.dataset.open;
+      const requested = el.dataset.open === "true" ? "open" : "closed";
+      if (requested !== this.state) {
+        this.transition(requested === "open" ? "open" : "close");
+      }
+    }
+
+    return true;
   }
 
   // The direction lives on the root `drawer/1`, but shadcn's classes key off
@@ -321,7 +401,7 @@ class DrawerComponent extends DialogComponent {
       }
 
       drag.active = true;
-      this.el.setAttribute("data-dragging", "true");
+      this.markDragging();
       window.getSelection?.()?.removeAllRanges?.();
       try {
         this.dragTarget?.setPointerCapture?.(drag.pointerId);
@@ -332,6 +412,12 @@ class DrawerComponent extends DialogComponent {
 
     drag.delta = delta;
     this.applyOffset(this.dampen(drag.startOffset + delta), false);
+  }
+
+  // While dragging, the page must not select text under the pointer.
+  markDragging() {
+    this.el.setAttribute("data-dragging", "true");
+    if (this.contentPanel) this.contentPanel.style.userSelect = "none";
   }
 
   // Resist dragging past the fully open position, and past the resting
@@ -426,6 +512,7 @@ class DrawerComponent extends DialogComponent {
     document.removeEventListener("pointerup", this.onPointerUp);
     document.removeEventListener("pointercancel", this.onPointerUp);
     this.el?.removeAttribute("data-dragging");
+    if (this.contentPanel) this.contentPanel.style.userSelect = "";
     this.drag = null;
   }
 }

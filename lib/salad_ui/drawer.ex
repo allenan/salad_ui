@@ -59,6 +59,13 @@ defmodule SaladUI.Drawer do
   `data-vaul-no-drag` never start a drag, and scrollable content scrolls
   before the drawer moves. Pass `handle_only` to drag by the handle only.
 
+  ## Re-renders
+
+  A LiveView re-render (a form inside the drawer validating, a flash) keeps an
+  open drawer open, at its snap point and with focus where it was. Changing
+  the rendered `open` value opens or closes it; changing other options
+  rebuilds it from the new markup.
+
   ## Component events
 
   * `:on-open` - Fired when the drawer opens.
