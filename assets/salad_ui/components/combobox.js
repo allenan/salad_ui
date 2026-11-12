@@ -351,6 +351,8 @@ class ComboboxComponent extends Component {
 
     if (target.dataset.part === "input") {
       this.onInputKeyDown(event, target);
+    } else if (target.dataset.part === "chip") {
+      this.onChipKeyDown(event, target);
     } else if (
       (event.key === "ArrowDown" || event.key === "ArrowUp") &&
       target.closest("[data-part='trigger']") &&
@@ -371,14 +373,38 @@ class ComboboxComponent extends Component {
       case "ArrowUp": {
         event.preventDefault();
         const forward = event.key === "ArrowDown";
-        if (!open) {
+        if (event.altKey) {
+          // Alt+ArrowDown shows the list without highlighting; Alt+ArrowUp
+          // hides it (WAI-ARIA combobox pattern).
+          if (forward && !open) this.open();
+          if (!forward && open) this.close();
+        } else if (!open) {
           this.open({ highlight: forward ? "first" : "last" });
         } else {
           this.moveHighlight(forward ? 1 : -1);
         }
         break;
       }
+      case "ArrowLeft":
+      case "ArrowRight": {
+        // From the start of the chips input, the "back" arrow moves focus
+        // onto the last chip.
+        if (
+          event.key === this.backKey(input) &&
+          this.multiple &&
+          input.selectionStart === 0 &&
+          input.selectionEnd === 0
+        ) {
+          const chips = this.chipElements();
+          if (chips.length > 0) {
+            event.preventDefault();
+            chips[chips.length - 1].focus({ preventScroll: true });
+          }
+        }
+        break;
+      }
       case "Enter": {
+        if (event.isComposing) return;
         if (!open || this.highlighted === null) return;
         event.preventDefault();
         this.selectValue(this.highlighted);
@@ -402,6 +428,80 @@ class ComboboxComponent extends Component {
         break;
       }
     }
+  }
+
+  /**
+   * Keyboard on a focused chip: the arrows move between the chips and back to
+   * the input, Backspace/Delete remove the chip, Escape and typing return to
+   * the input.
+   */
+  onChipKeyDown(event, chip) {
+    const chips = this.chipElements();
+    const index = chips.indexOf(chip);
+    if (index === -1) return;
+
+    const input = this.mainInput();
+    const back = this.backKey(chip);
+    const forward = back === "ArrowLeft" ? "ArrowRight" : "ArrowLeft";
+    const focus = (node) => node?.focus({ preventScroll: true });
+
+    switch (event.key) {
+      case back:
+        event.preventDefault();
+        focus(chips[index - 1] || chip);
+        break;
+      case forward:
+        event.preventDefault();
+        focus(chips[index + 1] || input);
+        break;
+      case "Backspace":
+      case "Delete": {
+        event.preventDefault();
+        const neighbour =
+          event.key === "Backspace"
+            ? chips[index - 1] || chips[index + 1]
+            : chips[index + 1];
+        const neighbourValue = neighbour?.dataset.value;
+        this.removeValue(chip.dataset.value);
+        const next =
+          neighbourValue !== undefined &&
+          this.chipElements().find((c) => c.dataset.value === neighbourValue);
+        focus(next || input);
+        break;
+      }
+      case "Escape":
+        event.preventDefault();
+        event.stopPropagation();
+        if (this.state === "open") this.close();
+        focus(input);
+        break;
+      default:
+        // Typing goes on in the input.
+        if (
+          event.key.length === 1 &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey
+        ) {
+          focus(input);
+        }
+    }
+  }
+
+  /** The arrow key pointing towards the chips, by text direction. */
+  backKey(node) {
+    const rtl =
+      typeof window !== "undefined" &&
+      window.getComputedStyle?.(node)?.direction === "rtl";
+    return rtl ? "ArrowRight" : "ArrowLeft";
+  }
+
+  chipElements() {
+    const box = this.chipsBox();
+    if (!box) return [];
+    return Array.from(box.querySelectorAll("[data-part='chip']")).filter(
+      (chip) => chip.closest("[data-component]") === this.el,
+    );
   }
 
   onFocusOut(event) {
@@ -528,6 +628,13 @@ class ComboboxComponent extends Component {
       const input = this.activeInput();
       if (input) this.setInputText(input, "");
     } else {
+      if (this.values.length === 1 && this.values[0] === value) {
+        // Picking the selected item again only closes the list.
+        this.close();
+        const input = this.mainInput();
+        if (input) this.setInputText(input, this.labelFor(value));
+        return;
+      }
       this.values = [value];
     }
 
@@ -822,9 +929,7 @@ class ComboboxComponent extends Component {
     const box = this.chipsBox();
     if (!box) return;
 
-    const existing = Array.from(
-      box.querySelectorAll("[data-part='chip']"),
-    ).filter((chip) => chip.closest("[data-component]") === this.el);
+    const existing = this.chipElements();
     const disabled = this.isDisabled();
 
     if (
@@ -844,6 +949,11 @@ class ComboboxComponent extends Component {
         box.insertBefore(chip, reference);
       });
     }
+
+    // Focusable from the keyboard (see onChipKeyDown), not in the tab order.
+    this.chipElements().forEach((chip) => {
+      if (!chip.hasAttribute("tabindex")) chip.setAttribute("tabindex", "-1");
+    });
 
     box.querySelectorAll("[data-part='chip-remove']").forEach((button) => {
       const chip = button.closest("[data-part='chip']");

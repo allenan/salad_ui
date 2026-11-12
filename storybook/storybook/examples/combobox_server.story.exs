@@ -10,7 +10,8 @@ defmodule Storybook.Examples.ComboboxServer do
     """
     Server-side filtering: `filter={false}` leaves the items to the server. The
     query input is named `query` and debounced, so the form's `phx-change`
-    receives it and the server renders the matching items. The selection is a
+    receives it and the server streams the matching items into the list
+    (`phx-update="stream"`, reset on every search). The selection is a
     form field: submitting without picking a language shows the field error,
     and the picked value is submitted with the form.
     """
@@ -21,12 +22,13 @@ defmodule Storybook.Examples.ComboboxServer do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket,
+     socket
+     |> assign(
        query: "",
-       languages: @languages,
        form: to_form(%{"language" => nil}, as: :project),
        submitted: nil
-     )}
+     )
+     |> stream(:languages, entries(@languages))}
   end
 
   @impl true
@@ -53,9 +55,13 @@ defmodule Storybook.Examples.ComboboxServer do
             />
             <.combobox_content>
               <.combobox_empty>No languages match "{@query}".</.combobox_empty>
-              <.combobox_list>
-                <.combobox_item :for={language <- @languages} value={language}>
-                  {language}
+              <.combobox_list id="project_language-list" phx-update="stream">
+                <.combobox_item
+                  :for={{dom_id, language} <- @streams.languages}
+                  id={dom_id}
+                  value={language.name}
+                >
+                  {language.name}
                 </.combobox_item>
               </.combobox_list>
             </.combobox_content>
@@ -76,12 +82,12 @@ defmodule Storybook.Examples.ComboboxServer do
     query = params |> Map.get("query", socket.assigns.query) |> String.trim()
     project = Map.get(params, "project", %{})
 
-    {:noreply,
-     assign(socket,
-       query: query,
-       languages: filter(query),
-       form: to_form(project, as: :project)
-     )}
+    socket =
+      if query == socket.assigns.query,
+        do: socket,
+        else: stream(socket, :languages, entries(filter(query)), reset: true)
+
+    {:noreply, assign(socket, query: query, form: to_form(project, as: :project))}
   end
 
   def handle_event("save", params, socket) do
@@ -95,6 +101,8 @@ defmodule Storybook.Examples.ComboboxServer do
         {:noreply, assign(socket, submitted: language, form: to_form(project, as: :project))}
     end
   end
+
+  defp entries(languages), do: Enum.map(languages, &%{id: String.downcase(&1), name: &1})
 
   defp filter(""), do: @languages
 

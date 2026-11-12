@@ -285,6 +285,56 @@ test("arrow keys move the highlight and Enter selects it", async () => {
   assert.equal(c.input.hasAttribute("aria-activedescendant"), false);
 });
 
+test("Alt+ArrowDown opens without a highlight; Alt+ArrowUp closes", async () => {
+  const c = buildCombobox();
+
+  const altKey = (key) =>
+    c.input.dispatchEvent(
+      new window.KeyboardEvent("keydown", {
+        key,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+  altKey("ArrowDown");
+  assert.ok(isOpen(c));
+  assert.equal(c.highlighted(), null);
+
+  altKey("ArrowUp");
+  await waitFor(() => isClosed(c));
+});
+
+test("picking the selected item again only closes the list", async () => {
+  const c = buildCombobox({ value: "Remix", inForm: true });
+  let changes = 0;
+  c.form.addEventListener("change", () => (changes += 1));
+
+  keydown(c.input, "ArrowDown");
+  assert.equal(c.highlighted(), "Remix");
+  keydown(c.input, "Enter");
+  await waitFor(() => isClosed(c));
+  assert.equal(c.input.value, "Remix");
+  assert.equal(changes, 0);
+  assert.equal(c.pushed.filter((p) => p.event === "changed").length, 0);
+});
+
+test("Enter while composing text does not select", () => {
+  const c = buildCombobox();
+
+  keydown(c.input, "ArrowDown");
+  const event = new window.KeyboardEvent("keydown", {
+    key: "Enter",
+    isComposing: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  c.input.dispatchEvent(event);
+  assert.ok(isOpen(c));
+  assert.deepEqual(c.hiddenValues(), []);
+});
+
 test("reopening shows every item and highlights the selection", () => {
   const c = buildCombobox({ value: "Remix" });
   assert.equal(c.input.value, "Remix", "input shows the selected label");
@@ -497,6 +547,84 @@ test("multiple: chip remove buttons and Backspace remove values", () => {
   keydown(c.input, "Backspace");
   assert.deepEqual(c.chipValues(), ["Next.js"]);
   assert.deepEqual(c.hiddenValues(), [["framework[]", "Next.js"]]);
+});
+
+test("multiple: the arrow keys move between chips; Backspace/Delete remove one", () => {
+  const c = buildCombobox({
+    mode: "chips",
+    multiple: true,
+    value: ["Next.js", "Remix", "Astro"],
+  });
+  const chip = (value) =>
+    c.chips.querySelector(`[data-part="chip"][data-value="${value}"]`);
+
+  c.input.focus();
+  type(c.input, "ab");
+  c.input.setSelectionRange(1, 1);
+  keydown(c.input, "ArrowLeft");
+  assert.equal(document.activeElement, c.input, "not at the start of the text");
+
+  type(c.input, "");
+  c.input.focus();
+  const event = keydown(c.input, "ArrowLeft");
+  assert.ok(event.defaultPrevented);
+  assert.equal(document.activeElement, chip("Astro"));
+  assert.equal(chip("Astro").getAttribute("tabindex"), "-1");
+
+  keydown(chip("Astro"), "ArrowLeft");
+  assert.equal(document.activeElement, chip("Remix"));
+  keydown(chip("Remix"), "ArrowLeft");
+  keydown(chip("Next.js"), "ArrowLeft");
+  assert.equal(document.activeElement, chip("Next.js"), "stops at the first");
+  keydown(chip("Next.js"), "ArrowRight");
+  assert.equal(document.activeElement, chip("Remix"));
+
+  keydown(chip("Remix"), "Backspace");
+  assert.deepEqual(c.chipValues(), ["Next.js", "Astro"]);
+  assert.deepEqual(c.hiddenValues(), [
+    ["framework[]", "Next.js"],
+    ["framework[]", "Astro"],
+  ]);
+  assert.equal(document.activeElement, chip("Next.js"), "focus moves back");
+
+  keydown(chip("Next.js"), "Delete");
+  assert.deepEqual(c.chipValues(), ["Astro"]);
+  assert.equal(document.activeElement, chip("Astro"), "focus moves forward");
+
+  keydown(chip("Astro"), "ArrowRight");
+  assert.equal(document.activeElement, c.input, "past the last chip");
+
+  keydown(c.input, "ArrowLeft");
+  keydown(chip("Astro"), "Delete");
+  assert.deepEqual(c.chipValues(), []);
+  assert.equal(document.activeElement, c.input);
+  assert.deepEqual(
+    c.pushed.findLast((p) => p.event === "changed").payload.value,
+    [],
+  );
+});
+
+test("multiple: Escape or typing on a chip returns to the input", () => {
+  const c = buildCombobox({
+    mode: "chips",
+    multiple: true,
+    value: ["Next.js"],
+  });
+  const chip = c.chips.querySelector('[data-part="chip"]');
+
+  click(c.input);
+  c.input.focus();
+  keydown(c.input, "ArrowLeft");
+  assert.equal(document.activeElement, chip);
+  assert.ok(isOpen(c), "moving onto a chip keeps the list open");
+
+  keydown(chip, "x");
+  assert.equal(document.activeElement, c.input);
+
+  keydown(c.input, "ArrowLeft");
+  keydown(chip, "Escape");
+  assert.equal(document.activeElement, c.input);
+  assert.equal(c.component.state, "closed");
 });
 
 test("multiple: the content is anchored to the chips", () => {

@@ -122,6 +122,8 @@ defmodule SaladUI.Combobox do
       end
 
   The open popup, the highlighted item and the selection survive the patch.
+  The list may also be a stream: give `combobox_list/1` an `id` and
+  `phx-update="stream"`, and each item its stream `id`.
   When the query is cleared by the component (after a pick in a multiple
   combobox, or by the clear button) it dispatches an `input` event, so the
   server is asked for the unfiltered list again.
@@ -140,9 +142,14 @@ defmodule SaladUI.Combobox do
   ## Keyboard
 
   * `ArrowDown` / `ArrowUp` - open the list, then move the highlight (wrapping).
+  * `Alt+ArrowDown` / `Alt+ArrowUp` - open the list without highlighting / close it.
   * `Enter` - select the highlighted item.
   * `Escape` - close the list.
   * `Backspace` - in an empty chips input, remove the last chip.
+  * `ArrowLeft` - at the start of the chips input, focus the last chip. On a
+    chip, `ArrowLeft` / `ArrowRight` move between the chips and back to the
+    input, `Backspace` / `Delete` remove it and `Escape` returns to the input
+    (the arrows swap in a right-to-left layout).
 
   The input keeps focus while the list is open and points at the highlighted
   option with `aria-activedescendant`, following the WAI-ARIA combobox pattern.
@@ -714,6 +721,7 @@ defmodule SaladUI.Combobox do
       data-slot="combobox-chip"
       data-part="chip"
       data-value={@value && to_string(@value)}
+      tabindex="-1"
       class={
         classes([
           "flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pr-0",

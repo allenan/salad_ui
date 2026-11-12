@@ -278,6 +278,7 @@ defmodule SaladUI.ComboboxTest do
       assert html =~ ~s(data-slot="combobox-chip-remove")
       assert html =~ ~s(data-slot="combobox-chip-input")
       assert html =~ ~s(data-value="Next.js")
+      assert html =~ ~r/data-slot="combobox-chip"[^>]*tabindex="-1"/
       assert html =~ ~s(placeholder="Add framework")
       assert html =~ "max-w-xs"
     end
