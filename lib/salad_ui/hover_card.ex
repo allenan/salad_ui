@@ -14,7 +14,7 @@ defmodule SaladUI.HoverCard do
         <.hover_card_content>
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
-              <img src="/images/avatar.png" alt="" class="h-10 w-10 rounded-full" />
+              <img src="/images/avatar.png" alt="" class="size-10 rounded-full" />
               <div>
                 <div class="font-semibold">SaladUI</div>
                 <div class="text-sm text-muted-foreground">@salad_ui</div>

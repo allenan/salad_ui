@@ -69,7 +69,9 @@ defmodule SaladUI.Form do
   @doc """
   Form label component that renders a label for a form field.
 
-  Shows validation errors through text color when a field has errors.
+  Shows validation errors through text color when a field has errors. Like the
+  form controls, errors on a field the user has not interacted with yet don't
+  count (see `SaladUI.Helpers.field_invalid?/1`).
 
   ## Examples:
 
@@ -89,7 +91,7 @@ defmodule SaladUI.Form do
   attr :rest, :global
 
   def form_label(assigns) do
-    assigns = assign(assigns, error: assigns[:error] || has_error?(assigns[:field]))
+    assigns = assign(assigns, error: assigns[:error] || field_invalid?(assigns[:field]))
 
     ~H"""
     <SaladUI.Label.label
@@ -150,6 +152,10 @@ defmodule SaladUI.Form do
   @doc """
   Form message component that displays validation errors for a form field.
 
+  Errors from `field` show only once the user has interacted with the field
+  (see `SaladUI.Helpers.field_invalid?/1`), matching the controls' `aria-invalid`.
+  Errors passed through `errors` always show.
+
   ## Examples:
 
       <.form_message field={@form[:email]} />
@@ -173,12 +179,12 @@ defmodule SaladUI.Form do
   def form_message(assigns) do
     assigns =
       assigns
-      |> assign(error: has_error?(assigns[:field]) || not Enum.empty?(assigns[:errors]))
+      |> assign(error: field_invalid?(assigns[:field]) || not Enum.empty?(assigns[:errors]))
       |> assign(
         :message,
         List.first(
           case assigns[:errors] do
-            [] -> field_errors(assigns[:field])
+            [] -> if field_invalid?(assigns[:field]), do: field_errors(assigns[:field]), else: []
             errors -> errors
           end
         )

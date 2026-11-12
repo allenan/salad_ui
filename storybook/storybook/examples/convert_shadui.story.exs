@@ -22,7 +22,7 @@ defmodule Storybook.Examples.ConvertShadui do
         <div>
           <.label>Input</.label>
           <.textarea
-            class="w-full h-full"
+            class="size-full"
             phx-change="convert"
             phx-debounce="2000"
             id="input"
@@ -32,7 +32,7 @@ defmodule Storybook.Examples.ConvertShadui do
         </div>
         <div>
           <.label>Output</.label>
-          <.textarea class="w-full h-full" value={@output} />
+          <.textarea class="size-full" value={@output} />
         </div>
       </div>
     </.form>

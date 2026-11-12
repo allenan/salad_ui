@@ -17,7 +17,7 @@ defmodule SaladUI.CheckboxTest do
       assert html =~ ~s(<input type="hidden" name="remember_me" value="false">)
 
       for css_class <-
-            ~w(peer h-4 w-4 shrink-0 rounded-xs border border-primary shadow-sm focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 checked:bg-primary checked:text-primary-foreground) do
+            ~w(peer size-4 shrink-0 rounded-[4px] border border-input shadow-xs outline-none focus:ring-0 focus:ring-offset-0 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 checked:border-primary checked:bg-primary checked:text-primary-foreground) do
         assert html =~ css_class
       end
     end

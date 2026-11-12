@@ -23,9 +23,11 @@ defmodule SaladUI.Button do
       * `"link"` - Button that appears as a link
   * `:size` - Size of the button:
       * `"default"` - Standard size
+      * `"xs"` - Extra small size
       * `"sm"` - Small size
       * `"lg"` - Large size
       * `"icon"` - Square button optimized for icons
+      * `"icon-xs"`, `"icon-sm"`, `"icon-lg"` - Smaller and larger square icon buttons
   * `:rest` - Additional HTML attributes including `disabled`, `form`, `name`, `value`
 
   ## Examples
@@ -46,7 +48,7 @@ defmodule SaladUI.Button do
     default: "default",
     doc: "the button variant style"
 
-  attr :size, :string, values: ~w(default sm lg icon), default: "default"
+  attr :size, :string, values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg), default: "default"
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
@@ -57,6 +59,9 @@ defmodule SaladUI.Button do
     ~H"""
     <button
       type={@type}
+      data-slot="button"
+      data-variant={@variant}
+      data-size={@size}
       class={
         classes([
           "phx-submit-loading:opacity-75",

@@ -54,7 +54,7 @@ defmodule Storybook.SaladUIComponents.Command do
                 <.command_shortcut>⌘B</.command_shortcut>
               </.command_item>
               <.command_item value="settings" phx-click="select_command">
-                <.settings class="w-4 h-4"/>
+                <.settings class="size-4"/>
                 <span>Settings</span>
                 <.command_shortcut>⌘,</.command_shortcut>
               </.command_item>

@@ -26,7 +26,7 @@ defmodule Storybook.SaladUIComponents.Collapsible do
             </h4>
             <.collapsible_trigger>
               <.button variant="ghost" size="sm" class="w-9 p-0">
-                <.icon name="hero-chevron-up-down" class="h-4 w-4"></.icon>
+                <.icon name="hero-chevron-up-down" class="size-4"></.icon>
                 <span class="sr-only">
                   Toggle
                 </span>

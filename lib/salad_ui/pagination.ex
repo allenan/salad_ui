@@ -121,20 +121,14 @@ defmodule SaladUI.Pagination do
       assigns
       |> assign(
         :variation_class,
-        variant(%{size: assigns[:size], variant: (is_active && "outline") || "ghost"})
+        button_variant(%{size: assigns[:size], variant: (is_active && "outline") || "ghost"})
       )
       |> assign(:"is-active", is_active)
 
     ~H"""
     <.link
       aria-current={(assigns[:"is-active"] && "page") || ""}
-      class={
-        classes([
-          "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50",
-          @variation_class,
-          @class
-        ])
-      }
+      class={classes([@variation_class, @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -153,7 +147,7 @@ defmodule SaladUI.Pagination do
     <.pagination_link
       aria-label="Go to next page"
       size="default"
-      class={classes(["gap-1 pr-2.5", @class])}
+      class={classes(["gap-1 px-2.5 sm:pr-2.5", @class])}
       {@rest}
     >
       <span>Next</span>
@@ -182,7 +176,7 @@ defmodule SaladUI.Pagination do
     <.pagination_link
       aria-label="Go to previous page"
       size="default"
-      class={classes(["gap-1 pr-2.5", @class])}
+      class={classes(["gap-1 px-2.5 sm:pl-2.5", @class])}
       {@rest}
     >
       <svg
@@ -211,7 +205,7 @@ defmodule SaladUI.Pagination do
     <span
       class={
         classes([
-          "flex h-9 w-9 items-center justify-center",
+          "flex size-9 items-center justify-center",
           @class
         ])
       }
@@ -223,7 +217,7 @@ defmodule SaladUI.Pagination do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-4 h-4"
+        class="size-4"
       >
         <path
           stroke-linecap="round"
@@ -235,25 +229,5 @@ defmodule SaladUI.Pagination do
       <span class="sr-only">More pages</span>
     </span>
     """
-  end
-
-  @variants %{
-    variant: %{
-      "outline" => "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
-      "ghost" => "hover:bg-accent hover:text-accent-foreground"
-    },
-    size: %{
-      "default" => "h-9 px-4 py-2",
-      "sm" => "h-8 rounded-md px-3 text-xs",
-      "lg" => "h-10 rounded-md px-8",
-      "icon" => "h-9 w-9"
-    }
-  }
-
-  defp variant(props) do
-    variants =
-      Map.take(props, ~w(variant size)a)
-
-    Enum.map_join(variants, " ", fn {key, value} -> @variants[key][value] end)
   end
 end

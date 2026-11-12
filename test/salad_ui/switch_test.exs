@@ -24,7 +24,7 @@ defmodule SaladUI.SwitchTest do
       assert html =~ ~s(checked)
 
       for css_class <-
-            ~w(switch-root inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0) do
+            ~w|switch-root inline-flex data-[size=default]:h-[1.15rem] data-[size=default]:w-8 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-all data-[state=checked]:bg-primary data-[state=unchecked]:bg-input data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0| do
         assert html =~ css_class
       end
     end

@@ -28,6 +28,15 @@ defmodule Storybook.SaladUIComponents.Input do
               }
             }
           end
+      },
+      %Variation{
+        id: :invalid,
+        description: ~s|Error styling via aria-invalid (set automatically when a form field has errors)|,
+        attributes: %{
+          type: "email",
+          placeholder: "Email",
+          "aria-invalid": "true"
+        }
       }
     ]
   end

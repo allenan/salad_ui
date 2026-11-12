@@ -11,6 +11,8 @@ defmodule SaladUI.Helpers do
 
   When a `:field` (a `%Phoenix.HTML.FormField{}`) is given, `:id`, `:name`, `:value`,
   and `:errors` are derived from it, though explicit assigns still take precedence.
+  `:used_input` records `Phoenix.Component.used_input?/1` for the field, so
+  `invalid?/1` only flags inputs the user has interacted with.
 
   In all cases, falls back to `:"default-value"` when the resulting value is `nil`,
   `""`, or `[]`.
@@ -19,6 +21,7 @@ defmodule SaladUI.Helpers do
     assigns
     |> assign(field: nil, id: assigns[:id] || field.id)
     |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(:used_input, field_used?(field))
     |> assign(:name, assigns[:name] || if(assigns[:multiple], do: field.name <> "[]", else: field.name))
     |> assign(:value, if(is_nil(assigns[:value]), do: field.value, else: assigns[:value]))
     |> prepare_assign()
@@ -35,6 +38,32 @@ defmodule SaladUI.Helpers do
 
     assign(assigns, value: value)
   end
+
+  @doc """
+  Returns `true` when the user has interacted with the form field, following
+  `Phoenix.Component.used_input?/1`.
+
+  Hand-built fields (e.g. in tests) may have no form or params; they count as used.
+
+  `Phoenix.Component.used_input?/1` only sees what the browser submits, so
+  controls that keep their value in hidden inputs (select) or submit nothing when
+  empty (radio group) render an extra input to take part in LiveView's
+  used-input tracking. See `SaladUI.Select` and `SaladUI.RadioGroup`.
+  """
+  def field_used?(%FormField{form: %{params: params}} = field) when is_map(params) do
+    Phoenix.Component.used_input?(field)
+  end
+
+  def field_used?(_field), do: true
+
+  @doc """
+  Returns `true` when the form field has errors and the user has interacted
+  with it (see `field_used?/1`). This is the field-level counterpart of
+  `invalid?/1`, used by `SaladUI.Form.form_label/1` and
+  `SaladUI.Form.form_message/1` so labels and messages agree with the controls.
+  """
+  def field_invalid?(%FormField{} = field), do: has_error?(field) and field_used?(field)
+  def field_invalid?(_field), do: false
 
   @doc """
   Returns the translated error messages for a form field.
@@ -55,6 +84,33 @@ defmodule SaladUI.Helpers do
   end
 
   def has_error?(_field), do: false
+
+  @doc """
+  Returns `true` when the assigns carry one or more errors, as populated by
+  `prepare_assign/1` from a `%Phoenix.HTML.FormField{}`.
+
+  Like Phoenix's generated `core_components`, errors on a field the user has
+  not interacted with yet (see `Phoenix.Component.used_input?/1`) don't count,
+  so a `phx-change` validation doesn't flag every untouched input at once.
+  """
+  def invalid?(assigns) do
+    assigns[:errors] not in [nil, []] and Map.get(assigns, :used_input, true)
+  end
+
+  @doc """
+  Adds `aria-invalid="true"` to the `:rest` global attributes when the assigns
+  carry errors (see `invalid?/1`), so form controls pick up shadcn's
+  `aria-invalid:` error styling automatically when given a `field` with errors.
+
+  An explicitly passed `aria-invalid` attribute always wins.
+  """
+  def put_aria_invalid(assigns) do
+    if invalid?(assigns) do
+      assign(assigns, :rest, Map.put_new(assigns[:rest] || %{}, :"aria-invalid", "true"))
+    else
+      assigns
+    end
+  end
 
   @doc """
   Builds a map of client event mappings from all assigned `on-*` attributes.
@@ -88,18 +144,24 @@ defmodule SaladUI.Helpers do
 
   @variants %{
     variant: %{
-      "default" => "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
-      "destructive" => "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90",
-      "outline" => "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
-      "secondary" => "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-      "ghost" => "hover:bg-accent hover:text-accent-foreground",
+      "default" => "bg-primary text-primary-foreground hover:bg-primary/90",
+      "destructive" =>
+        "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
+      "outline" =>
+        "border border-border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+      "secondary" => "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      "ghost" => "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
       "link" => "text-primary underline-offset-4 hover:underline"
     },
     size: %{
-      "default" => "h-9 px-4 py-2",
-      "sm" => "h-8 rounded-md px-3 text-xs",
-      "lg" => "h-10 rounded-md px-8",
-      "icon" => "h-9 w-9"
+      "default" => "h-9 px-4 py-2 has-[>svg]:px-3",
+      "xs" => "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+      "sm" => "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
+      "lg" => "h-10 rounded-md px-6 has-[>svg]:px-4",
+      "icon" => "size-9",
+      "icon-xs" => "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
+      "icon-sm" => "size-8",
+      "icon-lg" => "size-10"
     }
   }
 
@@ -110,7 +172,7 @@ defmodule SaladUI.Helpers do
 
   @doc """
   Reusable button variant helper. Supports two variant kinds:
-  - size: `default|sm|lg|icon`
+  - size: `default|xs|sm|lg|icon|icon-xs|icon-sm|icon-lg`
   - variant: `default|destructive|outline|secondary|ghost|link`
   """
   def button_variant(props \\ %{}) do
@@ -120,7 +182,7 @@ defmodule SaladUI.Helpers do
     variation_classes = Enum.map_join(variants, " ", fn {key, value} -> @variants[key][value] end)
 
     shared_classes =
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50"
+      "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 
     "#{shared_classes} #{variation_classes}"
   end
@@ -138,7 +200,7 @@ defmodule SaladUI.Helpers do
       variant: %{
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+          "bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]",
       },
       size: %{
         default: "h-8 text-sm",

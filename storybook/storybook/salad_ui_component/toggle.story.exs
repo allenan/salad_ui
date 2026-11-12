@@ -25,6 +25,15 @@ defmodule Storybook.SaladUIComponents.Toggle do
         },
         slots: ["B"]
       },
+      %Variation{
+        id: :toggle_invalid,
+        description: ~s|Error styling via aria-invalid (set automatically when a form field has errors)|,
+        attributes: %{
+          variant: "outline",
+          "aria-invalid": "true"
+        },
+        slots: ["B"]
+      },
       %VariationGroup{
         id: :variant_and_size,
         description: "Different variants and sizes",

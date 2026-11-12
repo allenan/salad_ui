@@ -15,7 +15,7 @@ defmodule Storybook.SaladUIComponents.Alert do
         id: :default_alert,
         template: """
         <.alert>
-          <.icon name="hero-command-line" class="h-4 w-4" />
+          <.icon name="hero-command-line" class="size-4" />
           <.alert_title>Heads up!</.alert_title>
           <.alert_description>
             You can add components to your app using the cli
@@ -28,7 +28,7 @@ defmodule Storybook.SaladUIComponents.Alert do
         id: :destructive,
         template: """
         <.alert variant="destructive">
-          <.icon name="hero-exclamation-triangle" class="h-4 w-4" />
+          <.icon name="hero-exclamation-triangle" class="size-4" />
           <.alert_title>Heads up!</.alert_title>
           <.alert_description>
             You can add components to your app using the cli

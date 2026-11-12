@@ -36,6 +36,23 @@ defmodule Storybook.SaladUIComponents.Switch do
               checked: true,
               disabled: true
             }
+          },
+          %Variation{
+            id: :small,
+            description: ~s|`size="sm"`|,
+            attributes: %{
+              id: "switch-small",
+              size: "sm",
+              checked: true
+            }
+          },
+          %Variation{
+            id: :invalid,
+            description: ~s|Error styling via aria-invalid (set automatically when a form field has errors)|,
+            attributes: %{
+              id: "switch-invalid",
+              "aria-invalid": "true"
+            }
           }
         ]
       },

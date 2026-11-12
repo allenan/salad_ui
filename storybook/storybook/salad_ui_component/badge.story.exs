@@ -39,6 +39,20 @@ defmodule Storybook.SaladUIComponents.Badge do
               variant: "outline"
             },
             slots: ["Outline"]
+          },
+          %Variation{
+            id: :color_ghost,
+            attributes: %{
+              variant: "ghost"
+            },
+            slots: ["Ghost"]
+          },
+          %Variation{
+            id: :color_link,
+            attributes: %{
+              variant: "link"
+            },
+            slots: ["Link"]
           }
         ]
       }

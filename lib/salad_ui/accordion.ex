@@ -171,7 +171,7 @@ defmodule SaladUI.Accordion do
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="h-4 w-4 shrink-0 transition-transform duration-200"
+        class="size-4 shrink-0 transition-transform duration-200"
       >
         <path d="m6 9 6 6 6-6"></path>
       </svg>

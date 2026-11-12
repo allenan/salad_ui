@@ -99,7 +99,7 @@ defmodule SaladUI.Sidebar do
         }
         side={@side}
       >
-        <div class="flex h-full w-full flex-col">
+        <div class="flex size-full flex-col">
           {render_slot(@inner_block)}
         </div>
       </.sheet_content>
@@ -145,7 +145,7 @@ defmodule SaladUI.Sidebar do
       >
         <div
           data-sidebar="sidebar"
-          class="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
+          class="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
         >
           {render_slot(@inner_block)}
         </div>
@@ -169,7 +169,7 @@ defmodule SaladUI.Sidebar do
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      class={classes(["h-7 w-7", @class])}
+      class={classes(["size-7", @class])}
       phx-click={JS.exec("phx-toggle-sidebar", to: "#" <> @target)}
       {@rest}
     >
@@ -183,7 +183,7 @@ defmodule SaladUI.Sidebar do
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="h-4 w-4"
+        class="size-4"
       >
         <rect width="18" height="18" x="3" y="3" rx="2"></rect>
         <path d="M9 3v18"></path>
@@ -256,10 +256,11 @@ defmodule SaladUI.Sidebar do
   def sidebar_input(assigns) do
     ~H"""
     <.input
+      data-slot="sidebar-input"
       data-sidebar="input"
       class={
         classes([
-          "h-8 w-full bg-background shadow-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+          "h-8 w-full bg-background shadow-none",
           @class
         ])
       }
@@ -735,7 +736,7 @@ defmodule SaladUI.Sidebar do
       variant: %{
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]"
+          "bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]"
       },
       size: %{
         default: "h-8 text-sm",

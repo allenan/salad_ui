@@ -25,7 +25,9 @@ defmodule SaladUI.Switch do
     * `:default-value` - The default value of the switch
     * `:field` - Phoenix form field
     * `:disabled` - Whether the switch is disabled
+    * `:size` - `"default"` or `"sm"`
     * `:on-checked-changed` - Handler for value change event
+    * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
 
   ## Component events
 
@@ -42,13 +44,17 @@ defmodule SaladUI.Switch do
   attr :"default-value", :any, values: [true, false, "true", "false"], default: false
   attr :checked, :boolean
   attr :disabled, :boolean, default: false
+  attr :size, :string, values: ~w(default sm), default: "default", doc: "the switch size"
   attr :"on-checked-changed", :any, default: nil, doc: "Handler for value change event"
 
   attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:active]"
   attr :rest, :global
 
   def switch(assigns) do
-    assigns = prepare_assign(assigns)
+    assigns =
+      assigns
+      |> prepare_assign()
+      |> put_aria_invalid()
 
     # Normalize value for boolean
     assigns = assign_new(assigns, :checked, fn -> normalize_boolean(assigns.value) end)
@@ -75,13 +81,16 @@ defmodule SaladUI.Switch do
       data-options={@options}
       data-event-mappings={@event_map}
       data-part="root"
+      data-slot="switch"
+      data-size={@size}
       phx-hook="SaladUI"
       data-disabled={@disabled}
       role="switch"
       aria-checked={to_string(@checked)}
       class={
         classes([
-          "switch-root inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
+          "switch-root peer group/switch inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[size=default]:h-[1.15rem] data-[size=default]:w-8 data-[size=sm]:h-3.5 data-[size=sm]:w-6 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-input/80",
+          "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
           @class
         ])
       }
@@ -102,8 +111,9 @@ defmodule SaladUI.Switch do
       />
       <span
         data-part="thumb"
+        data-slot="switch-thumb"
         data-state={@initial_state}
-        class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+        class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0 dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-foreground"
       />
     </div>
     """

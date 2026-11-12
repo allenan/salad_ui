@@ -23,6 +23,7 @@ defmodule SaladUI.Textarea do
   * `:placeholder` - Placeholder text (passed through as rest)
   * `:disabled` - Whether the textarea is disabled (passed through as rest)
   * `:required` - Whether the textarea is required (passed through as rest)
+  * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
   """
   attr :id, :any, default: nil
   attr :name, :any, default: nil
@@ -34,15 +35,19 @@ defmodule SaladUI.Textarea do
     include: ~w(autocomplete cols dirname disabled form maxlength minlength placeholder readonly required rows wrap)
 
   def textarea(assigns) do
-    assigns = prepare_assign(assigns)
+    assigns =
+      assigns
+      |> prepare_assign()
+      |> put_aria_invalid()
 
     ~H"""
     <textarea
       id={@id}
       name={@name}
+      data-slot="textarea"
       class={
         classes([
-          "min-h-[80px] border-input bg-background flex w-full rounded-md border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+          "flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:ring-destructive/40",
           @class
         ])
       }

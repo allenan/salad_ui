@@ -43,15 +43,18 @@ function buildSelect({
   inForm = false,
   extraHidden = false,
   disabled = false,
+  invalid = false,
+  triggerAttrs = "",
 } = {}) {
   const options = { name, multiple, value, defaultValue, usePortal: false };
   const root = `
     <div id="${id}" data-component="select" data-state="closed"
          data-disabled="${disabled}"
+         ${invalid ? 'data-invalid="true"' : ""}
          data-options='${JSON.stringify(options)}'
          data-event-mappings='{"value-changed":"value_changed"}'
          data-part="root">
-      <button type="button" data-part="trigger" ${disabled ? "disabled" : ""}>
+      <button type="button" data-part="trigger" ${disabled ? "disabled" : ""} ${triggerAttrs}>
         <span data-part="value" data-placeholder="Choose one">Choose one</span>
       </button>
       <div data-part="content" hidden>
@@ -107,6 +110,84 @@ function keydown(el, key) {
   el.dispatchEvent(event);
   return event;
 }
+
+test("root data-invalid is mirrored onto the trigger as aria-invalid", () => {
+  const { trigger } = buildSelect({ invalid: true });
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+});
+
+test("trigger has no aria-invalid when the root is not invalid", () => {
+  const { trigger } = buildSelect();
+
+  assert.equal(trigger.hasAttribute("aria-invalid"), false);
+});
+
+test("an explicit trigger aria-invalid wins over root data-invalid", () => {
+  const { trigger } = buildSelect({
+    invalid: true,
+    triggerAttrs: 'aria-invalid="false"',
+  });
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "false");
+});
+
+function rebuild(component, el) {
+  // Simulates SaladUIHook.updated(): destroy, then rebuild on the same element.
+  component.destroy();
+  return registry.create("select", el, {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  });
+}
+
+test("invalid -> valid on a patch removes the mirrored aria-invalid", () => {
+  const { component, el, trigger } = buildSelect({ invalid: true });
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+
+  // The patch drops the root's data-invalid but leaves the JS-added trigger
+  // attributes in place.
+  el.removeAttribute("data-invalid");
+  rebuild(component, el);
+
+  assert.equal(trigger.hasAttribute("aria-invalid"), false);
+  assert.equal(trigger.hasAttribute("data-invalid-synced"), false);
+});
+
+test("valid -> invalid on a patch adds the mirrored aria-invalid", () => {
+  const { component, el, trigger } = buildSelect();
+
+  el.setAttribute("data-invalid", "true");
+  rebuild(component, el);
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+});
+
+test("an explicit trigger aria-invalid survives a patch to a valid field", () => {
+  const { component, el, trigger } = buildSelect({
+    triggerAttrs: 'aria-invalid="true"',
+  });
+
+  rebuild(component, el);
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+});
+
+test("trigger carries data-placeholder only while nothing is selected", () => {
+  const { trigger, item } = buildSelect();
+  assert.equal(trigger.hasAttribute("data-placeholder"), true);
+
+  click(trigger);
+  click(item("banana"));
+
+  assert.equal(trigger.hasAttribute("data-placeholder"), false);
+});
+
+test("trigger has no data-placeholder when a value is preselected", () => {
+  const { trigger } = buildSelect({ value: "banana" });
+
+  assert.equal(trigger.hasAttribute("data-placeholder"), false);
+});
 
 test("trigger keyboard opens select and focuses the selected item", () => {
   const { content, item, trigger } = buildSelect({ value: "banana" });
@@ -228,6 +309,33 @@ test("selecting an item updates readable text, hidden input, and LiveView form e
   assert.deepEqual(targets, hiddenInputs());
   assert.equal(pushed.at(-1).event, "value_changed");
   assert.equal(pushed.at(-1).payload.value, "banana");
+});
+
+test("form change is dispatched from the server-rendered tracking input when present", () => {
+  const { el, form, hiddenInputs, item } = buildSelect({ inForm: true });
+  // select.ex renders this as the root's first child when a name is set.
+  el.insertAdjacentHTML(
+    "afterbegin",
+    '<input type="text" hidden name="fruit" value="" data-salad-ui-select-tracker="true">',
+  );
+  const tracker = el.querySelector("[data-salad-ui-select-tracker]");
+  const targets = [];
+  form.addEventListener("change", (event) => targets.push(event.target));
+
+  click(item("banana"));
+
+  assert.deepEqual(targets, [tracker]);
+  // The tracker comes first, so the selected value wins when the form is
+  // serialised (Plug keeps the last value for a repeated key).
+  const entries = [...new window.FormData(form).entries()];
+  assert.deepEqual(entries, [
+    ["fruit", ""],
+    ["fruit", "banana"],
+  ]);
+  assert.deepEqual(
+    hiddenInputs().map((input) => input.value),
+    ["banana"],
+  );
 });
 
 test("multiple select dispatches form change from a hidden input", () => {

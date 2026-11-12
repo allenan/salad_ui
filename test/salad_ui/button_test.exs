@@ -13,12 +13,43 @@ defmodule SaladUI.ButtonTest do
         """)
 
       assert html =~ "Send!"
-      assert html =~ "<button class=\"phx-submit-loading:opacity-75 inline-flex"
+      assert html =~ ~s(<button data-slot="button" data-variant="default" data-size="default")
+      assert html =~ ~s(class="phx-submit-loading:opacity-75 inline-flex)
 
       for class <-
-            ~w(inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90) do
+            ~w(inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&amp;_svg]:shrink-0 h-9 px-4 py-2 has-[&gt;svg]:px-3 bg-primary text-primary-foreground hover:bg-primary/90) do
         assert html =~ class
       end
+
+      # shadcn v4 (pinned) gives only the outline variant a shadow
+      refute html =~ "shadow-xs"
+    end
+
+    test "It renders every shadcn v4 size" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.button size="xs">xs</.button>
+        <.button size="sm">sm</.button>
+        <.button size="lg">lg</.button>
+        <.button size="icon-xs">i</.button>
+        <.button size="icon-sm">i</.button>
+        <.button size="icon">i</.button>
+        <.button size="icon-lg">i</.button>
+        """)
+
+      for size <- ~w(xs sm lg icon-xs icon-sm icon icon-lg) do
+        assert html =~ ~s(data-size="#{size}")
+      end
+
+      assert html =~ "h-6 gap-1 rounded-md px-2 text-xs has-[&gt;svg]:px-1.5"
+      assert html =~ "h-8 gap-1.5 rounded-md px-3 has-[&gt;svg]:px-2.5"
+      assert html =~ "h-10 rounded-md px-6 has-[&gt;svg]:px-4"
+      assert html =~ "size-6"
+      assert html =~ "size-8"
+      assert html =~ "size-9"
+      assert html =~ "size-10"
     end
 
     test "It renders button with additional css class correctly" do
@@ -45,9 +76,12 @@ defmodule SaladUI.ButtonTest do
       assert html =~ "phx-click=\"go\""
       assert html =~ "Destructive act"
 
-      for class <- ~w(bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90) do
+      for class <-
+            ~w(bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40) do
         assert html =~ class
       end
+
+      refute html =~ "shadow-xs"
     end
 
     test "It renders outline button correctly" do
@@ -61,7 +95,8 @@ defmodule SaladUI.ButtonTest do
       assert html =~ "phx-click=\"go\""
       assert html =~ "Outline act"
 
-      for class <- ~w(border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground) do
+      for class <-
+            ~w(border border-border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50) do
         assert html =~ class
       end
     end
@@ -77,9 +112,11 @@ defmodule SaladUI.ButtonTest do
       assert html =~ "phx-click=\"go\""
       assert html =~ "secondary act"
 
-      for class <- ~w(bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80) do
+      for class <- ~w(bg-secondary text-secondary-foreground hover:bg-secondary/80) do
         assert html =~ class
       end
+
+      refute html =~ "shadow-xs"
     end
 
     test "It renders ghost button correctly" do
@@ -93,7 +130,7 @@ defmodule SaladUI.ButtonTest do
       assert html =~ "phx-click=\"go\""
       assert html =~ "ghost act"
 
-      for class <- ~w(hover:bg-accent hover:text-accent-foreground) do
+      for class <- ~w(hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50) do
         assert html =~ class
       end
     end

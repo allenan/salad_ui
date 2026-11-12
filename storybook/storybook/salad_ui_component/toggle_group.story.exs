@@ -14,13 +14,13 @@ defmodule Storybook.SaladUIComponents.ToggleGroup do
         slots: [
           """
           <.toggle_group_item value="bold" builder={builder} aria-label="Toggle bold">
-          <.icon name="hero-bold" class="h-4 w-4" />
+          <.icon name="hero-bold" class="size-4" />
           </.toggle_group_item>
                     <.toggle_group_item value="italic" builder={builder} aria-label="Toggle italic">
-          <.icon name="hero-italic" class="h-4 w-4" />
+          <.icon name="hero-italic" class="size-4" />
           </.toggle_group_item>
           <.toggle_group_item value="underline" builder={builder} aria-label="Toggle underline">
-          <.icon name="hero-underline" class="h-4 w-4" />
+          <.icon name="hero-underline" class="size-4" />
           </.toggle_group_item>
 
           """
@@ -33,13 +33,13 @@ defmodule Storybook.SaladUIComponents.ToggleGroup do
         slots: [
           """
           <.toggle_group_item value="bold" builder={builder} aria-label="Toggle bold">
-          <.icon name="hero-bold" class="h-4 w-4" />
+          <.icon name="hero-bold" class="size-4" />
           </.toggle_group_item>
                     <.toggle_group_item value="italic" builder={builder} aria-label="Toggle italic">
-          <.icon name="hero-italic" class="h-4 w-4" />
+          <.icon name="hero-italic" class="size-4" />
           </.toggle_group_item>
           <.toggle_group_item value="underline" builder={builder} aria-label="Toggle underline">
-          <.icon name="hero-underline" class="h-4 w-4" />
+          <.icon name="hero-underline" class="size-4" />
           </.toggle_group_item>
 
           """
@@ -52,13 +52,13 @@ defmodule Storybook.SaladUIComponents.ToggleGroup do
         slots: [
           """
           <.toggle_group_item value="bold" builder={builder} aria-label="Toggle bold">
-          <.icon name="hero-bold" class="h-4 w-4" />
+          <.icon name="hero-bold" class="size-4" />
           </.toggle_group_item>
                     <.toggle_group_item value="italic" builder={builder} aria-label="Toggle italic">
-          <.icon name="hero-italic" class="h-4 w-4" />
+          <.icon name="hero-italic" class="size-4" />
           </.toggle_group_item>
           <.toggle_group_item value="underline" builder={builder} aria-label="Toggle underline">
-          <.icon name="hero-underline" class="h-4 w-4" />
+          <.icon name="hero-underline" class="size-4" />
           </.toggle_group_item>
 
           """

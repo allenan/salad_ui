@@ -46,7 +46,7 @@ defmodule SaladUI.Progress do
       <div
         class={
           classes([
-            "h-full w-full flex-1 bg-primary transition-all",
+            "size-full flex-1 bg-primary transition-all",
             @indeterminate && "animate-indeterminate-progress"
           ])
         }

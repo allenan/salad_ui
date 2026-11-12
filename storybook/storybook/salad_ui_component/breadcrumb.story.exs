@@ -37,7 +37,7 @@ defmodule Storybook.SaladUIComponents.Breadcrumb do
             <.breadcrumb_item>
               <.dropdown_menu id="breadcrumb-dropdown">
                 <.dropdown_menu_trigger class="flex items-center gap-1">
-                  <.breadcrumb_ellipsis class="h-4 w-4" />
+                  <.breadcrumb_ellipsis class="size-4" />
                   <span class="sr-only">toggle menu</span>
                 </.dropdown_menu_trigger>
                 <.dropdown_menu_content align="start">

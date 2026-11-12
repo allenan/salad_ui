@@ -267,7 +267,7 @@ defmodule SaladUI.Breadcrumb do
     <div
       class={
         classes([
-          "flex h-9 w-9 items-center justify-center",
+          "flex size-9 items-center justify-center",
           @class
         ])
       }
@@ -279,7 +279,7 @@ defmodule SaladUI.Breadcrumb do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="w-4 h-4"
+        class="size-4"
       >
         <path
           stroke-linecap="round"
