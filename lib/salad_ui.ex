@@ -75,6 +75,7 @@ defmodule SaladUI do
   ### Data Display
   - `table/1` - Data tables with sorting and selection
   - `chart/1` - Data visualization charts
+  - `code_block/1` - Code, terminal output and diffs with line numbers and a copy button
   - `avatar/1` - User profile images
   - `accordion/1` - Collapsible content sections
   - `kbd/1`, `kbd_group/1` - Keyboard keys and shortcuts
@@ -195,6 +196,7 @@ defmodule SaladUI do
       import SaladUI.Card
       import SaladUI.Chart
       import SaladUI.Checkbox
+      import SaladUI.CodeBlock
       import SaladUI.Collapsible
       import SaladUI.Dialog
       import SaladUI.DropdownMenu

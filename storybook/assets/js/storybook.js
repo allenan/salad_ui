@@ -19,6 +19,7 @@ import "salad_ui/components/dropdown_menu";
 import "salad_ui/components/chart";
 import "salad_ui/components/toast";
 import "salad_ui/components/toast-flash";
+import "salad_ui/components/code_block";
 
 // import * as Params from "./params";
 // import * as Uploaders from "./uploaders";

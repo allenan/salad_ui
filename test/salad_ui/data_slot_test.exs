@@ -159,6 +159,26 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
+  test "code block" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.code_block>
+               <.code_block_header>
+                 <.code_block_title>T</.code_block_title>
+                 <.code_block_actions>
+                   <.code_block_copy_button id="cb-copy" />
+                 </.code_block_actions>
+               </.code_block_header>
+               <.code_block_content code="a" line_numbers />
+               <.code_block_footer>F</.code_block_footer>
+             </.code_block>
+             """,
+             ~w(code-block code-block-header code-block-title code-block-actions code-block-copy-button code-block-content code-block-code code-block-line code-block-line-content code-block-footer)
+           ) == {[], []}
+  end
+
   test "checkbox" do
     assigns = %{name: "x"}
     assert check(~H"<.checkbox name={@name} />", ~w(checkbox)) == {[], []}
