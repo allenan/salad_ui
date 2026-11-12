@@ -66,6 +66,16 @@ defmodule SaladUI.Patcher.JSPatcherTest do
       assert JSPatcher.patch_js(patched, "", "SaladUI: SaladUI.SaladUIHook") == patched
     end
 
+    test "re-running with the same imports is a no-op" do
+      imports = ~s(import SaladUI from "salad_ui";\nimport "salad_ui/components/dialog";\n)
+      hooks = "SaladUI: SaladUI.SaladUIHook"
+
+      once = JSPatcher.patch_js(@phoenix_1_8_app_js, imports, hooks)
+
+      assert JSPatcher.patch_js(once, imports, hooks) == once
+      assert once |> String.split("salad_ui/components/dialog") |> length() == 2
+    end
+
     test "adds a hooks object to a const liveSocket with a trailing comma and no hooks" do
       js_content = """
       const liveSocket = new LiveSocket('/live', Socket, {
