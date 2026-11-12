@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, afterEach, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
+import { SaladUIHook } from "../salad_ui/core/hook.js";
 import "../salad_ui/components/carousel.js";
 import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
@@ -32,6 +33,7 @@ function buildCarousel({
   dir = null,
   itemAttrs = "",
   eventMappings = { select: "carousel_selected" },
+  hookExtras = {},
 } = {}) {
   // A test that builds twice must not leave the first instance's timers and
   // head <style> behind.
@@ -133,6 +135,7 @@ function buildCarousel({
     pushEventTo: (target, event, payload) =>
       pushed.push({ target, event, payload }),
     liveSocket: { execJS: () => {} },
+    ...hookExtras,
   };
 
   const component = registry.create("carousel", el, hookContext);
@@ -401,7 +404,7 @@ test("autoplay advances, wraps to the start, and stops on interaction", async ()
   const { component, prev, pushed } = buildCarousel({ items: 3, autoplay: 10 });
   const indexes = () => pushed.map(({ payload }) => payload.index).join(",");
 
-  await waitFor(() => indexes().startsWith("1,2,0"));
+  await waitFor(() => indexes().startsWith("0,1,2,0"));
 
   component.scrollTo(1);
   click(prev);
@@ -429,4 +432,185 @@ test("viewport is a polite live region unless autoplay is running", () => {
   assert.equal(auto.viewport.getAttribute("aria-live"), "off");
   auto.component.stopAutoplay();
   assert.equal(auto.viewport.getAttribute("aria-live"), "polite");
+});
+
+// A LiveView patch: morphdom resets what the JS wrote back to the server HTML
+// (buttons disabled, no data-selected-index, no slide labels), then the hook's
+// updated() runs.
+function patchFromServer(el) {
+  el.querySelectorAll('[data-part="previous"], [data-part="next"]').forEach(
+    (button) => {
+      button.disabled = true;
+    },
+  );
+  el.removeAttribute("data-selected-index");
+  el.removeAttribute("data-snap-count");
+  el.querySelectorAll('[data-part="item"]').forEach((item) => {
+    item.removeAttribute("aria-label");
+    item.removeAttribute("data-auto-label");
+  });
+}
+
+function hookFor(el, component) {
+  return { ...SaladUIHook, el, component, handleEvent() {} };
+}
+
+test("a LiveView patch keeps the live instance, its selection and autoplay stop", () => {
+  const { component, el, prev, next, pushed } = buildCarousel({
+    autoplay: 10_000,
+  });
+  click(next);
+  click(next);
+  assert.equal(component.autoplayStopped, true);
+  const pushes = pushed.length;
+
+  const hook = hookFor(el, component);
+  patchFromServer(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.destroyed, false);
+  assert.equal(component.selectedIndex, 2);
+  assert.equal(component.autoplayStopped, true);
+  assert.equal(prev.disabled, false);
+  assert.equal(next.disabled, false);
+  assert.equal(el.getAttribute("data-selected-index"), "2");
+  assert.equal(
+    el.querySelector('[data-part="item"]').getAttribute("aria-label"),
+    "1 of 5",
+  );
+  // Restoring state is not a new selection.
+  assert.equal(pushed.length, pushes);
+
+  // Next continues from slide 3, not from wherever a rebuild would guess.
+  click(next);
+  assert.equal(component.selectedIndex, 3);
+});
+
+test("a patch mid smooth-scroll does not reset the selection", async () => {
+  const { component, el, viewport, next, pushed } = buildCarousel();
+  // A smooth scroll that hasn't moved yet.
+  viewport.scrollTo = () => {};
+
+  click(next);
+  const hook = hookFor(el, component);
+  patchFromServer(el);
+  hook.updated();
+  click(next);
+
+  assert.equal(component.selectedIndex, 2);
+  assert.deepEqual(
+    pushed.map(({ payload }) => payload.index),
+    [0, 1, 2],
+  );
+});
+
+test("slides streamed in are relabelled, keeping a caller's own label", () => {
+  const { component, el } = buildCarousel({ items: 2 });
+  const content = el.querySelector('[data-part="content"]');
+  content.insertAdjacentHTML(
+    "beforeend",
+    '<div data-part="item">3</div><div data-part="item" aria-label="Last">4</div>',
+  );
+
+  // Streamed containers don't re-patch existing children, so their old
+  // "n of 2" labels are still there.
+  const hook = hookFor(el, component);
+  hook.updated();
+
+  const labels = [...el.querySelectorAll('[data-part="item"]')].map((item) =>
+    item.getAttribute("aria-label"),
+  );
+  assert.deepEqual(labels, ["1 of 4", "2 of 4", "3 of 4", "Last"]);
+});
+
+test("a patch that changes the options rebuilds the component", () => {
+  const { component, el } = buildCarousel();
+  const hook = hookFor(el, component);
+
+  el.setAttribute("data-options", JSON.stringify({ loop: true }));
+  hook.updated();
+
+  assert.equal(component.destroyed, true);
+  assert.notEqual(hook.component, component);
+  assert.equal(hook.component.options.loop, true);
+  current = { component: hook.component };
+});
+
+test("arrow keys with a modifier are left to the browser", () => {
+  const { component, el } = buildCarousel();
+
+  const event = new window.KeyboardEvent("keydown", {
+    key: "ArrowRight",
+    altKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  el.dispatchEvent(event);
+
+  assert.equal(event.defaultPrevented, false);
+  assert.equal(component.selectedIndex, 0);
+});
+
+test("mount reports the starting slide and the snap count", () => {
+  // Three 50px slides in a 100px viewport: two snap positions, not three.
+  const { pushed } = buildCarousel({ items: 3, itemSize: 50 });
+
+  assert.equal(pushed.length, 1);
+  assert.equal(pushed[0].payload.index, 0);
+  assert.equal(pushed[0].payload.count, 2);
+});
+
+test("select is pushed again when the snap count changes", () => {
+  const { component, el, pushed } = buildCarousel({ items: 3 });
+  const content = el.querySelector('[data-part="content"]');
+  const before = pushed.length;
+
+  // A stream inserts a slide (it has no layout in the DOM shim, so give it
+  // one after the existing slides).
+  content.insertAdjacentHTML("beforeend", '<div data-part="item">4</div>');
+  const added = content.lastElementChild;
+  added.getBoundingClientRect = () => ({
+    left: 300 - component.scrollPosition(),
+    right: 400 - component.scrollPosition(),
+    top: 0,
+    bottom: 100,
+    width: 100,
+    height: 100,
+  });
+  Object.defineProperty(component.viewport, "scrollWidth", {
+    configurable: true,
+    get: () => 400,
+  });
+
+  hookFor(el, component).updated();
+
+  assert.equal(pushed.length, before + 1);
+  assert.deepEqual(
+    { index: pushed.at(-1).payload.index, count: pushed.at(-1).payload.count },
+    { index: 0, count: 4 },
+  );
+
+  // Nothing changed: no new event.
+  hookFor(el, component).updated();
+  assert.equal(pushed.length, before + 1);
+});
+
+test("asks LiveView to keep the button state it writes", () => {
+  const ignored = [];
+  const { el, prev, next } = buildCarousel({
+    hookExtras: {
+      js: () => ({
+        ignoreAttributes: (target, attrs) => ignored.push([target, attrs]),
+      }),
+    },
+  });
+
+  const find = (target) => ignored.find(([el]) => el === target)?.[1];
+  assert.deepEqual(find(prev), ["disabled"]);
+  assert.deepEqual(find(next), ["disabled"]);
+  assert.deepEqual(find(el), ["data-selected-index", "data-snap-count"]);
+  assert.deepEqual(find(el.querySelector('[data-part="viewport"]')), [
+    "aria-live",
+  ]);
 });

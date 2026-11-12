@@ -12,6 +12,11 @@ import SaladUI from "../index.js";
 // Scroll events stop this long before the position counts as settled.
 const SETTLE_DELAY = 100;
 
+// The base class leaves slides out of allParts (they come and go with
+// streams); skipReinitialize() compares the remaining parts the same way.
+const isSlidePart = (el) =>
+  el.dataset.part.startsWith("item") || el.dataset.part.endsWith("-item");
+
 class CarouselComponent extends Component {
   constructor(el, hookContext) {
     super(el, { hookContext });
@@ -21,6 +26,8 @@ class CarouselComponent extends Component {
 
     this.snaps = [];
     this.selectedIndex = 0;
+    // The { index, count } last sent as a `select` event.
+    this.reported = null;
     this.settleTimer = null;
     this.autoplayTimer = null;
     this.autoplayStopped = false;
@@ -121,15 +128,72 @@ class CarouselComponent extends Component {
     this.stopAutoplayTimer();
   }
 
+  // A LiveView patch (e.g. an on-select handler re-rendering "Slide x of y",
+  // or slides streamed in) strips what this component wrote to the DOM: the
+  // buttons' enabled state, the root's data-selected-index and the slide
+  // labels. Re-apply them on the live instance instead of rebuilding it, so
+  // the selected snap, an in-flight smooth scroll and the autoplay
+  // stopped/paused state all survive the patch. Rebuild only when the
+  // options, event mappings or the non-slide parts themselves changed.
+  skipReinitialize(el) {
+    if (
+      el.getAttribute("data-options") !== this._optionsRaw ||
+      el.getAttribute("data-event-mappings") !== this._eventMappingsRaw
+    ) {
+      return false;
+    }
+
+    const parts = this.queryParts().filter((part) => !isSlidePart(part));
+    if (
+      parts.length !== this.allParts.length ||
+      parts.some((part) => !this.allParts.includes(part))
+    ) {
+      return false;
+    }
+
+    this.refresh();
+    return true;
+  }
+
+  refresh() {
+    this.labelSlides();
+    this.applySnapMargins();
+    this.measure();
+    this.updateUI();
+    this.select(Math.min(this.selectedIndex, Math.max(0, this.count() - 1)));
+  }
+
   afterMount() {
     this.labelSlides();
     this.applySnapMargins();
     this.measure();
     // Re-mounts after a LiveView patch keep the scroll position, so start
     // from wherever the viewport already is.
-    this.selectedIndex = this.nearestSnap();
-    this.updateControls();
+    // Report the starting slide and snap count once, like shadcn's onSelect
+    // wiring (called on init and on reInit), so a server rendering
+    // "Slide x of y" learns the real count (fewer snaps than slides when
+    // several are in view).
+    this.select(this.nearestSnap());
+    this.keepAttributesOnPatch();
     this.startAutoplay();
+  }
+
+  /**
+   * LiveView resets attributes this component writes back to the server
+   * render on every patch. For `disabled` that is harmful: re-disabling the
+   * Next button a keyboard user just pressed (when an on-select handler
+   * re-renders) drops their focus. Tell LiveView to keep the live values;
+   * skipReinitialize() -> refresh() re-applies everything else.
+   */
+  keepAttributesOnPatch() {
+    const js = this.hook?.js?.();
+    if (typeof js?.ignoreAttributes !== "function") return;
+
+    [...this.getAllParts("previous"), ...this.getAllParts("next")].forEach(
+      (button) => js.ignoreAttributes(button, ["disabled"]),
+    );
+    js.ignoreAttributes(this.el, ["data-selected-index", "data-snap-count"]);
+    if (this.viewport) js.ignoreAttributes(this.viewport, ["aria-live"]);
   }
 
   // --- measuring -----------------------------------------------------------
@@ -141,12 +205,19 @@ class CarouselComponent extends Component {
     );
   }
 
+  // Labels this component wrote carry data-auto-label, so they are rewritten
+  // when the slide count changes (slides kept by phx-update="stream" are not
+  // re-patched and would otherwise keep a stale "n of m"), while a caller's
+  // own aria-label/aria-labelledby is left alone.
   labelSlides() {
     const items = this.getItems();
     items.forEach((item, index) => {
-      if (item.hasAttribute("aria-label")) return;
-      if (item.hasAttribute("aria-labelledby")) return;
+      if (!item.hasAttribute("data-auto-label")) {
+        if (item.hasAttribute("aria-label")) return;
+        if (item.hasAttribute("aria-labelledby")) return;
+      }
       item.setAttribute("aria-label", `${index + 1} of ${items.length}`);
+      item.setAttribute("data-auto-label", "");
     });
   }
 
@@ -350,13 +421,18 @@ class CarouselComponent extends Component {
     return !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
   }
 
+  // Pushes `select` when the selected snap or the number of snaps changed
+  // (Embla's select + reInit): a resize that changes slides per view or
+  // slides streamed in/out keep a server-rendered "Slide x of y" right.
   select(index) {
-    const changed = index !== this.selectedIndex;
+    const count = this.count();
     this.selectedIndex = index;
     this.updateControls();
-    if (changed) {
-      this.pushEvent("select", { index, count: this.count() });
+    if (this.reported?.index === index && this.reported?.count === count) {
+      return;
     }
+    this.reported = { index, count };
+    this.pushEvent("select", { index, count });
   }
 
   updateControls() {
@@ -378,6 +454,9 @@ class CarouselComponent extends Component {
   }
 
   handleArrowKey(event, key) {
+    // Leave Alt+Left (history back), Cmd/Ctrl+Arrow etc. to the browser.
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+
     const target = event.target;
     if (
       target?.closest?.(
@@ -432,6 +511,7 @@ class CarouselComponent extends Component {
   onResize() {
     if (this.destroyed) return;
     this.applySnapMargins();
+    this.labelSlides();
     this.measure();
     const index = Math.min(this.selectedIndex, Math.max(0, this.count() - 1));
     this.select(index);

@@ -62,6 +62,17 @@ defmodule SaladUI.Carousel do
         <.carousel_next />
       </.carousel>
 
+  ## Streams
+
+  Attributes on `carousel_content/1` go on the track that holds the slides,
+  so it can be a stream container. LiveView patches (including slides
+  streamed in or out) keep the selected slide, button state and autoplay
+  state; slide labels are renumbered.
+
+      <.carousel_content id="photos" phx-update="stream">
+        <.carousel_item :for={{dom_id, photo} <- @streams.photos} id={dom_id}>...</.carousel_item>
+      </.carousel_content>
+
   ## Options
 
   * `align` - Where a slide snaps inside the viewport: `"start"` (default),
@@ -87,10 +98,13 @@ defmodule SaladUI.Carousel do
 
   ## Component events
 
-  * `:on-select` - Maps the `select` event. Fired when the selected slide
-    changes, with `%{"index" => index, "count" => count}` (`index` is
-    zero-based; `count` is the number of snap positions). The root also
-    carries `data-selected-index` and `data-snap-count` for CSS or client JS.
+  * `:on-select` - Maps the `select` event, with
+    `%{"index" => index, "count" => count}` (`index` is zero-based; `count` is
+    the number of snap positions, fewer than the slides when several are in
+    view). Fired once on mount, then whenever the selected slide or the snap
+    count changes (a resize or slides streamed in/out), like shadcn's
+    `onSelect` on Embla's `select` and `reInit`. The root also carries
+    `data-selected-index` and `data-snap-count` for CSS or client JS.
 
   ## Server commands
 
@@ -119,7 +133,7 @@ defmodule SaladUI.Carousel do
 
   ## Component events
 
-  * `:on-select` - Fired when the selected slide changes, with `index` (zero-based) and `count`.
+  * `:on-select` - Fired on mount and when the selected slide or snap count changes, with `index` (zero-based) and `count`.
   """
   attr :id, :string, required: true, doc: "Unique identifier for the carousel"
 
