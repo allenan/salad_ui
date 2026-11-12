@@ -134,6 +134,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/dialog.js";
     import "./ui/components/drawer.js";
     import "./ui/components/select.js";
+    import "./ui/components/combobox.js";
     import "./ui/components/tabs.js";
     import "./ui/components/carousel.js";
     import "./ui/components/radio_group.js";

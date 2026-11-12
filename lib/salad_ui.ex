@@ -46,6 +46,7 @@ defmodule SaladUI do
   - `checkbox/1` - Binary choice inputs
   - `radio_group/1` - Single choice from multiple options
   - `select/1` - Dropdown selection menus
+  - `combobox/1` - Autocomplete input with a filtered list, single or multiple (chips)
   - `native_select/1` - Styled native `<select>` with options and optgroups
   - `slider/1` - Range value selection
   - `calendar/1` - Month grid for picking a date, dates or a range
@@ -221,6 +222,7 @@ defmodule SaladUI do
       import SaladUI.Checkbox
       import SaladUI.CodeBlock
       import SaladUI.Collapsible
+      import SaladUI.Combobox
       import SaladUI.ContextMenu
 
       import SaladUI.DataTable,
