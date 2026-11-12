@@ -182,6 +182,7 @@ defmodule Mix.Tasks.Salad.Setup do
   import "salad_ui/components/dialog";
   import "salad_ui/components/select";
   import "salad_ui/components/tabs";
+  import "salad_ui/components/carousel";
   import "salad_ui/components/radio_group";
   import "salad_ui/components/popover";
   import "salad_ui/components/hover-card";

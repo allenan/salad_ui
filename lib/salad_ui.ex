@@ -79,6 +79,7 @@ defmodule SaladUI do
   - `accordion/1` - Collapsible content sections
   - `kbd/1`, `kbd_group/1` - Keyboard keys and shortcuts
   - `typography_h1/1`, `typography_p/1`, ... - Headings, paragraphs, lists and text styles
+  - `carousel/1` - Scroll-snapping slide carousels
 
   ### Utility
   - `toggle/1`, `toggle_group/1` - Toggle controls and groups
@@ -195,6 +196,7 @@ defmodule SaladUI do
       import SaladUI.Breadcrumb
       import SaladUI.Button
       import SaladUI.Card
+      import SaladUI.Carousel
       import SaladUI.Chart
       import SaladUI.Checkbox
       import SaladUI.Collapsible

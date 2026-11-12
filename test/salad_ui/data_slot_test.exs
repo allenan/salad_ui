@@ -148,6 +148,23 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
+  test "carousel" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.carousel id="c">
+               <.carousel_content>
+                 <.carousel_item>1</.carousel_item>
+               </.carousel_content>
+               <.carousel_previous />
+               <.carousel_next />
+             </.carousel>
+             """,
+             ~w(carousel carousel-content carousel-item carousel-previous carousel-next)
+           ) == {[], []}
+  end
+
   test "chart" do
     assigns = %{}
 
