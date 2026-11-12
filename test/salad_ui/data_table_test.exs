@@ -171,6 +171,8 @@ defmodule SaladUI.DataTableTest do
       assert {[%{amount: 242}], 3} = DataTable.run(@payments, DataTable.set_page(t, 2))
       # a page past the end is clamped to the last page
       assert {[%{amount: 242}], 3} = DataTable.run(@payments, DataTable.set_page(t, 7))
+      # and clamp_page brings the state in line, so the pager agrees
+      assert DataTable.clamp_page(DataTable.set_page(t, 7), 3).page == 2
     end
   end
 
@@ -267,6 +269,26 @@ defmodule SaladUI.DataTableTest do
       assert t.filters == %{email: "a"}
       assert MapSet.to_list(t.hidden) == [:status]
       assert {t.page, t.page_size} == {1, 10}
+    end
+
+    test "from_params ignores nested or list values instead of raising" do
+      # ?filter[email][x]=1&filter[status][]=a&sort[]=email&dir[x]=asc&hide[]=status
+      t =
+        DataTable.from_params(
+          %{
+            "filter" => %{"email" => %{"x" => "1"}, "status" => ["a"], "amount" => "3"},
+            "sort" => ["email"],
+            "dir" => %{"x" => "asc"},
+            "hide" => ["status"],
+            "page" => %{"n" => "2"}
+          },
+          columns: [:status, :email, :amount]
+        )
+
+      assert t.filters == %{amount: "3"}
+      assert t.sort == nil
+      assert MapSet.size(t.hidden) == 0
+      assert t.page == 1
     end
   end
 

@@ -58,5 +58,20 @@ defmodule SaladUI.CheckboxTest do
       refute html =~ "data-component"
       refute html =~ "data-indeterminate"
     end
+
+    test "disabled is passed to the input, as for an empty select-all" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="select-all" indeterminate={false} disabled={true} />
+        <.checkbox id="other" disabled={false} />
+        """)
+
+      [select_all, other] = ~r/<input type="checkbox"[^>]*>/ |> Regex.scan(html) |> List.flatten()
+      assert select_all =~ ~s(id="select-all") and select_all =~ ~r/\sdisabled[\s>]/
+      assert other =~ ~s(id="other")
+      refute other =~ ~r/\sdisabled[\s>]/
+    end
   end
 end

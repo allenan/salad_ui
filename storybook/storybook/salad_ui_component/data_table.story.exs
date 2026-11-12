@@ -86,6 +86,7 @@ defmodule Storybook.SaladUIComponents.DataTable do
                   id="data-table-select-all"
                   value={@select_all == true}
                   indeterminate={@select_all == :indeterminate}
+                  disabled={@page_rows == []}
                   phx-click="toggle_all"
                   aria-label="Select all"
                 />

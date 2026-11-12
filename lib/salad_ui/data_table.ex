@@ -67,14 +67,12 @@ defmodule SaladUI.DataTable do
         end
 
         def handle_event("toggle_row", %{"id" => id}, socket) do
-          table = DataTable.toggle_row(socket.assigns.table, id)
-          row = Enum.find(socket.assigns.page_rows, &(to_string(&1.id) == id))
+          socket = assign(socket, :table, DataTable.toggle_row(socket.assigns.table, id))
 
-          {:noreply,
-           socket
-           |> assign(:table, table)
-           |> assign_counts()
-           |> stream_insert(:payments, row)}
+          case Enum.find(socket.assigns.page_rows, &(to_string(&1.id) == id)) do
+            nil -> {:noreply, socket}
+            row -> {:noreply, stream_insert(socket, :payments, row)}
+          end
         end
 
         defp update_table(socket, fun) do
@@ -85,6 +83,9 @@ defmodule SaladUI.DataTable do
           {rows, total} = DataTable.run(Payments.list(), socket.assigns.table)
 
           socket
+          # run/3 returns the last page when the page is past the end (after a
+          # filter or a stale URL); clamp the state so the pager agrees.
+          |> assign(table: DataTable.clamp_page(socket.assigns.table, total))
           |> assign(page_rows: rows, total: total)
           |> stream(:payments, rows, reset: true)
         end
@@ -121,13 +122,16 @@ defmodule SaladUI.DataTable do
       </.table_body>
 
   The select-all checkbox uses `select_all_state/2` with the checkbox's
-  `indeterminate` attribute:
+  `indeterminate` attribute. Disable it when the page is empty: clicking it
+  then changes nothing on the server, so no patch would undo the browser's
+  own toggle.
 
       <% state = DataTable.select_all_state(@table, Enum.map(@page_rows, & &1.id)) %>
       <.checkbox
         id="select-all"
         value={state == true}
         indeterminate={state == :indeterminate}
+        disabled={@page_rows == []}
         phx-click="toggle_all"
         aria-label="Select all"
       />
@@ -301,7 +305,10 @@ defmodule SaladUI.DataTable do
   defp merge_sort_param(table, column, dir), do: sort(table, column, dir || "asc")
 
   defp merge_filter_param(table, filters) when is_map(filters) do
-    Enum.reduce(filters, table, fn {column, value}, acc -> put_filter(acc, column, value) end)
+    Enum.reduce(filters, table, fn
+      {column, value}, acc when is_binary(value) -> put_filter(acc, column, value)
+      _malformed, acc -> acc
+    end)
   end
 
   defp merge_filter_param(table, _filters), do: table
@@ -616,6 +623,10 @@ defmodule SaladUI.DataTable do
   @doc """
   Filters, sorts and paginates `rows` in memory. Returns `{page_rows, total}`
   where `total` is the number of rows that pass the filters.
+
+  When the table's page is past the last page (a filter shrank the rows, or a
+  URL named a page that no longer exists) the last page is returned; call
+  `clamp_page(table, total)` to bring the state in line.
 
   ## Options
 
@@ -1068,7 +1079,9 @@ defmodule SaladUI.DataTable do
   end
 
   defp compare(%mod{} = a, %mod{} = b) do
-    if function_exported?(mod, :compare, 2), do: mod.compare(a, b), else: term_compare(a, b)
+    if Code.ensure_loaded?(mod) and function_exported?(mod, :compare, 2),
+      do: mod.compare(a, b),
+      else: term_compare(a, b)
   end
 
   defp compare(a, b) when is_binary(a) and is_binary(b) do
