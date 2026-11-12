@@ -266,6 +266,12 @@ class Component {
     const actionElement = event.target.closest("[data-action]");
     if (!actionElement) return;
 
+    // A nested component (e.g. a collapsible row inside another collapsible,
+    // or a dialog trigger inside a collapsible) owns its own actions; the
+    // click still bubbles up here, so skip actions that belong to it.
+    const owner = actionElement.closest("[data-component]");
+    if (owner && owner !== this.el) return;
+
     const action = actionElement.getAttribute("data-action");
     this.transition(action, {
       originalEvent: event,

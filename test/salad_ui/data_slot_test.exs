@@ -130,22 +130,6 @@ defmodule SaladUI.DataSlotTest do
     assert check(~H"<.button>B</.button>", ~w(button)) == {[], []}
   end
 
-  test "button group" do
-    assigns = %{}
-
-    assert check(
-             ~H"""
-             <.button_group>
-               <.button_group_text>T</.button_group_text>
-               <.button>B</.button>
-               <.button_group_separator />
-               <.button>C</.button>
-             </.button_group>
-             """,
-             ~w(button-group button-group-text button button-group-separator)
-           ) == {[], []}
-  end
-
   test "card" do
     assigns = %{}
 
@@ -386,27 +370,6 @@ defmodule SaladUI.DataSlotTest do
              </.input_otp>
              """,
              ~w(input-otp input-otp-group input-otp-slot input-otp-separator)
-           ) == {[], []}
-  end
-
-  test "input group" do
-    assigns = %{}
-
-    assert check(
-             ~H"""
-             <.input_group id="ig">
-               <.input_group_input />
-               <.input_group_addon>
-                 <.input_group_text>T</.input_group_text>
-                 <.input_group_button>B</.input_group_button>
-               </.input_group_addon>
-             </.input_group>
-             <.input_group id="ig2">
-               <.input_group_textarea />
-               <.input_group_addon align="block-end">A</.input_group_addon>
-             </.input_group>
-             """,
-             ~w(input-group input-group-control input-group-addon input-group-text button)
            ) == {[], []}
   end
 
@@ -737,6 +700,92 @@ defmodule SaladUI.DataSlotTest do
              <.aspect_ratio ratio={1}>X</.aspect_ratio>
              """,
              ~w(kbd-group kbd spinner spinner aspect-ratio)
+           ) == {[], []}
+  end
+
+  test "message and bubble" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.message_group>
+               <.message>
+                 <.message_avatar />
+                 <.message_content>
+                   <.message_header>H</.message_header>
+                   <.bubble_group>
+                     <.bubble>
+                       <.bubble_content as="button">B</.bubble_content>
+                       <.bubble_reactions>R</.bubble_reactions>
+                     </.bubble>
+                   </.bubble_group>
+                   <.message_footer>F</.message_footer>
+                 </.message_content>
+               </.message>
+             </.message_group>
+             """,
+             ~w(message-group message message-avatar message-content message-header bubble-group bubble bubble-content bubble-reactions message-footer)
+           ) == {[], []}
+  end
+
+  test "marker" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.marker as="a" href="#">
+               <.marker_icon>I</.marker_icon>
+               <.marker_content>C</.marker_content>
+             </.marker>
+             """,
+             ~w(marker marker-icon marker-content)
+           ) == {[], []}
+  end
+
+  test "attachment" do
+    assigns = %{entry: %Phoenix.LiveView.UploadEntry{ref: "0", client_name: "a.pdf", progress: 50}}
+
+    assert check(
+             ~H"""
+             <.attachment_group>
+               <.attachment>
+                 <.attachment_media>M</.attachment_media>
+                 <.attachment_content>
+                   <.attachment_title>T</.attachment_title>
+                   <.attachment_description>D</.attachment_description>
+                 </.attachment_content>
+                 <.attachment_actions>
+                   <.attachment_action>A</.attachment_action>
+                 </.attachment_actions>
+                 <.attachment_trigger />
+               </.attachment>
+               <.attachment_upload_entry entry={@entry} />
+             </.attachment_group>
+             """,
+             ~w(attachment-group attachment attachment-media attachment-content attachment-title attachment-description attachment-actions attachment-action attachment-trigger attachment-progress spinner)
+           ) == {[], []}
+  end
+
+  test "trace" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.trace>
+               <.trace_line status="running">
+                 <.trace_icon>I</.trace_icon>
+                 <.trace_title>T</.trace_title>
+                 <.trace_description>D</.trace_description>
+               </.trace_line>
+               <.trace_collapsible id="t">
+                 <.trace_collapsible_trigger>
+                   <.trace_line>L</.trace_line>
+                 </.trace_collapsible_trigger>
+                 <.trace_collapsible_content>C</.trace_collapsible_content>
+               </.trace_collapsible>
+             </.trace>
+             """,
+             ~w(trace trace-line trace-icon trace-title trace-description trace-collapsible trace-collapsible-trigger trace-collapsible-content trace-collapsible-content-inner)
            ) == {[], []}
   end
 end

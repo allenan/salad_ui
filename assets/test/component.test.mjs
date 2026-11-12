@@ -182,6 +182,19 @@ test("handleActionClick(): clicking a [data-action] element triggers the matchin
   assert.equal(component.state, "closed");
 });
 
+test("handleActionClick(): ignores actions that belong to a nested component (regression)", () => {
+  const { component, el } = buildComponent();
+  component.setupEvents();
+
+  const nested = document.createElement("div");
+  nested.setAttribute("data-component", "collapsible");
+  nested.innerHTML = '<button data-action="open"><span>inner</span></button>';
+  el.appendChild(nested);
+
+  click(nested.querySelector("span"));
+  assert.equal(component.state, "closed");
+});
+
 test("setupEvents() does not accumulate duplicate click listeners across repeated calls (regression)", () => {
   const { component, elements } = buildComponent();
   const calls = [];

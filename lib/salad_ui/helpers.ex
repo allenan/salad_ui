@@ -314,13 +314,11 @@ defmodule SaladUI.Helpers do
   def dynamic(assigns) do
     name = assigns[:tag] || "div"
 
-    # Only `tag_name`: LiveView >= 1.0 renders an assigned `name` as an HTML
-    # attribute, so a `name` here would leak as `name="div"` (and clobber a
-    # caller's real `name`).
     assigns =
       assigns
       |> Map.delete(:tag)
       |> assign(:tag_name, name)
+      |> assign(:name, name)
 
     dynamic_tag(assigns)
   end
