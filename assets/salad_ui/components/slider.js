@@ -52,6 +52,11 @@ class SliderComponent extends Component {
 
     this.parseValues();
 
+    // Last value the server rendered. A LiveView patch that re-renders the
+    // same value must not throw away what the user picked since (see
+    // skipReinitialize); a different value is a deliberate server update.
+    this._serverValue = this.el.dataset.value;
+
     // Index of the thumb being dragged / last changed.
     this.activeIndex = 0;
 
@@ -444,6 +449,45 @@ class SliderComponent extends Component {
       thumb.style[edge] = `calc(${pct}% + ${offset}px)`;
       thumb.style.transform = THUMB_TRANSFORM[edge];
     });
+  }
+
+  // ---- LiveView patches ----------------------------------------------------
+
+  /**
+   * A LiveView patch reverts the attributes this component wrote (data-value,
+   * thumb/range styles, aria-valuenow, hidden input values) to whatever the
+   * server rendered. When the server still renders the value it rendered last
+   * time (it never stored the user's pick, e.g. a static `value={50}` with an
+   * unrelated re-render) and the markup is otherwise unchanged, keep this
+   * instance and re-apply the current values, so the slider does not jump
+   * back and an in-progress drag survives. A new server value, new options,
+   * or a different thumb count rebuilds the component from the server state.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (el.dataset.options !== this._optionsRaw) return false;
+    if (el.dataset.eventMappings !== this._eventMappingsRaw) return false;
+    if (!this.sameParts(el)) return false;
+    if (el.dataset.value !== this._serverValue && this.state !== "dragging") {
+      return false;
+    }
+
+    this.updateUI();
+    this.syncDom();
+    return true;
+  }
+
+  sameParts(el) {
+    const thumbs = el.querySelectorAll('[data-part="thumb"]');
+    const inputs = el.querySelectorAll(':scope > input[type="hidden"]');
+    return (
+      el.querySelector('[data-part="track"]') === this.track &&
+      el.querySelector('[data-part="range"]') === this.range &&
+      thumbs.length === this.thumbs.length &&
+      Array.from(thumbs).every((thumb, i) => thumb === this.thumbs[i]) &&
+      inputs.length === this.inputs.length &&
+      Array.from(inputs).every((input, i) => input === this.inputs[i])
+    );
   }
 
   // ---- Commands ------------------------------------------------------------

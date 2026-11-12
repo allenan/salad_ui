@@ -151,6 +151,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/toast.js";
     import "./ui/components/toast-flash.js";
     import "./ui/components/input_group.js";
+    import "./ui/components/code_block.js";
     """
 
     js_hooks = "SaladUI: SaladUI.SaladUIHook"
