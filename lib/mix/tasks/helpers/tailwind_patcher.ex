@@ -42,11 +42,13 @@ defmodule SaladUI.Patcher.TailwindPatcher do
   # entirely client-constructed) rather than embedding them in HEEx like
   # every other component — without this source, Tailwind never sees those
   # class strings and the toast ships with no styling or transitions.
+  # Ties `dark:` to an explicit class/attribute instead of the OS-level
+  # prefers-color-scheme media query, matching how the color tokens switch.
+  # Covers both the shadcn convention (`.dark`) and Phoenix 1.8's generated
+  # theme toggle (`data-theme="dark"`).
+  @dark_variant ~s{@custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));}
+
   @directives [
-    # Ties `dark:` to a `.dark` class instead of the OS-level
-    # prefers-color-scheme media query, matching how the color tokens below
-    # already switch.
-    ~s{@custom-variant dark (&:where(.dark, .dark *));},
     ~s(@source "../js";),
     ~s(@source "../../lib";),
     ~s(@source "../../deps/salad_ui/lib";),
@@ -64,11 +66,43 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     File.write!(css_path, new_content)
   end
 
+  @doc """
+  Injects a color scheme (contents of `priv/static/assets/colors/<scheme>.css`)
+  into `css_path` inside `@layer base`, together with shadcn's base border /
+  outline defaults. Idempotent: does nothing if a scheme is already present.
+  """
+  def patch_color_scheme(css_path, scheme_css) do
+    content = File.read!(css_path)
+
+    if String.contains?(content, "--sidebar-ring:") do
+      :ok
+    else
+      File.write!(css_path, append_block(content, color_scheme_block(scheme_css)))
+    end
+  end
+
+  @doc false
+  def color_scheme_block(scheme_css) do
+    # Dark tokens apply for `.dark` (shadcn) and `data-theme="dark"` (Phoenix 1.8).
+    scheme_css = String.replace(scheme_css, ~r/^\.dark\s*\{/m, ~s(.dark,\n[data-theme="dark"] {))
+
+    """
+    @layer base {
+    #{String.trim(scheme_css)}
+
+      * {
+        @apply border-border outline-ring/50;
+      }
+    }
+    """
+  end
+
   defp update_content(content, _opts) do
     content
     |> replace_v3_imports()
     |> ensure_tailwind_import()
     |> ensure_theme()
+    |> ensure_dark_variant()
     |> ensure_directives()
   end
 
@@ -80,8 +114,10 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     )
   end
 
+  # Phoenix 1.8 generates `@import "tailwindcss" source(none);`, so match any
+  # import of the bare "tailwindcss" entrypoint, with or without modifiers.
   defp ensure_tailwind_import(content) do
-    if String.contains?(content, ~s(@import "tailwindcss";)) do
+    if Regex.match?(~r/@import\s+["']tailwindcss["'][^;]*;/, content) do
       content
     else
       ~s(@import "tailwindcss";) <> "\n" <> content
@@ -93,6 +129,18 @@ defmodule SaladUI.Patcher.TailwindPatcher do
       content
     else
       append_block(content, @theme_block)
+    end
+  end
+
+  # Replace any existing `dark` variant (Phoenix 1.8 ships a data-theme-only
+  # one) rather than adding a second, conflicting definition.
+  defp ensure_dark_variant(content) do
+    existing = ~r/@custom-variant\s+dark\s*\([^;]*\);/
+
+    if Regex.match?(existing, content) do
+      Regex.replace(existing, content, @dark_variant, global: false)
+    else
+      append_block(content, @dark_variant)
     end
   end
 
