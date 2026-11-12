@@ -53,9 +53,50 @@ defmodule Storybook.SaladUIComponents.Button do
         ]
       },
       %VariationGroup{
-        id: :colors,
-        description: "Color variations with `variant` attribute.",
-        variations: []
+        id: :sizes,
+        description: "Sizes with the `size` attribute, including shadcn v4's `xs` and `icon-*` sizes.",
+        variations: [
+          %Variation{
+            id: :size_xs,
+            attributes: %{size: "xs", variant: "outline"},
+            slots: ["Extra small"]
+          },
+          %Variation{
+            id: :size_sm,
+            attributes: %{size: "sm", variant: "outline"},
+            slots: ["Small"]
+          },
+          %Variation{
+            id: :size_default,
+            attributes: %{size: "default", variant: "outline"},
+            slots: ["Default"]
+          },
+          %Variation{
+            id: :size_lg,
+            attributes: %{size: "lg", variant: "outline"},
+            slots: ["Large"]
+          },
+          %Variation{
+            id: :size_icon_xs,
+            attributes: %{size: "icon-xs", variant: "outline"},
+            slots: ["+"]
+          },
+          %Variation{
+            id: :size_icon_sm,
+            attributes: %{size: "icon-sm", variant: "outline"},
+            slots: ["+"]
+          },
+          %Variation{
+            id: :size_icon,
+            attributes: %{size: "icon", variant: "outline"},
+            slots: ["+"]
+          },
+          %Variation{
+            id: :size_icon_lg,
+            attributes: %{size: "icon-lg", variant: "outline"},
+            slots: ["+"]
+          }
+        ]
       },
       %Variation{
         id: :custom_class,

@@ -21,14 +21,14 @@ defmodule SaladUI.InvalidStateTest do
 
   @invalid_classes ~w(aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40)
 
-  defp field(errors, value \\ nil) do
+  defp field(errors, value \\ nil, params \\ %{"email" => ""}) do
     %FormField{
       id: "user_email",
       name: "user[email]",
       value: value,
       errors: errors,
       field: :email,
-      form: %Phoenix.HTML.Form{}
+      form: %Phoenix.HTML.Form{params: params}
     }
   end
 
@@ -40,6 +40,42 @@ defmodule SaladUI.InvalidStateTest do
       assert Helpers.invalid?(%{errors: ["can't be blank"]})
       refute Helpers.invalid?(%{errors: []})
       refute Helpers.invalid?(%{})
+    end
+  end
+
+  describe "used_input? filtering" do
+    test "errors on an input the user has not touched don't mark it invalid" do
+      untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
+      assigns = %{field: untouched}
+      html = rendered_to_string(~H"<.input field={@field} />")
+
+      refute html =~ ~s(aria-invalid=")
+    end
+
+    test "errors on a field missing from the params don't mark it invalid" do
+      assigns = %{field: field([{"can't be blank", []}], nil, %{})}
+      html = rendered_to_string(~H"<.checkbox field={@field} />")
+
+      refute html =~ ~s(aria-invalid=")
+    end
+
+    test "a select on an untouched field is not data-invalid" do
+      untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
+      assigns = %{field: untouched}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit">
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      refute html =~ "data-invalid"
+    end
+
+    test "invalid?/1 without :used_input (no field) still reads errors" do
+      assert Helpers.invalid?(%{errors: ["bad"]})
+      refute Helpers.invalid?(%{errors: ["bad"], used_input: false})
     end
   end
 
@@ -128,6 +164,22 @@ defmodule SaladUI.InvalidStateTest do
       assert html =~ "focus:ring-offset-0"
       assert html =~ "bg-transparent"
     end
+
+    test "replaces the @tailwindcss/forms white tick with a currentColor indicator" do
+      assigns = %{}
+      html = rendered_to_string(~H|<.checkbox name="terms" />|)
+
+      for class <-
+            ~w(appearance-none checked:bg-none indeterminate:bg-none checked:text-primary-foreground before:bg-current checked:before:opacity-100 indeterminate:before:opacity-100) do
+        assert html =~ class
+      end
+
+      assert html =~ "checked:bg-primary"
+      assert html =~ "indeterminate:bg-primary"
+      assert html =~ "before:[mask-image:url(data:image/svg+xml,"
+      assert html =~ "indeterminate:before:[mask-image:url(data:image/svg+xml,"
+      assert html =~ ~s(data-slot="checkbox")
+    end
   end
 
   describe "switch" do
@@ -137,7 +189,24 @@ defmodule SaladUI.InvalidStateTest do
 
       assert html =~ ~r/role="switch"[^>]*aria-invalid="true"|aria-invalid="true"[^>]*role="switch"/s
       for class <- @invalid_classes, do: assert(html =~ class)
-      assert html =~ "size-5"
+    end
+
+    test "uses shadcn v4 geometry and supports size" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.switch id="a" />
+        <.switch id="b" size="sm" />
+        """)
+
+      assert html =~ ~s(data-size="default")
+      assert html =~ ~s(data-size="sm")
+      assert html =~ ~s(data-slot="switch-thumb")
+      assert html =~ "data-[size=default]:h-[1.15rem]"
+      assert html =~ "data-[state=checked]:translate-x-[calc(100%-2px)]"
+      refute html =~ "border-2"
+      refute html =~ "shadow-lg"
     end
   end
 
@@ -154,7 +223,7 @@ defmodule SaladUI.InvalidStateTest do
 
       assert html =~ ~s(aria-invalid="true")
       assert html =~ "group/radio-group"
-      assert html =~ "group-aria-invalid/radio-group:border-destructive"
+      assert html =~ "group-aria-invalid/radio-group:not-aria-[invalid=false]:border-destructive"
       for class <- @invalid_classes, do: assert(html =~ class)
     end
 
@@ -190,7 +259,7 @@ defmodule SaladUI.InvalidStateTest do
 
       assert html =~ ~s(data-invalid="true")
       assert html =~ "group/select"
-      assert html =~ "group-data-[invalid=true]/select:border-destructive"
+      assert html =~ "group-data-[invalid=true]/select:not-aria-[invalid=false]:border-destructive"
       assert html =~ "shadow-xs"
       for class <- @invalid_classes, do: assert(html =~ class)
     end
@@ -208,6 +277,37 @@ defmodule SaladUI.InvalidStateTest do
         """)
 
       refute html =~ "data-invalid"
+    end
+  end
+
+  describe "select trigger" do
+    test "follows shadcn v4: w-fit, data-size, data-slot, muted placeholder" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select_trigger size="sm"><.select_value placeholder="Pick" /></.select_trigger>
+        """)
+
+      assert html =~ ~s(data-slot="select-trigger")
+      assert html =~ ~s(data-size="sm")
+      assert html =~ ~s(data-slot="select-value")
+      assert html =~ "w-fit"
+      refute html =~ "w-full"
+      assert html =~ "data-[placeholder]:text-muted-foreground"
+      assert html =~ "data-[size=sm]:h-8"
+    end
+  end
+
+  describe "sidebar input" do
+    test "matches shadcn's sidebar-input classes" do
+      assigns = %{}
+      html = rendered_to_string(~H"<.sidebar_input />")
+
+      assert html =~ ~s(data-slot="sidebar-input")
+      refute html =~ ~s(data-slot="input")
+      assert html =~ "shadow-none"
+      refute html =~ "ring-sidebar-ring"
     end
   end
 

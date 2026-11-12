@@ -44,8 +44,14 @@ defmodule SaladUI.Select do
 
   When `field` has errors the root renders `data-invalid="true"`: the trigger
   picks up the destructive error styling and the JS hook mirrors it onto the
-  trigger as `aria-invalid="true"`. You can also pass `aria-invalid` to
-  `select_trigger/1` directly, as in shadcn.
+  trigger as `aria-invalid="true"` (and removes it again once the errors are
+  fixed). You can also pass `aria-invalid` to `select_trigger/1` directly, as
+  in shadcn; an explicit value wins over the field, for both the attribute and
+  the styling.
+
+  Only errors on inputs the user has interacted with count, following
+  `Phoenix.Component.used_input?/1`. The trigger's `aria-invalid` is added by
+  the hook, so it is missing from a dead render.
   """
   use SaladUI, :component
 
@@ -130,6 +136,7 @@ defmodule SaladUI.Select do
   end
 
   attr :class, :string, default: nil
+  attr :size, :string, values: ~w(default sm), default: "default", doc: "the trigger height"
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -138,32 +145,33 @@ defmodule SaladUI.Select do
     <button
       type="button"
       data-part="trigger"
+      data-slot="select-trigger"
+      data-size={@size}
       class={
         classes([
-          "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:ring-destructive/40 [&>span]:line-clamp-1",
-          "group-data-[invalid=true]/select:border-destructive group-data-[invalid=true]/select:ring-destructive/20 dark:group-data-[invalid=true]/select:ring-destructive/40",
+          "flex w-fit items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[placeholder]:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+          "group-data-[invalid=true]/select:not-aria-[invalid=false]:border-destructive group-data-[invalid=true]/select:not-aria-[invalid=false]:ring-destructive/20 dark:group-data-[invalid=true]/select:not-aria-[invalid=false]:ring-destructive/40",
           @class
         ])
       }
       {@rest}
     >
       {render_slot(@inner_block)}
-      <span class="size-4 opacity-50">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="lucide lucide-chevron-down size-4"
-        >
-          <path d="M6 9l6 6 6-6"></path>
-        </svg>
-      </span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-chevron-down size-4 opacity-50"
+        aria-hidden="true"
+      >
+        <path d="M6 9l6 6 6-6"></path>
+      </svg>
     </button>
     """
   end
@@ -176,6 +184,7 @@ defmodule SaladUI.Select do
     ~H"""
     <span
       data-part="value"
+      data-slot="select-value"
       class={classes(["select-value pointer-events-none", @class])}
       data-content={@placeholder}
       data-placeholder={@placeholder}

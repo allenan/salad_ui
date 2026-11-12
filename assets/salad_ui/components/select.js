@@ -189,12 +189,22 @@ class SelectComponent extends Component {
    * Mirror the root's `data-invalid` (set server-side when a form field has
    * errors) onto the trigger as `aria-invalid`, so assistive tech announces
    * the error. An `aria-invalid` passed explicitly to the trigger wins.
-   * Re-run on every LiveView patch, since the hook reinitializes.
+   * Re-run on every LiveView patch, since the hook reinitializes; the
+   * `data-invalid-synced` marker tells our own attribute apart from an
+   * explicit one, so it is removed again once the field becomes valid.
    */
   syncInvalidState() {
-    if (!this.trigger || this.trigger.hasAttribute("aria-invalid")) return;
+    if (!this.trigger) return;
+
+    const synced = this.trigger.hasAttribute("data-invalid-synced");
+    if (this.trigger.hasAttribute("aria-invalid") && !synced) return;
+
     if (this.el.dataset.invalid === "true") {
       this.trigger.setAttribute("aria-invalid", "true");
+      this.trigger.setAttribute("data-invalid-synced", "");
+    } else if (synced) {
+      this.trigger.removeAttribute("aria-invalid");
+      this.trigger.removeAttribute("data-invalid-synced");
     }
   }
 
@@ -449,9 +459,17 @@ class SelectComponent extends Component {
   }
 
   updateValueDisplay() {
+    const selectedValues = this.selection.getValue(true);
+
+    // Like Radix, flag the trigger while it shows the placeholder so
+    // `data-[placeholder]:text-muted-foreground` can mute it.
+    this.trigger?.toggleAttribute(
+      "data-placeholder",
+      selectedValues.length === 0,
+    );
+
     if (!this.valueDisplay) return;
 
-    const selectedValues = this.selection.getValue(true);
     const placeholder =
       this.valueDisplay.getAttribute("data-placeholder") || "Select an option";
 

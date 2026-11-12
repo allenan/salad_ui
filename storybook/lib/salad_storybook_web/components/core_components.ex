@@ -92,13 +92,13 @@ defmodule SaladStorybookWeb.CoreComponents do
       class="fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg"
       {@rest}
     >
-      <.icon :if={@kind == :info} name="hero-information-circle" class="h-4 w-4" />
-      <.icon :if={@kind == :error} name="hero-exclamation-circle" class="h-4 w-4" />
+      <.icon :if={@kind == :info} name="hero-information-circle" class="size-4" />
+      <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-4" />
 
       <.alert_title :if={@title}>{@title}</.alert_title>
       <.alert_description>{msg}</.alert_description>
       <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
-        <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
+        <.icon name="hero-x-mark-solid" class="size-5 opacity-40 group-hover:opacity-70" />
       </button>
     </.alert>
     """
@@ -128,7 +128,7 @@ defmodule SaladStorybookWeb.CoreComponents do
         hidden
       >
         {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <.icon name="hero-arrow-path" class="ml-1 size-3 animate-spin" />
       </.flash>
 
       <.flash
@@ -140,7 +140,7 @@ defmodule SaladStorybookWeb.CoreComponents do
         hidden
       >
         {gettext("Hang in there while we get back on track")}
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <.icon name="hero-arrow-path" class="ml-1 size-3 animate-spin" />
       </.flash>
     </div>
     """
@@ -507,7 +507,7 @@ defmodule SaladStorybookWeb.CoreComponents do
         navigate={@navigate}
         class="text-sm font-semibold leading-6 text-primary hover:text-primary/90"
       >
-        <.icon name="hero-arrow-left-solid" class="h-3 w-3" />
+        <.icon name="hero-arrow-left-solid" class="size-3" />
         {render_slot(@inner_block)}
       </.link>
     </div>
@@ -530,7 +530,7 @@ defmodule SaladStorybookWeb.CoreComponents do
   ## Examples
 
       <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+      <.icon name="hero-arrow-path" class="ml-1 size-3 animate-spin" />
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil

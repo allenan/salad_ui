@@ -81,8 +81,9 @@ defmodule SaladUI.RadioGroup do
     ~H"""
     <div
       id={@id}
-      class={classes(["group/radio-group grid gap-2", @class])}
+      class={classes(["group/radio-group grid gap-3", @class])}
       data-component="radio-group"
+      data-slot="radio-group"
       data-state="idle"
       data-options={@options}
       data-event-mappings={@event_map}
@@ -108,6 +109,7 @@ defmodule SaladUI.RadioGroup do
     ~H"""
     <div
       data-part="item"
+      data-slot="radio-group-item"
       data-value={@value}
       data-state="unchecked"
       data-disabled={to_string(@disabled)}
@@ -115,7 +117,7 @@ defmodule SaladUI.RadioGroup do
         classes([
           "group/item",
           "relative inline-flex aspect-square size-4 shrink-0 rounded-full border border-input text-primary shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:ring-destructive/40",
-          "group-aria-invalid/radio-group:border-destructive group-aria-invalid/radio-group:ring-destructive/20 dark:group-aria-invalid/radio-group:ring-destructive/40",
+          "group-aria-invalid/radio-group:not-aria-[invalid=false]:border-destructive group-aria-invalid/radio-group:not-aria-[invalid=false]:ring-destructive/20 dark:group-aria-invalid/radio-group:not-aria-[invalid=false]:ring-destructive/40",
           @class
         ])
       }
@@ -123,7 +125,10 @@ defmodule SaladUI.RadioGroup do
       {@rest}
     >
       <input type="radio" id={@id} value={@value} disabled={@disabled} class="sr-only" tabindex="-1" />
-      <span class="absolute inset-0 hidden group-data-[state=checked]/item:block">
+      <span
+        data-slot="radio-group-indicator"
+        class="absolute inset-0 hidden group-data-[state=checked]/item:block"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -134,7 +139,7 @@ defmodule SaladUI.RadioGroup do
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="lucide lucide-circle absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 fill-current text-current"
+          class="lucide lucide-circle absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 fill-primary"
         >
           <circle cx="12" cy="12" r="10"></circle>
         </svg>

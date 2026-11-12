@@ -41,17 +41,17 @@ defmodule Storybook.SaladUIComponents.DropdownMenu do
               <.dropdown_menu_separator />
               <.dropdown_menu_group>
                 <.dropdown_menu_item on-select="on_command" value="profile">
-                  <.icon name="hero-user" class="mr-2 h-4 w-4" />
+                  <.icon name="hero-user" class="mr-2 size-4" />
                   <span>Profile</span>
                   <.dropdown_menu_shortcut>⌘P</.dropdown_menu_shortcut>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item on-select="on_command">
-                  <.icon name="hero-cog-6-tooth" class="mr-2 h-4 w-4" />
+                  <.icon name="hero-cog-6-tooth" class="mr-2 size-4" />
                   <span>Settings</span>
                   <.dropdown_menu_shortcut>⌘S</.dropdown_menu_shortcut>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item on-select="on_command">
-                  <.icon name="hero-banknotes" class="mr-2 h-4 w-4" />
+                  <.icon name="hero-banknotes" class="mr-2 size-4" />
                   <span>Billing</span>
                   <.dropdown_menu_shortcut>⌘B</.dropdown_menu_shortcut>
                 </.dropdown_menu_item>
@@ -59,18 +59,18 @@ defmodule Storybook.SaladUIComponents.DropdownMenu do
               <.dropdown_menu_separator />
               <.dropdown_menu_group>
                 <.dropdown_menu_item on-select="on_command">
-                  <.icon name="hero-users" class="mr-2 h-4 w-4" />
+                  <.icon name="hero-users" class="mr-2 size-4" />
                   <span>Team</span>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item disabled>
-                  <.icon name="hero-plus" class="mr-2 h-4 w-4" />
+                  <.icon name="hero-plus" class="mr-2 size-4" />
                   <span>New Team</span>
                   <.dropdown_menu_shortcut>⌘T</.dropdown_menu_shortcut>
                 </.dropdown_menu_item>
               </.dropdown_menu_group>
               <.dropdown_menu_separator />
               <.dropdown_menu_item on-select="on_command">
-                <.icon name="hero-arrow-left-on-rectangle" class="mr-2 h-4 w-4" />
+                <.icon name="hero-arrow-left-on-rectangle" class="mr-2 size-4" />
                 <span>Log out</span>
               </.dropdown_menu_item>
             </.dropdown_menu_content>
@@ -117,16 +117,16 @@ defmodule Storybook.SaladUIComponents.DropdownMenu do
             </.as_child>
             <.dropdown_menu_content class="w-56">
               <.dropdown_menu_link_item href="/docs">
-                <.icon name="hero-book-open" class="mr-2 h-4 w-4" />
+                <.icon name="hero-book-open" class="mr-2 size-4" />
                 <span>Documentation</span>
               </.dropdown_menu_link_item>
               <.dropdown_menu_link_item href="https://github.com">
-                <.icon name="hero-code-bracket" class="mr-2 h-4 w-4" />
+                <.icon name="hero-code-bracket" class="mr-2 size-4" />
                 <span>GitHub</span>
               </.dropdown_menu_link_item>
               <.dropdown_menu_separator />
               <.dropdown_menu_link_item disabled href="/changelog">
-                <.icon name="hero-clock" class="mr-2 h-4 w-4" />
+                <.icon name="hero-clock" class="mr-2 size-4" />
                 <span>Changelog</span>
               </.dropdown_menu_link_item>
             </.dropdown_menu_content>

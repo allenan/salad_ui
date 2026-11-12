@@ -82,6 +82,26 @@ defmodule Storybook.SaladUIComponents.Select do
         ]
       },
       %Variation{
+        id: :small,
+        description: ~s|`size="sm"` on the trigger|,
+        attributes: %{
+          id: "small-select",
+          name: "fruit",
+          "use-portal": false
+        },
+        slots: [
+          """
+            <.select_trigger size="sm" class="w-[180px]">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_item value="apple">Apple</.select_item>
+              <.select_item value="banana">Banana</.select_item>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
         id: :with_default_value,
         description: "A select component with a pre-selected default value",
         attributes: %{

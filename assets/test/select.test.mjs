@@ -132,6 +132,63 @@ test("an explicit trigger aria-invalid wins over root data-invalid", () => {
   assert.equal(trigger.getAttribute("aria-invalid"), "false");
 });
 
+function rebuild(component, el) {
+  // Simulates SaladUIHook.updated(): destroy, then rebuild on the same element.
+  component.destroy();
+  return registry.create("select", el, {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  });
+}
+
+test("invalid -> valid on a patch removes the mirrored aria-invalid", () => {
+  const { component, el, trigger } = buildSelect({ invalid: true });
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+
+  // The patch drops the root's data-invalid but leaves the JS-added trigger
+  // attributes in place.
+  el.removeAttribute("data-invalid");
+  rebuild(component, el);
+
+  assert.equal(trigger.hasAttribute("aria-invalid"), false);
+  assert.equal(trigger.hasAttribute("data-invalid-synced"), false);
+});
+
+test("valid -> invalid on a patch adds the mirrored aria-invalid", () => {
+  const { component, el, trigger } = buildSelect();
+
+  el.setAttribute("data-invalid", "true");
+  rebuild(component, el);
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+});
+
+test("an explicit trigger aria-invalid survives a patch to a valid field", () => {
+  const { component, el, trigger } = buildSelect({
+    triggerAttrs: 'aria-invalid="true"',
+  });
+
+  rebuild(component, el);
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+});
+
+test("trigger carries data-placeholder only while nothing is selected", () => {
+  const { trigger, item } = buildSelect();
+  assert.equal(trigger.hasAttribute("data-placeholder"), true);
+
+  click(trigger);
+  click(item("banana"));
+
+  assert.equal(trigger.hasAttribute("data-placeholder"), false);
+});
+
+test("trigger has no data-placeholder when a value is preselected", () => {
+  const { trigger } = buildSelect({ value: "banana" });
+
+  assert.equal(trigger.hasAttribute("data-placeholder"), false);
+});
+
 test("trigger keyboard opens select and focuses the selected item", () => {
   const { content, item, trigger } = buildSelect({ value: "banana" });
 
