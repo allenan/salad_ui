@@ -154,14 +154,14 @@ defmodule Storybook.Examples.FormDemo do
               </.form_item>
               <.form_item>
                 <.label>Scale</.label>
-                <div>
+                <div class="flex items-center gap-4">
                   <.slider
-                    class="w-[60%] inline-block"
+                    class="w-[60%]"
                     id="slider-single-step-slider"
                     max={50}
                     step={5}
                     field={f[:scale]}
-                    onchange="document.querySelector('#slider-value').value = this.value"
+                    onchange="document.querySelector('#slider-value').value = event.target.value"
                   />
                   <.input class="inline w-16" type="number" id="slider-value" />
                 </div>
