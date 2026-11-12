@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" width="480" height="300">
+  <rect width="480" height="300" fill="#f0fdf4"/>
+  <rect x="16" y="16" width="200" height="168" rx="14" fill="#86efac"/>
+  <circle cx="116" cy="100" r="46" fill="#22c55e"/>
+  <path d="M116 70c-20 10-24 40 0 60 24-20 20-50 0-60z" fill="#dcfce7"/>
+  <rect x="232" y="16" width="232" height="80" rx="14" fill="#14532d"/>
+  <text x="252" y="64" font-family="Georgia, serif" font-size="28" fill="#f0fdf4">Grow calmly.</text>
+  <rect x="232" y="108" width="110" height="76" rx="14" fill="#fde68a"/>
+  <rect x="354" y="108" width="110" height="76" rx="14" fill="#bbf7d0"/>
+  <rect x="16" y="200" width="448" height="84" rx="14" fill="#fff" stroke="#bbf7d0"/>
+  <g font-family="ui-sans-serif, system-ui" font-size="13" fill="#166534">
+    <circle cx="52" cy="242" r="16" fill="#166534"/><text x="76" y="247">#166534</text>
+    <circle cx="172" cy="242" r="16" fill="#22c55e"/><text x="196" y="247">#22C55E</text>
+    <circle cx="292" cy="242" r="16" fill="#bbf7d0"/><text x="316" y="247">#BBF7D0</text>
+    <circle cx="402" cy="242" r="16" fill="#fde68a"/>
+  </g>
+</svg>
