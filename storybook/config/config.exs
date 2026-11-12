@@ -58,7 +58,7 @@ config :salad_ui, :error_translator_function, {SaladStorybookWeb.CoreComponents,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "4.3.0",
+  version: "4.3.5",
   default: [
     args: ~w(
       --input=assets/css/app.css
