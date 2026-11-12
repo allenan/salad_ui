@@ -32,6 +32,8 @@ defmodule SaladUI do
   - `card/1` - Content containers with headers and footers
   - `separator/1` - Visual dividers between content sections
   - `scroll_area/1` - Custom scrollable containers
+  - `aspect_ratio/1` - Content constrained to a width/height ratio
+  - `item/1`, `item_group/1` - Flexible rows with media, title, description and actions
 
   ### Forms & Input
   - `button/1` - Interactive buttons with multiple variants
@@ -64,12 +66,16 @@ defmodule SaladUI do
   - `badge/1` - Labels and status indicators
   - `progress/1` - Progress bars and loading states
   - `skeleton/1` - Loading placeholder content
+  - `spinner/1` - Animated loading indicator
+  - `empty/1` - Empty states with media, title, description and actions
 
   ### Data Display
   - `table/1` - Data tables with sorting and selection
   - `chart/1` - Data visualization charts
   - `avatar/1` - User profile images
   - `accordion/1` - Collapsible content sections
+  - `kbd/1`, `kbd_group/1` - Keyboard keys and shortcuts
+  - `typography_h1/1`, `typography_p/1`, ... - Headings, paragraphs, lists and text styles
 
   ### Utility
   - `toggle/1`, `toggle_group/1` - Toggle controls and groups
@@ -180,6 +186,7 @@ defmodule SaladUI do
       import SaladUI.Accordion
       import SaladUI.Alert
       import SaladUI.AlertDialog
+      import SaladUI.AspectRatio
       import SaladUI.Avatar
       import SaladUI.Badge
       import SaladUI.Breadcrumb
@@ -190,11 +197,14 @@ defmodule SaladUI do
       import SaladUI.Collapsible
       import SaladUI.Dialog
       import SaladUI.DropdownMenu
+      import SaladUI.Empty
       import SaladUI.Form
       import SaladUI.Helpers
       import SaladUI.HoverCard
       import SaladUI.Icon
       import SaladUI.Input
+      import SaladUI.Item
+      import SaladUI.Kbd
       import SaladUI.Label
       import SaladUI.Menu
       import SaladUI.Pagination
@@ -208,6 +218,7 @@ defmodule SaladUI do
       import SaladUI.Sidebar
       import SaladUI.Skeleton
       import SaladUI.Slider
+      import SaladUI.Spinner
       import SaladUI.Switch
       import SaladUI.Table
       import SaladUI.Tabs
@@ -216,6 +227,7 @@ defmodule SaladUI do
       import SaladUI.Toggle
       import SaladUI.ToggleGroup
       import SaladUI.Tooltip
+      import SaladUI.Typography
     end
   end
 end

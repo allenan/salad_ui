@@ -560,4 +560,62 @@ defmodule SaladUI.DataSlotTest do
              ~w(tooltip tooltip-trigger tooltip-content)
            ) == {[], []}
   end
+
+  test "item" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.item_group>
+               <.item>
+                 <.item_header>H</.item_header>
+                 <.item_media variant="icon">M</.item_media>
+                 <.item_content>
+                   <.item_title>T</.item_title>
+                   <.item_description>D</.item_description>
+                 </.item_content>
+                 <.item_actions>A</.item_actions>
+                 <.item_footer>F</.item_footer>
+               </.item>
+               <.item_separator />
+               <.item href="#">L</.item>
+             </.item_group>
+             """,
+             ~w(item-group item item-header item-media item-content item-title item-description item-actions item-footer item-separator item)
+           ) == {[], []}
+  end
+
+  test "empty" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.empty>
+               <.empty_header>
+                 <.empty_media variant="icon">M</.empty_media>
+                 <.empty_title>T</.empty_title>
+                 <.empty_description>D</.empty_description>
+               </.empty_header>
+               <.empty_content>C</.empty_content>
+             </.empty>
+             """,
+             ~w(empty empty-header empty-icon empty-title empty-description empty-content)
+           ) == {[], []}
+  end
+
+  test "kbd, spinner and aspect ratio" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.kbd_group>
+               <.kbd>A</.kbd>
+             </.kbd_group>
+             <.spinner />
+             <.spinner><svg></svg></.spinner>
+             <.aspect_ratio ratio={1}>X</.aspect_ratio>
+             """,
+             ~w(kbd-group kbd spinner spinner aspect-ratio)
+           ) == {[], []}
+  end
 end
