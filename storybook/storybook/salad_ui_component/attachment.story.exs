@@ -22,7 +22,8 @@ defmodule Storybook.SaladUIComponents.Attachment do
          attachment_trigger: 1,
          attachment_upload_entry: 1
        ]},
-      {Dialog, [dialog: 1, dialog_trigger: 1, dialog_content: 1, dialog_header: 1, dialog_title: 1, dialog_description: 1]},
+      {Dialog,
+       [dialog: 1, dialog_trigger: 1, dialog_content: 1, dialog_header: 1, dialog_title: 1, dialog_description: 1]},
       {SaladUI.Spinner, [spinner: 1]},
       {SaladStorybookWeb.CoreComponents, [icon: 1]}
     ]
@@ -85,7 +86,8 @@ defmodule Storybook.SaladUIComponents.Attachment do
       },
       %Variation{
         id: :image,
-        description: "An `attachment_trigger` link stretched over the card opens the image; actions stay clickable above it.",
+        description:
+          "An `attachment_trigger` link stretched over the card opens the image; actions stay clickable above it.",
         template: """
         <div class="mx-auto w-full max-w-sm py-12">
           <.attachment_group class="w-full">

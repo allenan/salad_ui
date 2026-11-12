@@ -16,7 +16,8 @@ defmodule Storybook.SaladUIComponents.Bubble do
       {Bubble, [bubble_group: 1, bubble_content: 1, bubble_reactions: 1]},
       {Button, [button: 1]},
       {Collapsible, [collapsible: 1, collapsible_trigger: 1, collapsible_content: 1]},
-      {Popover, [popover: 1, popover_trigger: 1, popover_content: 1, popover_header: 1, popover_title: 1, popover_description: 1]},
+      {Popover,
+       [popover: 1, popover_trigger: 1, popover_content: 1, popover_header: 1, popover_title: 1, popover_description: 1]},
       {Tooltip, [tooltip: 1, tooltip_trigger: 1, tooltip_content: 1]},
       {SaladStorybookWeb.CoreComponents, [icon: 1]}
     ]
@@ -172,7 +173,7 @@ defmodule Storybook.SaladUIComponents.Bubble do
       },
       %Variation{
         id: :link_button,
-        description: "`as=\"button\"` (or `as=\"a\"`) makes the bubble itself interactive.",
+        description: ~s{`as="button"` (or `as="a"`) makes the bubble itself interactive.},
         template: """
         <div class="flex w-full max-w-sm flex-col gap-8 py-12">
           <.bubble variant="muted">

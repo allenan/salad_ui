@@ -109,13 +109,22 @@ defmodule Storybook.Examples.Questionnaire do
           phx-submit="permission"
         >
           <.questionnaire_progress questionnaire={q} />
-          <.questionnaire_item :for={question <- @permission_items} :let={item} questionnaire={q} name={question.name}>
+          <.questionnaire_item
+            :let={item}
+            :for={question <- @permission_items}
+            questionnaire={q}
+            name={question.name}
+          >
             <.questionnaire_title>{question.prompt}</.questionnaire_title>
             <.questionnaire_description :if={question[:description]} item={item}>
               {question.description}
             </.questionnaire_description>
             <.questionnaire_choices item={item}>
-              <.questionnaire_choice :for={choice <- question.choices} item={item} value={choice.value}>
+              <.questionnaire_choice
+                :for={choice <- question.choices}
+                item={item}
+                value={choice.value}
+              >
                 {choice.label}
               </.questionnaire_choice>
             </.questionnaire_choices>
@@ -130,7 +139,9 @@ defmodule Storybook.Examples.Questionnaire do
             >
               Next
             </.questionnaire_next>
-            <.questionnaire_submit disabled={State.status(@permission, @permission.item) == "unanswered"}>
+            <.questionnaire_submit disabled={
+              State.status(@permission, @permission.item) == "unanswered"
+            }>
               Save permissions
             </.questionnaire_submit>
           </.questionnaire_actions>
@@ -149,10 +160,19 @@ defmodule Storybook.Examples.Questionnaire do
           phx-submit="conditional"
         >
           <.questionnaire_progress questionnaire={q} />
-          <.questionnaire_item :for={question <- @conditional_items} :let={item} questionnaire={q} name={question.name}>
+          <.questionnaire_item
+            :let={item}
+            :for={question <- @conditional_items}
+            questionnaire={q}
+            name={question.name}
+          >
             <.questionnaire_title>{question.prompt}</.questionnaire_title>
             <.questionnaire_choices item={item}>
-              <.questionnaire_choice :for={choice <- question.choices} item={item} value={choice.value}>
+              <.questionnaire_choice
+                :for={choice <- question.choices}
+                item={item}
+                value={choice.value}
+              >
                 {choice.label}
               </.questionnaire_choice>
             </.questionnaire_choices>
@@ -179,10 +199,19 @@ defmodule Storybook.Examples.Questionnaire do
           <.questionnaire_progress :let={p} questionnaire={q} class="min-w-0">
             {p.current} / {p.total}
           </.questionnaire_progress>
-          <.questionnaire_item :for={question <- @validation_items} :let={item} questionnaire={q} name={question.name}>
+          <.questionnaire_item
+            :let={item}
+            :for={question <- @validation_items}
+            questionnaire={q}
+            name={question.name}
+          >
             <.questionnaire_title>{question.prompt}</.questionnaire_title>
             <.questionnaire_choices item={item}>
-              <.questionnaire_choice :for={choice <- question.choices} item={item} value={choice.value}>
+              <.questionnaire_choice
+                :for={choice <- question.choices}
+                item={item}
+                value={choice.value}
+              >
                 {choice.label}
               </.questionnaire_choice>
             </.questionnaire_choices>
@@ -242,7 +271,9 @@ defmodule Storybook.Examples.Questionnaire do
       state.answers["audience"] == "public" and state.answers["detail"] == "summary" ->
         # An external rule failed: return to the invalid item with its message.
         message = "Public answers need enough context. Choose a complete answer."
-        {:noreply, assign(socket, validation: %{state | submitted: false, item: "detail", errors: %{"detail" => message}})}
+
+        {:noreply,
+         assign(socket, validation: %{state | submitted: false, item: "detail", errors: %{"detail" => message}})}
 
       true ->
         {:noreply,

@@ -23,7 +23,8 @@ defmodule Storybook.SaladUIComponents.Drawer do
          drawer_footer: 1,
          drawer_close: 1
        ]},
-      {Dialog, [dialog: 1, dialog_trigger: 1, dialog_content: 1, dialog_header: 1, dialog_title: 1, dialog_description: 1]},
+      {Dialog,
+       [dialog: 1, dialog_trigger: 1, dialog_content: 1, dialog_header: 1, dialog_title: 1, dialog_description: 1]},
       {Button, [button: 1]},
       {Input, [input: 1]},
       {Label, [label: 1]},
@@ -44,7 +45,8 @@ defmodule Storybook.SaladUIComponents.Drawer do
   # The "Move Goal" body shared by the demo and RTL examples. The goal value is
   # static here; in an app it would come from your LiveView assigns.
   defp goal_body(decrease, increase, unit) do
-    bars = Enum.map_join(@bars, "\n", &~s(<div class="flex-1 rounded-t-sm bg-foreground/90" style="height: #{&1 / 4}%"></div>))
+    bars =
+      Enum.map_join(@bars, "\n", &~s(<div class="flex-1 rounded-t-sm bg-foreground/90" style="height: #{&1 / 4}%"></div>))
 
     """
             <div class="p-4 pb-0">

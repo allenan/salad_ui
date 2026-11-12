@@ -154,7 +154,8 @@ defmodule Storybook.SaladUIComponents.Carousel do
       },
       %Variation{
         id: :rtl,
-        description: ~s|`dir="rtl"`: the track runs right to left and the arrow keys flip; `rtl:rotate-180` flips the icons.|,
+        description:
+          ~s|`dir="rtl"`: the track runs right to left and the arrow keys flip; `rtl:rotate-180` flips the icons.|,
         attributes: %{id: "carousel-rtl", dir: "rtl", class: "w-full max-w-xs"},
         slots: [
           """

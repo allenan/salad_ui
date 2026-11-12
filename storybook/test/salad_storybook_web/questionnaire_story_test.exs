@@ -60,7 +60,10 @@ defmodule SaladStorybookWeb.QuestionnaireStoryTest do
 
     press(view, "validation-questionnaire", "next", %{"detail" => ["complete"]})
     html = press(view, "validation-questionnaire", "submit")
-    assert html =~ ~s(Saved: %{&quot;audience&quot; =&gt; &quot;public&quot;, &quot;detail&quot; =&gt; &quot;complete&quot;})
+
+    assert html =~
+             ~s(Saved: %{&quot;audience&quot; =&gt; &quot;public&quot;, &quot;detail&quot; =&gt; &quot;complete&quot;})
+
     assert active(view, "validation-questionnaire") == "detail"
   end
 

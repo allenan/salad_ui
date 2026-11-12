@@ -29,7 +29,8 @@ defmodule Storybook.SaladUIComponents.Questionnaire do
          questionnaire_submit: 1
        ]},
       {Button, [button: 1]},
-      {Card, [card: 1, card_header: 1, card_title: 1, card_description: 1, card_action: 1, card_content: 1, card_footer: 1]},
+      {Card,
+       [card: 1, card_header: 1, card_title: 1, card_description: 1, card_action: 1, card_content: 1, card_footer: 1]},
       {Dialog,
        [
          dialog: 1,
@@ -52,8 +53,16 @@ defmodule Storybook.SaladUIComponents.Questionnaire do
         description: "Choose a direction or describe another task.",
         choices: [
           %{value: "tool-calls", label: "Tool call timeline", description: "Show what the agent ran and what came back."},
-          %{value: "approvals", label: "Approval checkpoints", description: "Ask before sensitive or destructive actions."},
-          %{value: "handoffs", label: "Sub-agent handoffs", description: "Make delegated work and results easier to follow."}
+          %{
+            value: "approvals",
+            label: "Approval checkpoints",
+            description: "Ask before sensitive or destructive actions."
+          },
+          %{
+            value: "handoffs",
+            label: "Sub-agent handoffs",
+            description: "Make delegated work and results easier to follow."
+          }
         ],
         input: %{label: "Another agent feature", placeholder: "Describe another feature…"}
       },

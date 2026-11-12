@@ -373,7 +373,8 @@ defmodule Storybook.SaladUIComponents.Field do
       },
       %Variation{
         id: :field_group,
-        description: "Stack fieldsets in a group with a separator; `data-slot=\"checkbox-group\"` tightens a checkbox list.",
+        description:
+          "Stack fieldsets in a group with a separator; `data-slot=\"checkbox-group\"` tightens a checkbox list.",
         template: """
         <div class="w-full max-w-md">
           <.field_group>

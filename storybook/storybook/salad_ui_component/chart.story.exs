@@ -54,7 +54,11 @@ defmodule Storybook.SaladUIComponents.Chart do
         id: :your_first_chart,
         description: "Your first chart: bars, then a grid, an axis, a tooltip and a legend",
         variations: [
-          intro(:bar, "Bars only", ~s(<.chart type="bar" data={#{months()}} index="month" grid={false} index_axis={false} />)),
+          intro(
+            :bar,
+            "Bars only",
+            ~s(<.chart type="bar" data={#{months()}} index="month" grid={false} index_axis={false} />)
+          ),
           intro(:grid, "Add a grid", ~s(<.chart type="bar" data={#{months()}} index="month" index_axis={false} />)),
           intro(:axis, "Add an axis", ~s(<.chart type="bar" data={#{months()}} index="month" tick_chars={3} />)),
           intro(:tooltip, "Add a tooltip", """

@@ -140,7 +140,7 @@ defmodule Storybook.SaladUIComponents.Marker do
       },
       %Variation{
         id: :link_button,
-        description: "`as=\"a\"` and `as=\"button\"` render the marker as a link or button.",
+        description: ~s(`as="a"` and `as="button"` render the marker as a link or button.),
         template: """
         <div class="flex w-full max-w-sm flex-col gap-8 py-12">
           <.marker as="a" href="#links-and-buttons">

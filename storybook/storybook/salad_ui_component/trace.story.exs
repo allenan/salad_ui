@@ -25,7 +25,8 @@ defmodule Storybook.SaladUIComponents.Trace do
          trace_collapsible_trigger: 1,
          trace_collapsible_content: 1
        ]},
-      {Dialog, [dialog: 1, dialog_trigger: 1, dialog_content: 1, dialog_header: 1, dialog_title: 1, dialog_description: 1]},
+      {Dialog,
+       [dialog: 1, dialog_trigger: 1, dialog_content: 1, dialog_header: 1, dialog_title: 1, dialog_description: 1]},
       {Sheet, [sheet: 1, sheet_trigger: 1, sheet_content: 1, sheet_header: 1, sheet_title: 1, sheet_description: 1]},
       {Message, [message: 1, message_content: 1]},
       {Bubble, [bubble: 1, bubble_content: 1]},
