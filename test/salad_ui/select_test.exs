@@ -60,7 +60,7 @@ defmodule SaladUI.SelectTest do
         |> clean_string()
 
       assert html =~ ~s(data-slot="select-content")
-      assert html =~ "max-h-96"
+      assert html =~ "max-h-[min(24rem,var(--salad-select-content-available-height,24rem))]"
       assert html =~ "w-64"
 
       [_, after_up] = String.split(html, ~s(data-slot="select-scroll-up-button"), parts: 2)

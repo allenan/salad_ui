@@ -8,6 +8,11 @@ import {
 } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
 
+// Matches the `max-h-[min(24rem,var(...))]` class on select_content.
+const AVAILABLE_HEIGHT_VAR = "--salad-select-content-available-height";
+// sideOffset (4px) plus a little breathing room from the window edge.
+const SELECT_COLLISION_MARGIN = 12;
+
 /**
  * SelectItem class to manage individual select options
  * Handles state transitions and events for a single select item
@@ -471,7 +476,29 @@ class SelectComponent extends Component {
         portalContainer: portalContainer || document.body,
         trapFocus: false,
         onOutsideClick: () => this.transition("close"),
+        onPosition: () => this.updateAvailableHeight(),
       });
+    }
+  }
+
+  /**
+   * Like Radix's --radix-select-content-available-height: cap the content at
+   * the room left in the window on the roomier side of the trigger, so a long
+   * list scrolls in its viewport instead of running off-screen (the content
+   * is position: fixed, so off-screen items could not be reached). It is the
+   * larger of the two sides rather than the placed side, so capping cannot
+   * flip the placement back and forth.
+   */
+  updateAvailableHeight() {
+    if (!this.content || !this.el || typeof window === "undefined") return;
+
+    const rect = this.el.getBoundingClientRect();
+    const room = Math.max(rect.top, window.innerHeight - rect.bottom);
+    const available = Math.max(0, Math.floor(room - SELECT_COLLISION_MARGIN));
+    const value = `${available}px`;
+
+    if (this.content.style.getPropertyValue(AVAILABLE_HEIGHT_VAR) !== value) {
+      this.content.style.setProperty(AVAILABLE_HEIGHT_VAR, value);
     }
   }
 
@@ -485,6 +512,8 @@ class SelectComponent extends Component {
   onOpenEnter() {
     // Initialize positioned element
     this.initializePositionedElement();
+    // Before the first position pass, so it measures the capped height.
+    this.updateAvailableHeight();
 
     // Activate positioned element
     if (this.positionedElement) {

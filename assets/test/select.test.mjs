@@ -3,7 +3,7 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/select.js"; // self-registers "select"
-import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
+import { installDom, setRect, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -511,6 +511,58 @@ test("closing the select stops auto-scrolling", () => {
   keydown(trigger, "Escape");
   assert.equal(component.state, "closed");
   assert.equal(component.autoScrollTimer, null);
+
+  component.destroy();
+});
+
+const AVAILABLE_HEIGHT = "--salad-select-content-available-height";
+
+test("content is capped at the room left on the roomier side of the trigger", () => {
+  const { component, el, trigger, content } = buildSelect({
+    scrollable: true,
+  });
+  const windowHeight = window.innerHeight;
+
+  // Trigger near the top: the room below wins.
+  setRect(el, { top: 100, bottom: 136, height: 36, left: 0, width: 200 });
+  click(trigger);
+  assert.equal(component.state, "open");
+  assert.equal(
+    content.style.getPropertyValue(AVAILABLE_HEIGHT),
+    `${windowHeight - 136 - 12}px`,
+  );
+  keydown(trigger, "Escape");
+  assert.equal(component.state, "closed");
+
+  // Trigger near the bottom: the room above wins.
+  const top = windowHeight - 60;
+  setRect(el, { top, bottom: top + 36, height: 36, left: 0, width: 200 });
+  click(trigger);
+  assert.equal(
+    content.style.getPropertyValue(AVAILABLE_HEIGHT),
+    `${top - 12}px`,
+  );
+
+  component.destroy();
+});
+
+test("the cap follows the trigger when the content is repositioned", () => {
+  const { component, el, trigger, content } = buildSelect({
+    scrollable: true,
+  });
+
+  setRect(el, { top: 100, bottom: 136, height: 36, left: 0, width: 200 });
+  click(trigger);
+
+  // e.g. the page scrolled: ScrollManager calls update() on the element.
+  const top = window.innerHeight - 200;
+  setRect(el, { top, bottom: top + 36, height: 36, left: 0, width: 200 });
+  component.positionedElement.update();
+
+  assert.equal(
+    content.style.getPropertyValue(AVAILABLE_HEIGHT),
+    `${top - 12}px`,
+  );
 
   component.destroy();
 });
