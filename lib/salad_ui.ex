@@ -43,9 +43,11 @@ defmodule SaladUI do
   - `checkbox/1` - Binary choice inputs
   - `radio_group/1` - Single choice from multiple options
   - `select/1` - Dropdown selection menus
+  - `native_select/1` - Styled native `<select>` with options and optgroups
   - `slider/1` - Range value selection
   - `switch/1` - Toggle controls
-  - `form/1`, `form_item/1`, `form_label/1` - Form structure and validation
+  - `field/1`, `field_set/1`, `field_group/1`, `field_label/1`, `field_error/1` - Form field structure and validation
+  - `form_item/1`, `form_label/1`, `form_message/1` - Legacy form helpers (prefer `field/1`)
 
   ### Navigation
   - `tabs/1` - Tabbed content navigation
@@ -103,13 +105,11 @@ defmodule SaladUI do
   ### Form Integration
 
       <.form for={@form} phx-change="validate" phx-submit="save">
-        <.form_item>
-          <.form_label>Email</.form_label>
-          <.form_control>
-            <.input field={@form[:email]} type="email" />
-          </.form_control>
-          <.form_message field={@form[:email]} />
-        </.form_item>
+        <.field field={@form[:email]}>
+          <.field_label field={@form[:email]}>Email</.field_label>
+          <.input field={@form[:email]} type="email" />
+          <.field_error field={@form[:email]} />
+        </.field>
       </.form>
 
   ### Interactive Components with Events
@@ -199,6 +199,7 @@ defmodule SaladUI do
       import SaladUI.Dialog
       import SaladUI.DropdownMenu
       import SaladUI.Empty
+      import SaladUI.Field
       import SaladUI.Form
       import SaladUI.Helpers
       import SaladUI.HoverCard
@@ -208,6 +209,7 @@ defmodule SaladUI do
       import SaladUI.Kbd
       import SaladUI.Label
       import SaladUI.Menu
+      import SaladUI.NativeSelect
       import SaladUI.Pagination
       import SaladUI.Popover
       import SaladUI.Progress

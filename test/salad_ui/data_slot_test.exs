@@ -248,6 +248,34 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
+  test "field" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.field_set>
+               <.field_legend>Profile</.field_legend>
+               <.field_group>
+                 <.field orientation="horizontal">
+                   <.field_content>
+                     <.field_label for="n">Name</.field_label>
+                     <.field_description>D</.field_description>
+                   </.field_content>
+                   <.input id="n" name="n" />
+                   <.field_error>is required</.field_error>
+                 </.field>
+                 <.field_separator>Or</.field_separator>
+                 <.field>
+                   <.field_title>T</.field_title>
+                 </.field>
+               </.field_group>
+             </.field_set>
+             """,
+             ~w(field-set field-legend field-group field field-content field-label field-description input field-error
+                field-separator separator field-separator-content)
+           ) == {[], []}
+  end
+
   test "form" do
     assigns = %{}
 
@@ -307,6 +335,21 @@ defmodule SaladUI.DataSlotTest do
   test "label" do
     assigns = %{}
     assert check(~H"<.label>L</.label>", ~w(label)) == {[], []}
+  end
+
+  test "native select" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.native_select name="s">
+               <.native_select_optgroup label="G">
+                 <.native_select_option value="a">A</.native_select_option>
+               </.native_select_optgroup>
+             </.native_select>
+             """,
+             ~w(native-select-wrapper native-select native-select-icon native-select-optgroup native-select-option)
+           ) == {[], []}
   end
 
   test "pagination" do

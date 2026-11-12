@@ -1,6 +1,12 @@
 defmodule SaladUI.Form do
   @moduledoc """
-  Form-related components that help build accessible forms.
+  Legacy form-related components that help build accessible forms.
+
+  > #### Legacy {: .warning}
+  >
+  > shadcn/ui replaced its `Form` components with the `Field` family. New code
+  > should use `SaladUI.Field` (`field/1`, `field_label/1`, `field_error/1`,
+  > ...). These helpers stay for backwards compatibility and are not going away.
 
   SaladUI doesn't define its own form component, but instead provides a set of
   form-related components to enhance the native Phoenix LiveView form.

@@ -356,7 +356,15 @@ defmodule SaladUI.Helpers do
     |> tag.()
   end
 
-  # Translate error message
+  @doc """
+  Translates a `{msg, opts}` form error with the configured
+  `:error_translator_function`, or by interpolating `opts` into `msg`.
+
+  (Not named `translate_error/1`: `use SaladUI` imports these helpers into
+  modules such as a generated `CoreComponents`, which defines its own.)
+  """
+  def translate_form_error(error), do: translate_error(error)
+
   # borrowed from https://github.com/petalframework/petal_components/blob/main/lib/petal_components/field.ex#L414
   defp translate_error({msg, opts}) do
     config_translator = get_translator_from_config() || (&fallback_translate_error/1)
