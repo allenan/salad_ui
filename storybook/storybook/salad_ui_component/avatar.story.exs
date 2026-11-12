@@ -4,7 +4,7 @@ defmodule Storybook.SaladUIComponents.Avatar do
 
   alias SaladUI.Avatar
 
-  def function, do: &SaladUI.Avatar.avatar/1
+  def function, do: &Avatar.avatar/1
 
   def imports, do: [{Avatar, [avatar_image: 1, avatar_fallback: 1]}]
 
