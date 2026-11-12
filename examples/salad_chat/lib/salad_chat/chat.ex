@@ -272,6 +272,27 @@ defmodule SaladChat.Chat do
     |> Enum.sort_by(& &1.id, :desc)
   end
 
+  @doc "The top-level message right before `message` in its channel, if any."
+  def previous_message(%Message{channel_id: channel_id, id: id}) do
+    case list_messages(channel_id, before: id, limit: 1) do
+      {[prev], _} -> prev
+      _ -> nil
+    end
+  end
+
+  @doc "The top-level message right after message id `id` in a channel, if any."
+  def next_message(channel_id, id) do
+    Store.messages()
+    |> :ets.select(
+      [{{:"$1", %{channel_id: channel_id, parent_id: nil}}, [{:>, :"$1", id}], [:"$_"]}],
+      1
+    )
+    |> case do
+      {[{_, message}], _} -> message
+      _ -> nil
+    end
+  end
+
   @doc "The latest top-level message id in a channel (0 when empty)."
   def latest_id(channel_id) do
     case list_messages(channel_id, limit: 1) do
@@ -497,6 +518,12 @@ defmodule SaladChat.Chat do
       Store.run(fn -> :ets.insert(Store.reads(), {{handle, channel_id}, message_id}) end)
     end
 
+    :ok
+  end
+
+  @doc "Moves the read marker back so `message_id` and later show as unread."
+  def mark_unread(handle, channel_id, message_id) do
+    Store.run(fn -> :ets.insert(Store.reads(), {{handle, channel_id}, message_id - 1}) end)
     :ok
   end
 

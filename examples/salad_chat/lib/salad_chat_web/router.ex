@@ -10,18 +10,16 @@ defmodule SaladChatWeb.Router do
     plug :put_secure_browser_headers
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
   scope "/", SaladChatWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-  end
+    live_session :chat do
+      live "/", LandingLive
+      live "/as/:handle/c/:channel", ChatLive
+      live "/as/:handle/c/:channel/t/:thread", ChatLive
+    end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SaladChatWeb do
-  #   pipe_through :api
-  # end
+    get "/as/:handle", UploadController, :home
+    get "/uploads/:name", UploadController, :show
+  end
 end
