@@ -91,13 +91,13 @@ defmodule Storybook.SaladUIComponents.Tooltip do
       },
       %Variation{
         id: :styled,
-        description: "Tooltip with custom styling",
+        description: "Tooltip with custom styling. The arrow is styled through its `tooltip-arrow` slot.",
         slots: [
           """
           <.tooltip_trigger>
             <.button variant="outline">Styled tooltip</.button>
           </.tooltip_trigger>
-          <.tooltip_content class="bg-primary text-primary-foreground border-primary">
+          <.tooltip_content class="bg-primary text-primary-foreground border-primary [&_[data-slot=tooltip-arrow]>span]:bg-primary">
             <p>I have custom styling!</p>
           </.tooltip_content>
           """

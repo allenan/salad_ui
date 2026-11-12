@@ -21,14 +21,21 @@ defmodule SaladUI.Alert do
       </.alert>
 
       <.alert>
-        <span class="mr-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M9 12l2 2l4-4"></path>
-          </svg>
-        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" d="M9 12l2 2l4-4"></path>
+        </svg>
         <.alert_title>Success</.alert_title>
         <.alert_description>Your changes have been saved successfully.</.alert_description>
       </.alert>
+
+  ## Icons
+
+  An icon is placed as a direct child, before the title (as in shadcn/ui). The
+  alert is a two-column grid: when its first child is an `<svg>` (or a
+  `<span>`, such as a heroicon `<.icon name="hero-..." />` or the older
+  `<span><svg/></span>` wrapper) the icon takes a `size-4` first column and the
+  title and description sit in the second. Without an icon the first column
+  collapses to zero width.
   """
   use SaladUI, :component
 
@@ -72,7 +79,10 @@ defmodule SaladUI.Alert do
       data-part="root"
       class={
         classes([
-          "relative w-full rounded-lg border border-border p-4 [&>span~*]:pl-7 [&>span+div]:translate-y-[-3px] [&>span]:absolute [&>span]:left-4 [&>span]:top-4",
+          "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
+          # A `<span>` icon (heroicon `<.icon>`, or the pre-grid `<span><svg/></span>`
+          # wrapper) gets the same first column as a bare `<svg>`.
+          "has-[>span]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>span]:gap-x-3 [&>span]:size-4 [&>span]:translate-y-0.5 [&>span]:text-current [&>span>svg]:size-4",
           @variant_class,
           @class
         ])
@@ -104,18 +114,18 @@ defmodule SaladUI.Alert do
 
   def alert_title(assigns) do
     ~H"""
-    <h5
+    <div
       data-slot="alert-title"
       class={
         classes([
-          "mb-1 font-medium leading-none tracking-tight",
+          "col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight",
           @class
         ])
       }
       {@rest}
     >
       {render_slot(@inner_block)}
-    </h5>
+    </div>
     """
   end
 
@@ -145,7 +155,7 @@ defmodule SaladUI.Alert do
       data-slot="alert-description"
       class={
         classes([
-          "text-sm [&_p]:leading-relaxed",
+          "col-start-2 grid justify-items-start gap-1 text-sm text-muted-foreground [&_p]:leading-relaxed",
           @class
         ])
       }
@@ -158,9 +168,8 @@ defmodule SaladUI.Alert do
 
   @variants %{
     variant: %{
-      "default" => "bg-background text-foreground",
-      "destructive" =>
-        "bg-background border-destructive/50 text-destructive dark:border-destructive [&>span]:text-destructive"
+      "default" => "bg-card text-card-foreground",
+      "destructive" => "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 [&>svg]:text-current"
     }
   }
 

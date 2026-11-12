@@ -9,6 +9,14 @@ defmodule SaladUI.Progress do
 
       <.progress value={50} />
       <.progress value={75} class="w-[60%]" />
+
+      <.field class="w-full max-w-sm">
+        <.field_label for="progress-upload">
+          <span>Upload progress</span>
+          <span class="ml-auto">66%</span>
+        </.field_label>
+        <.progress value={66} id="progress-upload" />
+      </.field>
   """
   use SaladUI, :component
 
@@ -18,6 +26,8 @@ defmodule SaladUI.Progress do
   ## Options
 
   * `:value` - The current progress value (0-100)
+  * `:max` - The maximum value. Defaults to `100`.
+  * `:indeterminate` - Render an animated bar with no `aria-valuenow`.
   * `:class` - Additional CSS classes
   """
   attr :class, :string, default: nil
@@ -40,7 +50,7 @@ defmodule SaladUI.Progress do
       aria-valuemin="0"
       aria-valuemax={@max || 100}
       aria-valuenow={if @indeterminate, do: nil, else: @value}
-      class={classes(["relative h-4 w-full overflow-hidden rounded-full bg-secondary", @class])}
+      class={classes(["relative h-2 w-full overflow-hidden rounded-full bg-primary/20", @class])}
       data-indeterminate={to_string(@indeterminate)}
       {@rest}
     >
@@ -48,7 +58,7 @@ defmodule SaladUI.Progress do
         data-slot="progress-indicator"
         class={
           classes([
-            "size-full flex-1 bg-primary transition-all",
+            "h-full w-full flex-1 bg-primary transition-all",
             @indeterminate && "animate-indeterminate-progress"
           ])
         }

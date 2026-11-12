@@ -36,6 +36,47 @@ defmodule SaladUI.CommandTest do
       assert html =~ "data-component=\"command\""
       assert html =~ "placeholder=\"Type...\""
     end
+
+    test "has an sr-only header with default title and description, and a close button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_dialog id="cmd-dialog" class="extra-class">
+          <.command_input />
+        </.command_dialog>
+        """)
+
+      assert html =~ ~r/data-slot="dialog-header" class="[^"]*sr-only/
+      assert html =~ ~r/data-slot="dialog-title"[^>]*>\s*Command Palette\s*</
+      assert html =~ ~r/data-slot="dialog-description"[^>]*>\s*Search for a command to run...\s*</
+      assert html =~ ~s(data-slot="dialog-close")
+      assert html =~ "overflow-hidden p-0"
+      assert html =~ "extra-class"
+      assert html =~ "**:data-[slot=command-input-wrapper]:h-12"
+      assert html =~ "**:data-[slot=command-item]:py-3"
+    end
+
+    test "accepts a custom title and description and can hide the close button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_dialog
+          id="cmd-dialog"
+          title="Search"
+          description="Find anything"
+          show_close_button={false}
+        >
+          <.command_input />
+        </.command_dialog>
+        """)
+
+      assert html =~ ~r/data-slot="dialog-title"[^>]*>\s*Search\s*</
+      assert html =~ ~r/data-slot="dialog-description"[^>]*>\s*Find anything\s*</
+      refute html =~ "Command Palette"
+      refute html =~ ~s(data-slot="dialog-close")
+    end
   end
 
   describe "command_input/1" do
@@ -102,6 +143,11 @@ defmodule SaladUI.CommandTest do
       assert html =~ "Group Heading"
       assert html =~ "role=\"group\""
       assert html =~ "Item 1"
+
+      assert html =~
+               ~s(data-slot="command-group-heading" aria-hidden="true" class="px-2 py-1.5 text-xs font-medium text-muted-foreground")
+
+      assert html =~ "overflow-hidden p-1 text-foreground"
     end
   end
 
@@ -134,6 +180,24 @@ defmodule SaladUI.CommandTest do
       assert html =~ " disabled>"
       assert html =~ " data-selected "
       assert html =~ " aria-selected "
+    end
+
+    test "uses the v4 item classes" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_item class="item-class" disabled>Item</.command_item>
+        """)
+
+      for class <-
+            ~w|relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 item-class| do
+        assert html =~ class
+      end
+
+      assert html =~ "[&amp;_svg:not([class*=&#39;size-&#39;])]:size-4"
+      assert html =~ ~s(data-disabled="true")
+      refute html =~ "rounded-xs"
     end
   end
 

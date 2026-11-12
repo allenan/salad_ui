@@ -85,6 +85,56 @@ defmodule SaladUI.SheetTest do
       assert html =~ ~s(data-side="right")
       assert html =~ "data-[state=closed]:fill-mode-forwards"
       assert html =~ "Sheet Content"
+
+      # v4 overlay and panel: no p-6, a flex column with gap-4
+      assert html =~ "fixed inset-0 z-50 bg-black/50"
+      refute html =~ "bg-black/80"
+
+      for class <-
+            ~w(fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm) do
+        assert html =~ class
+      end
+
+      refute html =~ " p-6"
+
+      # the close button is shown by default
+      assert html =~ ~s(data-slot="sheet-close")
+      assert html =~ "focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      assert html =~ ~s(class="size-4")
+      assert html =~ ~s(<span class="sr-only">Close</span>)
+    end
+
+    test "show_close_button={false} omits the close button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.sheet_content show_close_button={false}>
+          <div>No close</div>
+        </.sheet_content>
+        """)
+
+      assert html =~ "No close"
+      refute html =~ ~s(data-slot="sheet-close")
+      refute html =~ "sr-only"
+    end
+
+    test "top and bottom sheets are full width with auto height" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.sheet_content side="bottom" class="data-[side=bottom]:max-h-[50vh]">
+          <div>Bottom</div>
+        </.sheet_content>
+        """)
+
+      assert html =~ ~s(data-side="bottom")
+
+      for class <-
+            ~w(inset-x-0 bottom-0 h-auto border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom data-[side=bottom]:max-h-[50vh]) do
+        assert html =~ class
+      end
     end
 
     test "renders side variants" do
@@ -103,6 +153,21 @@ defmodule SaladUI.SheetTest do
     end
   end
 
+  describe "sheet_header/1 and sheet_footer/1" do
+    test "carry the v4 padding and layout" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.sheet_header>H</.sheet_header>
+        <.sheet_footer>F</.sheet_footer>
+        """)
+
+      assert html =~ ~s(<div data-slot="sheet-header" class="flex flex-col gap-1.5 p-4">)
+      assert html =~ ~s(<div data-slot="sheet-footer" class="mt-auto flex flex-col gap-2 p-4">)
+    end
+  end
+
   describe "sheet_title/1 and sheet_description/1" do
     test "render ARIA data parts" do
       assigns = %{}
@@ -114,7 +179,9 @@ defmodule SaladUI.SheetTest do
         """)
 
       assert html =~ ~s(data-part="title")
+      assert html =~ ~s(class="font-semibold text-foreground")
       assert html =~ ~s(data-part="description")
+      assert html =~ ~s(class="text-sm text-muted-foreground")
       assert html =~ "Title"
       assert html =~ "Description"
     end

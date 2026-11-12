@@ -123,7 +123,7 @@ defmodule SaladUI.ItemTest do
 
       assert html =~ ~s(<div role="list" data-slot="item-group")
       assert html =~ "group/item-group flex flex-col gap-4"
-      assert html =~ ~s(role="separator")
+      assert html =~ ~s(role="none")
       assert html =~ ~s(data-slot="item-separator")
       refute html =~ ~s(data-slot="separator")
       assert html =~ "my-0"

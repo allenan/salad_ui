@@ -16,14 +16,33 @@ defmodule SaladUI.AlertTest do
         </.alert>
         """)
 
-      for class <- ~w(mb-1 tracking-tight font-medium leading-none) do
+      for class <- ~w(col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight) do
         assert html =~ class
       end
 
       assert html =~ "Heads up!"
       assert html =~ "Alert Descriptions"
+      assert html =~ ~s(role="alert")
 
-      for class <- ~w(relative w-full rounded-lg border p-4 absolute left-4 top-4) do
+      for class <-
+            ~w|relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border px-4 py-3 text-sm has-[&gt;svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[&gt;svg]:gap-x-3 [&amp;&gt;svg]:size-4 [&amp;&gt;svg]:translate-y-0.5 [&amp;&gt;svg]:text-current bg-card text-card-foreground| do
+        assert html =~ class
+      end
+    end
+
+    test "a heroicon or legacy <span> icon wrapper gets the icon column too" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.alert>
+          <span class="hero-check-circle"></span>
+          <.alert_title>Saved</.alert_title>
+        </.alert>
+        """)
+
+      for class <-
+            ~w|has-[&gt;span]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[&gt;span]:gap-x-3 [&amp;&gt;span]:size-4 [&amp;&gt;span]:translate-y-0.5| do
         assert html =~ class
       end
     end
@@ -42,9 +61,12 @@ defmodule SaladUI.AlertTest do
         </.alert>
         """)
 
-      for class <- ~w(relative p-4 rounded-lg border-destructive/50 text-destructive w-full dark:border-destructive) do
+      for class <-
+            ~w(relative grid rounded-lg bg-card text-destructive w-full *:data-[slot=alert-description]:text-destructive/90) do
         assert html =~ class
       end
+
+      refute html =~ "text-card-foreground"
 
       assert html =~ "Heads up!"
       assert html =~ "You can add components to your app using the cli"
@@ -58,13 +80,10 @@ defmodule SaladUI.AlertTest do
         <.alert_title>Alert title</.alert_title>
         """)
 
-      for class <- ~w(mb-1 font-medium leading-none tracking-tight) do
-        assert html =~ class
-      end
+      assert html =~
+               ~s(<div data-slot="alert-title" class="col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight">)
 
-      assert html =~ "<h5 data-slot=\"alert-title\" class=\"mb-1"
       assert html =~ "Alert title"
-      assert html =~ "</h5>"
     end
 
     test "it renders alert description correctly" do
@@ -76,11 +95,9 @@ defmodule SaladUI.AlertTest do
         """)
 
       assert html =~ "Alert description"
-      assert html =~ ~s(<div data-slot="alert-description" class="text-sm [&amp;_p]:leading-relaxed">)
 
-      for class <- ~w(text-sm leading-relaxed) do
-        assert html =~ class
-      end
+      assert html =~
+               ~s(<div data-slot="alert-description" class="col-start-2 grid justify-items-start gap-1 text-sm text-muted-foreground [&amp;_p]:leading-relaxed">)
     end
   end
 end

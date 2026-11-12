@@ -14,13 +14,16 @@ defmodule SaladUi.ProgressTest do
         |> rendered_to_string()
         |> clean_string()
 
-      for class <- ~w(size-full flex-1 bg-primary transition-all) do
+      for class <- ~w(h-full w-full flex-1 bg-primary transition-all) do
         assert html =~ class
       end
 
-      for class <- ~w(relative rounded-full bg-secondary overflow-hidden w-[60%]) do
+      for class <- ~w(relative h-2 rounded-full bg-primary/20 overflow-hidden w-[60%]) do
         assert html =~ class
       end
+
+      refute html =~ "bg-secondary"
+      refute html =~ "h-4"
 
       assert html =~ "style=\"transform: translateX(-80%)\"></div></div>"
     end

@@ -18,14 +18,17 @@ defmodule SaladUI.Sheet do
               Make changes to your profile here. Click save when you're done.
             </.sheet_description>
           </.sheet_header>
-          <div class="grid gap-4 py-4">
-            <div class="grid grid-cols-4 items-center gap-4">
-              <.label for="name" class="text-right">Name</.label>
-              <.input id="name" value="John Doe" class="col-span-3" />
+          <div class="grid flex-1 auto-rows-min gap-6 px-4">
+            <div class="grid gap-3">
+              <.label for="name">Name</.label>
+              <.input id="name" value="John Doe" />
             </div>
           </div>
           <.sheet_footer>
             <.button type="submit">Save changes</.button>
+            <.sheet_close>
+              <.button variant="outline" class="w-full">Close</.button>
+            </.sheet_close>
           </.sheet_footer>
         </.sheet_content>
       </.sheet>
@@ -142,13 +145,32 @@ defmodule SaladUI.Sheet do
   @doc """
   The sheet content that appears when triggered.
 
+  Renders the overlay and the sliding panel. The panel is a `flex flex-col gap-4`
+  column with no padding of its own: `sheet_header/1` and `sheet_footer/1` carry
+  `p-4`, and the footer is pushed to the bottom with `mt-auto`.
+
   ## Options
 
   * `:side` - The side from which the sheet appears (top, right, bottom, left). Defaults to `"right"`.
+    Rendered as `data-side`, so `class` can target a side, e.g. `data-[side=bottom]:max-h-[50vh]`.
+  * `:show_close_button` - Render the close (X) button in the top-right corner. Defaults to `true`.
   * `:class` - Additional CSS classes to customize dimensions and appearance.
+
+  ## Examples
+
+      <.sheet_content side="left" show_close_button={false}>
+        <.sheet_header>
+          <.sheet_title>No Close Button</.sheet_title>
+        </.sheet_header>
+      </.sheet_content>
   """
   attr :class, :string, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "right", doc: "The side from which the sheet appears"
+
+  attr :show_close_button, :boolean,
+    default: true,
+    doc: "render the close button in the top-right corner"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -163,7 +185,7 @@ defmodule SaladUI.Sheet do
       <div
         data-slot="sheet-overlay"
         data-part="overlay"
-        class="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300 data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        class="fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:fill-mode-forwards"
       />
 
       <div
@@ -171,32 +193,36 @@ defmodule SaladUI.Sheet do
         data-side={@side}
         class={
           classes([
-            "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300 data-[state=closed]:fill-mode-forwards",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "fixed z-50 flex flex-col gap-4 bg-background shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
+            "data-[state=closed]:fill-mode-forwards",
             @variant_class,
             @class
           ])
         }
         {@rest}
       >
-        <div class="h-full flex flex-col">
-          {render_slot(@inner_block)}
-        </div>
+        {render_slot(@inner_block)}
 
         <button
+          :if={@show_close_button}
           data-slot="sheet-close"
           type="button"
           data-part="close-trigger"
           data-action="close"
-          class="absolute right-4 top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-ring/50 focus:ring-[3px] disabled:pointer-events-none data-[state=open]:bg-secondary"
+          class="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            fill="none"
+            width="24"
+            height="24"
             viewBox="0 0 24 24"
-            stroke-width="1.5"
+            fill="none"
             stroke="currentColor"
-            class="size-5"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="size-4"
+            aria-hidden="true"
           >
             <path d="M18 6 6 18"></path>
             <path d="m6 6 12 12"></path>
@@ -219,7 +245,7 @@ defmodule SaladUI.Sheet do
     ~H"""
     <div
       data-slot="sheet-header"
-      class={classes(["flex flex-col space-y-1.5 text-center sm:text-left", @class])}
+      class={classes(["flex flex-col gap-1.5 p-4", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -239,7 +265,7 @@ defmodule SaladUI.Sheet do
     <h3
       data-slot="sheet-title"
       data-part="title"
-      class={classes(["flex flex-col space-y-2 text-center sm:text-left", @class])}
+      class={classes(["font-semibold text-foreground", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -278,7 +304,7 @@ defmodule SaladUI.Sheet do
     ~H"""
     <div
       data-slot="sheet-footer"
-      class={classes(["flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", @class])}
+      class={classes(["mt-auto flex flex-col gap-2 p-4", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -318,14 +344,13 @@ defmodule SaladUI.Sheet do
 
   @variants %{
     side: %{
-      "top" =>
-        "inset-x-0 top-0 border-b border-border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+      "top" => "inset-x-0 top-0 h-auto border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
       "bottom" =>
-        "inset-x-0 bottom-0 border-t border-border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        "inset-x-0 bottom-0 h-auto border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
       "left" =>
-        "inset-y-0 left-0 h-full w-3/4 border-r border-border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
+        "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
       "right" =>
-        "inset-y-0 right-0 h-full w-3/4 border-l border-border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm"
+        "inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm"
     }
   }
 

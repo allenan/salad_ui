@@ -38,7 +38,6 @@ defmodule SaladUI.Command do
   use SaladUI, :component
 
   import SaladUI.Dialog
-  import SaladUI.Icon
 
   @doc """
   Renders the root command palette container.
@@ -86,10 +85,17 @@ defmodule SaladUI.Command do
   @doc """
   Renders a command palette inside a dialog.
 
+  The dialog gets a screen-reader-only header (title and description), as in
+  shadcn's `CommandDialog`, so the dialog has an accessible name.
+
   ## Attributes
 
-    * `:id` (required) - The unique id for the command palette.
+    * `:id` (required) - The unique id for the command palette. The dialog's id is `"<id>_dialog"`.
     * `:open` - Whether the dialog is open.
+    * `:title` - The dialog's accessible title. Defaults to `"Command Palette"`.
+    * `:description` - The dialog's accessible description. Defaults to `"Search for a command to run..."`.
+    * `:show_close_button` - Render the dialog's close button. Defaults to `true`.
+    * `:class` - Additional classes for the dialog content.
 
   ## Slots
 
@@ -97,19 +103,37 @@ defmodule SaladUI.Command do
 
   ## Example
 
-      <.command_dialog id="my-command" open={@show_command}>
+      <.command_dialog id="my-command" open={@show_command} title="Search" show_close_button={false}>
         ...
       </.command_dialog>
   """
   attr :id, :string, required: true
   attr :open, :boolean, default: false
+  attr :title, :string, default: "Command Palette", doc: "the dialog's accessible (sr-only) title"
+
+  attr :description, :string,
+    default: "Search for a command to run...",
+    doc: "the dialog's accessible (sr-only) description"
+
+  attr :show_close_button, :boolean, default: true, doc: "render the dialog's close button"
+  attr :class, :any, default: nil
   slot :inner_block, required: true
 
   def command_dialog(assigns) do
     ~H"""
     <.dialog id={@id <> "_dialog"} open={@open}>
-      <.dialog_content class="overflow-hidden p-0">
-        <.command id={@id} class="[&_[data-part='input']]:h-12">
+      <.dialog_content
+        class={classes(["overflow-hidden p-0", @class])}
+        show_close_button={@show_close_button}
+      >
+        <.dialog_header class="sr-only">
+          <.dialog_title>{@title}</.dialog_title>
+          <.dialog_description>{@description}</.dialog_description>
+        </.dialog_header>
+        <.command
+          id={@id}
+          class="**:data-[slot=command-input-wrapper]:h-12 **:data-[slot=command-group-heading]:px-2 **:data-[slot=command-group-heading]:font-medium **:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group]:px-2 [&_[data-slot=command-group]:not([data-visible=false])~[data-slot=command-group]]:pt-0 [&_[data-slot=command-input-wrapper]_svg]:h-5 [&_[data-slot=command-input-wrapper]_svg]:w-5 **:data-[slot=command-input]:h-12 **:data-[slot=command-item]:px-2 **:data-[slot=command-item]:py-3 [&_[data-slot=command-item]_svg]:h-5 [&_[data-slot=command-item]_svg]:w-5"
+        >
           {render_slot(@inner_block)}
         </.command>
       </.dialog_content>
@@ -137,9 +161,23 @@ defmodule SaladUI.Command do
     <div
       data-slot="command-input-wrapper"
       data-part="input-wrapper"
-      class="flex items-center border-b border-border px-3"
+      class="flex h-9 items-center gap-2 border-b px-3"
     >
-      <.icon name="hero-magnifying-glass" />
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="size-4 shrink-0 opacity-50"
+        aria-hidden="true"
+      >
+        <path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />
+      </svg>
       <input
         data-slot="command-input"
         type="text"
@@ -150,7 +188,9 @@ defmodule SaladUI.Command do
         spellcheck="false"
         class={
           classes([
-            "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-none focus:ring-transparent",
+            "flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+            # cancel form-plugin input borders, padding and focus rings
+            "border-none px-0 focus:ring-transparent",
             @class
           ])
         }
@@ -189,7 +229,7 @@ defmodule SaladUI.Command do
       data-part="list"
       tabindex="-1"
       role="listbox"
-      class={classes(["max-h-[300px] overflow-y-auto overflow-x-hidden", @class])}
+      class={classes(["max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto", @class])}
     >
       {render_slot(@inner_block)}
     </div>
@@ -234,7 +274,8 @@ defmodule SaladUI.Command do
 
   ## Attributes
 
-    * `:heading` (required) - The group heading.
+    * `:heading` (required) - The group heading (`data-slot="command-group-heading"`).
+    * `:class` - Additional classes to apply.
 
   ## Slots
 
@@ -247,6 +288,7 @@ defmodule SaladUI.Command do
       </.command_group>
   """
   attr :heading, :string, required: true
+  attr :class, :any, default: nil
   slot :inner_block, required: true
 
   def command_group(assigns) do
@@ -255,9 +297,13 @@ defmodule SaladUI.Command do
       data-slot="command-group"
       role="presentation"
       data-part="group"
-      class="overflow-hidden p-1 text-foreground data-[visible=false]:hidden"
+      class={classes(["overflow-hidden p-1 text-foreground data-[visible=false]:hidden", @class])}
     >
-      <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+      <div
+        data-slot="command-group-heading"
+        aria-hidden="true"
+        class="px-2 py-1.5 text-xs font-medium text-muted-foreground"
+      >
         {@heading}
       </div>
       <div role="group" class="list-none">
@@ -306,8 +352,9 @@ defmodule SaladUI.Command do
 
   ## Attributes
 
-    * `:disabled` - Whether the item is disabled.
+    * `:disabled` - Whether the item is disabled (also sets `data-disabled="true"`).
     * `:selected` - Whether the item is selected.
+    * `:class` - Additional classes to apply.
     * All global attributes are passed to the `<button>` element.
 
   ## Slots
@@ -323,6 +370,7 @@ defmodule SaladUI.Command do
   """
   attr :disabled, :boolean, default: false
   attr :selected, :boolean, default: false
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -333,9 +381,18 @@ defmodule SaladUI.Command do
       tabindex="-1"
       role="option"
       data-part="item"
-      class="relative flex cursor-default w-full gap-2 select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden disabled:pointer-events-none hover:bg-accent/75 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[visible=false]:hidden disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+      class={
+        classes([
+          "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+          # SaladUI items are <button>s: fill the row, show hover, hide when filtered out
+          "w-full text-left hover:bg-accent/75 data-[visible=false]:hidden",
+          @class
+        ])
+      }
       data-selected={@selected}
       aria-selected={@selected}
+      data-disabled={@disabled && "true"}
+      aria-disabled={@disabled && "true"}
       disabled={@disabled}
       {@rest}
     >

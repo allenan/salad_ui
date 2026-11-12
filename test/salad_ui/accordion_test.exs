@@ -85,7 +85,7 @@ defmodule SaladUI.AccordionTest do
       assert html =~ ~s(data-part="item")
       assert html =~ ~s(data-value="item-1")
 
-      for class <- ~w(border-b border-border custom-class) do
+      for class <- ~w(border-b last:border-b-0 custom-class) do
         assert html =~ class
       end
     end
@@ -101,10 +101,15 @@ defmodule SaladUI.AccordionTest do
 
       assert html =~ ~s(data-part="item-trigger")
       assert html =~ ~s(aria-expanded="false")
+      # shadcn's AccordionPrimitive.Header: the button sits inside an h3.flex
+      assert html =~ ~r/<h3 class="flex">\s*<button/
 
-      for class <- ~w(flex w-full justify-between py-4 font-medium transition-all hover:underline text-sm custom-class) do
+      for class <-
+            ~w(flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 custom-class) do
         assert html =~ class
       end
+
+      assert html =~ "pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground"
     end
   end
 
@@ -116,10 +121,11 @@ defmodule SaladUI.AccordionTest do
           inner_block: []
         })
 
-      for class <-
-            ~w(text-sm overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down custom-class) do
-        assert html =~ class
-      end
+      assert html =~
+               ~s(class="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down")
+
+      # className lands on the inner padding div, as in shadcn's AccordionContent
+      assert html =~ ~s(<div class="pt-0 pb-4 custom-class">)
     end
   end
 end

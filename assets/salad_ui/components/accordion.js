@@ -123,6 +123,9 @@ class AccordionItem extends Component {
 
   initialize() {
     if (this.disabled) {
+      // Mirrors Radix: a disabled item's trigger is a disabled <button>, so
+      // the trigger's `disabled:` styles (dimmed, no pointer events) apply.
+      this.trigger.disabled = true;
       this.trigger.setAttribute("tabindex", "-1");
     } else {
       this.trigger.setAttribute("tabindex", "0");

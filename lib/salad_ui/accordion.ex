@@ -133,7 +133,7 @@ defmodule SaladUI.Accordion do
       data-value={@value}
       data-disabled={to_string(@disabled)}
       data-state="closed"
-      class={classes(["border-b border-border", @class])}
+      class={classes(["border-b last:border-b-0", @class])}
       tabindex="-1"
       {@rest}
     >
@@ -145,9 +145,12 @@ defmodule SaladUI.Accordion do
   @doc """
   The trigger element that expands/collapses an accordion item.
 
+  Rendered as a `<button>` inside an `<h3>` heading (shadcn's
+  `AccordionPrimitive.Header`), followed by a rotating chevron.
+
   ## Options
 
-  * `:class` - Additional CSS classes.
+  * `:class` - Additional CSS classes for the `<button>`.
   """
   attr :class, :string, default: nil
   attr :rest, :global
@@ -155,37 +158,39 @@ defmodule SaladUI.Accordion do
 
   def accordion_trigger(assigns) do
     ~H"""
-    <button
-      data-slot="accordion-trigger"
-      type="button"
-      data-part="item-trigger"
-      class={
-        classes([
-          "flex w-full justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-          "text-sm",
-          @class
-        ])
-      }
-      tabindex="-1"
-      aria-expanded="false"
-      {@rest}
-    >
-      <span>{render_slot(@inner_block)}</span>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="size-4 shrink-0 transition-transform duration-200"
+    <h3 class="flex">
+      <button
+        data-slot="accordion-trigger"
+        type="button"
+        data-part="item-trigger"
+        class={
+          classes([
+            "flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
+            @class
+          ])
+        }
+        tabindex="-1"
+        aria-expanded="false"
+        {@rest}
       >
-        <path d="m6 9 6 6 6-6"></path>
-      </svg>
-    </button>
+        {render_slot(@inner_block)}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6"></path>
+        </svg>
+      </button>
+    </h3>
     """
   end
 
@@ -194,7 +199,8 @@ defmodule SaladUI.Accordion do
 
   ## Options
 
-  * `:class` - Additional CSS classes.
+  * `:class` - Additional CSS classes for the inner padding wrapper
+    (`pt-0 pb-4`), as in shadcn's `AccordionContent`.
   """
   attr :class, :string, default: nil
   attr :rest, :global
@@ -206,16 +212,11 @@ defmodule SaladUI.Accordion do
       data-slot="accordion-content"
       data-part="item-content"
       data-state="closed"
-      class={
-        classes([
-          "overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
-          @class
-        ])
-      }
+      class="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
       hidden
       {@rest}
     >
-      <div class="pb-4 pt-0">
+      <div class={classes(["pt-0 pb-4", @class])}>
         {render_slot(@inner_block)}
       </div>
     </div>

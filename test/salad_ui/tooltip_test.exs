@@ -77,5 +77,30 @@ defmodule SaladUI.TooltipTest do
       assert html =~ "hidden"
       assert html =~ "Tooltip content"
     end
+
+    test "renders shadcn's arrow, positioned by the content's data-side" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip_content side="bottom">Tip</.tooltip_content>
+        """)
+
+      assert html =~ "group/tooltip z-50"
+      assert html =~ ~s(data-slot="tooltip-arrow")
+      assert html =~ ~s(aria-hidden="true")
+
+      assert html =~
+               "z-50 block size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground"
+
+      for side <- ~w(top bottom left right) do
+        assert html =~ "group-data-[side=#{side}]/tooltip:"
+      end
+
+      assert html =~ "group-data-[side=bottom]/tooltip:bottom-full"
+      assert html =~ "group-data-[side=bottom]/tooltip:rotate-180"
+      assert html =~ "group-data-[side=left]/tooltip:left-full"
+      assert html =~ "group-data-[side=right]/tooltip:right-full"
+    end
   end
 end

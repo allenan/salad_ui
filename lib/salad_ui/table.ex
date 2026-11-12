@@ -30,12 +30,20 @@ defmodule SaladUI.Table do
   """
   use SaladUI, :component
 
+  # shadcn's `[role=checkbox]` selectors target Radix's `<button role="checkbox">`.
+  # SaladUI's `checkbox/1` is a native `<input type="checkbox">`, which has no
+  # `role` attribute, so the same tweaks are repeated for `[type=checkbox]`.
+  @native_checkbox_class "[&:has([type=checkbox])]:pr-0 [&>[type=checkbox]]:translate-y-[2px]"
+
   @doc """
   Renders a data table.
 
+  The `<table>` is wrapped in a `<div data-slot="table-container">` that scrolls
+  horizontally when the table is wider than its container.
+
   ## Attributes
 
-  * `:class` - Additional CSS classes for the table
+  * `:class` - Additional CSS classes for the `<table>`
   * `:aria-label` - Accessible name for the table when no caption is present
   * `:aria-describedby` - ID of an element that describes the table
   """
@@ -47,15 +55,17 @@ defmodule SaladUI.Table do
 
   def table(assigns) do
     ~H"""
-    <table
-      data-slot="table"
-      class={classes(["w-full caption-bottom text-sm", @class])}
-      aria-label={assigns[:"aria-label"]}
-      aria-describedby={assigns[:"aria-describedby"]}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </table>
+    <div data-slot="table-container" class="relative w-full overflow-x-auto">
+      <table
+        data-slot="table"
+        class={classes(["w-full caption-bottom text-sm", @class])}
+        aria-label={assigns[:"aria-label"]}
+        aria-describedby={assigns[:"aria-describedby"]}
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </table>
+    </div>
     """
   end
 
@@ -70,7 +80,7 @@ defmodule SaladUI.Table do
     ~H"""
     <thead
       data-slot="table-header"
-      class={classes(["[&_tr]:border-b [&_tr]:border-border", @class])}
+      class={classes(["[&_tr]:border-b", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -97,7 +107,7 @@ defmodule SaladUI.Table do
       data-slot="table-row"
       class={
         classes([
-          "border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+          "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
           @class
         ])
       }
@@ -126,12 +136,15 @@ defmodule SaladUI.Table do
   slot :inner_block, required: true
 
   def table_head(assigns) do
+    assigns = assign(assigns, :checkbox_class, @native_checkbox_class)
+
     ~H"""
     <th
       data-slot="table-head"
       class={
         classes([
-          "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+          "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+          @checkbox_class,
           @class
         ])
       }
@@ -172,10 +185,18 @@ defmodule SaladUI.Table do
   slot :inner_block, required: true
 
   def table_cell(assigns) do
+    assigns = assign(assigns, :checkbox_class, @native_checkbox_class)
+
     ~H"""
     <td
       data-slot="table-cell"
-      class={classes(["p-4 align-middle [&:has([role=checkbox])]:pr-0", @class])}
+      class={
+        classes([
+          "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+          @checkbox_class,
+          @class
+        ])
+      }
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -196,7 +217,7 @@ defmodule SaladUI.Table do
       data-slot="table-footer"
       class={
         classes([
-          "border-t border-border bg-muted/50 font-medium [&>tr]:last:border-b-0",
+          "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
           @class
         ])
       }

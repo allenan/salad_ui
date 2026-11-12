@@ -181,7 +181,6 @@ defmodule SaladUI.ButtonGroup do
     ~H"""
     <SaladUI.Separator.separator
       data-slot="button-group-separator"
-      data-orientation={@orientation}
       orientation={@orientation}
       class={
         classes([

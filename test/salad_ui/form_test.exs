@@ -29,7 +29,7 @@ defmodule SaladUI.FormTest do
         |> rendered_to_string()
         |> clean_string()
 
-      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-70) do
+      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-50) do
         assert html =~ class
       end
 
@@ -120,7 +120,7 @@ defmodule SaladUI.FormTest do
       assert String.contains?(html, "phx-submit=\"save\"")
       assert String.contains?(html, "phx-target=\"test-string\"")
 
-      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-70) do
+      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-50) do
         assert html =~ class
       end
 

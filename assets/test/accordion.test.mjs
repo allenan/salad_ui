@@ -185,6 +185,8 @@ test("disabled item ignores clicks and keeps a non-focusable trigger", () => {
 
   const { trigger } = getItemEls("item-1");
   assert.equal(trigger.getAttribute("tabindex"), "-1");
+  assert.equal(trigger.disabled, true);
+  assert.equal(getItemEls("item-2").trigger.disabled, false);
 
   click(trigger);
 

@@ -116,11 +116,13 @@ defmodule SaladUI.ButtonGroupTest do
         <.button_group_separator />
         """)
 
-      assert html =~ ~s(role="separator")
+      assert html =~ ~s(role="none")
       assert html =~ ~s(data-slot="button-group-separator")
       refute html =~ ~s(data-slot="separator")
       assert html =~ ~s(data-orientation="vertical")
-      assert html =~ ~s(aria-orientation="vertical")
+      # decorative by default, like shadcn's Separator: no aria-orientation
+      refute html =~ "aria-orientation"
+      assert length(Regex.scan(~r/data-orientation=/, html)) == 1
       assert html =~ "self-stretch"
       assert html =~ "bg-input"
       assert html =~ "data-[orientation=vertical]:h-auto"

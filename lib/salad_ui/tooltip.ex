@@ -132,6 +132,12 @@ defmodule SaladUI.Tooltip do
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.
+
+  The content ends with shadcn's arrow: a rotated `size-2.5` square in the
+  content's color, centred on the edge that faces the trigger. It follows
+  `data-side`, which the positioner updates when the tooltip flips sides.
+  If you change the content's background, recolor the arrow to match, e.g.
+  `class="bg-primary [&_[data-slot=tooltip-arrow]>span]:bg-primary"`.
   """
   attr :class, :string, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "top"
@@ -158,7 +164,7 @@ defmodule SaladUI.Tooltip do
       data-align-offset={@align_offset}
       class={
         classes([
-          "z-50 w-fit animate-in rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+          "group/tooltip z-50 w-fit animate-in rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           @class
         ])
       }
@@ -166,6 +172,19 @@ defmodule SaladUI.Tooltip do
       {@rest}
     >
       {render_slot(@inner_block)}
+      <span
+        data-slot="tooltip-arrow"
+        aria-hidden="true"
+        class={[
+          "pointer-events-none absolute",
+          "group-data-[side=top]/tooltip:top-full group-data-[side=top]/tooltip:left-1/2 group-data-[side=top]/tooltip:-translate-x-1/2",
+          "group-data-[side=bottom]/tooltip:bottom-full group-data-[side=bottom]/tooltip:left-1/2 group-data-[side=bottom]/tooltip:-translate-x-1/2 group-data-[side=bottom]/tooltip:rotate-180",
+          "group-data-[side=left]/tooltip:top-1/2 group-data-[side=left]/tooltip:left-full group-data-[side=left]/tooltip:-translate-y-1/2 group-data-[side=left]/tooltip:-rotate-90",
+          "group-data-[side=right]/tooltip:top-1/2 group-data-[side=right]/tooltip:right-full group-data-[side=right]/tooltip:-translate-y-1/2 group-data-[side=right]/tooltip:rotate-90"
+        ]}
+      >
+        <span class="z-50 block size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground"></span>
+      </span>
     </div>
     """
   end
