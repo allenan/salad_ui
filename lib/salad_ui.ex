@@ -48,6 +48,8 @@ defmodule SaladUI do
   - `select/1` - Dropdown selection menus
   - `native_select/1` - Styled native `<select>` with options and optgroups
   - `slider/1` - Range value selection
+  - `calendar/1` - Month grid for picking a date, dates or a range
+  - `date_picker/1` - Popover + calendar date picker
   - `switch/1` - Toggle controls
   - `field/1`, `field_set/1`, `field_group/1`, `field_label/1`, `field_error/1` - Form field structure and validation
   - `form_item/1`, `form_label/1`, `form_message/1` - Legacy form helpers (prefer `field/1`)
@@ -209,12 +211,14 @@ defmodule SaladUI do
       import SaladUI.Bubble
       import SaladUI.Button
       import SaladUI.ButtonGroup
+      import SaladUI.Calendar
       import SaladUI.Card
       import SaladUI.Carousel
       import SaladUI.Chart
       import SaladUI.Checkbox
       import SaladUI.CodeBlock
       import SaladUI.Collapsible
+      import SaladUI.DatePicker
       import SaladUI.Dialog
       import SaladUI.Drawer
       import SaladUI.DropdownMenu

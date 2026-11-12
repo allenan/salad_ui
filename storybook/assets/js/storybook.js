@@ -25,6 +25,7 @@ import "salad_ui/components/toast";
 import "salad_ui/components/toast-flash";
 import "salad_ui/components/input_group";
 import "salad_ui/components/code_block";
+import "salad_ui/components/calendar";
 
 // import * as Params from "./params";
 // import * as Uploaders from "./uploaders";

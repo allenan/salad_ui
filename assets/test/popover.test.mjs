@@ -212,3 +212,65 @@ test("with an anchor, clicking outside closes the popover", () => {
   assert.equal(component.state, "closed");
   component.destroy();
 });
+
+// A hook on LiveView >= 1.1, which can ignore attributes during patches.
+function createPatchSafeHook(el, ignored) {
+  return {
+    ...createHookInstance(el),
+    js: () => ({
+      ignoreAttributes: (target, attrs) => ignored.set(target, attrs),
+    }),
+  };
+}
+
+test("open state is kept across LiveView patches", () => {
+  const { el, trigger, positioner, content } = buildPopover();
+  const ignored = new Map();
+  const hook = createPatchSafeHook(el, ignored);
+  hook.mounted();
+
+  assert.deepEqual(ignored.get(el), ["data-state"]);
+  assert.deepEqual(ignored.get(trigger), ["data-state", "aria-expanded"]);
+  assert.deepEqual(ignored.get(positioner), ["data-state", "hidden", "style"]);
+  assert.deepEqual(ignored.get(content), ["data-state", "data-side"]);
+
+  click(trigger);
+  const original = hook.component;
+  const positioned = original.positionedElement;
+  assert.equal(positioned.active, true);
+
+  // A patch that only changed the content's children keeps everything live.
+  hook.beforeUpdate();
+  content.innerHTML = "<button type='button'>Re-rendered</button>";
+  hook.updated();
+
+  assert.equal(hook.component, original);
+  assert.equal(original.state, "open");
+  assert.equal(positioned.active, true);
+  assert.equal(positioner.hidden, false);
+  hook.destroyed();
+});
+
+test("a patch that replaces the parts rebuilds the popover in its open state", () => {
+  const { el, trigger } = buildPopover();
+  const hook = createPatchSafeHook(el, new Map());
+  hook.mounted();
+  click(trigger);
+
+  const original = hook.component;
+  hook.beforeUpdate();
+  // LiveView kept the root's (ignored) data-state="open" but swapped children.
+  el.innerHTML = `
+    <button data-part="trigger" data-action="toggle" type="button">Open</button>
+    <div data-part="positioner" data-side="bottom" data-align="center" hidden>
+      <div data-part="content">New</div>
+    </div>
+  `;
+  hook.updated();
+
+  assert.notEqual(hook.component, original);
+  assert.equal(original.destroyed, true);
+  assert.equal(hook.component.state, "open");
+  assert.equal(el.querySelector('[data-part="positioner"]').hidden, false);
+  hook.destroyed();
+});
