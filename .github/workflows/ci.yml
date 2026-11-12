@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Library on the toolchain pinned in .tool-versions (latest Elixir/OTP).
+  elixir:
+    name: Elixir (.tool-versions)
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      - uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-
+      - run: mix deps.get
+      - run: mix deps.unlock --check-unused
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix credo
+      - run: mix test
+
+  # Oldest Elixir/OTP allowed by mix.exs (`elixir: "~> 1.16"`).
+  elixir-min:
+    name: Elixir 1.16 / OTP 26 (minimum)
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26"
+          elixir-version: "1.16"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+          key: mix-min-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-min-${{ runner.os }}-
+      - run: mix deps.get
+      - run: mix compile
+      - run: mix test
+
+  js:
+    name: JavaScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: assets
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+
+  # Storybook app: compiles, every story mounts (StorybookSmokeTest), assets build.
+  storybook:
+    name: Storybook
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: storybook
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/cache@v6
+        with:
+          path: |
+            storybook/deps
+            storybook/_build
+          key: storybook-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-${{ hashFiles('storybook/mix.lock') }}
+          restore-keys: storybook-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-
+      - run: mix deps.get
+      - run: mix deps.unlock --check-unused
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix test
+      - name: Build assets
+        run: |
+          npm ci --prefix assets
+          mix assets.setup
+          mix assets.build
+
+  # mix salad.setup / mix salad.install against a freshly generated Phoenix app.
+  installer:
+    name: Installer e2e (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [setup, install]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      - run: mix archive.install hex phx_new --force
+      - run: .github/scripts/installer-e2e/run.sh ${{ matrix.mode }}

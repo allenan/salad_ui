@@ -918,7 +918,9 @@ SaladUI.register("toast", ToastComponent);
  * round trip. Targets whichever `<.toaster>` mounted first on the page.
  */
 function getToaster() {
-  return document.querySelector('[data-component="toast"]')?.__toastComponent || null;
+  return (
+    document.querySelector('[data-component="toast"]')?.__toastComponent || null
+  );
 }
 
 function dispatchToast(variant, message, opts = {}) {

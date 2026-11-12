@@ -3,7 +3,7 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/collapsible.js"; // self-registers "collapsible"
-import { installDom, uninstallDom, wait } from "./helpers/dom.mjs";
+import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -157,10 +157,14 @@ test("open_to_closed animation hides content only after the transition finishes"
   assert.equal(el.getAttribute("data-state"), "closed");
   assert.equal(content.hidden, false);
 
-  await wait(40);
-
+  // Hidden, then animation classes cleaned up, once the transition settles.
+  await waitFor(
+    () =>
+      content.hidden === true &&
+      !content.classList.contains("opacity-0") &&
+      !content.classList.contains("opacity-100"),
+  );
   assert.equal(content.hidden, true);
-  // Animation classes are cleaned up once the transition settles.
   assert.equal(content.classList.contains("opacity-0"), false);
   assert.equal(content.classList.contains("opacity-100"), false);
 });

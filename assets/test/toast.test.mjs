@@ -3,7 +3,13 @@ import { after, afterEach, before, test } from "node:test";
 
 import { toast } from "../salad_ui/components/toast.js";
 import { registry } from "../salad_ui/core/factory.js";
-import { installDom, setRect, uninstallDom, wait } from "./helpers/dom.mjs";
+import {
+  installDom,
+  setRect,
+  uninstallDom,
+  wait,
+  waitFor,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -73,10 +79,10 @@ test("add creates a visible card with title/description", async () => {
     title: "Saved!",
     description: "All good",
   });
-  await wait(10);
-
   const card = cardFor(viewport, id);
   assert.ok(card);
+  // entering -> visible happens after two nested rAFs
+  await waitFor(() => card.dataset.state === "visible");
   assert.equal(card.dataset.state, "visible");
   assert.equal(card.dataset.variant, "default");
   assert.equal(card.querySelector('[data-part="title"]').textContent, "Saved!");

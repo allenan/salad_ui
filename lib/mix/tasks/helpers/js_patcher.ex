@@ -31,6 +31,20 @@ defmodule SaladUI.Patcher.JSPatcher do
     The modified JavaScript content with the content appended after the last import
   """
   def append_after_last_import(js_content, content_to_append) do
+    # Only append lines that aren't already present, so re-running is a no-op.
+    missing =
+      content_to_append
+      |> String.split("\n", trim: true)
+      |> Enum.reject(&String.contains?(js_content, String.trim(&1)))
+
+    if missing == [] do
+      js_content
+    else
+      do_append_after_last_import(js_content, Enum.join(missing, "\n") <> "\n")
+    end
+  end
+
+  defp do_append_after_last_import(js_content, content_to_append) do
     # Find all import statements - handle both semicolon and non-semicolon imports
     import_regex = ~r/(import\s+.*?(?:;\n?|\n|$))/
     imports = Regex.scan(import_regex, js_content)
