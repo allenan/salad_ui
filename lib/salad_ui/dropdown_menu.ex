@@ -631,7 +631,9 @@ defmodule SaladUI.DropdownMenu do
   sub-trigger opens the sub-menu and focuses its first item; `ArrowLeft`
   inside it closes it and returns focus to the sub-trigger (mirrored when an
   ancestor has `dir="rtl"`). `Escape` closes the whole menu. Hovering the
-  sub-trigger opens the sub-menu; hovering a sibling item closes it.
+  sub-trigger opens the sub-menu; hovering a sibling item closes it, except
+  while the pointer is travelling from the sub-trigger toward the sub-menu.
+  Open sub-menus and focus survive LiveView re-renders.
 
   ## Examples
 

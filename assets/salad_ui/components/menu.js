@@ -12,7 +12,47 @@ const ITEM_SELECTOR = [
 ].join(", ");
 const MENU_SELECTOR = "[data-part='content'], [data-part='sub-content']";
 
-let subContentCounter = 0;
+// How long the pointer may take to travel from a sub-trigger to its sub-menu.
+const POINTER_GRACE_MS = 300;
+
+let subMenuCounter = 0;
+
+// Ids this module (or the dropdown root) generated. LiveView's morphdom keys
+// nodes by id, so a client-only id makes it replace the node on the next
+// patch instead of patching it; they are stripped before each patch.
+const generatedIds = new WeakSet();
+
+export function assignId(el, id) {
+  if (el && !el.id) {
+    el.id = id;
+    generatedIds.add(el);
+  }
+  return el?.id || null;
+}
+
+export function clearGeneratedIds(...roots) {
+  roots.forEach((root) =>
+    root?.querySelectorAll("[id]").forEach((node) => {
+      if (!generatedIds.has(node)) return;
+      node.removeAttribute("id");
+      generatedIds.delete(node);
+    }),
+  );
+}
+
+function isPointInPolygon({ x, y }, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i];
+    const b = polygon[j];
+    if (
+      a.y > y !== b.y > y &&
+      x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x
+    )
+      inside = !inside;
+  }
+  return inside;
+}
 
 function readItemValue(itemElement) {
   return (
@@ -69,6 +109,7 @@ class MenuItemBase extends Component {
             item: {
               click: "handleActivation",
               mouseenter: "handleMouseEnter",
+              mousemove: "handleMouseEnter",
             },
           },
           keyMap: {
@@ -137,10 +178,12 @@ class MenuItemBase extends Component {
     return this.el.matches("a[href]");
   }
 
-  handleMouseEnter() {
-    if (!this.disabled) {
-      this.parent.handleItemFocus(this);
-    }
+  // Pointer moves focus to the hovered item (mousemove too, so an item
+  // skipped during a sub-menu's pointer grace is focused once it ends).
+  handleMouseEnter(event) {
+    if (this.disabled || this.parent.isPointerMovingToSubmenu(event)) return;
+
+    this.parent.handleItemFocus(this);
   }
 }
 
@@ -162,6 +205,7 @@ function checkableConfig(component, part, role) {
       [part]: {
         click: "handleActivation",
         mouseenter: "handleMouseEnter",
+        mousemove: "handleMouseEnter",
       },
     },
     keyMap: {
@@ -327,9 +371,14 @@ class MenuSubTrigger extends MenuItemBase {
       ":scope > [data-part='sub-content']",
     );
 
-    if (this.content && !this.content.id) {
-      const prefix = parentComponent.rootEl?.id || "salad-menu";
-      this.content.id = `${prefix}-sub-content-${++subContentCounter}`;
+    if (this.content) {
+      const prefix = `${parentComponent.rootEl?.id || "salad-menu"}-sub`;
+      const n = ++subMenuCounter;
+      assignId(this.content, `${prefix}-content-${n}`);
+      this.content.setAttribute(
+        "aria-labelledby",
+        assignId(itemElement, `${prefix}-trigger-${n}`),
+      );
     }
 
     this.subMenu = this.content
@@ -352,6 +401,8 @@ class MenuSubTrigger extends MenuItemBase {
         "sub-trigger": {
           click: "handleActivation",
           mouseenter: "handleMouseEnter",
+          mousemove: "handleMouseEnter",
+          mouseleave: "handleMouseLeave",
         },
       },
     };
@@ -428,14 +479,36 @@ class MenuSubTrigger extends MenuItemBase {
     this.open({ focusFirst: true });
   }
 
-  handleMouseEnter() {
-    if (this.disabled) return;
+  handleMouseEnter(event) {
+    if (this.disabled || this.parent.isPointerMovingToSubmenu(event)) return;
 
     this.parent.handleItemFocus(this);
     // Coming back from the sub-menu, the parent's roving focus already points
     // here, so focus the trigger explicitly.
     if (document.activeElement !== this.el) this.el.focus();
     this.open();
+  }
+
+  // Leaving toward the open sub-menu: give the pointer a grace area (the
+  // polygon between the exit point and the sub-menu's near edge) in which
+  // sibling items don't steal focus and close it.
+  handleMouseLeave(event) {
+    if (this.state !== "open" || !this.content) return;
+
+    const rect = this.content.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const toRight = rect.left + rect.width / 2 > event.clientX;
+    const near = toRight ? rect.left : rect.right;
+    const far = toRight ? rect.right : rect.left;
+
+    this.parent.setPointerGrace([
+      { x: event.clientX + (toRight ? -5 : 5), y: event.clientY },
+      { x: near, y: rect.top },
+      { x: far, y: rect.top },
+      { x: far, y: rect.bottom },
+      { x: near, y: rect.bottom },
+    ]);
   }
 
   open({ focusFirst = false } = {}) {
@@ -668,6 +741,73 @@ class Menu extends Component {
   selectItem(item) {
     if (item.disabled) return;
     this.onItemSelect(item);
+  }
+
+  setPointerGrace(area) {
+    this.pointerGrace = { area, until: Date.now() + POINTER_GRACE_MS };
+  }
+
+  isPointerMovingToSubmenu(event) {
+    const grace = this.pointerGrace;
+    if (!grace || event?.clientX === undefined) return false;
+
+    const inside =
+      Date.now() <= grace.until &&
+      isPointInPolygon({ x: event.clientX, y: event.clientY }, grace.area);
+    if (!inside) this.pointerGrace = null;
+    return inside;
+  }
+
+  openSubTrigger() {
+    return (
+      this.menuItems?.find(
+        (item) => item instanceof MenuSubTrigger && item.state === "open",
+      ) || null
+    );
+  }
+
+  // Which sub-menus are open (outermost first) and which item has focus, so
+  // a menu rebuilt after a LiveView patch can pick up where this one was.
+  snapshot() {
+    const openSubTriggers = [];
+    for (
+      let sub = this.openSubTrigger();
+      sub;
+      sub = sub.subMenu?.openSubTrigger()
+    )
+      openSubTriggers.push(sub.el);
+
+    const active = document.activeElement;
+    return {
+      openSubTriggers,
+      focused: active && this.el.contains(active) ? active : null,
+    };
+  }
+
+  restore({ openSubTriggers = [], focused = null } = {}) {
+    const menus = [this];
+    for (const el of openSubTriggers) {
+      const menu = menus.at(-1);
+      const sub = menu.menuItems.find(
+        (item) => item instanceof MenuSubTrigger && item.el === el,
+      );
+      if (!sub?.subMenu) break;
+
+      // The parent's roving focus points at an open sub-menu's trigger.
+      menu.handleItemFocus(sub);
+      sub.open();
+      menus.push(sub.subMenu);
+    }
+
+    for (const menu of menus.reverse()) {
+      const item = menu.menuItems.find((candidate) => candidate.el === focused);
+      if (item && !item.disabled) {
+        menu.handleItemFocus(item);
+        return;
+      }
+    }
+
+    if (menus.length === 1) this.activate();
   }
 
   handleItemFocus(item) {

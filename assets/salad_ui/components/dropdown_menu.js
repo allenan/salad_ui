@@ -2,7 +2,11 @@
 import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
-import Menu from "./menu.js";
+import Menu, { assignId, clearGeneratedIds } from "./menu.js";
+
+// Open sub-menus and focus, handed from the instance torn down by a LiveView
+// patch to the one rebuilt in its place (keyed by root element).
+const pendingRestores = new WeakMap();
 
 /**
  * DropdownMenuComponent class for SaladUI framework
@@ -20,7 +24,7 @@ class DropdownMenuComponent extends Component {
     this.handleTriggerKeydown = this.handleTriggerKeydown.bind(this);
 
     if (this.content && !this.content.id) {
-      this.content.id = `${this.el.id}-content`;
+      assignId(this.content, `${this.el.id}-content`);
       this.updateUI();
     }
 
@@ -148,9 +152,25 @@ class DropdownMenuComponent extends Component {
   }
 
   afterMount() {
+    const restore = pendingRestores.get(this.el);
+    pendingRestores.delete(this.el);
+
     if (this.state === "open") {
-      this.activateOpenState(false);
+      this.activateOpenState(false, restore);
     }
+  }
+
+  // Runs right before LiveView patches this element; updated() then rebuilds
+  // the component, which picks the snapshot back up in afterMount().
+  beforeUpdate() {
+    if (this.state === "open") {
+      pendingRestores.set(this.el, {
+        menu: this.menu?.snapshot(),
+        previousFocusEl: this.previousFocusEl,
+      });
+    }
+
+    clearGeneratedIds(this.el, this.positioner);
   }
 
   setupComponentEvents() {
@@ -193,17 +213,28 @@ class DropdownMenuComponent extends Component {
     action();
   }
 
-  activateOpenState(pushEvent = true) {
+  activateOpenState(pushEvent = true, restore = null) {
     const activeElement = document.activeElement;
+    const restoredFocusEl = restore?.previousFocusEl?.isConnected
+      ? restore.previousFocusEl
+      : null;
+    // Never return focus into the (then hidden) menu itself on close.
     this.previousFocusEl =
       this.previousFocusEl ||
-      (activeElement && activeElement !== document.body
+      restoredFocusEl ||
+      (activeElement &&
+      activeElement !== document.body &&
+      !this.positioner?.contains(activeElement)
         ? activeElement
         : this.trigger);
 
     this.initializePositionedElement();
     this.positionedElement?.activate();
-    this.menu?.activate();
+    if (restore?.menu) {
+      this.menu?.restore(restore.menu);
+    } else {
+      this.menu?.activate();
+    }
     window.requestAnimationFrame(() => {
       if (this.destroyed || typeof document === "undefined") return;
 

@@ -429,3 +429,29 @@ test("parseOptions() falls back to an empty options object and logs an error on 
     console.error = originalError;
   }
 });
+
+test("destroy() detaches key handlers of every state bound to the same element (regression)", () => {
+  const calls = [];
+
+  class TwoStateKeys extends Component {
+    getComponentConfig() {
+      const keyMap = { Enter: () => calls.push("Enter") };
+      return {
+        stateMachine: { on: {}, off: {} },
+        events: { _all: { keyMap }, on: { keyMap }, off: { keyMap } },
+      };
+    }
+  }
+
+  document.body.innerHTML = `<div data-part="root" data-state="on"></div>`;
+  const el = document.body.firstElementChild;
+  const component = new TwoStateKeys(el, {});
+  component.setupEvents();
+  component.destroy();
+
+  el.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+  );
+
+  assert.deepEqual(calls, []);
+});

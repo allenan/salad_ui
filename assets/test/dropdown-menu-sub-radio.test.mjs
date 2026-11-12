@@ -473,3 +473,165 @@ test("an open sub-menu re-positions when its parent panel's enter animation ends
 
   component.destroy();
 });
+
+test("sub-content is labelled by its sub-trigger", () => {
+  const { component, invite, inviteContent } = build();
+
+  assert.ok(invite.id);
+  assert.equal(inviteContent.getAttribute("aria-labelledby"), invite.id);
+
+  component.destroy();
+});
+
+// Mirrors SaladUIHook: beforeUpdate, LiveView's morphdom patch (which resets
+// every attribute to its server-rendered value), then updated() rebuilds.
+function livePatch(state, patch = () => {}) {
+  state.component.beforeUpdate();
+
+  // morphdom keys nodes by id: a client-only id would make it replace the
+  // node (dropping focus) instead of patching it, so none may be left.
+  const clientIds = Array.from(state.el.querySelectorAll("[id]")).filter(
+    (node) => !node.hasAttribute("data-server-id"),
+  );
+  assert.deepEqual(
+    clientIds.map((node) => node.id),
+    [],
+    "generated ids are stripped before the patch",
+  );
+
+  state.el.querySelectorAll('[data-part$="positioner"]').forEach((node) => {
+    node.hidden = true;
+  });
+  state.el
+    .querySelectorAll('[data-part="sub-trigger"], [data-part="sub-content"]')
+    .forEach((node) => node.setAttribute("data-state", "closed"));
+  state.el
+    .querySelectorAll('[data-part="content"], [data-part="radio-item"]')
+    .forEach((node) => node.removeAttribute("data-state"));
+  patch();
+
+  state.component.destroy();
+  state.component = registry.create("dropdown-menu", state.el, state.hook);
+  return state.component;
+}
+
+test("a LiveView patch keeps open sub-menus open and focus where it was", () => {
+  const state = build();
+  state.hook = {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  };
+  const { calendly, email, invite, more, moreContent, trigger } = state;
+
+  click(trigger);
+  invite.focus();
+  keydown(invite, "ArrowRight");
+  keydown(email, "End");
+  keydown(more, "ArrowRight");
+  assert.equal(document.activeElement, calendly);
+
+  const component = livePatch(state);
+
+  assert.equal(component.state, "open");
+  assert.equal(invite.getAttribute("data-state"), "open");
+  assert.equal(moreContent.getAttribute("data-state"), "open");
+  assert.equal(moreContent.parentElement.hidden, false);
+  assert.equal(document.activeElement, calendly, "focus stays put");
+  assert.equal(invite.getAttribute("aria-controls"), state.inviteContent.id);
+
+  // The rebuilt menus still navigate and close level by level.
+  keydown(calendly, "ArrowLeft");
+  assert.equal(document.activeElement, more);
+  keydown(more, "ArrowLeft");
+  assert.equal(document.activeElement, invite);
+  keydown(invite, "ArrowDown");
+  assert.equal(document.activeElement, state.newTeam);
+
+  component.destroy();
+});
+
+test("a server round-trip after picking a radio item keeps the menu usable", async () => {
+  const state = build();
+  state.hook = {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  };
+  const { group, top, trigger } = state;
+
+  click(trigger);
+  top.focus();
+  keydown(top, "Enter");
+  assert.equal(group.getAttribute("data-value"), "top");
+
+  // The server echoes the new value back.
+  const component = livePatch(state, () =>
+    group.setAttribute("data-value", "top"),
+  );
+
+  assert.equal(component.state, "open");
+  assert.equal(top.getAttribute("aria-checked"), "true");
+  assert.equal(document.activeElement, top, "focus stays on the radio item");
+
+  keydown(top, "Escape");
+  await waitFor(() => document.activeElement === trigger);
+
+  component.destroy();
+});
+
+test("moving the pointer from an open sub-trigger toward its sub-menu does not close it", () => {
+  const { component, invite, inviteContent, newTeam, team, trigger } = build();
+
+  // Trigger row at y 40-60, sub-menu to its right spanning y 40-140, and
+  // "New Team" right below the trigger.
+  setRect(invite, {
+    top: 40,
+    bottom: 60,
+    left: 10,
+    right: 110,
+    width: 100,
+    height: 20,
+  });
+  setRect(newTeam, {
+    top: 60,
+    bottom: 80,
+    left: 10,
+    right: 110,
+    width: 100,
+    height: 20,
+  });
+  setRect(inviteContent, {
+    top: 40,
+    bottom: 140,
+    left: 110,
+    right: 210,
+    width: 100,
+    height: 100,
+  });
+
+  const pointer = (type, el, clientX, clientY) =>
+    el.dispatchEvent(new window.MouseEvent(type, { clientX, clientY }));
+
+  click(trigger);
+  pointer("mouseenter", invite, 100, 50);
+  assert.equal(invite.getAttribute("data-state"), "open");
+
+  // Heading diagonally down-right across "New Team" toward the sub-menu.
+  pointer("mouseleave", invite, 100, 59);
+  pointer("mouseenter", newTeam, 104, 62);
+  pointer("mousemove", newTeam, 106, 64);
+  assert.equal(invite.getAttribute("data-state"), "open");
+
+  // Moving away from the sub-menu ends the grace period.
+  pointer("mousemove", newTeam, 40, 75);
+  assert.equal(invite.getAttribute("data-state"), "closed");
+  assert.equal(document.activeElement, newTeam);
+
+  // Straight down onto another item closes it right away.
+  pointer("mouseenter", invite, 100, 50);
+  assert.equal(invite.getAttribute("data-state"), "open");
+  pointer("mouseleave", invite, 20, 59);
+  pointer("mouseenter", team, 20, 30);
+  assert.equal(invite.getAttribute("data-state"), "closed");
+
+  component.destroy();
+});

@@ -328,7 +328,12 @@ class Component {
       const element = this.getPart(stateEvents.keyEventTarget) || this.el;
 
       element.addEventListener("keydown", boundHandler);
-      this.keyEventHandlers.set(element, boundHandler);
+      // Several states (e.g. checked/unchecked) can bind the same element,
+      // so keep every handler: overwriting one would leak it past destroy().
+      if (!this.keyEventHandlers.has(element)) {
+        this.keyEventHandlers.set(element, []);
+      }
+      this.keyEventHandlers.get(element).push(boundHandler);
     });
   }
 
@@ -388,8 +393,10 @@ class Component {
   removeKeyEventHandlers() {
     if (this.keyEventHandlers) {
       // For each element that has event handlers
-      this.keyEventHandlers.forEach((handler, element) => {
-        element.removeEventListener("keydown", handler);
+      this.keyEventHandlers.forEach((handlers, element) => {
+        handlers.forEach((handler) =>
+          element.removeEventListener("keydown", handler),
+        );
       });
 
       // Clear the map for future use
