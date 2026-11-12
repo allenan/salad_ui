@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 240" width="480" height="240">
+  <rect width="480" height="240" fill="#f8fafc"/>
+  <g font-family="ui-sans-serif, system-ui" font-size="12" fill="#0f172a" text-anchor="middle">
+    <g transform="translate(24 40)"><rect width="92" height="150" rx="12" fill="#fff" stroke="#cbd5e1"/><rect x="12" y="14" width="68" height="40" rx="8" fill="#dcfce7"/><rect x="12" y="66" width="68" height="8" rx="4" fill="#e2e8f0"/><rect x="12" y="82" width="48" height="8" rx="4" fill="#e2e8f0"/><rect x="12" y="122" width="68" height="16" rx="8" fill="#16a34a"/><text x="46" y="174">1 · Welcome</text></g>
+    <g transform="translate(140 40)"><rect width="92" height="150" rx="12" fill="#fff" stroke="#cbd5e1"/><circle cx="46" cy="40" r="20" fill="#bbf7d0"/><rect x="12" y="74" width="68" height="14" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/><rect x="12" y="122" width="68" height="16" rx="8" fill="#16a34a"/><text x="46" y="174">2 · Profile</text></g>
+    <g transform="translate(256 40)"><rect width="92" height="150" rx="12" fill="#fff" stroke="#cbd5e1"/><rect x="12" y="16" width="68" height="14" rx="6" fill="#f1f5f9"/><rect x="12" y="36" width="68" height="14" rx="6" fill="#dcfce7"/><rect x="12" y="56" width="68" height="14" rx="6" fill="#f1f5f9"/><rect x="12" y="122" width="68" height="16" rx="8" fill="#16a34a"/><text x="46" y="174">3 · Channels</text></g>
+    <g transform="translate(372 40)"><rect width="92" height="150" rx="12" fill="#fff" stroke="#cbd5e1"/><rect x="12" y="16" width="52" height="14" rx="7" fill="#e2e8f0"/><rect x="28" y="38" width="52" height="14" rx="7" fill="#16a34a"/><rect x="12" y="104" width="68" height="16" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="46" y="174">4 · First message</text></g>
+    <path d="M118 115h20M234 115h20M350 115h20" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+  </g>
+  <defs><marker id="a" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l8 4-8 4z" fill="#94a3b8"/></marker></defs>
+</svg>

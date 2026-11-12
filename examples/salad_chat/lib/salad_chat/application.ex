@@ -12,8 +12,12 @@ defmodule SaladChat.Application do
       SaladChatWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:salad_chat, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SaladChat.PubSub},
-      # Start a worker by calling: SaladChat.Worker.start_link(arg)
-      # {SaladChat.Worker, arg},
+      SaladChatWeb.Presence,
+      # In-memory chat data, seeded on boot
+      SaladChat.Chat.Store,
+      # Sprout, the AI assistant: reminders plus one responder per reply
+      SaladChat.Sprout,
+      {DynamicSupervisor, name: SaladChat.Sprout.Supervisor, strategy: :one_for_one},
       # Start to serve requests, typically the last entry
       SaladChatWeb.Endpoint
     ]

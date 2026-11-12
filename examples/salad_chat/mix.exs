@@ -41,6 +41,12 @@ defmodule SaladChat.MixProject do
   defp deps do
     [
       {:salad_ui, path: "../.."},
+      # Server-side syntax highlighting for SaladUI.CodeBlock
+      {:makeup, "~> 1.0"},
+      {:makeup_elixir, "~> 1.0"},
+      {:makeup_js, "~> 0.1"},
+      {:makeup_sql, "~> 0.1"},
+      {:makeup_json, "~> 1.0"},
       {:phoenix, "~> 1.8.16"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
