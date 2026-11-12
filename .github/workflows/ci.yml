@@ -131,3 +131,34 @@ jobs:
           version-type: strict
       - run: mix archive.install hex phx_new --force
       - run: .github/scripts/installer-e2e/run.sh ${{ matrix.mode }}
+
+  # The Salad Chat example app (examples/salad_chat): compiles, tests, assets build.
+  example-salad-chat:
+    name: Example app (salad_chat)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/cache@v6
+        with:
+          path: |
+            examples/salad_chat/deps
+            examples/salad_chat/_build
+          key: salad-chat-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-${{ hashFiles('examples/salad_chat/mix.lock') }}
+          restore-keys: salad-chat-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-
+      - name: Gates
+        run: |
+          cd examples/salad_chat
+          mix deps.get
+          npm install --prefix assets
+          mix compile --warnings-as-errors
+          mix format --check-formatted
+          mix test
+          mix assets.setup
+          mix assets.build

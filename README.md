@@ -27,6 +27,14 @@
 
 <a href='https://ko-fi.com/F1F1CEZ91' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
+## Examples
+
+- [**Salad Chat**](examples/salad_chat/README.md): a Slack-style team chat built
+  entirely from SaladUI components: sidebar, threads in a resizable pane,
+  reactions, code blocks, attachments, a streaming AI assistant, a ⌘K switcher,
+  dialogs, sheets and toasts. No database; run it with
+  `cd examples/salad_chat && mix setup && mix phx.server`.
+
 ## Installation
 
 1. Add `salad_ui` to your `mix.exs`
