@@ -421,6 +421,28 @@ test("a stream reset reopens the new transcript at the default position", async 
   assert.equal(viewport.scrollTop, 0);
 });
 
+test("emptying the stream then loading another transcript reopens at the default position", async () => {
+  const { viewport, content, append, spacerHeight, component } = build({
+    rows: conversation(6),
+  });
+  // An anchored turn reserves a tail spacer below it.
+  append({ id: "q", h: 60, anchor: true }, { id: "a", h: 40 });
+  await waitFor(() => component.mode === "anchored-to-message");
+  assert.ok(spacerHeight() > 0);
+
+  // stream(:messages, [], reset: true), then the next conversation arrives
+  // (e.g. from handle_async): no stranded spacer, and it opens at the end.
+  content.innerHTML = "";
+  await waitFor(() => component.itemCount === 0);
+  assert.equal(spacerHeight(), 0);
+  assert.equal(component.mode, "free-scrolling");
+
+  append(...conversation(8).map((row, index) => ({ ...row, id: `n${index}` })));
+  await waitFor(() => component.firstItem?.dataset.messageId === "n0");
+  assert.equal(viewport.scrollTop, 400);
+  assert.equal(spacerHeight(), 0);
+});
+
 test("scroll_to_message command jumps to a row; unknown ids return false", () => {
   const { el, viewport, component } = build({ rows: conversation(10) });
 
@@ -542,6 +564,64 @@ test("an option change is applied in place", () => {
   // At the bottom with autoScroll on, the next commit arms following.
   component.commitScrollState();
   assert.equal(component.mode, "following-bottom");
+
+  // Turning it off again stops following: appended rows stay below and the
+  // end button shows them.
+  el.setAttribute(
+    "data-options",
+    JSON.stringify({ autoScroll: false, defaultScrollPosition: "end" }),
+  );
+  component.skipReinitialize(el);
+  assert.equal(component.mode, "free-scrolling");
+  current.append({ id: "late", h: 200 });
+  component.handleContentChange();
+  assert.equal(current.viewport.scrollTop, 200);
+  assert.equal(current.endButton.getAttribute("data-active"), "true");
+});
+
+test("changing the peek moves the visibility reading line", () => {
+  const observers = [];
+  window.IntersectionObserver = class {
+    constructor(callback, options) {
+      this.options = options;
+      this.observed = new Set();
+      this.disconnected = false;
+      observers.push(this);
+    }
+    observe(element) {
+      this.observed.add(element);
+    }
+    unobserve(element) {
+      this.observed.delete(element);
+    }
+    disconnect() {
+      this.disconnected = true;
+    }
+  };
+
+  try {
+    const { el, component } = build({
+      rows: conversation(4),
+      eventMappings: { "visibility-change": "visibility" },
+    });
+    assert.equal(observers.length, 1);
+    assert.equal(observers[0].options.rootMargin, "-64px 0px 0px 0px");
+
+    el.setAttribute(
+      "data-options",
+      JSON.stringify({ scrollPreviousItemPeek: 128, scrollMargin: 8 }),
+    );
+    component.skipReinitialize(el);
+
+    assert.equal(observers[0].disconnected, true);
+    assert.equal(observers.length, 2);
+    assert.equal(observers[1].options.rootMargin, "-136px 0px 0px 0px");
+    assert.equal(observers[1].observed.size, 4);
+  } finally {
+    current?.component?.destroy();
+    current = null;
+    delete window.IntersectionObserver;
+  }
 });
 
 test("a replaced viewport forces a rebuild", () => {

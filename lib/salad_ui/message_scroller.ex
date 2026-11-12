@@ -73,7 +73,8 @@ defmodule SaladUI.MessageScroller do
   fits). For `"end"` and `"last-anchor"` the root renders `data-pending-scroll`
   and the viewport stays `invisible` until the position is applied, so a
   server-rendered transcript does not flash at the top. Resetting a stream
-  (every row replaced) reopens at the default position.
+  (every row replaced, or emptied before the next conversation loads) reopens
+  at the default position.
 
   ## Loading earlier messages
 

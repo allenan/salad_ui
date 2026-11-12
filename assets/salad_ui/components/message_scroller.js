@@ -339,8 +339,27 @@ class MessageScrollerComponent extends Component {
 
     if (el.getAttribute("data-options") !== this._optionsRaw) {
       const previousPosition = this.opts.defaultScrollPosition;
+      const previousLine =
+        this.opts.scrollMargin + this.opts.scrollPreviousItemPeek;
       this.parseOptions();
       this.readOptions();
+      // The IntersectionObserver's reading line is fixed at creation; rebuild
+      // it when scroll_margin or scroll_previous_item_peek moves that line.
+      if (
+        this.intersectionObserver &&
+        this.opts.scrollMargin + this.opts.scrollPreviousItemPeek !==
+          previousLine
+      ) {
+        this.intersectionObserver.disconnect();
+        this.intersectionObserver = null;
+        this.visibleIds.clear();
+        this.startVisibilityTracking();
+      }
+      // Turning auto_scroll off must drop follow-output, or the scroller
+      // keeps hiding the end button while nothing follows the new rows.
+      if (!this.opts.autoScroll && this.mode === "following-bottom") {
+        this.mode = "free-scrolling";
+      }
       if (this.opts.defaultScrollPosition !== previousPosition) {
         this.defaultScrollPositionApplied = false;
         this.applyDefaultScrollPosition();
@@ -1069,11 +1088,21 @@ class MessageScrollerComponent extends Component {
     // A stream reset (or swapping in another conversation) removes every row
     // that was there: treat it like a freshly opened transcript.
     const replaced = previousCount > 0 && items.length > 0 && firstSurvivor < 0;
-    if (replaced) {
+    // Emptying it (`stream(..., [], reset: true)` before the next conversation
+    // loads) does the same, so the next rows open at the default position
+    // and no reserved tail spacer is left behind.
+    const emptied = previousCount > 0 && items.length === 0;
+    if (replaced || emptied) {
       this.defaultScrollPositionApplied = false;
       this.setTailSpacerHeight(0);
       this.streamingTurn = null;
       this.mode = this.opts.autoScroll ? "following-bottom" : "free-scrolling";
+    }
+
+    if (emptied) {
+      this.commitScrollState();
+      this.scheduleVisibilitySync();
+      return;
     }
 
     if (previousCount === 0 || replaced) {
