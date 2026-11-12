@@ -3,6 +3,8 @@ defmodule SaladUI.CodeBlockTest do
 
   import SaladUI.CodeBlock
 
+  alias Makeup.Lexers.ElixirLexer
+
   setup_all do
     # makeup_elixir is a dev/test dependency (via ex_doc) that registers its
     # lexer when its application starts.
@@ -260,8 +262,13 @@ defmodule SaladUI.CodeBlockTest do
     end
 
     test "accepts a lexer module" do
-      [line] = highlight(":ok", Makeup.Lexers.ElixirLexer)
+      [line] = highlight(":ok", ElixirLexer)
       assert Phoenix.HTML.safe_to_string(line) =~ "text-[#005cc5]"
+    end
+
+    test "handles one-character tokens, which Makeup emits as a bare codepoint" do
+      [line] = highlight("%{x: 1}", ElixirLexer)
+      assert Phoenix.HTML.safe_to_string(line) =~ ">x<"
     end
 
     test "ansi colors do not carry across lines" do

@@ -23,6 +23,7 @@ import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 import SaladUI from "salad_ui";
 import "salad_ui/components/dialog";
+import "salad_ui/components/drawer";
 import "salad_ui/components/select";
 import "salad_ui/components/tabs";
 import "salad_ui/components/radio_group";
@@ -37,6 +38,9 @@ import "salad_ui/components/dropdown_menu";
 import "salad_ui/components/chart";
 import "salad_ui/components/toast";
 import "salad_ui/components/toast-flash";
+import "salad_ui/components/checkbox";
+import "salad_ui/components/input_group";
+import "salad_ui/components/message_scroller";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")

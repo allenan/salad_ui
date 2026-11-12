@@ -583,7 +583,8 @@ defmodule SaladUI.CodeBlock do
     {lines, current} =
       Enum.reduce(tokens, {[], []}, fn {type, _meta, value}, {lines, current} ->
         class = token_class(type)
-        [first | rest] = value |> IO.chardata_to_string() |> String.split("\n")
+        # Makeup emits a bare codepoint for one-character tokens (`x:` in `%{x: 1}`).
+        [first | rest] = value |> List.wrap() |> IO.chardata_to_string() |> String.split("\n")
 
         Enum.reduce(rest, {lines, push_segment(current, class, first)}, fn part, {lines, current} ->
           {[Enum.reverse(current) | lines], push_segment([], class, part)}
