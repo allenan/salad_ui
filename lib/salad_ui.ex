@@ -52,6 +52,7 @@ defmodule SaladUI do
   - `calendar/1` - Month grid for picking a date, dates or a range
   - `date_picker/1` - Popover + calendar date picker
   - `switch/1` - Toggle controls
+  - `questionnaire/1` - Multi-step single, multiple, freeform and skippable questions
   - `field/1`, `field_set/1`, `field_group/1`, `field_label/1`, `field_error/1` - Form field structure and validation
   - `form_item/1`, `form_label/1`, `form_message/1` - Legacy form helpers (prefer `field/1`)
 
@@ -253,6 +254,7 @@ defmodule SaladUI do
       import SaladUI.Pagination
       import SaladUI.Popover
       import SaladUI.Progress
+      import SaladUI.Questionnaire
       import SaladUI.RadioGroup
       import SaladUI.Resizable
       import SaladUI.ScrollArea

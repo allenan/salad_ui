@@ -205,6 +205,7 @@ defmodule Mix.Tasks.Salad.Setup do
   import "salad_ui/components/input_group";
   import "salad_ui/components/code_block";
   import "salad_ui/components/calendar";
+  import "salad_ui/components/questionnaire";
   """
   @js_hooks "SaladUI: SaladUI.SaladUIHook"
   defp patch_app_js(igniter) do
