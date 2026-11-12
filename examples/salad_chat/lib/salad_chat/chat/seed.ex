@@ -554,7 +554,7 @@ defmodule SaladChat.Chat.Seed do
         at: at,
         channel: channel,
         user: Enum.at(people, rem(n, length(people))),
-        body: Enum.at(lines, rem(n * 5 + i, length(lines))),
+        body: Enum.at(lines, rem(day * 5 + i * 3 + String.length(channel), length(lines))),
         opts: []
       }
     end

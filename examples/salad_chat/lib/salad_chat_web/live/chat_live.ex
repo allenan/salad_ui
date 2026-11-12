@@ -53,7 +53,7 @@ defmodule SaladChatWeb.ChatLive do
            thread: nil,
            thread_replies: [],
            typing: %{},
-           last_typing_at: 0,
+           last_typing_at: nil,
            editing_id: nil,
            deleting: nil,
            reminding: nil,
@@ -302,7 +302,13 @@ defmodule SaladChatWeb.ChatLive do
   def handle_event("send", %{"body" => body}, socket) do
     case run_command(socket, body) do
       {:handled, socket} ->
-        {:noreply, assign(socket, main_form: blank_form(), slash: [])}
+        {:noreply,
+         socket
+         |> assign(main_form: blank_form(), slash: [])
+         |> push_event("composer:clear", %{id: "main-input"})}
+
+      {:fill, text, socket} ->
+        {:noreply, push_event(socket, "composer:set-text", %{id: "main-input", text: text})}
 
       {:send, body, socket} ->
         attachments =
@@ -316,7 +322,8 @@ defmodule SaladChatWeb.ChatLive do
           {:ok, _} ->
             {:noreply,
              socket
-             |> assign(main_form: blank_form(), slash: [], last_typing_at: 0)
+             |> assign(main_form: blank_form(), slash: [], last_typing_at: nil)
+             |> push_event("composer:clear", %{id: "main-input"})
              |> push_event("chat:scroll-bottom", %{})}
 
           {:error, :empty} ->
@@ -337,6 +344,7 @@ defmodule SaladChatWeb.ChatLive do
     {body, socket} =
       case run_command(socket, body) do
         {:handled, socket} -> {"", socket}
+        {:fill, _text, socket} -> {"", socket}
         {:send, body, socket} -> {body, socket}
       end
 
@@ -349,7 +357,11 @@ defmodule SaladChatWeb.ChatLive do
          Toast.toast_error(socket, "Couldn't send that reply", description: error_text(reason))}
 
       _ ->
-        {:noreply, assign(socket, thread_form: blank_form(), thread_slash: [], last_typing_at: 0)}
+        {:noreply,
+         socket
+         |> assign(thread_form: blank_form(), thread_slash: [], last_typing_at: nil)
+         |> push_event("composer:clear", %{id: "thread-desktop-composer-input"})
+         |> push_event("composer:clear", %{id: "thread-mobile-composer-input"})}
     end
   end
 
@@ -520,10 +532,6 @@ defmodule SaladChatWeb.ChatLive do
   def handle_event("set_theme", %{"value" => theme}, socket),
     do: {:noreply, set_theme(socket, theme)}
 
-  def handle_event("toggle_theme", _, socket) do
-    {:noreply, set_theme(socket, if(socket.assigns.theme == "dark", do: "light", else: "dark"))}
-  end
-
   def handle_event("toggle_away", %{"status" => status}, socket) when status in ~w(active away) do
     {:ok, me} = Chat.update_user(socket.assigns.me.handle, %{status: status})
     {:noreply, assign(socket, me: me)}
@@ -582,8 +590,7 @@ defmodule SaladChatWeb.ChatLive do
       ["/" <> _ = cmd | _] ->
         case matching_commands(cmd) do
           [{name, _, _}] when name != cmd ->
-            {:handled,
-             push_event(socket, "composer:set-text", %{id: "main-input", text: name <> " "})}
+            {:fill, name <> " ", socket}
 
           _ ->
             {:handled,
@@ -608,7 +615,7 @@ defmodule SaladChatWeb.ChatLive do
     a = socket.assigns
 
     if String.trim(body) != "" and not String.starts_with?(body, "/") and
-         now - a.last_typing_at > @typing_every do
+         (a.last_typing_at == nil or now - a.last_typing_at > @typing_every) do
       thread_id = if composer != "main" and a.thread, do: a.thread.id
       Chat.broadcast_typing(a.channel.id, thread_id, a.me.handle)
       assign(socket, last_typing_at: now)
@@ -911,40 +918,43 @@ defmodule SaladChatWeb.ChatLive do
         </.sidebar_inset>
       </.sidebar_provider>
 
-      <.sheet id="thread-sheet" on-close="close_thread">
-        <.sheet_content side="right" class="w-full max-w-full p-0 sm:max-w-md md:hidden">
-          <.thread_pane
-            :if={@channel}
-            id="thread-mobile"
-            parent={@thread}
-            replies={@thread_replies}
-            channel={@channel}
-            ctx={@ctx}
-            form={@thread_form}
-            closable={false}
-            typing={typing_names(@typing, @users, @thread && @thread.id)}
-          />
-        </.sheet_content>
-      </.sheet>
+      <%!-- Overlay roots take no space; their panels are fixed-positioned. --%>
+      <div class="h-0 overflow-hidden">
+        <.sheet id="thread-sheet" on-close="close_thread">
+          <.sheet_content side="right" class="w-full max-w-full p-0 sm:max-w-md md:hidden">
+            <.thread_pane
+              :if={@channel}
+              id="thread-mobile"
+              parent={@thread}
+              replies={@thread_replies}
+              channel={@channel}
+              ctx={@ctx}
+              form={@thread_form}
+              closable={false}
+              typing={typing_names(@typing, @users, @thread && @thread.id)}
+            />
+          </.sheet_content>
+        </.sheet>
 
-      <.quick_switcher me={@me} channels={@channels} dms={@dms} users={@users} online={@online} />
-      <.channel_details
-        :if={@channel}
-        channel={@channel}
-        me={@me}
-        users={@users}
-        online={@online}
-        tz={@me.timezone}
-      />
-      <.delete_dialog message={@deleting} />
-      <.remind_dialog message={@reminding} />
-      <.live_component module={SaladChatWeb.SettingsComponent} id="settings" me={@me} />
-      <.live_component
-        module={SaladChatWeb.NewChannelComponent}
-        id="new-channel"
-        me={@me}
-        users={@users}
-      />
+        <.quick_switcher me={@me} channels={@channels} dms={@dms} users={@users} online={@online} />
+        <.channel_details
+          :if={@channel}
+          channel={@channel}
+          me={@me}
+          users={@users}
+          online={@online}
+          tz={@me.timezone}
+        />
+        <.delete_dialog message={@deleting} />
+        <.remind_dialog message={@reminding} />
+        <.live_component module={SaladChatWeb.SettingsComponent} id="settings" me={@me} />
+        <.live_component
+          module={SaladChatWeb.NewChannelComponent}
+          id="new-channel"
+          me={@me}
+          users={@users}
+        />
+      </div>
     </Layouts.app>
     """
   end

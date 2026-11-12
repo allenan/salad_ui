@@ -160,18 +160,22 @@ defmodule SaladChatWeb.SettingsComponent do
           >
             <.tabs id="settings-tabs" default="profile">
               <.tabs_list class="w-full">
-                <.tabs_trigger value="profile" class="flex-1">
+                <.tabs_trigger value="profile" id="settings-tabs-trigger-profile" class="flex-1">
                   <.icon name="hero-user" /> Profile
                 </.tabs_trigger>
-                <.tabs_trigger value="notifications" class="flex-1">
+                <.tabs_trigger
+                  value="notifications"
+                  id="settings-tabs-trigger-notifications"
+                  class="flex-1"
+                >
                   <.icon name="hero-bell" /> Notifications
                 </.tabs_trigger>
-                <.tabs_trigger value="appearance" class="flex-1">
+                <.tabs_trigger value="appearance" id="settings-tabs-trigger-appearance" class="flex-1">
                   <.icon name="hero-paint-brush" /> Appearance
                 </.tabs_trigger>
               </.tabs_list>
 
-              <.tabs_content value="profile" class="pt-4">
+              <.tabs_content value="profile" id="settings-tabs-content-profile" class="pt-4">
                 <.field_group>
                   <div class="flex items-center gap-4">
                     <.user_avatar user={@me} size="lg" class="size-14" />
@@ -232,7 +236,11 @@ defmodule SaladChatWeb.SettingsComponent do
                 </.field_group>
               </.tabs_content>
 
-              <.tabs_content value="notifications" class="pt-4">
+              <.tabs_content
+                value="notifications"
+                id="settings-tabs-content-notifications"
+                class="pt-4"
+              >
                 <.field_set>
                   <.field_legend variant="label">Notify me about</.field_legend>
                   <.field_group class="gap-4">
@@ -265,7 +273,7 @@ defmodule SaladChatWeb.SettingsComponent do
                 </.field_set>
               </.tabs_content>
 
-              <.tabs_content value="appearance" class="pt-4">
+              <.tabs_content value="appearance" id="settings-tabs-content-appearance" class="pt-4">
                 <.field_group>
                   <.field_set>
                     <.field_legend variant="label">Theme</.field_legend>
@@ -283,6 +291,7 @@ defmodule SaladChatWeb.SettingsComponent do
                           ]
                         }
                         for={"theme-#{value}"}
+                        id={"settings-theme-item-#{value}-label-0"}
                       >
                         <.field orientation="horizontal" class="items-center">
                           <.radio_group_item id={"theme-#{value}"} value={value} />
