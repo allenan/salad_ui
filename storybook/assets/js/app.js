@@ -41,6 +41,8 @@ import "salad_ui/components/toast-flash";
 import "salad_ui/components/checkbox";
 import "salad_ui/components/input_group";
 import "salad_ui/components/message_scroller";
+import "salad_ui/components/toggle";
+import "salad_ui/components/toggle_group";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")

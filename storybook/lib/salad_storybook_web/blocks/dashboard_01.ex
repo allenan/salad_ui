@@ -649,10 +649,12 @@ defmodule SaladStorybookWeb.Blocks.Dashboard01 do
           <form id="time-range-form" phx-change="set_time_range" class="hidden @[767px]/card:flex">
             <.toggle_group
               :let={builder}
+              id="time-range-toggle"
+              type="single"
               name="time_range"
               value={@time_range}
               variant="outline"
-              class="gap-0 *:data-[slot=toggle-group-item]:h-9 *:data-[slot=toggle-group-item]:px-4! *:data-[slot=toggle-group-item]:rounded-none *:data-[slot=toggle-group-item]:first:rounded-l-md *:data-[slot=toggle-group-item]:last:rounded-r-md *:data-[slot=toggle-group-item]:not-first:border-l-0"
+              class="*:data-[slot=toggle-group-item]:px-4!"
             >
               <.toggle_group_item
                 :for={{value, label, _days} <- @ranges}
@@ -1118,6 +1120,8 @@ defmodule SaladStorybookWeb.Blocks.Dashboard01 do
   @impl true
   def handle_event("set_time_range", %{"time_range" => range}, socket), do: {:noreply, assign_time_range(socket, range)}
   def handle_event("set_time_range", %{"value" => range}, socket), do: {:noreply, assign_time_range(socket, range)}
+  # Pressing the selected toggle group item releases it, so the form submits no range.
+  def handle_event("set_time_range", _params, socket), do: {:noreply, socket}
 
   def handle_event("set_view", %{"value" => view}, socket), do: {:noreply, assign(socket, :view, view)}
 
