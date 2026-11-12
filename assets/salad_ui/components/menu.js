@@ -723,18 +723,24 @@ class Menu extends Component {
     });
   }
 
-  // Activate menu, focus the first item
-  activate() {
-    // Forget the previously focused item so reopening focuses the first item
-    // again instead of no-oping on a stale roving-focus pointer.
+  // Forget the roving-focus pointer without moving focus, so the next
+  // ArrowDown starts from the first item (ArrowUp from the last).
+  reset() {
     if (this.rovingFocus.focusedItem) {
       this.rovingFocus.focusedItem.focused = false;
       this.rovingFocus.reset();
     }
+  }
 
-    const firstItem = this.registry.getItem("first");
-    if (firstItem) {
-      this.rovingFocus.focus(firstItem);
+  // Activate menu, focus the first (or last) item
+  activate(direction = "first") {
+    // Forget the previously focused item so reopening focuses the first item
+    // again instead of no-oping on a stale roving-focus pointer.
+    this.reset();
+
+    const item = this.registry.getItem(direction);
+    if (item) {
+      this.rovingFocus.focus(item);
     }
   }
 

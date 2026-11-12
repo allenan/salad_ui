@@ -20,6 +20,8 @@ import "salad_ui/components/input_otp";
 import "salad_ui/components/checkbox";
 import "salad_ui/components/switch";
 import "salad_ui/components/dropdown_menu";
+import "salad_ui/components/context_menu";
+import "salad_ui/components/menubar";
 import "salad_ui/components/navigation_menu";
 import "salad_ui/components/chart";
 import "salad_ui/components/toast";

@@ -148,6 +148,8 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/checkbox.js";
     import "./ui/components/switch.js";
     import "./ui/components/dropdown_menu.js";
+    import "./ui/components/context_menu.js";
+    import "./ui/components/menubar.js";
     import "./ui/components/navigation_menu.js";
     import "./ui/components/toast.js";
     import "./ui/components/toast-flash.js";

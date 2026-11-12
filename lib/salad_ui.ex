@@ -58,6 +58,7 @@ defmodule SaladUI do
   - `tabs/1` - Tabbed content navigation
   - `breadcrumb/1` - Hierarchical navigation paths
   - `navigation_menu/1` - Site navigation with hover/keyboard dropdown panels
+  - `menubar/1` - Desktop-style application menu bar
   - `pagination/1` - Page navigation controls
   - `sidebar/1` - Application navigation sidebars
 
@@ -70,6 +71,7 @@ defmodule SaladUI do
   - `tooltip/1` - Hover information displays
   - `hover_card/1` - Rich hover content
   - `dropdown_menu/1` - Contextual action menus
+  - `context_menu/1` - Right-click / long-press menus
 
   ### Feedback & Status
   - `alert/1` - Status messages and notifications
@@ -219,6 +221,7 @@ defmodule SaladUI do
       import SaladUI.Checkbox
       import SaladUI.CodeBlock
       import SaladUI.Collapsible
+      import SaladUI.ContextMenu
 
       import SaladUI.DataTable,
         only: [data_table_column_header: 1, data_table_pagination: 1, data_table_view_options: 1]
@@ -241,6 +244,7 @@ defmodule SaladUI do
       import SaladUI.Label
       import SaladUI.Marker
       import SaladUI.Menu
+      import SaladUI.Menubar
       import SaladUI.Message
       import SaladUI.NativeSelect
       import SaladUI.NavigationMenu
