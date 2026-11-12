@@ -2,59 +2,62 @@
 
 ## Status
 
-Run against shadcn/ui ref `dd41d19e2f80ff6891951f7ced74c2c9a650b065`.
+Run against shadcn/ui ref `dd41d19e2f80ff6891951f7ced74c2c9a650b065`. All four
+items below are on `parity/integration`; the rest of the catalog (Tier 1–3
+components, dropdown sub-menus/radio, slider range, chart theming, `mix salad.add`)
+was not part of this run.
 
-| Item | Status | Branch | Notes |
+| Item | Status | Commit | What landed |
 |---|---|---|---|
-| `tailwind-drift` | needs-human | `parity/tailwind-drift` | Review left 1 must + 10 should (deduplicated). Not integrated. |
-| `data-slot` | blocked | — | Blocked by `tailwind-drift`. |
-| `small-deltas` | blocked | — | Blocked by `data-slot`. |
-| `tiny-primitives` | blocked | — | Blocked by `data-slot`. |
+| `tailwind-drift` | pushed | `696806c` | v4 shadow scale; `aria-invalid:` styling + automatic `aria-invalid="true"` on touched FormFields (input, textarea, select trigger, checkbox, radio, switch, toggle); destructive `text-white`; `size-N`; button xs/icon-* sizes; badge ghost/link; switch `size`; tooltip `bg-foreground` style; sidebar `hsl(oklch)` bug fixed. |
+| `data-slot` | pushed | `32390fc` | shadcn `data-slot` on every part of every component; `put_data_slot/2` helper; `data_slot_test.exs`. |
+| `overlay-deltas` | pushed + reviewed | `67f6c67`, review fix `ac341c8` | Popover header/title/description/anchor; tabs vertical + `line` variant; select scroll buttons + viewport, capped to available window height. |
+| `small-deltas` | pushed | `3c5f6de` | Button/badge as `<a>`; card action/size/spacing; dialog close parts; alert-dialog media/size; command separator; avatar sizes/badge/group; scroll-area orientation. |
 
-### Open "should" findings on integrated items
+### Not covered
 
-None. No item has been integrated into `parity/integration` yet.
+**tailwind-drift**
+- Tooltip has no arrow part (shadcn renders `TooltipPrimitive.Arrow`).
+- `toggle_group` items have no `aria-invalid:` styling (only `toggle` was in scope).
+- Checkbox custom colors use `checked:` rather than `data-[state=checked]:` (native input; documented in moduledoc).
 
-### `tailwind-drift`: findings blocking integration
+**data-slot**
+- `form_control` has no `form-control` slot: it renders no wrapper, and adding one breaks `form_item`'s `space-y` layout.
+- `menu` has no shadcn counterpart; its parts use invented `menu-*` names.
+- No slot on toast/toaster (sonner has none either) or `icon`.
+- No slots for parts SaladUI lacks: `checkbox-indicator`, `scroll-area-scrollbar/thumb`, `table-container`, dropdown-menu radio/sub/portal. Popover and dropdown positioner wrappers have none, matching Radix.
 
-**Must (blocks merge):**
+**overlay-deltas**
+- Select: no `position="item-aligned"` (always popper); no first-class `disabled` attr on `select/1` (story uses `data-disabled`).
+- `popover-form` example uses plain label/input (no `field` component yet).
+- RTL examples (popover, tabs, select) not covered.
+- Out of scope, still differs: `popover_content` default side-offset 8 (shadcn 4); `select_label`/`select_item` classes and check-indicator side.
 
-- Installers still emit `border-color: hsl(var(--border));` after an oklch color
-  scheme (`lib/mix/tasks/salad.setup.ex:118`, `lib/mix/tasks/salad.install.ex:177`).
-  `hsl(oklch(...))` is invalid, so bare `border` renders in `currentColor`.
-  Fix: `border-color: var(--border);` plus an `outline-color` for `ring/50`,
-  matching shadcn's `* { @apply border-border outline-ring/50 }`.
+**small-deltas**
+- RTL examples for button, badge, card, dialog, alert-dialog, command, switch, avatar, scroll-area (→ `direction`).
+- `button-group-demo` (→ `button_group`); `switch-description`/`switch-choice-card` (→ `field`).
+- No `spinner` yet: button/badge spinner examples use an `animate-spin` icon.
+- No separate `scroll_bar` part: horizontal scroll is `orientation="horizontal"` with styled native scrollbars.
+- `card-spacing` example shows two fixed spacings, not the interactive ToggleGroup switcher.
 
-**Should (open, carry forward once merged):**
+### Remaining review issues
 
-1. `docs/manual_install.md` still maps colors as `hsl(var(--x))` and points at
-   shadcn themes (now oklch). Switch to `var(--x)` / `@theme inline`; add sidebar,
-   radius and chart tokens.
-2. Bare `aria-invalid` (HEEx port of `<Input aria-invalid />`) renders without a
-   value, so `aria-invalid:` styles and AT announcement don't fire. Have
-   `put_aria_invalid/1` map `true` to `"true"`, or document the string form.
-3. `toggle` lacks shadcn's `aria-invalid:*` classes and `data-slot="toggle"`;
-   tooltip content keeps `shadow-md` (shadcn v4 has none).
-4. `badge` ships `[a&]:hover:*` classes but always renders `<span>` with no
-   `as_child`/`href`; `button` has no `as_child` either (badge-link,
-   button-aschild examples can't be written). Likely belongs to badge/button items.
-5. `checkbox` has `indeterminate:` styles but no attr sets `el.indeterminate`.
-6. Token naming: `--sidebar-background` vs shadcn's `--sidebar`; library CSS and
-   storybook ship no `* { border-color: var(--border) }` base rule.
-7. Leftover `h-4 w-4` pairs in `test/salad_ui/dropdown_menu_test.exs`
-   (lines 37–114). Cosmetic.
-8. Empty `multiple` select is never flagged invalid after submit: its tracking
-   input is `disabled`, so the key is absent from params and `used_input?/1` is
-   false. Moduledoc claim is wrong for this case; add a test.
-9. CHANGELOG entry needed: errors now hidden on unused fields
-   (`form_label`/`form_message`/`aria-invalid`), single-select trigger `w-full` →
-   `w-fit`, badge root `div` → `span`, empty radio groups submit `""`.
-10. Select trigger's `aria-invalid` is set only by the JS hook, so it is missing
-    on dead render and briefly on each patch. Documented; optional fix is passing
-    `invalid` to `select_trigger` server-side.
+From the `overlay-deltas` review (none block merge):
+1. Tabs: no RTL key swap (`dir=rtl` should swap Left/Right). Belongs to a cross-cutting `direction` item.
+2. Tabs: Radix also puts `data-orientation` on list/triggers/content; shadcn's classes only read the root, so low value.
+3. Popover anchor: clicking the anchor keeps the popover open (Radix closes it). Kept deliberately — friendlier when the anchor wraps an input.
+4. Popover title/description are not wired to `aria-labelledby`/`aria-describedby` (Radix doesn't either; client-generated ids break LiveView patching).
+5. Select (pre-existing): any LiveView patch re-renders `data-state="closed"`, so an open select closes on patch.
 
-(The review also repeated the installer `hsl(var(--border))` issue as a "should";
-it is the same fix as the must above.)
+Carried over from the earlier `tailwind-drift` review, still open:
+- `docs/manual_install.md` still maps colors as `hsl(var(--x))`; switch to `var(--x)` / `@theme inline` and add sidebar, radius and chart tokens.
+- `checkbox` has `indeterminate:` styles but no attr sets `el.indeterminate`.
+- Token naming: `--sidebar-background` vs shadcn's `--sidebar`.
+- Empty `multiple` select is never flagged invalid after submit (its tracking input is `disabled`, so `used_input?/1` is false).
+- Select trigger `aria-invalid` is set only by the JS hook, so it is missing on dead render and briefly on each patch.
+- Leftover `h-4 w-4` pairs in `test/salad_ui/dropdown_menu_test.exs` (cosmetic).
+
+Resolved since that review: installer `hsl(var(--border))` (now `var(--border)` + `@apply border-border outline-ring/50`), toggle `aria-invalid`/`data-slot`, tooltip shadow, badge/button link rendering, CHANGELOG entry.
 
 ---
 
