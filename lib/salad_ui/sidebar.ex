@@ -99,7 +99,7 @@ defmodule SaladUI.Sidebar do
         }
         side={@side}
       >
-        <div class="flex h-full w-full flex-col">
+        <div class="flex size-full flex-col">
           {render_slot(@inner_block)}
         </div>
       </.sheet_content>
@@ -145,7 +145,7 @@ defmodule SaladUI.Sidebar do
       >
         <div
           data-sidebar="sidebar"
-          class="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
+          class="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
         >
           {render_slot(@inner_block)}
         </div>

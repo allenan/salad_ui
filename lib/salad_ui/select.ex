@@ -52,6 +52,16 @@ defmodule SaladUI.Select do
   Only errors on inputs the user has interacted with count, following
   `Phoenix.Component.used_input?/1`. The trigger's `aria-invalid` is added by
   the hook, so it is missing from a dead render.
+
+  The selected value is submitted through hidden inputs that the hook manages.
+  LiveView never reports hidden-only fields as unused, and an empty select
+  submits no value at all, so when `name` (or `field`) is set the root also
+  renders a text input with the `hidden` attribute and the same name. For a
+  single select it submits `""` ahead of the selected value, so an empty
+  required select still reaches the changeset. For a multiple select it is
+  `disabled` and only takes part in LiveView's used-input tracking. The hook
+  dispatches its form `change` events from that input, so the select counts as
+  used once the user picks a value or submits the form.
   """
   use SaladUI, :component
 
@@ -96,7 +106,12 @@ defmodule SaladUI.Select do
 
   def select(assigns) do
     assigns = prepare_assign(assigns)
-    assigns = assign(assigns, :invalid, invalid?(assigns))
+
+    assigns =
+      assign(assigns,
+        invalid: invalid?(assigns),
+        tracking_name: tracking_name(assigns.name, assigns.multiple)
+      )
 
     # Collect event mappings
     event_map = event_mappings(assigns)
@@ -130,10 +145,33 @@ defmodule SaladUI.Select do
       phx-hook="SaladUI"
       {@rest}
     >
+      <input
+        :if={@tracking_name}
+        type="text"
+        hidden
+        name={@tracking_name}
+        value=""
+        disabled={@multiple}
+        tabindex="-1"
+        autocomplete="off"
+        aria-hidden="true"
+        data-salad-ui-select-tracker="true"
+      />
       {render_slot(@inner_block)}
     </div>
     """
   end
+
+  # The input that lets LiveView's used-input tracking see the select (see
+  # "Validation" in the moduledoc). Mirrors `getInputName()` in select.js.
+  defp tracking_name(name, _multiple) when name in [nil, ""], do: nil
+
+  defp tracking_name(name, true) do
+    name = to_string(name)
+    if String.ends_with?(name, "[]"), do: name, else: name <> "[]"
+  end
+
+  defp tracking_name(name, _multiple), do: to_string(name)
 
   attr :class, :string, default: nil
   attr :size, :string, values: ~w(default sm), default: "default", doc: "the trigger height"

@@ -39,12 +39,31 @@ defmodule SaladUI.Helpers do
     assign(assigns, value: value)
   end
 
-  # Hand-built fields (e.g. in tests) may have no form or params; treat them as used.
-  defp field_used?(%FormField{form: %{params: params}} = field) when is_map(params) do
+  @doc """
+  Returns `true` when the user has interacted with the form field, following
+  `Phoenix.Component.used_input?/1`.
+
+  Hand-built fields (e.g. in tests) may have no form or params; they count as used.
+
+  `Phoenix.Component.used_input?/1` only sees what the browser submits, so
+  controls that keep their value in hidden inputs (select) or submit nothing when
+  empty (radio group) render an extra input to take part in LiveView's
+  used-input tracking. See `SaladUI.Select` and `SaladUI.RadioGroup`.
+  """
+  def field_used?(%FormField{form: %{params: params}} = field) when is_map(params) do
     Phoenix.Component.used_input?(field)
   end
 
-  defp field_used?(_field), do: true
+  def field_used?(_field), do: true
+
+  @doc """
+  Returns `true` when the form field has errors and the user has interacted
+  with it (see `field_used?/1`). This is the field-level counterpart of
+  `invalid?/1`, used by `SaladUI.Form.form_label/1` and
+  `SaladUI.Form.form_message/1` so labels and messages agree with the controls.
+  """
+  def field_invalid?(%FormField{} = field), do: has_error?(field) and field_used?(field)
+  def field_invalid?(_field), do: false
 
   @doc """
   Returns the translated error messages for a form field.

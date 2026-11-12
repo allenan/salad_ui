@@ -311,6 +311,33 @@ test("selecting an item updates readable text, hidden input, and LiveView form e
   assert.equal(pushed.at(-1).payload.value, "banana");
 });
 
+test("form change is dispatched from the server-rendered tracking input when present", () => {
+  const { el, form, hiddenInputs, item } = buildSelect({ inForm: true });
+  // select.ex renders this as the root's first child when a name is set.
+  el.insertAdjacentHTML(
+    "afterbegin",
+    '<input type="text" hidden name="fruit" value="" data-salad-ui-select-tracker="true">',
+  );
+  const tracker = el.querySelector("[data-salad-ui-select-tracker]");
+  const targets = [];
+  form.addEventListener("change", (event) => targets.push(event.target));
+
+  click(item("banana"));
+
+  assert.deepEqual(targets, [tracker]);
+  // The tracker comes first, so the selected value wins when the form is
+  // serialised (Plug keeps the last value for a repeated key).
+  const entries = [...new window.FormData(form).entries()];
+  assert.deepEqual(entries, [
+    ["fruit", ""],
+    ["fruit", "banana"],
+  ]);
+  assert.deepEqual(
+    hiddenInputs().map((input) => input.value),
+    ["banana"],
+  );
+});
+
 test("multiple select dispatches form change from a hidden input", () => {
   const { form, hiddenInputs, item } = buildSelect({
     inForm: true,

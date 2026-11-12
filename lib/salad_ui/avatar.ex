@@ -80,7 +80,7 @@ defmodule SaladUI.Avatar do
   def avatar_image(assigns) do
     ~H"""
     <img
-      class={classes(["aspect-square h-full w-full", @class])}
+      class={classes(["aspect-square size-full", @class])}
       {@rest}
       phx-update="ignore"
       style="display:none"
@@ -114,9 +114,7 @@ defmodule SaladUI.Avatar do
   def avatar_fallback(assigns) do
     ~H"""
     <span
-      class={
-        classes(["flex h-full w-full items-center justify-center rounded-full bg-muted", @class])
-      }
+      class={classes(["flex size-full items-center justify-center rounded-full bg-muted", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

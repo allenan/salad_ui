@@ -9,6 +9,7 @@ defmodule SaladUI.InvalidStateTest do
   import SaladUI.Badge
   import SaladUI.Button
   import SaladUI.Checkbox
+  import SaladUI.Form
   import SaladUI.Input
   import SaladUI.RadioGroup
   import SaladUI.Select
@@ -35,6 +36,14 @@ defmodule SaladUI.InvalidStateTest do
   defp invalid_field(value \\ nil), do: field([{"can't be blank", []}], value)
   defp valid_field, do: field([])
 
+  # The first `<input ...>` tag containing `marker`.
+  defp input_tag(html, marker) do
+    ~r/<input\b[^>]*>/
+    |> Regex.scan(html)
+    |> List.flatten()
+    |> Enum.find(&String.contains?(&1, marker))
+  end
+
   describe "Helpers.invalid?/1" do
     test "is true only when errors are present" do
       assert Helpers.invalid?(%{errors: ["can't be blank"]})
@@ -59,7 +68,58 @@ defmodule SaladUI.InvalidStateTest do
       refute html =~ ~s(aria-invalid=")
     end
 
-    test "a select on an untouched field is not data-invalid" do
+    # LiveView only sends `_unused_<name>` for a field when at least one of its
+    # inputs is not type="hidden" and none has been changed or submitted. The
+    # select's value inputs are all hidden, so it renders a tracking input.
+    test "a select renders a non-hidden-type tracking input named after the field" do
+      assigns = %{field: field([])}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit">
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      tracker = input_tag(html, "data-salad-ui-select-tracker")
+      assert tracker =~ ~s(type="text")
+      assert tracker =~ ~s(name="user[email]")
+      assert tracker =~ ~s(value="")
+      assert tracker =~ ~r/\shidden[\s>\/]/
+      refute tracker =~ "disabled"
+    end
+
+    test "a multiple select's tracking input is disabled and uses the [] name" do
+      assigns = %{field: field([])}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit" multiple>
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      tracker = input_tag(html, "data-salad-ui-select-tracker")
+      assert tracker =~ ~s(name="user[email][]")
+      assert tracker =~ "disabled"
+    end
+
+    test "a select without a name renders no tracking input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select id="fruit">
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      refute html =~ "data-salad-ui-select-tracker"
+    end
+
+    test "a select the user has not touched is not data-invalid" do
+      # The params LiveView sends on a phx-change of another field, now that
+      # the tracking input makes the select's key visible but unused.
       untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
       assigns = %{field: untouched}
 
@@ -71,6 +131,107 @@ defmodule SaladUI.InvalidStateTest do
         """)
 
       refute html =~ "data-invalid"
+    end
+
+    test "an empty select is data-invalid after submit" do
+      # On submit every input counts as used and the tracking input submits "".
+      submitted = field([{"can't be blank", []}], nil, %{"email" => ""})
+      assigns = %{field: submitted}
+
+      html =
+        rendered_to_string(~H"""
+        <.select field={@field} id="fruit">
+          <.select_trigger><.select_value placeholder="Pick" /></.select_trigger>
+        </.select>
+        """)
+
+      assert html =~ ~s(data-invalid="true")
+    end
+
+    test "a radio group renders an empty hidden input ahead of its radios" do
+      assigns = %{field: field([])}
+
+      html =
+        rendered_to_string(~H"""
+        <.radio_group field={@field}>
+          <.radio_group_item value="a" id="a" />
+        </.radio_group>
+        """)
+
+      first = input_tag(html, "")
+      assert first =~ ~s(type="hidden")
+      assert first =~ ~s(name="user[email]")
+      assert first =~ ~s(value="")
+    end
+
+    test "a radio group without a name renders no hidden input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.radio_group>
+          <.radio_group_item value="a" id="a" />
+        </.radio_group>
+        """)
+
+      refute html =~ ~s(type="hidden")
+    end
+
+    test "an untouched radio group is not aria-invalid, a submitted empty one is" do
+      untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
+      submitted = field([{"can't be blank", []}], nil, %{"email" => ""})
+
+      assigns = %{field: untouched}
+
+      html =
+        rendered_to_string(~H"""
+        <.radio_group field={@field}><.radio_group_item value="a" id="a" /></.radio_group>
+        """)
+
+      refute html =~ ~s(aria-invalid=")
+
+      assigns = %{field: submitted}
+
+      html =
+        rendered_to_string(~H"""
+        <.radio_group field={@field}><.radio_group_item value="a" id="a" /></.radio_group>
+        """)
+
+      assert html =~ ~s(aria-invalid="true")
+    end
+
+    test "form_label and form_message follow the same used-input rule as the controls" do
+      untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
+      assigns = %{field: untouched}
+
+      html =
+        rendered_to_string(~H"""
+        <.form_label field={@field}>Email</.form_label>
+        <.form_message field={@field} />
+        """)
+
+      refute html =~ "text-destructive"
+      refute html =~ "can&#39;t be blank"
+
+      assigns = %{field: invalid_field()}
+
+      html =
+        rendered_to_string(~H"""
+        <.form_label field={@field}>Email</.form_label>
+        <.form_message field={@field} />
+        """)
+
+      assert html =~ "text-destructive"
+      assert html =~ "can&#39;t be blank"
+    end
+
+    test "form_message always shows explicitly passed errors" do
+      untouched = field([{"can't be blank", []}], nil, %{"email" => "", "_unused_email" => ""})
+      assigns = %{field: untouched}
+
+      html = rendered_to_string(~H"<.form_message field={@field} errors={[~s(custom)]} />")
+
+      assert html =~ "custom"
     end
 
     test "invalid?/1 without :used_input (no field) still reads errors" do

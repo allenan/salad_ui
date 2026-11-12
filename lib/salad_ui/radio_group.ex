@@ -36,6 +36,13 @@ defmodule SaladUI.RadioGroup do
   When `field` has errors the group renders `aria-invalid="true"` on its
   `role="radiogroup"` root and every item picks up the destructive error styling.
   Pass `aria-invalid` to the group (or a single item) to set it explicitly.
+
+  Only errors on a group the user has interacted with count, following
+  `Phoenix.Component.used_input?/1`. An unchecked radio submits nothing, so
+  when `name` (or `field`) is set the group renders a hidden input with an
+  empty value ahead of the radios, as Phoenix does for checkboxes: an empty
+  group still submits `""`, reaches the changeset and is marked used on submit,
+  while LiveView reports it as unused until the user picks an item.
   """
   use SaladUI, :component
 
@@ -91,6 +98,7 @@ defmodule SaladUI.RadioGroup do
       phx-hook="SaladUI"
       {@rest}
     >
+      <input :if={@name} type="hidden" name={@name} value="" />
       {render_slot(@inner_block)}
     </div>
     """

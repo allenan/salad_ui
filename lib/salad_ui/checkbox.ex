@@ -32,6 +32,14 @@ defmodule SaladUI.Checkbox do
   * `:field` - A Phoenix form field
   * `:class` - Additional classes to add to the checkbox
   * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
+
+  ## Differences from shadcn
+
+  The checkbox is a native `<input type="checkbox">`, not Radix's `<button>`, so
+  it has no `data-state` attribute and no `checkbox-indicator` child. Style the
+  checked state with Tailwind's `checked:` variant where shadcn examples use
+  `data-[state=checked]:`, for example
+  `class="checked:border-blue-600 checked:bg-blue-600 checked:text-white"`.
   """
   attr :name, :any, default: nil
   attr :value, :any, default: nil
@@ -70,7 +78,7 @@ defmodule SaladUI.Checkbox do
         classes([
           "peer size-4 shrink-0 rounded-[4px] border border-input bg-transparent shadow-xs transition-shadow outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 checked:border-primary checked:bg-primary checked:text-primary-foreground dark:bg-input/30 dark:aria-invalid:ring-destructive/40 dark:checked:bg-primary",
           "indeterminate:border-primary indeterminate:bg-primary indeterminate:text-primary-foreground dark:indeterminate:bg-primary",
-          "grid appearance-none place-content-center checked:bg-none indeterminate:bg-none focus:ring-0 focus:ring-offset-0",
+          "inline-grid appearance-none place-content-center checked:bg-none indeterminate:bg-none focus:ring-0 focus:ring-offset-0",
           "before:size-3.5 before:bg-current before:opacity-0 checked:before:opacity-100 indeterminate:before:opacity-100",
           "before:[mask-image:url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27black%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpath%20d=%27M20%206%209%2017l-5-5%27/%3E%3C/svg%3E)] indeterminate:before:[mask-image:url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27black%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpath%20d=%27M5%2012h14%27/%3E%3C/svg%3E)]",
           @class

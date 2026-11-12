@@ -39,7 +39,7 @@ defmodule SaladUI.Toggle do
       type="button"
       class={
         classes([
-          "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 has-[:checked]:bg-accent has-[:checked]:text-accent-foreground",
+          "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,box-shadow] outline-none hover:bg-muted hover:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 has-[:checked]:bg-accent has-[:checked]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           @variant_class,
           @class
         ])
@@ -63,12 +63,12 @@ defmodule SaladUI.Toggle do
   @variants %{
     variant: %{
       "default" => "bg-transparent",
-      "outline" => "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground"
+      "outline" => "border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground"
     },
     size: %{
-      "default" => "h-10 px-3",
-      "sm" => "h-9 px-2.5",
-      "lg" => "h-11 px-5"
+      "default" => "h-9 min-w-9 px-2",
+      "sm" => "h-8 min-w-8 px-1.5",
+      "lg" => "h-10 min-w-10 px-2.5"
     }
   }
 

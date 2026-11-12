@@ -582,10 +582,16 @@ class SelectComponent extends Component {
   dispatchFormEvents() {
     if (!this.el.closest("form")) return;
 
+    // Prefer the server-rendered tracking input: LiveView marks the input an
+    // event comes from as used, and unlike the hidden value inputs (re-created
+    // on every sync) it survives patches, so the select stays "used".
+    const tracker = this.el.querySelector(
+      "input[data-salad-ui-select-tracker='true']",
+    );
     const hiddenInput = this.el.querySelector(
       "input[type='hidden'][data-salad-ui-select-input='true']",
     );
-    const target = hiddenInput || this.el;
+    const target = tracker || hiddenInput || this.el;
     target.dispatchEvent(new Event("change", { bubbles: true }));
   }
 

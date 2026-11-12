@@ -14,7 +14,7 @@ defmodule SaladUi.ProgressTest do
         |> rendered_to_string()
         |> clean_string()
 
-      for class <- ~w(h-full w-full flex-1 bg-primary transition-all) do
+      for class <- ~w(size-full flex-1 bg-primary transition-all) do
         assert html =~ class
       end
 
