@@ -56,7 +56,10 @@ defmodule SaladUI.NavigationMenu do
     triggers and links. `ArrowDown` or `Tab` on an open trigger moves focus into
     its panel, where the arrow keys move between links. `Escape` closes the
     panel and returns focus to its trigger.
-  * Clicking a link, clicking outside, or moving focus out of the menu closes it.
+  * Clicking a link, clicking outside, pressing `Escape` anywhere, or moving
+    focus out of the menu closes it.
+  * An open panel stays open across LiveView re-renders of the menu, unless its
+    item is removed or the menu's options change.
 
   ## Component events
 

@@ -434,3 +434,134 @@ test("beforeUpdate and destroy move content back into its item", () => {
   component.destroy();
   assert.equal(homeContent.parentElement, homeItem);
 });
+
+// Mimics a LiveView patch of unchanged markup: morphdom puts back the
+// server-rendered attributes and drops everything the component added.
+function patchFromServer(el) {
+  el.setAttribute("data-state", "closed");
+  el.querySelectorAll("[data-part='trigger']").forEach((trigger) => {
+    trigger.setAttribute("data-state", "closed");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.removeAttribute("id");
+    trigger.removeAttribute("aria-controls");
+  });
+  el.querySelectorAll("[data-part='content']").forEach((content) => {
+    content.setAttribute("data-state", "closed");
+    content.hidden = true;
+    content.removeAttribute("id");
+    content.removeAttribute("aria-labelledby");
+    content.removeAttribute("data-motion");
+  });
+  const viewport = el.querySelector("[data-part='viewport']");
+  if (viewport) {
+    viewport.setAttribute("data-state", "closed");
+    viewport.hidden = true;
+    viewport.removeAttribute("style");
+  }
+  const indicator = el.querySelector("[data-part='indicator']");
+  indicator.setAttribute("data-state", "hidden");
+  indicator.hidden = true;
+  indicator.removeAttribute("style");
+}
+
+test("an open panel and its focus survive a LiveView patch", () => {
+  const {
+    el,
+    homeTrigger,
+    homeContent,
+    viewport,
+    indicator,
+    pushed,
+    component,
+  } = buildMenu();
+  const linkA = homeContent.querySelector("a");
+
+  homeTrigger.click();
+  linkA.focus();
+  const pushedBefore = pushed.length;
+
+  component.beforeUpdate();
+  // Moving the panel home blurs the link in a browser; jsdom keeps it, so
+  // move focus away by hand.
+  homeTrigger.focus();
+  patchFromServer(el);
+  assert.equal(component.skipReinitialize(el), true);
+
+  assert.equal(component.value, "home");
+  assert.equal(el.dataset.state, "open");
+  assert.equal(homeTrigger.getAttribute("aria-expanded"), "true");
+  assert.equal(homeTrigger.getAttribute("aria-controls"), "nav-content-home");
+  assert.equal(homeContent.parentElement, viewport);
+  assert.equal(homeContent.hidden, false);
+  assert.equal(homeContent.dataset.state, "open");
+  assert.equal(viewport.hidden, false);
+  assert.equal(
+    viewport.style.getPropertyValue("--navigation-menu-viewport-height"),
+    "150px",
+  );
+  assert.equal(indicator.dataset.state, "visible");
+  assert.equal(document.activeElement, linkA);
+  assert.equal(pushed.length, pushedBefore);
+
+  // Listeners still work after the resync.
+  homeTrigger.click();
+  assert.equal(component.value, "");
+  assert.equal(el.dataset.state, "closed");
+});
+
+test("a patch that removes the open item closes the menu", () => {
+  const { el, homeTrigger, homeItem, pushed, component } = buildMenu();
+
+  homeTrigger.click();
+  component.beforeUpdate();
+  homeItem.remove();
+  patchFromServer(el);
+  assert.equal(component.skipReinitialize(el), true);
+
+  assert.equal(component.value, "");
+  assert.equal(el.dataset.state, "closed");
+  assert.equal(pushed.at(-1).payload.value, "");
+});
+
+test("a patch with new options rebuilds the component", () => {
+  const { el, component } = buildMenu();
+
+  el.setAttribute("data-options", JSON.stringify({ delayDuration: 1 }));
+  assert.equal(component.skipReinitialize(el), false);
+});
+
+test("Escape anywhere closes a hover-opened panel", () => {
+  const { homeTrigger, component } = buildMenu({ delayDuration: 0 });
+
+  pointer("pointerenter", homeTrigger);
+  assert.equal(component.value, "home");
+
+  key(document.getElementById("after"), "Escape");
+  assert.equal(component.value, "");
+});
+
+test("arrow keys inside a panel follow the reading direction", () => {
+  const { el, homeTrigger, homeContent } = buildMenu();
+  const [linkA, linkB] = homeContent.querySelectorAll("a");
+  el.setAttribute("dir", "rtl");
+
+  homeTrigger.click();
+  linkA.focus();
+  key(linkA, "ArrowLeft");
+  assert.equal(document.activeElement, linkB);
+  key(linkB, "ArrowRight");
+  assert.equal(document.activeElement, linkA);
+});
+
+test("Shift+Tab from the next item enters the open viewport panel at its end", () => {
+  const { homeTrigger, componentsTrigger, homeContent } = buildMenu();
+  const linkB = homeContent.querySelectorAll("a")[1];
+
+  homeTrigger.click();
+  componentsTrigger.focus();
+  assert.equal(
+    key(componentsTrigger, "Tab", { shiftKey: true }).defaultPrevented,
+    true,
+  );
+  assert.equal(document.activeElement, linkB);
+});

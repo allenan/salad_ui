@@ -58,12 +58,6 @@ class NavigationMenuComponent extends Component {
       DEFAULTS.animationDuration,
     );
 
-    this.list = this.getPart("list");
-    this.viewport = this.getPart("viewport") || null;
-    this.indicator = this.getPart("indicator") || null;
-    this.useViewport =
-      !!this.viewport && this.el.getAttribute("data-viewport") !== "false";
-
     this.value = "";
     this.openTimer = null;
     this.closeTimer = null;
@@ -71,8 +65,9 @@ class NavigationMenuComponent extends Component {
     this.indicatorTimer = null;
     this.lastClosedAt = 0;
     this.clickClosedValue = null;
+    this.focusBeforePatch = null;
 
-    this.items = this.collectItems();
+    this.collectParts();
     this.syncParts();
   }
 
@@ -83,6 +78,19 @@ class NavigationMenuComponent extends Component {
         open: { transitions: { close: "closed" } },
       },
     };
+  }
+
+  /** (Re)reads the parts from the DOM; also run after every LiveView patch. */
+  collectParts() {
+    this.allParts = this.queryParts().filter(
+      (node) => !node.dataset.part.startsWith("item"),
+    );
+    this.list = this.getPart("list") || null;
+    this.viewport = this.getPart("viewport") || null;
+    this.indicator = this.getPart("indicator") || null;
+    this.useViewport =
+      !!this.viewport && this.el.getAttribute("data-viewport") !== "false";
+    this.items = this.collectItems();
   }
 
   collectItems() {
@@ -348,6 +356,9 @@ class NavigationMenuComponent extends Component {
     on(this.el, "keydown", (e) => this.onKeyDown(e));
     on(this.el, "click", (e) => this.onRootClick(e));
     on(this.el, "focusout", (e) => this.onFocusOut(e));
+    // Like Radix's DismissableLayer: Escape closes a (hover-)opened panel even
+    // when focus is not inside the menu.
+    on(document, "keydown", (e) => this.onDocumentKeyDown(e));
 
     this.clickOutside = new ClickOutsideMonitor(this.el, () => this.dismiss());
     this.updateClickOutside();
@@ -419,6 +430,12 @@ class NavigationMenuComponent extends Component {
 
   onRootClick(event) {
     if (event.target.closest?.("[data-part='link']")) this.dismiss();
+  }
+
+  onDocumentKeyDown(event) {
+    if (event.key !== "Escape" || event.defaultPrevented || !this.value) return;
+    if (this.el.contains(event.target)) return;
+    this.dismiss();
   }
 
   onFocusOut(event) {
@@ -521,6 +538,18 @@ class NavigationMenuComponent extends Component {
       return;
     }
 
+    // With a viewport the open panel is not next to its trigger in the DOM, so
+    // Shift+Tab from the following item would skip it. Radix's focus proxy
+    // sends focus to the panel's last tabbable instead.
+    if (event.key === "Tab" && event.shiftKey && this.useViewport) {
+      const openItem = this.itemByValue(this.value);
+      if (openItem && focusables[index - 1] === openItem.trigger) {
+        const last = this.tabbables(openItem.content).at(-1);
+        if (this.focus(last)) event.preventDefault();
+      }
+      return;
+    }
+
     const rtl = this.isRtl();
     const keys = {
       ArrowRight: rtl ? index - 1 : index + 1,
@@ -566,11 +595,12 @@ class NavigationMenuComponent extends Component {
     const index = links.indexOf(event.target);
     if (index === -1) return;
 
+    const rtl = this.isRtl();
     const keys = {
       ArrowDown: index + 1,
-      ArrowRight: index + 1,
+      ArrowRight: rtl ? index - 1 : index + 1,
       ArrowUp: index - 1,
-      ArrowLeft: index - 1,
+      ArrowLeft: rtl ? index + 1 : index - 1,
       Home: 0,
       End: links.length - 1,
     };
@@ -605,16 +635,81 @@ class NavigationMenuComponent extends Component {
   }
 
   // LiveView must see contents back inside their items before it patches.
+  // Moving a panel out of the viewport blurs whatever was focused in it, so
+  // remember that element to refocus it once the panel is back.
   beforeUpdate() {
+    const active = document.activeElement;
+    this.focusBeforePatch =
+      active && active !== this.el && this.el.contains(active) ? active : null;
     this.restoreAllContent();
   }
 
-  beforeDestroy() {
+  /**
+   * A LiveView patch puts back the server-rendered markup: every panel hidden
+   * and closed, the viewport and indicator hidden, the root closed and the
+   * JS-assigned ids/ARIA wiring gone. Unless the options or event mappings
+   * changed, keep this instance and re-apply its state, so an open panel
+   * survives an unrelated re-render instead of snapping shut.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (el.getAttribute("data-options") !== this._optionsRaw) return false;
+    if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
+      return false;
+    }
+    this.resync();
+    return true;
+  }
+
+  resync() {
+    const value = this.value;
+    const focused = this.focusBeforePatch;
+    this.focusBeforePatch = null;
+
+    this.cancelTimers();
+    this.collectParts();
+    // Items (and their triggers) may be new elements: rebind the listeners.
+    this.setupEvents();
+
+    const item = this.itemByValue(value);
+    this.value = item ? value : "";
+    if (item) this.showContent(item, null);
+    if (!item && this.state === "open") {
+      this.lastClosedAt = Date.now();
+      this.transition("close");
+    }
+
+    this.updateUI();
+    this.updateViewport(item);
+    this.updateIndicator(item);
+    this.updateClickOutside();
+    if (value && !item) this.pushEvent("value-changed", { value: "" });
+
+    if (
+      focused?.isConnected &&
+      document.activeElement !== focused &&
+      this.el.contains(focused) &&
+      !focused.closest("[hidden]")
+    ) {
+      focused.focus({ preventScroll: true });
+    }
+  }
+
+  cancelTimers() {
     this.clearOpenTimer();
     this.clearCloseTimer();
     clearTimeout(this.viewportTimer);
+    this.viewportTimer = null;
     clearTimeout(this.indicatorTimer);
-    this.items?.forEach((item) => clearTimeout(item.hideTimer));
+    this.indicatorTimer = null;
+    this.items?.forEach((item) => {
+      clearTimeout(item.hideTimer);
+      item.hideTimer = null;
+    });
+  }
+
+  beforeDestroy() {
+    this.cancelTimers();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.restoreAllContent();
