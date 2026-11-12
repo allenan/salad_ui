@@ -36,7 +36,6 @@ node_modules/
 /priv/static/assets/storybook.css
 
 # In case you use Node.js/npm alongside yarn, ignore its stray lockfile.
-storybook/assets/package-lock.json
 
 /.vscode/
 /.ctags.d/

@@ -4,6 +4,7 @@ import { after, before, test } from "node:test";
 import {
   addOrRemoveClasses,
   animateTransition,
+  executeAnimation,
   queryDOM,
 } from "../salad_ui/core/utils.js";
 import { installDom, uninstallDom } from "./helpers/dom.mjs";
@@ -103,4 +104,28 @@ test("animateTransition applies the start class synchronously and clears all tra
   assert.equal(el.classList.contains("start-class"), false);
   assert.equal(el.classList.contains("run-class"), false);
   assert.equal(el.classList.contains("end-class"), false);
+});
+
+test("executeAnimation: frames that arrive after cleanup do not re-add classes", async () => {
+  // Simulate frames being delayed past the animation duration (busy main
+  // thread, background tab): hold rAF callbacks and flush them after cleanup.
+  const queued = [];
+  const realRaf = window.requestAnimationFrame;
+  window.requestAnimationFrame = (cb) => queued.push(cb);
+
+  try {
+    const el = document.createElement("div");
+    await executeAnimation(el, {
+      animation: [["ease-out"], ["opacity-100"], ["opacity-0"]],
+      duration: 1,
+    });
+
+    while (queued.length) queued.shift()(0);
+
+    assert.equal(el.classList.contains("ease-out"), false);
+    assert.equal(el.classList.contains("opacity-100"), false);
+    assert.equal(el.classList.contains("opacity-0"), false);
+  } finally {
+    window.requestAnimationFrame = realRaf;
+  }
 });

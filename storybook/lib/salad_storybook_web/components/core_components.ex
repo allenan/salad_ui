@@ -15,12 +15,13 @@ defmodule SaladStorybookWeb.CoreComponents do
   Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
   """
   use Phoenix.Component
-
   use Gettext, backend: SaladStorybookWeb.Gettext
+
   import SaladUI.Alert
   import SaladUI.Form, except: [form: 1]
   import SaladUI.Table, except: [table: 1]
 
+  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
   alias SaladUI.Button
   alias SaladUI.Checkbox
@@ -247,7 +248,7 @@ defmodule SaladStorybookWeb.CoreComponents do
     values: ~w(checkbox color date datetime-local email file month number password
                range search select tel text textarea time url week)
 
-  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
@@ -258,7 +259,7 @@ defmodule SaladStorybookWeb.CoreComponents do
   attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
-  def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+  def input(%{field: %FormField{} = field} = assigns) do
     errors = field.errors || []
 
     assigns
