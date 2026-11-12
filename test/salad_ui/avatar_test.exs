@@ -12,11 +12,13 @@ defmodule SaladUI.AvatarTest do
         <.avatar_image src="https://github.com/shadcn.png" />
         """)
 
-      for class <- ~w(aspect-square w-full h-full) do
+      for class <- ~w(absolute inset-0 aspect-square size-full) do
         assert html =~ class
       end
 
-      assert html =~ "src=\"https:\/\/github.com\/shadcn.png\" "
+      assert html =~ ~s(src="https://github.com/shadcn.png")
+      # phx-update="ignore" without an id raises inside a LiveView
+      refute html =~ "phx-update"
     end
 
     test "It renders fallback correctly" do
