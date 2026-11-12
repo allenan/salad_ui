@@ -130,6 +130,22 @@ defmodule SaladUI.DataSlotTest do
     assert check(~H"<.button>B</.button>", ~w(button)) == {[], []}
   end
 
+  test "button group" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.button_group>
+               <.button_group_text>T</.button_group_text>
+               <.button>B</.button>
+               <.button_group_separator />
+               <.button>C</.button>
+             </.button_group>
+             """,
+             ~w(button-group button-group-text button button-group-separator)
+           ) == {[], []}
+  end
+
   test "card" do
     assigns = %{}
 
@@ -370,6 +386,27 @@ defmodule SaladUI.DataSlotTest do
              </.input_otp>
              """,
              ~w(input-otp input-otp-group input-otp-slot input-otp-separator)
+           ) == {[], []}
+  end
+
+  test "input group" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.input_group id="ig">
+               <.input_group_input />
+               <.input_group_addon>
+                 <.input_group_text>T</.input_group_text>
+                 <.input_group_button>B</.input_group_button>
+               </.input_group_addon>
+             </.input_group>
+             <.input_group id="ig2">
+               <.input_group_textarea />
+               <.input_group_addon align="block-end">A</.input_group_addon>
+             </.input_group>
+             """,
+             ~w(input-group input-group-control input-group-addon input-group-text button)
            ) == {[], []}
   end
 
