@@ -63,6 +63,13 @@ defmodule SaladUI.Slider do
 
   * `"setValue"` - Sets the slider value. Requires a `:value` param (a number
     or a list of numbers).
+
+  ## LiveView patches
+
+  A re-render that sends the same `value` as the previous render keeps what
+  the user picked (and any drag in progress). Rendering a different `value`
+  moves the thumbs to it, so store the value from `phx-change` or
+  `on-value-changed` to keep the server in sync.
   """
   use SaladUI, :component
 
@@ -88,7 +95,9 @@ defmodule SaladUI.Slider do
   * `:inverted` - Reverse the visual direction.
   * `:disabled` - Disable the slider.
   * `:name` / `:field` - Form binding.
-  * `:thumb-labels` - Optional list of `aria-label`s, one per thumb.
+  * `:thumb-labels` - Optional list of `aria-label`s, one per thumb. A
+    single-thumb slider also takes its name from `aria-label` /
+    `aria-labelledby` passed to the root.
   * `:on-value-changed` - Handler for the `value-changed` event.
   * `:class` - Additional CSS classes for the root.
   """
@@ -164,7 +173,7 @@ defmodule SaladUI.Slider do
       assign(assigns,
         min: min,
         max: max,
-        thumbs: build_thumbs(values, percents, start_edge, assigns[:"thumb-labels"] || []),
+        thumbs: build_thumbs(values, percents, start_edge, thumb_labels(assigns, length(values))),
         input_name: input_name(assigns.name, length(values)),
         data_value: Enum.map_join(values, ",", &format_number/1),
         range_style: range_style(start_edge, percents),
@@ -221,6 +230,7 @@ defmodule SaladUI.Slider do
         role="slider"
         tabindex={if @disabled, do: nil, else: "0"}
         aria-label={thumb.label}
+        aria-labelledby={thumb.labelledby}
         aria-valuemin={format_number(@min)}
         aria-valuemax={format_number(@max)}
         aria-valuenow={thumb.value}
@@ -264,9 +274,25 @@ defmodule SaladUI.Slider do
         index: index,
         value: format_number(value),
         style: thumb_style(start_edge, pct),
-        label: Enum.at(labels, index) || default_label(index, count)
+        label: Enum.at(labels.aria_labels, index) || default_label(index, count),
+        labelledby: labels.labelledby
       }
     end)
+  end
+
+  # `role="slider"` lives on the thumbs, so a single-thumb slider forwards the
+  # root's `aria-label` / `aria-labelledby` to its thumb to give it a name.
+  defp thumb_labels(assigns, count) do
+    case assigns[:"thumb-labels"] do
+      [_ | _] = labels ->
+        %{aria_labels: labels, labelledby: nil}
+
+      _ when count == 1 ->
+        %{aria_labels: [assigns.rest[:"aria-label"]], labelledby: assigns.rest[:"aria-labelledby"]}
+
+      _ ->
+        %{aria_labels: [], labelledby: nil}
+    end
   end
 
   # Radix appends `[]` with several thumbs so the form posts a list.
