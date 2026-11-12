@@ -40,6 +40,7 @@ defmodule SaladChat.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:salad_ui, path: "../.."},
       {:phoenix, "~> 1.8.16"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -51,13 +52,6 @@ defmodule SaladChat.MixProject do
        github: "tailwindlabs/heroicons",
        tag: "v2.2.0",
        sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
-      {:daisyui,
-       github: "saadeghi/daisyui",
-       tag: "v5.5.20",
-       sparse: "packages/bundle",
        app: false,
        compile: false,
        depth: 1},
@@ -78,7 +72,11 @@ defmodule SaladChat.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.setup": [
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing",
+        "cmd npm install --prefix assets"
+      ],
       "assets.build": ["compile", "tailwind salad_chat", "esbuild salad_chat"],
       "assets.deploy": [
         "tailwind salad_chat --minify",

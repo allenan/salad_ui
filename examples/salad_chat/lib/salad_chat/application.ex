@@ -8,6 +8,7 @@ defmodule SaladChat.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      TwMerge.Cache,
       SaladChatWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:salad_chat, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SaladChat.PubSub},
