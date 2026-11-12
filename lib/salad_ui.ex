@@ -34,6 +34,7 @@ defmodule SaladUI do
   - `scroll_area/1` - Custom scrollable containers
   - `aspect_ratio/1` - Content constrained to a width/height ratio
   - `item/1`, `item_group/1` - Flexible rows with media, title, description and actions
+  - `resizable_panel_group/1`, `resizable_panel/1`, `resizable_handle/1` - Resizable panel layouts
 
   ### Forms & Input
   - `button/1` - Interactive buttons with multiple variants
@@ -211,6 +212,7 @@ defmodule SaladUI do
       import SaladUI.Popover
       import SaladUI.Progress
       import SaladUI.RadioGroup
+      import SaladUI.Resizable
       import SaladUI.ScrollArea
       import SaladUI.Select
       import SaladUI.Separator

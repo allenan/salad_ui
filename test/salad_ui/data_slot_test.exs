@@ -359,6 +359,21 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
+  test "resizable" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.resizable_panel_group id="r">
+               <.resizable_panel>A</.resizable_panel>
+               <.resizable_handle with_handle />
+               <.resizable_panel>B</.resizable_panel>
+             </.resizable_panel_group>
+             """,
+             ~w(resizable-panel-group resizable-panel resizable-handle)
+           ) == {[], []}
+  end
+
   test "scroll area" do
     assigns = %{}
     assert check(~H"<.scroll_area>C</.scroll_area>", ~w(scroll-area scroll-area-viewport)) == {[], []}

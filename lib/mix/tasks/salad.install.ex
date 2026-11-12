@@ -141,6 +141,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/tooltip.js";
     import "./ui/components/accordion.js";
     import "./ui/components/slider.js";
+    import "./ui/components/resizable.js";
     import "./ui/components/switch.js";
     import "./ui/components/dropdown_menu.js";
     import "./ui/components/toast.js";
