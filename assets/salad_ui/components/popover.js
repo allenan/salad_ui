@@ -9,6 +9,8 @@ class PopoverComponent extends Component {
 
     // Initialize core properties
     this.trigger = this.getPart("trigger");
+    // Optional popover_anchor: positions the content in place of the trigger.
+    this.anchor = this.getPart("anchor");
     this.positioner = this.getPart("positioner");
     this.content = this.positioner
       ? this.positioner.querySelector("[data-part='content']")
@@ -81,7 +83,8 @@ class PopoverComponent extends Component {
    * Extracts placement configuration from DOM attributes and creates a new PositionedElement instance.
    */
   initializePositionedElement() {
-    if (this.positioner && this.trigger && !this.positionedElement) {
+    const reference = this.anchor || this.trigger;
+    if (this.positioner && reference && !this.positionedElement) {
       const placement = this.positioner.getAttribute("data-side") || "bottom";
       const alignment = this.positioner.getAttribute("data-align") || "center";
       const sideOffset = parseInt(
@@ -100,7 +103,7 @@ class PopoverComponent extends Component {
 
       this.positionedElement = new PositionedElement(
         this.positioner,
-        this.trigger,
+        reference,
         {
           placement,
           alignment,
@@ -110,7 +113,12 @@ class PopoverComponent extends Component {
           usePortal,
           portalContainer,
           trapFocus: true,
-          onOutsideClick: () => this.transition("close"),
+          onOutsideClick: (event) => {
+            // With an anchor the trigger is outside the monitored elements;
+            // let its own toggle action close the popover instead.
+            if (this.trigger?.contains(event?.target)) return;
+            this.transition("close");
+          },
           onPosition: ({ placement: actualPlacement }) => {
             this.content?.setAttribute("data-side", actualPlacement);
           },

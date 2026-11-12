@@ -12,7 +12,11 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function buildPopover({ state = "closed", usePortal = false } = {}) {
+function buildPopover({
+  state = "closed",
+  usePortal = false,
+  withAnchor = false,
+} = {}) {
   const options = JSON.stringify({
     portalContainer: "#portal",
     usePortal,
@@ -24,6 +28,7 @@ function buildPopover({ state = "closed", usePortal = false } = {}) {
          data-options='${options}'
          data-event-mappings='{"open":"opened","close":"closed"}'
          data-part="root">
+      ${withAnchor ? '<div data-part="anchor">Anchor</div>' : ""}
       <button data-part="trigger" data-action="toggle" type="button">Open</button>
       <div data-part="positioner" data-side="bottom" data-align="center"
            data-side-offset="8" data-align-offset="0" hidden>
@@ -36,6 +41,17 @@ function buildPopover({ state = "closed", usePortal = false } = {}) {
   const trigger = el.querySelector('[data-part="trigger"]');
   const positioner = el.querySelector('[data-part="positioner"]');
   const content = el.querySelector('[data-part="content"]');
+  const anchor = el.querySelector('[data-part="anchor"]');
+  if (anchor) {
+    setRect(anchor, {
+      top: 300,
+      right: 500,
+      bottom: 320,
+      left: 300,
+      width: 200,
+      height: 20,
+    });
+  }
   setRect(trigger, {
     top: 100,
     right: 200,
@@ -53,7 +69,7 @@ function buildPopover({ state = "closed", usePortal = false } = {}) {
     liveSocket: { execJS: () => {} },
   };
 
-  return { el, trigger, positioner, content, pushed, hookContext };
+  return { el, trigger, anchor, positioner, content, pushed, hookContext };
 }
 
 function click(el) {
@@ -159,4 +175,40 @@ test("LiveView pre-update restores portaled content before component recreation"
   assert.equal(document.querySelectorAll('[data-part="positioner"]').length, 1);
   assert.equal(patchedPositioner.parentElement.id, "portal");
   hook.destroyed();
+});
+
+test("popover positions against the anchor instead of the trigger", () => {
+  const { el, trigger, anchor, hookContext } = buildPopover({
+    withAnchor: true,
+  });
+  const component = registry.create("popover", el, hookContext);
+
+  click(trigger);
+
+  assert.equal(component.state, "open");
+  assert.equal(component.positionedElement.reference, anchor);
+  component.destroy();
+});
+
+test("with an anchor, clicking the trigger again closes the popover", () => {
+  const { el, trigger, hookContext } = buildPopover({ withAnchor: true });
+  const component = registry.create("popover", el, hookContext);
+
+  click(trigger);
+  assert.equal(component.state, "open");
+
+  click(trigger);
+  assert.equal(component.state, "closed");
+  component.destroy();
+});
+
+test("with an anchor, clicking outside closes the popover", () => {
+  const { el, trigger, hookContext } = buildPopover({ withAnchor: true });
+  const component = registry.create("popover", el, hookContext);
+
+  click(trigger);
+  click(document.body);
+
+  assert.equal(component.state, "closed");
+  component.destroy();
 });

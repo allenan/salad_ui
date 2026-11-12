@@ -21,8 +21,9 @@ function buildTabs({
   value = null,
   defaultValue = null,
   items = [{ value: "account" }, { value: "password" }, { value: "billing" }],
+  orientation,
 } = {}) {
-  const options = { value, defaultValue };
+  const options = { value, defaultValue, orientation };
   const eventMappings = { "tab-changed": "tab_changed" };
 
   document.body.innerHTML = `
@@ -52,7 +53,9 @@ function buildTabs({
   const getContent = (itemValue) =>
     el.querySelector(`[data-part="content"][data-value="${itemValue}"]`);
 
-  return { component, el, pushed, getTrigger, getContent };
+  const list = el.querySelector('[data-part="list"]');
+
+  return { component, el, list, pushed, getTrigger, getContent };
 }
 
 function click(el) {
@@ -141,4 +144,50 @@ test("keyboard navigation selects next enabled tab and skips disabled tabs", () 
   assert.equal(document.activeElement, getTrigger("password"));
   assert.equal(getTrigger("password").getAttribute("data-state"), "active");
   assert.equal(getContent("password").hidden, false);
+});
+
+test("horizontal tabs use Left/Right and ignore Up/Down", () => {
+  const { list, getTrigger } = buildTabs({ defaultValue: "account" });
+
+  assert.equal(list.getAttribute("aria-orientation"), "horizontal");
+
+  getTrigger("account").focus();
+  keydown(getTrigger("account"), "ArrowDown");
+  assert.equal(getTrigger("account").getAttribute("data-state"), "active");
+
+  keydown(getTrigger("account"), "ArrowRight");
+  assert.equal(getTrigger("password").getAttribute("data-state"), "active");
+});
+
+test("vertical tabs use Up/Down, ignore Left/Right and set aria-orientation", () => {
+  const { list, getTrigger, getContent } = buildTabs({
+    defaultValue: "account",
+    orientation: "vertical",
+  });
+
+  assert.equal(list.getAttribute("aria-orientation"), "vertical");
+
+  getTrigger("account").focus();
+  const ignored = new window.KeyboardEvent("keydown", {
+    key: "ArrowRight",
+    bubbles: true,
+    cancelable: true,
+  });
+  getTrigger("account").dispatchEvent(ignored);
+  assert.equal(ignored.defaultPrevented, false);
+  assert.equal(getTrigger("account").getAttribute("data-state"), "active");
+
+  const down = new window.KeyboardEvent("keydown", {
+    key: "ArrowDown",
+    bubbles: true,
+    cancelable: true,
+  });
+  getTrigger("account").dispatchEvent(down);
+  assert.equal(down.defaultPrevented, true);
+  assert.equal(document.activeElement, getTrigger("password"));
+  assert.equal(getContent("password").hidden, false);
+
+  keydown(getTrigger("password"), "ArrowUp");
+  assert.equal(document.activeElement, getTrigger("account"));
+  assert.equal(getTrigger("account").getAttribute("data-state"), "active");
 });

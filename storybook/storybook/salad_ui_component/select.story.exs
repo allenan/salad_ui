@@ -61,6 +61,110 @@ defmodule Storybook.SaladUIComponents.Select do
         ]
       },
       %Variation{
+        id: :groups,
+        description: "Groups, labels and a separator",
+        attributes: %{id: "groups-select", name: "food", "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-48">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_label>Fruits</.select_label>
+                <.select_item value="apple">Apple</.select_item>
+                <.select_item value="banana">Banana</.select_item>
+                <.select_item value="blueberry">Blueberry</.select_item>
+              </.select_group>
+              <.select_separator />
+              <.select_group>
+                <.select_label>Vegetables</.select_label>
+                <.select_item value="carrot">Carrot</.select_item>
+                <.select_item value="broccoli">Broccoli</.select_item>
+                <.select_item value="spinach">Spinach</.select_item>
+              </.select_group>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :scrollable,
+        description: "A long list scrolls inside the content; the scroll buttons appear while there is more to see",
+        attributes: %{id: "timezone-select", name: "timezone", "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-64">
+              <.select_value placeholder="Select a timezone" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_label>North America</.select_label>
+                <.select_item value="est">Eastern Standard Time</.select_item>
+                <.select_item value="cst">Central Standard Time</.select_item>
+                <.select_item value="mst">Mountain Standard Time</.select_item>
+                <.select_item value="pst">Pacific Standard Time</.select_item>
+                <.select_item value="akst">Alaska Standard Time</.select_item>
+                <.select_item value="hst">Hawaii Standard Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>Europe &amp; Africa</.select_label>
+                <.select_item value="gmt">Greenwich Mean Time</.select_item>
+                <.select_item value="cet">Central European Time</.select_item>
+                <.select_item value="eet">Eastern European Time</.select_item>
+                <.select_item value="west">Western European Summer Time</.select_item>
+                <.select_item value="cat">Central Africa Time</.select_item>
+                <.select_item value="eat">East Africa Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>Asia</.select_label>
+                <.select_item value="msk">Moscow Time</.select_item>
+                <.select_item value="ist">India Standard Time</.select_item>
+                <.select_item value="cst_china">China Standard Time</.select_item>
+                <.select_item value="jst">Japan Standard Time</.select_item>
+                <.select_item value="kst">Korea Standard Time</.select_item>
+                <.select_item value="ist_indonesia">Indonesia Central Standard Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>Australia &amp; Pacific</.select_label>
+                <.select_item value="awst">Australian Western Standard Time</.select_item>
+                <.select_item value="acst">Australian Central Standard Time</.select_item>
+                <.select_item value="aest">Australian Eastern Standard Time</.select_item>
+                <.select_item value="nzst">New Zealand Standard Time</.select_item>
+                <.select_item value="fjt">Fiji Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>South America</.select_label>
+                <.select_item value="art">Argentina Time</.select_item>
+                <.select_item value="bot">Bolivia Time</.select_item>
+                <.select_item value="brt">Brasilia Time</.select_item>
+                <.select_item value="clt">Chile Standard Time</.select_item>
+              </.select_group>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :disabled,
+        description: "A disabled select (data-disabled on the root, disabled on the trigger) and a disabled item",
+        attributes: %{id: "disabled-select", name: "fruit", "data-disabled": "true", "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-48" disabled>
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_item value="apple">Apple</.select_item>
+                <.select_item value="banana">Banana</.select_item>
+                <.select_item value="blueberry">Blueberry</.select_item>
+                <.select_item value="grapes" disabled>Grapes</.select_item>
+                <.select_item value="pineapple">Pineapple</.select_item>
+              </.select_group>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
         id: :invalid,
         description:
           ~s|Error styling via aria-invalid on the trigger (a form field with errors sets data-invalid on the root, which styles and marks the trigger automatically)|,

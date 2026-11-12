@@ -145,9 +145,15 @@ class SelectComponent extends Component {
     this.trigger = this.getPart("trigger");
     this.valueDisplay = this.getPart("value");
     this.content = this.getPart("content");
+    this.viewport = this.getPart("viewport");
+    this.scrollUpButton = this.getPart("scroll-up-button");
+    this.scrollDownButton = this.getPart("scroll-down-button");
+    this.autoScrollTimer = null;
     this.disabled = this.el.dataset.disabled === "true";
     this.handleTriggerClick = this.handleTriggerClick.bind(this);
     this.handleTriggerKeydown = this.handleTriggerKeydown.bind(this);
+    this.updateScrollButtons = this.updateScrollButtons.bind(this);
+    this.scrollButtonHandlers = new Map();
 
     // Get configuration from options
     this.multiple = this.options.multiple || false;
@@ -283,6 +289,7 @@ class SelectComponent extends Component {
 
     this.trigger?.addEventListener("click", this.handleTriggerClick);
     this.trigger?.addEventListener("keydown", this.handleTriggerKeydown);
+    this.setupScrollButtons();
   }
 
   teardownComponentEvents() {
@@ -290,6 +297,89 @@ class SelectComponent extends Component {
 
     this.trigger?.removeEventListener("click", this.handleTriggerClick);
     this.trigger?.removeEventListener("keydown", this.handleTriggerKeydown);
+    this.teardownScrollButtons();
+  }
+
+  // Scroll buttons (shadcn's SelectScrollUpButton / SelectScrollDownButton).
+  // Like Radix, each one is shown only while the viewport can scroll in its
+  // direction, and pointing at it scrolls the viewport one item per tick.
+  setupScrollButtons() {
+    if (!this.viewport) return;
+
+    this.viewport.addEventListener("scroll", this.updateScrollButtons, {
+      passive: true,
+    });
+
+    [
+      [this.scrollUpButton, -1],
+      [this.scrollDownButton, 1],
+    ].forEach(([button, direction]) => {
+      if (!button) return;
+
+      const start = () => this.startAutoScroll(direction);
+      const stop = () => this.stopAutoScroll();
+      const handlers = {
+        pointerdown: start,
+        pointermove: start,
+        pointerleave: stop,
+      };
+      Object.entries(handlers).forEach(([type, handler]) =>
+        button.addEventListener(type, handler),
+      );
+      this.scrollButtonHandlers.set(button, handlers);
+    });
+  }
+
+  teardownScrollButtons() {
+    this.stopAutoScroll();
+    this.viewport?.removeEventListener("scroll", this.updateScrollButtons);
+    this.scrollButtonHandlers.forEach((handlers, button) => {
+      Object.entries(handlers).forEach(([type, handler]) =>
+        button.removeEventListener(type, handler),
+      );
+    });
+    this.scrollButtonHandlers.clear();
+  }
+
+  updateScrollButtons() {
+    if (!this.viewport) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = this.viewport;
+    const canScrollUp = scrollTop > 0;
+    const canScrollDown = Math.ceil(scrollTop) < scrollHeight - clientHeight;
+
+    if (this.scrollUpButton) this.scrollUpButton.hidden = !canScrollUp;
+    if (this.scrollDownButton) this.scrollDownButton.hidden = !canScrollDown;
+
+    // Stop once the button under the pointer disappears at either end.
+    if (
+      this.autoScrollTimer !== null &&
+      ((this.autoScrollDirection < 0 && !canScrollUp) ||
+        (this.autoScrollDirection > 0 && !canScrollDown))
+    ) {
+      this.stopAutoScroll();
+    }
+  }
+
+  startAutoScroll(direction) {
+    if (this.autoScrollTimer !== null || !this.viewport) return;
+
+    this.autoScrollDirection = direction;
+    this.autoScrollTimer = window.setInterval(() => {
+      if (this.destroyed || !this.viewport) return this.stopAutoScroll();
+
+      const item = this.viewport.querySelector("[data-part='item']");
+      const step = item?.offsetHeight || 32;
+      this.viewport.scrollTop += direction * step;
+      this.updateScrollButtons();
+    }, 50);
+  }
+
+  stopAutoScroll() {
+    if (this.autoScrollTimer === null) return;
+
+    window.clearInterval(this.autoScrollTimer);
+    this.autoScrollTimer = null;
   }
 
   handleTriggerClick() {
@@ -403,6 +493,7 @@ class SelectComponent extends Component {
 
     // Highlight first selected item or first item
     this.highlightFirstSelectedOrFirstItem();
+    this.updateScrollButtons();
     window.requestAnimationFrame(() => {
       if (this.destroyed || typeof document === "undefined") return;
 
@@ -412,12 +503,15 @@ class SelectComponent extends Component {
       ) {
         this.highlightFirstSelectedOrFirstItem();
       }
+      if (this.state === "open") this.updateScrollButtons();
     });
 
     this.pushEvent("open");
   }
 
   onOpenExit() {
+    this.stopAutoScroll();
+
     // Deactivate positioned element
     if (this.positionedElement) {
       this.positionedElement.deactivate();

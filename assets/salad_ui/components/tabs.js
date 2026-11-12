@@ -16,6 +16,8 @@ class TabsComponent extends Component {
     this.config.preventDefaultKeys = [
       "ArrowLeft",
       "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
       "Home",
       "End",
       "Enter",
@@ -70,7 +72,22 @@ class TabsComponent extends Component {
     }
   }
 
+  /**
+   * "vertical" or "horizontal" (default). Read from options because
+   * getComponentConfig() runs inside the base constructor, before any
+   * subclass fields exist.
+   */
+  getOrientation() {
+    return this.options?.orientation === "vertical" ? "vertical" : "horizontal";
+  }
+
   getComponentConfig() {
+    // Like Radix, only the arrow keys on the tabs' axis move between tabs.
+    const [prevKey, nextKey] =
+      this.getOrientation() === "vertical"
+        ? ["ArrowUp", "ArrowDown"]
+        : ["ArrowLeft", "ArrowRight"];
+
     return {
       stateMachine: {
         idle: {
@@ -81,8 +98,8 @@ class TabsComponent extends Component {
         idle: {
           keyEventTarget: "list",
           keyMap: {
-            ArrowLeft: () => this.navigateTab("prev"),
-            ArrowRight: () => this.navigateTab("next"),
+            [prevKey]: () => this.navigateTab("prev"),
+            [nextKey]: () => this.navigateTab("next"),
             Home: () => this.navigateTab("first"),
             End: () => this.navigateTab("last"),
           },
@@ -93,7 +110,7 @@ class TabsComponent extends Component {
       },
       ariaConfig: {
         list: {
-          all: { role: "tablist" },
+          all: { role: "tablist", orientation: this.getOrientation() },
         },
         trigger: {
           all: {

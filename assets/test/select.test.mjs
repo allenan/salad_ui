@@ -3,7 +3,7 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/select.js"; // self-registers "select"
-import { installDom, uninstallDom } from "./helpers/dom.mjs";
+import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -45,6 +45,7 @@ function buildSelect({
   disabled = false,
   invalid = false,
   triggerAttrs = "",
+  scrollable = false,
 } = {}) {
   const options = { name, multiple, value, defaultValue, usePortal: false };
   const root = `
@@ -58,7 +59,13 @@ function buildSelect({
         <span data-part="value" data-placeholder="Choose one">Choose one</span>
       </button>
       <div data-part="content" hidden>
-        ${items.map(itemMarkup).join("")}
+        ${
+          scrollable
+            ? `<div data-part="scroll-up-button" aria-hidden="true" hidden></div>
+               <div data-part="viewport">${items.map(itemMarkup).join("")}</div>
+               <div data-part="scroll-down-button" aria-hidden="true" hidden></div>`
+            : items.map(itemMarkup).join("")
+        }
       </div>
       ${extraHidden ? '<input type="hidden" name="csrf_token" value="keep-me">' : ""}
     </div>
@@ -83,6 +90,9 @@ function buildSelect({
     pushed,
     trigger: el.querySelector('[data-part="trigger"]'),
     content: el.querySelector('[data-part="content"]'),
+    viewport: el.querySelector('[data-part="viewport"]'),
+    scrollUp: el.querySelector('[data-part="scroll-up-button"]'),
+    scrollDown: el.querySelector('[data-part="scroll-down-button"]'),
     valueDisplay: el.querySelector('[data-part="value"]'),
     item: (value) =>
       el.querySelector(`[data-part="item"][data-value="${value}"]`),
@@ -397,4 +407,110 @@ test("hidden input sync only replaces select-owned inputs", () => {
 
   const csrf = el.querySelector('input[name="csrf_token"]');
   assert.equal(csrf?.value, "keep-me");
+});
+
+// jsdom has no layout: give the viewport a fixed scrollable box.
+function makeScrollable(viewport, { scrollHeight = 300, clientHeight = 100 }) {
+  Object.defineProperty(viewport, "scrollHeight", {
+    value: scrollHeight,
+    configurable: true,
+  });
+  Object.defineProperty(viewport, "clientHeight", {
+    value: clientHeight,
+    configurable: true,
+  });
+}
+
+function pointer(el, type) {
+  el.dispatchEvent(new window.Event(type, { bubbles: true }));
+}
+
+test("scroll buttons show only while the viewport can scroll that way", () => {
+  const { component, trigger, viewport, scrollUp, scrollDown } = buildSelect({
+    scrollable: true,
+  });
+  makeScrollable(viewport, { scrollHeight: 300, clientHeight: 100 });
+
+  click(trigger);
+  assert.equal(scrollUp.hidden, true);
+  assert.equal(scrollDown.hidden, false);
+
+  viewport.scrollTop = 100;
+  viewport.dispatchEvent(new window.Event("scroll"));
+  assert.equal(scrollUp.hidden, false);
+  assert.equal(scrollDown.hidden, false);
+
+  viewport.scrollTop = 200;
+  viewport.dispatchEvent(new window.Event("scroll"));
+  assert.equal(scrollUp.hidden, false);
+  assert.equal(scrollDown.hidden, true);
+
+  component.destroy();
+});
+
+test("scroll buttons stay hidden when the items fit", () => {
+  const { component, trigger, viewport, scrollUp, scrollDown } = buildSelect({
+    scrollable: true,
+  });
+  makeScrollable(viewport, { scrollHeight: 100, clientHeight: 100 });
+
+  click(trigger);
+  assert.equal(scrollUp.hidden, true);
+  assert.equal(scrollDown.hidden, true);
+
+  component.destroy();
+});
+
+test("pointing at the scroll-down button scrolls until the end, then stops", async () => {
+  const { component, trigger, viewport, scrollUp, scrollDown } = buildSelect({
+    scrollable: true,
+  });
+  makeScrollable(viewport, { scrollHeight: 300, clientHeight: 100 });
+
+  click(trigger);
+  pointer(scrollDown, "pointermove");
+
+  // jsdom clamps nothing, so the interval must stop itself at the end.
+  await waitFor(() => viewport.scrollTop >= 200);
+  await waitFor(() => component.autoScrollTimer === null);
+  assert.equal(scrollDown.hidden, true);
+  assert.equal(scrollUp.hidden, false);
+
+  component.destroy();
+});
+
+test("leaving a scroll button stops auto-scrolling", async () => {
+  const { component, trigger, viewport, scrollUp } = buildSelect({
+    scrollable: true,
+  });
+  makeScrollable(viewport, { scrollHeight: 300, clientHeight: 100 });
+
+  click(trigger);
+  viewport.scrollTop = 200;
+  viewport.dispatchEvent(new window.Event("scroll"));
+
+  pointer(scrollUp, "pointerdown");
+  assert.notEqual(component.autoScrollTimer, null);
+  pointer(scrollUp, "pointerleave");
+  assert.equal(component.autoScrollTimer, null);
+
+  component.destroy();
+});
+
+test("closing the select stops auto-scrolling", () => {
+  const { component, trigger, viewport, scrollDown } = buildSelect({
+    scrollable: true,
+  });
+  makeScrollable(viewport, { scrollHeight: 300, clientHeight: 100 });
+
+  click(trigger);
+  pointer(scrollDown, "pointerenter");
+  pointer(scrollDown, "pointermove");
+  assert.notEqual(component.autoScrollTimer, null);
+
+  keydown(trigger, "Escape");
+  assert.equal(component.state, "closed");
+  assert.equal(component.autoScrollTimer, null);
+
+  component.destroy();
 });

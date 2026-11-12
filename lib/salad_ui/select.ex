@@ -25,6 +25,28 @@ defmodule SaladUI.Select do
         <.button type="submit">Submit</.button>
       </form>
 
+  ## Size
+
+  `select_trigger/1` takes `size="sm"` for a compact (`h-8`) trigger:
+
+      <.select id="small-select" placeholder="Theme">
+        <.select_trigger size="sm" class="w-[140px]">
+          <.select_value placeholder="Theme" />
+        </.select_trigger>
+        <.select_content>
+          <.select_item value="light">Light</.select_item>
+          <.select_item value="dark">Dark</.select_item>
+        </.select_content>
+      </.select>
+
+  ## Scrolling
+
+  `select_content/1` caps its height at `max-h-96`; longer lists scroll inside
+  its viewport. Like shadcn, it renders `select_scroll_up_button/1` and
+  `select_scroll_down_button/1` above and below the items. The hook shows each
+  one only while there is more to scroll in its direction, and hovering one
+  scrolls the list.
+
   ## Component events
 
   * `:on-value-changed` - Maps the `value-changed` event. Fired when the selected value changes.
@@ -174,6 +196,14 @@ defmodule SaladUI.Select do
 
   defp tracking_name(name, _multiple), do: to_string(name)
 
+  @doc """
+  The button that opens the dropdown and shows the selected value.
+
+  ## Options
+
+  * `:size` - `"default"` (`h-9`) or `"sm"` (`h-8`).
+  * `:class` - Additional CSS classes.
+  """
   attr :class, :string, default: nil
   attr :size, :string, values: ~w(default sm), default: "default", doc: "the trigger height"
   slot :inner_block, required: true
@@ -232,6 +262,18 @@ defmodule SaladUI.Select do
     """
   end
 
+  @doc """
+  The dropdown panel holding the items.
+
+  Items render inside a scrollable viewport (`data-part="viewport"`) between
+  a scroll-up and a scroll-down button, which the hook shows only while the
+  list can scroll that way.
+
+  ## Options
+
+  * `:side` - Preferred side of the trigger (`"top"` or `"bottom"`). Flips when there is no room.
+  * `:class` - Additional CSS classes.
+  """
   attr :class, :string, default: nil
   attr :side, :string, values: ~w(top bottom), default: "bottom"
   slot :inner_block, required: true
@@ -257,7 +299,7 @@ defmodule SaladUI.Select do
       hidden
       class={
         classes([
-          "absolute min-w-full",
+          "absolute flex min-w-full flex-col",
           "z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           @position_class,
           @class
@@ -265,9 +307,84 @@ defmodule SaladUI.Select do
       }
       {@rest}
     >
-      <div class="relative w-full p-1">
+      <.select_scroll_up_button />
+      <div
+        data-part="viewport"
+        class="relative min-h-0 w-full flex-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {render_slot(@inner_block)}
       </div>
+      <.select_scroll_down_button />
+    </div>
+    """
+  end
+
+  @doc """
+  Scrolls the list up while hovered. `select_content/1` renders one for you;
+  the hook hides it until the viewport is scrolled down.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def select_scroll_up_button(assigns) do
+    ~H"""
+    <div
+      data-slot="select-scroll-up-button"
+      data-part="scroll-up-button"
+      aria-hidden="true"
+      hidden
+      class={classes(["flex cursor-default items-center justify-center py-1", @class])}
+      {@rest}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-chevron-up size-4"
+      >
+        <path d="m18 15-6-6-6 6"></path>
+      </svg>
+    </div>
+    """
+  end
+
+  @doc """
+  Scrolls the list down while hovered. `select_content/1` renders one for
+  you; the hook shows it while there are items below the visible area.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def select_scroll_down_button(assigns) do
+    ~H"""
+    <div
+      data-slot="select-scroll-down-button"
+      data-part="scroll-down-button"
+      aria-hidden="true"
+      hidden
+      class={classes(["flex cursor-default items-center justify-center py-1", @class])}
+      {@rest}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-chevron-down size-4"
+      >
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
     </div>
     """
   end
