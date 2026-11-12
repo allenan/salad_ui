@@ -275,8 +275,8 @@ defmodule SaladChatWeb.MessageComponents do
     <div class="flex flex-wrap gap-2">
       <%= for {file, i} <- Enum.with_index(@attachments) do %>
         <%= if file.kind == :image do %>
-          <.attachment orientation="vertical" class="w-60 max-w-full sm:w-72">
-            <.attachment_media variant="image" class="aspect-[16/10] w-full">
+          <.attachment orientation="vertical" class="w-60! max-w-full sm:w-72!">
+            <.attachment_media variant="image" class="aspect-[16/10]! w-full">
               <img src={file.url} alt={file.alt} loading="lazy" class="object-cover" />
             </.attachment_media>
             <.attachment_content>

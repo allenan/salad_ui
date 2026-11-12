@@ -175,7 +175,12 @@ defmodule SaladChatWeb.ChatPanels do
 
         <.tooltip>
           <.tooltip_trigger>
-            <.button variant="ghost" size="icon-sm" phx-click="toggle_theme" aria-label="Toggle theme">
+            <.button
+              variant="ghost"
+              size="icon-sm"
+              phx-click={JS.dispatch("salad-chat:toggle-theme")}
+              aria-label="Toggle theme"
+            >
               <.icon name="hero-moon" class="dark:hidden" />
               <.icon name="hero-sun" class="hidden dark:block" />
             </.button>
@@ -360,7 +365,9 @@ defmodule SaladChatWeb.ChatPanels do
           <.command_item phx-click={close("#quick-switcher_dialog") |> open("#settings-dialog")}>
             <.icon name="hero-cog-6-tooth" /> <span>Open settings</span>
           </.command_item>
-          <.command_item phx-click={JS.push("toggle_theme") |> close("#quick-switcher_dialog")}>
+          <.command_item phx-click={
+            JS.dispatch("salad-chat:toggle-theme") |> close("#quick-switcher_dialog")
+          }>
             <.icon name="hero-moon" /> <span>Toggle dark mode</span>
           </.command_item>
           <.command_item phx-click={JS.navigate(~p"/")}>
@@ -415,13 +422,19 @@ defmodule SaladChatWeb.ChatPanels do
         </.sheet_header>
         <.tabs id="details-tabs" default="about" class="min-h-0 flex-1 p-6 pt-4">
           <.tabs_list class="w-full">
-            <.tabs_trigger value="about" class="flex-1">About</.tabs_trigger>
-            <.tabs_trigger value="members" class="flex-1">
+            <.tabs_trigger value="about" id="details-tabs-trigger-about" class="flex-1">
+              About
+            </.tabs_trigger>
+            <.tabs_trigger value="members" id="details-tabs-trigger-members" class="flex-1">
               Members
               <.badge variant="secondary" class="ml-1 h-5 px-1.5">{length(@members)}</.badge>
             </.tabs_trigger>
           </.tabs_list>
-          <.tabs_content value="about" class="flex flex-col gap-4 pt-2">
+          <.tabs_content
+            value="about"
+            id="details-tabs-content-about"
+            class="flex flex-col gap-4 pt-2"
+          >
             <form
               :if={!Channel.dm?(@channel)}
               id="topic-form"
@@ -463,7 +476,7 @@ defmodule SaladChatWeb.ChatPanels do
               </dd>
             </dl>
           </.tabs_content>
-          <.tabs_content value="members" class="pt-2">
+          <.tabs_content value="members" id="details-tabs-content-members" class="pt-2">
             <.scroll_area class="max-h-[60vh]">
               <.item_group>
                 <.item :for={u <- @members} size="sm">

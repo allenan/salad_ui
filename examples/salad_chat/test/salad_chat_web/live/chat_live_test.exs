@@ -63,6 +63,16 @@ defmodule SaladChatWeb.ChatLiveTest do
       assert render(leo) =~ "<strong>ramen</strong>"
     end
 
+    test "typing shows an indicator in the other tab", %{conn: conn} do
+      {:ok, maya, _} = live(conn, ~p"/as/maya/c/random")
+      {:ok, leo, _} = live(build_conn(), ~p"/as/leo/c/random")
+
+      maya |> form("#main-form", %{"body" => "Who wants"}) |> render_change()
+
+      assert render(leo) =~ "Maya is typing…"
+      refute render(maya) =~ "is typing…"
+    end
+
     test "a mention in another channel bumps the unread badge", %{conn: conn} do
       {:ok, kai, _} = live(conn, ~p"/as/kai/c/general")
       Chat.mark_read("kai", "random", Chat.latest_id("random"))
