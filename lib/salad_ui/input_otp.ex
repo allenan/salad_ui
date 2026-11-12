@@ -56,7 +56,16 @@ defmodule SaladUI.InputOTP do
   * Clicking a filled slot selects its character; clicking an empty slot puts
     the caret after the last character.
   * Pasting replaces the selection with the clipboard text (whitespace
-    stripped), truncated to `maxlength`. Input that fails `pattern` is rejected.
+    stripped), truncated to `maxlength`; a pasted code that fills every slot on
+    its own replaces the whole value. Input that fails `pattern` is rejected.
+  * Resetting the enclosing form redraws the slots from the restored value.
+
+  ## LiveView
+
+  The real input takes part in `phx-change`/`phx-submit` like any text input,
+  including `Phoenix.Component.used_input?/1` tracking. When the server
+  re-renders a new `value` (or `field` value) and the input is not focused, the
+  slots redraw from it; while it is focused, LiveView keeps what the user typed.
 
   ## Component events
 

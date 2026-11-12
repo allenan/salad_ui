@@ -3,6 +3,9 @@ defmodule SaladUI.InputOTPTest do
 
   import SaladUI.InputOTP
 
+  alias Phoenix.HTML.Form
+  alias Phoenix.HTML.FormField
+
   defp render_otp(assigns) do
     ~H"""
     <.input_otp {@attrs}>
@@ -124,13 +127,13 @@ defmodule SaladUI.InputOTPTest do
     end
 
     test "form field binds id, name, value and errors" do
-      field = %Phoenix.HTML.FormField{
+      field = %FormField{
         id: "user_code",
         name: "user[code]",
         value: "999",
         errors: [{"is invalid", []}],
         field: :code,
-        form: %Phoenix.HTML.Form{params: %{"code" => "999"}}
+        form: %Form{params: %{"code" => "999"}}
       }
 
       html = render_otp(%{attrs: %{field: field, maxlength: 6}})
@@ -147,6 +150,37 @@ defmodule SaladUI.InputOTPTest do
       assert_raise ArgumentError, ~r/requires an :id/, fn ->
         render_otp(%{attrs: %{maxlength: 6}})
       end
+    end
+
+    test "errors on a field the user has not touched don't mark it invalid" do
+      field = %FormField{
+        id: "user_code",
+        name: "user[code]",
+        value: nil,
+        errors: [{"can't be blank", []}],
+        field: :code,
+        form: %Form{params: %{"code" => "", "_unused_code" => ""}}
+      }
+
+      html = render_otp(%{attrs: %{field: field, maxlength: 6}})
+
+      refute html =~ ~s(aria-invalid=")
+      refute html =~ ~s(data-invalid=")
+      assert html =~ ~s(value="")
+    end
+
+    test "an integer field value is rendered as text" do
+      field = %FormField{
+        id: "pin",
+        name: "pin",
+        value: 1234,
+        errors: [],
+        field: :pin,
+        form: %Form{params: %{}}
+      }
+
+      html = render_otp(%{attrs: %{field: field, maxlength: 6}})
+      assert html =~ ~s(value="1234")
     end
   end
 

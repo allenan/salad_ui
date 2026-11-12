@@ -282,3 +282,145 @@ test("destroy removes listeners", () => {
 
   assert.equal(chars(slotEls), "|||||");
 });
+
+// Simulate a native caret move (arrow keys, Home/End), then selectionchange.
+function moveCaret(input, pos) {
+  input.setSelectionRange(pos, pos);
+  document.dispatchEvent(new window.Event("selectionchange"));
+}
+
+// Simulate Backspace: delete the selection, or the character before the caret.
+function backspace(input) {
+  const v = input.value;
+  let start = input.selectionStart;
+  const end = input.selectionEnd;
+  if (start === end) start = Math.max(0, start - 1);
+  input.value = v.slice(0, start) + v.slice(end);
+  input.setSelectionRange(start, start);
+  input.dispatchEvent(new window.Event("input", { bubbles: true }));
+  document.dispatchEvent(new window.Event("selectionchange"));
+}
+
+const selection = (input) => [input.selectionStart, input.selectionEnd];
+
+test("arrow keys move the one-character selection like input-otp", () => {
+  const { input, slotEls } = build({ value: "12345" });
+  input.focus();
+  // Focus with room left: caret after the last character (insert mode).
+  assert.deepEqual(selection(input), [5, 5]);
+  assert.deepEqual(active(slotEls), [false, false, false, false, false, true]);
+
+  // ArrowLeft from insert mode selects the last character.
+  moveCaret(input, 4);
+  assert.deepEqual(selection(input), [4, 5]);
+  assert.deepEqual(active(slotEls), [false, false, false, false, true, false]);
+
+  // ArrowLeft on a selection collapses it to its start; step back one more.
+  moveCaret(input, 4);
+  assert.deepEqual(selection(input), [3, 4]);
+
+  // ArrowRight collapses to the end and selects the next character.
+  moveCaret(input, 4);
+  assert.deepEqual(selection(input), [4, 5]);
+
+  // Home selects the first character.
+  moveCaret(input, 0);
+  assert.deepEqual(selection(input), [0, 1]);
+  assert.deepEqual(active(slotEls), [true, false, false, false, false, false]);
+});
+
+test("backspace clears from the end and moves the active slot back", () => {
+  const { input, slotEls, pushed } = build({ value: "123456" });
+  input.focus();
+  assert.deepEqual(selection(input), [5, 6]);
+
+  backspace(input);
+  assert.equal(input.value, "12345");
+  assert.equal(chars(slotEls), "1|2|3|4|5|");
+  assert.deepEqual(active(slotEls), [false, false, false, false, false, true]);
+  assert.deepEqual(carets(slotEls), [false, false, false, false, false, true]);
+
+  backspace(input);
+  assert.equal(input.value, "1234");
+  assert.deepEqual(active(slotEls), [false, false, false, false, true, false]);
+  assert.deepEqual(
+    pushed.map((p) => p.payload.value),
+    ["12345", "1234"],
+  );
+});
+
+test("pasting a full code replaces the value even when one is already there", () => {
+  const { input, slotEls, pushed } = build({ value: "123456" });
+  input.focus();
+  assert.deepEqual(selection(input), [5, 6]);
+
+  paste(input, "987 654");
+
+  assert.equal(input.value, "987654");
+  assert.equal(chars(slotEls), "9|8|7|6|5|4");
+  assert.deepEqual(
+    pushed.map((p) => p.event),
+    ["otp_changed"],
+  );
+});
+
+test("a partial paste replaces the selected character", () => {
+  const { input } = build({ value: "1234" });
+  input.focus();
+  moveCaret(input, 1); // selects "2"
+
+  paste(input, "ab");
+
+  assert.equal(input.value, "1ab34");
+});
+
+test("form reset redraws the slots from the restored value", async () => {
+  const { input, slotEls, pushed } = build({ value: "12" });
+  input.focus();
+  type(input, "3");
+  assert.equal(chars(slotEls), "1|2|3|||");
+
+  document.getElementById("form").reset();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(input.value, "12");
+  assert.equal(chars(slotEls), "1|2||||");
+  assert.deepEqual(
+    pushed.map((p) => p.payload.value),
+    ["123", "12"],
+  );
+});
+
+test("a LiveView patch with a new server value redraws the slots", () => {
+  const { el, input, otp } = build({ value: "12" });
+  input.focus();
+  input.blur();
+
+  // LiveView morphs the DOM back to the server's markup, then the hook's
+  // updated() rebuilds the component.
+  input.value = "4321";
+  el.querySelectorAll('[data-part="slot-char"]').forEach((c) => {
+    c.textContent = "";
+  });
+  otp.destroy();
+  const pushed = [];
+  const rebuilt = new InputOTPComponent(el, {
+    pushEventTo: (_el, event, payload) => pushed.push({ event, payload }),
+  });
+  rebuilt.setupEvents();
+  rebuilt.afterMount();
+  current = rebuilt;
+
+  const slotEls = [...el.querySelectorAll('[data-part="slot"]')];
+  assert.equal(chars(slotEls), "4|3|2|1||");
+  assert.deepEqual(pushed, []);
+
+  // Typing continues from the server value and completes once.
+  input.focus();
+  type(input, "5");
+  type(input, "6");
+  assert.deepEqual(
+    pushed.map((p) => p.event),
+    ["otp_changed", "otp_changed", "otp_complete"],
+  );
+});

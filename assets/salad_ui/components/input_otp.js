@@ -63,6 +63,7 @@ class InputOTPComponent extends Component {
     this.onBlur = this.onBlur.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
     this.onSelectionChange = this.onSelectionChange.bind(this);
+    this.onFormReset = this.onFormReset.bind(this);
 
     this.input.addEventListener("input", this.onInput);
     this.input.addEventListener("paste", this.onPaste);
@@ -73,6 +74,9 @@ class InputOTPComponent extends Component {
     // that do not fire selectionchange for text inputs.
     this.input.addEventListener("keyup", this.onSelectionChange);
     this.doc.addEventListener("selectionchange", this.onSelectionChange);
+    // form.reset() restores the input's default value without an input event.
+    this.form = this.input.form;
+    this.form?.addEventListener("reset", this.onFormReset);
 
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver(() => this.updateRootHeight());
@@ -92,6 +96,9 @@ class InputOTPComponent extends Component {
     this.input.removeEventListener("mouseup", this.onPointerUp);
     this.input.removeEventListener("keyup", this.onSelectionChange);
     this.doc.removeEventListener("selectionchange", this.onSelectionChange);
+    this.form?.removeEventListener("reset", this.onFormReset);
+    this.form = null;
+    clearTimeout(this.resetTimer);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
   }
@@ -161,10 +168,14 @@ class InputOTPComponent extends Component {
     const value = this.value;
     const start = this.input.selectionStart ?? value.length;
     const end = this.input.selectionEnd ?? value.length;
-    const next = (value.slice(0, start) + content + value.slice(end)).slice(
-      0,
-      this.maxLength,
-    );
+    // A pasted code that fills every slot on its own replaces the value, so
+    // pasting a fresh code over an old one (whose last character is selected
+    // on focus) does not keep the old characters.
+    const next = (
+      content.length >= this.maxLength
+        ? content
+        : value.slice(0, start) + content + value.slice(end)
+    ).slice(0, this.maxLength);
 
     if (next.length > 0 && this.regexp && !this.regexp.test(next)) return;
 
@@ -198,6 +209,17 @@ class InputOTPComponent extends Component {
     if (!this.isFocused()) return;
     this.syncSelection();
     this.render();
+  }
+
+  onFormReset() {
+    // The reset event fires before the form restores its controls' values.
+    clearTimeout(this.resetTimer);
+    this.resetTimer = setTimeout(() => {
+      if (this.destroyed || !this.input) return;
+      const value = this.value.slice(0, this.maxLength);
+      if (value !== this.input.value) this.input.value = value;
+      this.commit(value);
+    }, 0);
   }
 
   // --- Value --------------------------------------------------------------
