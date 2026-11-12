@@ -137,8 +137,10 @@ class ContextMenuComponent extends Component {
     this.clearLongPress();
 
     // A keyboard-invoked context menu (Shift+F10, the Menu key) reports no
-    // pointer position: anchor at the trigger and focus the first item.
-    const fromKeyboard = event.clientX === 0 && event.clientY === 0;
+    // pointer position (and, as a PointerEvent, an empty pointerType): anchor
+    // at the trigger and focus the first item.
+    const fromKeyboard =
+      event.pointerType === "" || (event.clientX === 0 && event.clientY === 0);
     this.openAt(this.pointFor(event, fromKeyboard), { fromKeyboard });
   }
 
@@ -212,23 +214,27 @@ class ContextMenuComponent extends Component {
     this.startOpenListeners();
   }
 
-  onOpenExit() {
+  // Runs as soon as the menu starts closing, before the exit animation: the
+  // close event and the focus return must not wait for it, since a LiveView
+  // patch in that window (e.g. the reply to an item's on-select) rebuilds the
+  // component and the deferred closed-state handler never runs.
+  onOpenExit({ restoreFocus = true } = {}) {
     this.menu?.closeSubmenus();
     this.stopOpenListeners();
-  }
-
-  onClosedEnter({ restoreFocus = true } = {}) {
-    this.point = null;
-
-    if (this.positioner && Portal.isInPortal(this.positioner)) {
-      Portal.restore(this.positioner);
-    }
-
     this.pushEvent("close");
 
     const target = this.previousFocusEl;
     this.previousFocusEl = null;
     if (restoreFocus && target?.isConnected) target.focus();
+  }
+
+  // After the exit animation.
+  onClosedEnter() {
+    this.point = null;
+
+    if (this.positioner && Portal.isInPortal(this.positioner)) {
+      Portal.restore(this.positioner);
+    }
   }
 
   focusContent(fromKeyboard) {

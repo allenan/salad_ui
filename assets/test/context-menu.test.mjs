@@ -18,11 +18,21 @@ function build({
   side = "right",
   disabled = false,
   usePortal = false,
+  // The exit animation context_menu/1 configures.
+  animated = false,
 } = {}) {
+  const options = JSON.stringify({
+    usePortal,
+    ...(animated && {
+      animations: {
+        open_to_closed: { duration: 130, target_part: "content" },
+      },
+    }),
+  });
   document.body.innerHTML = `
     <div ${dir ? `dir="${dir}"` : ""}>
       <div id="cm" data-component="context-menu" data-state="closed" data-part="root"
-           data-options='{"usePortal":${usePortal}}'
+           data-options='${options}'
            data-event-mappings='{"open":"opened","close":"closed"}'>
         <span data-part="trigger" ${disabled ? "data-disabled" : ""}>
           Right click here <button id="inner" type="button">inner</button>
@@ -452,4 +462,83 @@ test("a LiveView rebuild keeps focus on a toggled checkbox item", () => {
   );
 
   rebuilt.destroy();
+});
+
+test("with the exit animation, closing returns focus and fires close at once, then hides", async () => {
+  const { component, content, positioner, pushed, trigger } = build({
+    animated: true,
+  });
+  const inner = trigger.querySelector("#inner");
+  inner.focus();
+
+  contextmenu(inner, 200, 150);
+  assert.equal(document.activeElement, content);
+
+  keydown(content, "Escape");
+  assert.equal(component.state, "closed");
+  assert.equal(document.activeElement, inner);
+  assert.ok(pushed.some(({ event }) => event === "closed"));
+  // The panel stays up while it animates out.
+  assert.equal(positioner.hidden, false);
+
+  await waitFor(() => positioner.hidden === true);
+
+  component.destroy();
+});
+
+test("a LiveView rebuild during the exit animation still returns focus and fires close", async () => {
+  const { back, component, el, hookContext, positioner, pushed, trigger } =
+    build({ animated: true });
+  const inner = trigger.querySelector("#inner");
+  inner.focus();
+
+  // Keep hold of the exit animation so the test can let it drain.
+  let exitAnimation = null;
+  const machine = component.stateMachine;
+  const onStateChanged = machine.options.onStateChanged;
+  machine.options.onStateChanged = (...args) =>
+    (exitAnimation = onStateChanged(...args));
+
+  contextmenu(inner, 200, 150);
+  // Selecting an item pushes its on-select; the server's reply patches the
+  // menu before the 130ms exit animation finishes.
+  click(back);
+  component.beforeUpdate();
+  component.destroy();
+  positioner.hidden = true;
+
+  const rebuilt = registry.create("context-menu", el, hookContext);
+  assert.equal(rebuilt.state, "closed");
+  assert.equal(positioner.hidden, true);
+  assert.equal(document.activeElement, inner);
+  assert.deepEqual(
+    pushed.map(({ event }) => event).filter((event) => event !== "back"),
+    ["opened", "closed"],
+  );
+
+  rebuilt.destroy();
+  await exitAnimation;
+});
+
+test("a keyboard contextmenu PointerEvent (empty pointerType) opens at the first item", () => {
+  const { back, component, positioner, trigger } = build();
+  const inner = trigger.querySelector("#inner");
+  inner.focus();
+
+  // Browsers place a keyboard-fired contextmenu near the focused element.
+  inner.dispatchEvent(
+    new window.PointerEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 180,
+      clientY: 140,
+      pointerType: "",
+    }),
+  );
+
+  assert.equal(component.state, "open");
+  assert.equal(document.activeElement, back);
+  assert.equal(positioner.style.top, px(100));
+
+  component.destroy();
 });
