@@ -239,12 +239,22 @@ defmodule SaladUI.DataSlotTest do
                    </.dropdown_menu_item>
                    <.dropdown_menu_checkbox_item value="b">B</.dropdown_menu_checkbox_item>
                  </.dropdown_menu_group>
+                 <.dropdown_menu_radio_group value="c">
+                   <.dropdown_menu_radio_item value="c">C</.dropdown_menu_radio_item>
+                 </.dropdown_menu_radio_group>
+                 <.dropdown_menu_sub>
+                   <.dropdown_menu_sub_trigger>More</.dropdown_menu_sub_trigger>
+                   <.dropdown_menu_sub_content>
+                     <.dropdown_menu_item>D</.dropdown_menu_item>
+                   </.dropdown_menu_sub_content>
+                 </.dropdown_menu_sub>
                </.dropdown_menu_content>
              </.dropdown_menu>
              """,
              ~w(dropdown-menu dropdown-menu-trigger dropdown-menu-content dropdown-menu-label
                 dropdown-menu-separator dropdown-menu-group dropdown-menu-item dropdown-menu-shortcut
-                dropdown-menu-checkbox-item)
+                dropdown-menu-checkbox-item dropdown-menu-radio-group dropdown-menu-radio-item
+                dropdown-menu-sub dropdown-menu-sub-trigger dropdown-menu-sub-content)
            ) == {[], []}
   end
 

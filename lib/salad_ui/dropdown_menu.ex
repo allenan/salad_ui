@@ -55,12 +55,55 @@ defmodule SaladUI.DropdownMenu do
         </.dropdown_menu_content>
       </.dropdown_menu>
 
+  ## Example with a radio group
+
+      <.dropdown_menu id="position-menu">
+        <.dropdown_menu_trigger as={&SaladUI.Button.button/1} variant="outline">
+          Open
+        </.dropdown_menu_trigger>
+        <.dropdown_menu_content class="w-56">
+          <.dropdown_menu_label>Panel Position</.dropdown_menu_label>
+          <.dropdown_menu_separator />
+          <.dropdown_menu_radio_group value={@position} on-value-changed="set_position">
+            <.dropdown_menu_radio_item value="top">Top</.dropdown_menu_radio_item>
+            <.dropdown_menu_radio_item value="bottom">Bottom</.dropdown_menu_radio_item>
+            <.dropdown_menu_radio_item value="right">Right</.dropdown_menu_radio_item>
+          </.dropdown_menu_radio_group>
+        </.dropdown_menu_content>
+      </.dropdown_menu>
+
+  ## Example with a sub-menu
+
+      <.dropdown_menu id="team-menu">
+        <.dropdown_menu_trigger as={&SaladUI.Button.button/1} variant="outline">
+          Open
+        </.dropdown_menu_trigger>
+        <.dropdown_menu_content>
+          <.dropdown_menu_item>Team</.dropdown_menu_item>
+          <.dropdown_menu_sub>
+            <.dropdown_menu_sub_trigger>Invite users</.dropdown_menu_sub_trigger>
+            <.dropdown_menu_sub_content>
+              <.dropdown_menu_item on-select="invite_email">Email</.dropdown_menu_item>
+              <.dropdown_menu_item on-select="invite_message">Message</.dropdown_menu_item>
+            </.dropdown_menu_sub_content>
+          </.dropdown_menu_sub>
+        </.dropdown_menu_content>
+      </.dropdown_menu>
+
+  ## Keyboard
+
+  Follows the WAI-ARIA menu pattern: `ArrowUp`/`ArrowDown`/`Home`/`End` move
+  between items, `Enter`/`Space` activate, `ArrowRight` opens a sub-menu and
+  `ArrowLeft` closes it (mirrored under `dir="rtl"`), `Escape` closes the menu.
+
   ## Component events
 
   * `:on-open` - Maps the `open` event. Fired when the dropdown menu enters open state.
   * `:on-close` - Maps the `close` event. Fired when the dropdown menu enters closed state.
   * `:on-select` - Maps the `select` event on a `dropdown_menu_item`. Fired when the item is activated.
   * `:on-checked-change` - Maps the `checked-change` event on a `dropdown_menu_checkbox_item`.
+  * `:on-value-changed` - Maps the `value-changed` event on a `dropdown_menu_radio_group`.
+    Fired with `%{"value" => value}` when a different radio item is picked.
 
   ## Server commands
 
@@ -461,6 +504,264 @@ defmodule SaladUI.DropdownMenu do
         </span>
       </span>
       {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  A group of mutually exclusive `dropdown_menu_radio_item/1`s.
+
+  The group owns the selected value: the item whose `value` equals the
+  group's `value` is rendered checked. Selecting another item updates the
+  checked item on the client, keeps the menu open (like checkbox items) and
+  fires `on-value-changed`. Pass the new value back as `value` from your
+  LiveView to keep server state in sync.
+
+  ## Options
+
+  * `:value` - The currently selected value. Defaults to `nil` (nothing checked).
+  * `:on-value-changed` - Handler fired when the user picks a different item.
+    A string event name receives `%{"value" => value}`; a `Phoenix.LiveView.JS`
+    command is executed as-is.
+  * `:class` - Additional CSS classes.
+
+  ## Examples
+
+      <.dropdown_menu_radio_group value={@position} on-value-changed="set_position">
+        <.dropdown_menu_radio_item value="top">Top</.dropdown_menu_radio_item>
+        <.dropdown_menu_radio_item value="bottom">Bottom</.dropdown_menu_radio_item>
+        <.dropdown_menu_radio_item value="right">Right</.dropdown_menu_radio_item>
+      </.dropdown_menu_radio_group>
+  """
+  attr :value, :string, default: nil, doc: "The currently selected value"
+
+  attr :"on-value-changed", :any,
+    default: nil,
+    doc: "Handler fired with `%{\"value\" => value}` when the selected item changes"
+
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def dropdown_menu_radio_group(assigns) do
+    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
+
+    ~H"""
+    <div
+      data-slot="dropdown-menu-radio-group"
+      data-part="radio-group"
+      data-value={@value}
+      data-event-mappings={@event_map}
+      role="group"
+      class={classes([@class])}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  A radio item inside a `dropdown_menu_radio_group/1`.
+
+  Its checked state comes from the enclosing group's `value`, so the item
+  itself only declares its own `value`.
+
+  ## Options
+
+  * `:value` - Required. The value this item selects.
+  * `:disabled` - Whether the item is disabled. Defaults to `false`.
+  * `:on-select` - Handler fired whenever the item is activated, even if it is already checked.
+  * `:class` - Additional CSS classes.
+  """
+  attr :value, :string, required: true, doc: "The value this item selects"
+  attr :disabled, :boolean, default: false
+  attr :"on-select", :any, default: nil, doc: "Handler for item selected event"
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def dropdown_menu_radio_item(assigns) do
+    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
+
+    ~H"""
+    <div
+      data-slot="dropdown-menu-radio-item"
+      data-part="radio-item"
+      data-value={@value}
+      data-disabled={@disabled}
+      data-event-mappings={@event_map}
+      class={
+        classes([
+          "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          @class
+        ])
+      }
+      tabindex={if @disabled, do: "-1", else: "0"}
+      {@rest}
+    >
+      <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+        <span data-part="item-indicator" hidden>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="size-2 fill-current"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+        </span>
+      </span>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  Wraps a sub-menu: one `dropdown_menu_sub_trigger/1` followed by one
+  `dropdown_menu_sub_content/1`. Sub-menus can be nested.
+
+  Keyboard (WAI-ARIA menu pattern): `ArrowRight`, `Enter` or `Space` on the
+  sub-trigger opens the sub-menu and focuses its first item; `ArrowLeft`
+  inside it closes it and returns focus to the sub-trigger (mirrored when an
+  ancestor has `dir="rtl"`). `Escape` closes the whole menu. Hovering the
+  sub-trigger opens the sub-menu; hovering a sibling item closes it.
+
+  ## Examples
+
+      <.dropdown_menu_sub>
+        <.dropdown_menu_sub_trigger>Invite users</.dropdown_menu_sub_trigger>
+        <.dropdown_menu_sub_content>
+          <.dropdown_menu_item on-select="invite_email">Email</.dropdown_menu_item>
+          <.dropdown_menu_item on-select="invite_message">Message</.dropdown_menu_item>
+        </.dropdown_menu_sub_content>
+      </.dropdown_menu_sub>
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def dropdown_menu_sub(assigns) do
+    ~H"""
+    <div data-slot="dropdown-menu-sub" data-part="sub" class={classes([@class])} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  The item that opens a sub-menu. Renders a trailing chevron.
+
+  ## Options
+
+  * `:inset` - Adds left padding to line up with checkbox/radio items. Defaults to `false`.
+  * `:disabled` - Whether the sub-trigger is disabled. Defaults to `false`.
+  * `:class` - Additional CSS classes.
+  """
+  attr :inset, :boolean, default: false
+  attr :disabled, :boolean, default: false
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def dropdown_menu_sub_trigger(assigns) do
+    ~H"""
+    <div
+      data-slot="dropdown-menu-sub-trigger"
+      data-part="sub-trigger"
+      data-inset={@inset}
+      data-disabled={@disabled}
+      data-state="closed"
+      aria-haspopup="menu"
+      aria-expanded="false"
+      class={
+        classes([
+          "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[inset]:pl-8 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+          @class
+        ])
+      }
+      tabindex={if @disabled, do: "-1", else: "0"}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="ml-auto size-4"
+      >
+        <path d="m9 18 6-6-6-6"></path>
+      </svg>
+    </div>
+    """
+  end
+
+  @doc """
+  The floating panel of a sub-menu. It accepts the same children as
+  `dropdown_menu_content/1`, including nested `dropdown_menu_sub/1`s.
+
+  ## Options
+
+  * `:side` - Placement relative to the sub-trigger (`right` or `left`). Defaults to `"right"`;
+    mirrored automatically under `dir="rtl"`.
+  * `:align` - Alignment along the sub-trigger (start, center, end). Defaults to `"start"`.
+  * `:side-offset` - Distance from the sub-trigger in pixels. Defaults to `0`.
+  * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
+  * `:class` - Additional CSS classes.
+  """
+  attr :side, :string, values: ~w(right left), default: "right"
+  attr :align, :string, values: ~w(start center end), default: "start"
+  attr :"side-offset", :integer, default: 0, doc: "Distance from the sub-trigger in pixels"
+  attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def dropdown_menu_sub_content(assigns) do
+    assigns =
+      assign(assigns, %{
+        side_offset: assigns[:"side-offset"],
+        align_offset: assigns[:"align-offset"]
+      })
+
+    ~H"""
+    <div
+      data-part="sub-positioner"
+      data-side={@side}
+      data-align={@align}
+      data-side-offset={@side_offset}
+      data-align-offset={@align_offset}
+      class="absolute z-50"
+      hidden
+    >
+      <div
+        data-slot="dropdown-menu-sub-content"
+        data-part="sub-content"
+        data-side={@side}
+        data-state="closed"
+        role="menu"
+        class={
+          classes([
+            "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            @class
+          ])
+        }
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </div>
     </div>
     """
   end

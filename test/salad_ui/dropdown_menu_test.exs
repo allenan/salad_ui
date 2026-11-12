@@ -134,4 +134,104 @@ defmodule SaladUI.DropdownMenuTest do
       end
     end
   end
+
+  describe "sub-menus" do
+    test "renders sub, sub-trigger with chevron and a hidden sub-content panel" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_sub>
+          <.dropdown_menu_sub_trigger inset>Invite users</.dropdown_menu_sub_trigger>
+          <.dropdown_menu_sub_content class="w-40">
+            <.dropdown_menu_item>Email</.dropdown_menu_item>
+          </.dropdown_menu_sub_content>
+        </.dropdown_menu_sub>
+        """)
+
+      assert html =~ ~s(data-slot="dropdown-menu-sub")
+      assert html =~ ~s(data-part="sub")
+      assert html =~ ~s(data-slot="dropdown-menu-sub-trigger")
+      assert html =~ ~s(data-part="sub-trigger")
+      assert html =~ ~s(data-inset)
+      assert html =~ ~s(aria-haspopup="menu")
+      assert html =~ ~s(aria-expanded="false")
+      assert html =~ ~s(<path d="m9 18 6-6-6-6"></path>)
+      assert html =~ "data-[state=open]:bg-accent"
+
+      assert html =~ ~r/data-part="sub-positioner"[^>]*hidden/
+      assert html =~ ~s(data-side="right")
+      assert html =~ ~s(data-align="start")
+      assert html =~ ~s(data-side-offset="0")
+      assert html =~ ~s(data-slot="dropdown-menu-sub-content")
+      assert html =~ ~s(data-part="sub-content")
+      assert html =~ ~s(role="menu")
+      assert html =~ "shadow-lg"
+      assert html =~ "w-40"
+      assert html =~ "Email"
+    end
+
+    test "sub-content accepts side and offsets; disabled sub-trigger is not focusable" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_sub>
+          <.dropdown_menu_sub_trigger disabled>More</.dropdown_menu_sub_trigger>
+          <.dropdown_menu_sub_content side="left" side-offset={2} align-offset={-5}>
+            <.dropdown_menu_item>A</.dropdown_menu_item>
+          </.dropdown_menu_sub_content>
+        </.dropdown_menu_sub>
+        """)
+
+      assert html =~ ~s(data-side="left")
+      assert html =~ ~s(data-side-offset="2")
+      assert html =~ ~s(data-align-offset="-5")
+      assert html =~ ~r/data-part="sub-trigger"[^>]*data-disabled/
+      assert html =~ ~r/data-part="sub-trigger"[^>]*tabindex="-1"/
+    end
+  end
+
+  describe "radio group" do
+    test "renders the group value and value-changed mapping" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_radio_group value="bottom" on-value-changed="set_position">
+          <.dropdown_menu_radio_item value="top">Top</.dropdown_menu_radio_item>
+          <.dropdown_menu_radio_item value="bottom" disabled>Bottom</.dropdown_menu_radio_item>
+        </.dropdown_menu_radio_group>
+        """)
+
+      assert html =~ ~s(data-slot="dropdown-menu-radio-group")
+      assert html =~ ~s(data-part="radio-group")
+      assert html =~ ~s(data-value="bottom")
+      assert html =~ ~s(role="group")
+      assert html =~ ~s(data-event-mappings="{&quot;value-changed&quot;:&quot;set_position&quot;}")
+
+      assert html =~ ~s(data-slot="dropdown-menu-radio-item")
+      assert html =~ ~s(data-part="radio-item")
+      assert html =~ ~s(data-value="top")
+      assert html =~ ~s(<circle cx="12" cy="12" r="10"></circle>)
+      assert html =~ "size-2 fill-current"
+      assert html =~ ~r/data-part="item-indicator"[^>]*hidden/
+      assert html =~ "pl-8"
+      assert html =~ ~r/data-value="bottom"[^>]*data-disabled[^>]*tabindex="-1"/s
+    end
+
+    test "on-value-changed accepts a JS command" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_radio_group value="a" on-value-changed={Phoenix.LiveView.JS.push("picked")}>
+          <.dropdown_menu_radio_item value="a">A</.dropdown_menu_radio_item>
+        </.dropdown_menu_radio_group>
+        """)
+
+      assert html =~ "value-changed"
+      assert html =~ "picked"
+    end
+  end
 end

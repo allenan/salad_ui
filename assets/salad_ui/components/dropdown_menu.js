@@ -48,6 +48,7 @@ class DropdownMenuComponent extends Component {
         },
         open: {
           enter: "onOpenEnter",
+          exit: "onOpenExit",
           transitions: {
             close: "closed",
             toggle: "closed",
@@ -96,6 +97,15 @@ class DropdownMenuComponent extends Component {
         },
       },
     };
+  }
+
+  // Parts inside a sub-menu (`sub`, `sub-trigger`, `sub-content`, ...) carry
+  // their own open/closed state, owned by the sub-trigger; keep the root from
+  // stamping its state onto them.
+  queryParts() {
+    return super
+      .queryParts()
+      .filter((part) => !part.closest("[data-part='sub']"));
   }
 
   initializePositionedElement() {
@@ -212,6 +222,10 @@ class DropdownMenuComponent extends Component {
 
   onOpenEnter() {
     this.activateOpenState();
+  }
+
+  onOpenExit() {
+    this.menu?.closeSubmenus();
   }
 
   onClosedEnter({ restoreFocus = true } = {}) {
