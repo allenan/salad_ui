@@ -65,6 +65,23 @@ export function uninstallDom() {
 
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Polls `predicate` until it returns truthy or `timeout` ms elapse. Prefer this
+ * over a fixed `wait(ms)` when the code under test chains timers/rAFs, whose
+ * firing order against a fixed wait is not guaranteed on a loaded machine.
+ */
+export async function waitFor(
+  predicate,
+  { timeout = 5000, interval = 5 } = {},
+) {
+  const deadline = Date.now() + timeout;
+  while (!predicate()) {
+    if (Date.now() > deadline)
+      throw new Error(`waitFor: timed out after ${timeout}ms`);
+    await wait(interval);
+  }
+}
+
 export function setRect(element, rect) {
   Object.assign(element, {
     getBoundingClientRect: () => ({

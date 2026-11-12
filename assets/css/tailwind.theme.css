@@ -35,3 +35,11 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 }
+
+/* shadcn base defaults. Tailwind v4's preflight makes borders `currentColor`;
+   without this, every bare `border` utility renders in the text color. */
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+}

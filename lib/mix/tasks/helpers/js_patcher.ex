@@ -31,6 +31,20 @@ defmodule SaladUI.Patcher.JSPatcher do
     The modified JavaScript content with the content appended after the last import
   """
   def append_after_last_import(js_content, content_to_append) do
+    # Only append lines that aren't already present, so re-running is a no-op.
+    missing =
+      content_to_append
+      |> String.split("\n", trim: true)
+      |> Enum.reject(&String.contains?(js_content, String.trim(&1)))
+
+    if missing == [] do
+      js_content
+    else
+      do_append_after_last_import(js_content, Enum.join(missing, "\n") <> "\n")
+    end
+  end
+
+  defp do_append_after_last_import(js_content, content_to_append) do
     # Find all import statements - handle both semicolon and non-semicolon imports
     import_regex = ~r/(import\s+.*?(?:;\n?|\n|$))/
     imports = Regex.scan(import_regex, js_content)
@@ -63,10 +77,10 @@ defmodule SaladUI.Patcher.JSPatcher do
   """
   def add_hook(js_content, hooks) do
     # First, extract the entire LiveSocket block
-    liveSocket_regex =
-      ~r/(let\s+liveSocket\s*=\s*new\s+LiveSocket\s*\(\s*"[^"]*"\s*,\s*Socket\s*,\s*\{)([\s\S]*?)(\}\s*\))/
+    live_socket_regex =
+      ~r/((?:let|const|var)\s+liveSocket\s*=\s*new\s+LiveSocket\s*\(\s*["'][^"']*["']\s*,\s*Socket\s*,\s*\{)([\s\S]*?)(\}\s*\))/
 
-    case Regex.run(liveSocket_regex, js_content) do
+    case Regex.run(live_socket_regex, js_content) do
       nil ->
         # LiveSocket initialization not found
         js_content
@@ -115,12 +129,7 @@ defmodule SaladUI.Patcher.JSPatcher do
           js_content
         else
           # Add the new hooks to the existing hooks
-          new_hooks_content =
-            if String.trim(hooks_content) == "" do
-              new_hooks
-            else
-              "#{hooks_content},\n    #{new_hooks}"
-            end
+          new_hooks_content = append_hooks(hooks_content, new_hooks)
 
           # Create the new hooks block
           new_hooks_block = "hooks: {#{new_hooks_content}}"
@@ -144,10 +153,23 @@ defmodule SaladUI.Patcher.JSPatcher do
       if String.trim(params) == "" do
         "  hooks: { #{hooks} }"
       else
-        "#{params},\n  hooks: { #{hooks} }"
+        trailer = if String.match?(params, ~r/\n\s*\z/), do: ",\n", else: ""
+        "#{trim_trailing_comma(params)},\n  hooks: { #{hooks} }#{trailer}"
       end
 
     # Replace the LiveSocket initialization with the new one
     String.replace(js_content, whole_match, "#{before_params}#{new_params}#{after_params}", global: false)
+  end
+
+  defp append_hooks(hooks_content, new_hooks) do
+    if String.trim(hooks_content) == "" do
+      new_hooks
+    else
+      "#{trim_trailing_comma(hooks_content)},\n    #{new_hooks}"
+    end
+  end
+
+  defp trim_trailing_comma(content) do
+    content |> String.trim_trailing() |> String.trim_trailing(",")
   end
 end

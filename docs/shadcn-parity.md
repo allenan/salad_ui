@@ -1,5 +1,63 @@
 # shadcn/ui parity — gap catalog
 
+## Status
+
+Run against shadcn/ui ref `dd41d19e2f80ff6891951f7ced74c2c9a650b065`.
+
+| Item | Status | Branch | Notes |
+|---|---|---|---|
+| `tailwind-drift` | needs-human | `parity/tailwind-drift` | Review left 1 must + 10 should (deduplicated). Not integrated. |
+| `data-slot` | blocked | — | Blocked by `tailwind-drift`. |
+| `small-deltas` | blocked | — | Blocked by `data-slot`. |
+| `tiny-primitives` | blocked | — | Blocked by `data-slot`. |
+
+### Open "should" findings on integrated items
+
+None. No item has been integrated into `parity/integration` yet.
+
+### `tailwind-drift`: findings blocking integration
+
+**Must (blocks merge):**
+
+- Installers still emit `border-color: hsl(var(--border));` after an oklch color
+  scheme (`lib/mix/tasks/salad.setup.ex:118`, `lib/mix/tasks/salad.install.ex:177`).
+  `hsl(oklch(...))` is invalid, so bare `border` renders in `currentColor`.
+  Fix: `border-color: var(--border);` plus an `outline-color` for `ring/50`,
+  matching shadcn's `* { @apply border-border outline-ring/50 }`.
+
+**Should (open, carry forward once merged):**
+
+1. `docs/manual_install.md` still maps colors as `hsl(var(--x))` and points at
+   shadcn themes (now oklch). Switch to `var(--x)` / `@theme inline`; add sidebar,
+   radius and chart tokens.
+2. Bare `aria-invalid` (HEEx port of `<Input aria-invalid />`) renders without a
+   value, so `aria-invalid:` styles and AT announcement don't fire. Have
+   `put_aria_invalid/1` map `true` to `"true"`, or document the string form.
+3. `toggle` lacks shadcn's `aria-invalid:*` classes and `data-slot="toggle"`;
+   tooltip content keeps `shadow-md` (shadcn v4 has none).
+4. `badge` ships `[a&]:hover:*` classes but always renders `<span>` with no
+   `as_child`/`href`; `button` has no `as_child` either (badge-link,
+   button-aschild examples can't be written). Likely belongs to badge/button items.
+5. `checkbox` has `indeterminate:` styles but no attr sets `el.indeterminate`.
+6. Token naming: `--sidebar-background` vs shadcn's `--sidebar`; library CSS and
+   storybook ship no `* { border-color: var(--border) }` base rule.
+7. Leftover `h-4 w-4` pairs in `test/salad_ui/dropdown_menu_test.exs`
+   (lines 37–114). Cosmetic.
+8. Empty `multiple` select is never flagged invalid after submit: its tracking
+   input is `disabled`, so the key is absent from params and `used_input?/1` is
+   false. Moduledoc claim is wrong for this case; add a test.
+9. CHANGELOG entry needed: errors now hidden on unused fields
+   (`form_label`/`form_message`/`aria-invalid`), single-select trigger `w-full` →
+   `w-fit`, badge root `div` → `span`, empty radio groups submit `""`.
+10. Select trigger's `aria-invalid` is set only by the JS hook, so it is missing
+    on dead render and briefly on each patch. Documented; optional fix is passing
+    `invalid` to `select_trigger` server-side.
+
+(The review also repeated the installer `hsl(var(--border))` issue as a "should";
+it is the same fix as the must above.)
+
+---
+
 Snapshot: 2026-11-12. SaladUI `v1.0.0` (main @ `64090ea`) vs shadcn/ui `main`
 (last commit 2026-11-11, `apps/v4/registry/new-york-v4/ui` + `apps/v4/content/docs/components/radix`).
 

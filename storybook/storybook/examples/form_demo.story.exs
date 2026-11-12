@@ -4,7 +4,7 @@ defmodule Storybook.Examples.FormDemo.Item do
 
   import Ecto.Changeset
 
-  schema "items" do
+  embedded_schema do
     field(:name, :string)
     field(:description, :string)
     field(:material, :string)
@@ -97,25 +97,24 @@ defmodule Storybook.Examples.FormDemo do
               <.form_item>
                 <.form_label error={not Enum.empty?(f[:material].errors)}>Material</.form_label>
                 <.radio_group
-                  :let={builder}
                   name={f[:material].name}
                   field={f[:material]}
                   default-value="wood"
                 >
                   <div class="flex items-center space-x-2">
-                    <.radio_group_item builder={builder} value="wood" id="option-one" />
+                    <.radio_group_item value="wood" id="option-one" />
                     <.label for="option-one">
                       Wood
                     </.label>
                   </div>
                   <div class="flex items-center space-x-2">
-                    <.radio_group_item builder={builder} value="steel" id="option-two" />
+                    <.radio_group_item value="steel" id="option-two" />
                     <.label for="option-two">
                       Steel
                     </.label>
                   </div>
                   <div class="flex items-center space-x-2">
-                    <.radio_group_item builder={builder} value="plastic" id="option-three" />
+                    <.radio_group_item value="plastic" id="option-three" />
                     <.label for="option-three">
                       Plastic
                     </.label>

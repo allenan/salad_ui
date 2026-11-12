@@ -77,14 +77,16 @@ defmodule SaladUI.Avatar do
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(alt src)
 
+  # The image is absolutely positioned over `avatar_fallback/1`: while loading it
+  # is transparent so the fallback shows through, once loaded it covers it, and
+  # on error it removes itself. Nothing LiveView renders is mutated client-side,
+  # so DOM patches are safe without `phx-update="ignore"` (which would require an id).
   def avatar_image(assigns) do
     ~H"""
     <img
-      class={classes(["aspect-square size-full", @class])}
+      class={classes(["absolute inset-0 aspect-square size-full object-cover", @class])}
+      onerror="this.remove()"
       {@rest}
-      phx-update="ignore"
-      style="display:none"
-      onload="this.style.display=''"
     />
     """
   end
