@@ -50,6 +50,7 @@ defmodule SaladUI do
   ### Navigation
   - `tabs/1` - Tabbed content navigation
   - `breadcrumb/1` - Hierarchical navigation paths
+  - `navigation_menu/1` - Site navigation with hover/keyboard dropdown panels
   - `pagination/1` - Page navigation controls
   - `sidebar/1` - Application navigation sidebars
 
@@ -208,6 +209,7 @@ defmodule SaladUI do
       import SaladUI.Kbd
       import SaladUI.Label
       import SaladUI.Menu
+      import SaladUI.NavigationMenu
       import SaladUI.Pagination
       import SaladUI.Popover
       import SaladUI.Progress

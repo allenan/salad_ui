@@ -144,6 +144,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/resizable.js";
     import "./ui/components/switch.js";
     import "./ui/components/dropdown_menu.js";
+    import "./ui/components/navigation_menu.js";
     import "./ui/components/toast.js";
     import "./ui/components/toast-flash.js";
     """
