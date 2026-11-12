@@ -13,7 +13,7 @@ defmodule SaladUI.Avatar do
         <.avatar_fallback>JD</.avatar_fallback>
       </.avatar>
 
-      <.avatar class="size-12">
+      <.avatar size="lg">
         <.avatar_image src={@user.avatar_url} alt={@user.name} />
         <.avatar_fallback>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
@@ -21,6 +21,22 @@ defmodule SaladUI.Avatar do
           </svg>
         </.avatar_fallback>
       </.avatar>
+
+  With a status badge, and stacked in a group with an overflow count:
+
+      <.avatar>
+        <.avatar_image src="/images/er.png" alt="@evilrabbit" />
+        <.avatar_fallback>ER</.avatar_fallback>
+        <.avatar_badge class="bg-green-600 dark:bg-green-800" />
+      </.avatar>
+
+      <.avatar_group class="grayscale">
+        <.avatar :for={user <- @users}>
+          <.avatar_image src={user.avatar_url} alt={user.name} />
+          <.avatar_fallback>{user.initials}</.avatar_fallback>
+        </.avatar>
+        <.avatar_group_count>+3</.avatar_group_count>
+      </.avatar_group>
   """
   use SaladUI, :component
 
@@ -31,6 +47,8 @@ defmodule SaladUI.Avatar do
 
   ## Options
 
+  * `:size` - `"sm"` (24px), `"default"` (32px) or `"lg"` (40px). Fallback
+    text, `avatar_badge/1` and `avatar_group_count/1` scale with it.
   * `:class` - Additional CSS classes to apply to the avatar container.
 
   ## Examples
@@ -40,17 +58,28 @@ defmodule SaladUI.Avatar do
         <.avatar_fallback>JD</.avatar_fallback>
       </.avatar>
 
+      <.avatar size="sm">...</.avatar>
       <.avatar class="size-16">...</.avatar>
   """
   attr :class, :string, default: nil
+  attr :size, :string, values: ~w(default sm lg), default: "default", doc: "the avatar size"
   attr :rest, :global
   slot :inner_block, required: false
 
+  # shadcn clips with `overflow-hidden` on the root; here the image and
+  # fallback are rounded instead (as in shadcn's nova style) so `avatar_badge/1`
+  # can sit on the edge without being clipped.
   def avatar(assigns) do
     ~H"""
     <span
       data-slot="avatar"
-      class={classes(["relative size-10 shrink-0 overflow-hidden rounded-full", @class])}
+      data-size={@size}
+      class={
+        classes([
+          "group/avatar relative flex size-8 shrink-0 rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
+          @class
+        ])
+      }
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -86,7 +115,7 @@ defmodule SaladUI.Avatar do
     ~H"""
     <img
       data-slot="avatar-image"
-      class={classes(["absolute inset-0 aspect-square size-full object-cover", @class])}
+      class={classes(["absolute inset-0 aspect-square size-full rounded-full object-cover", @class])}
       onerror="this.remove()"
       {@rest}
     />
@@ -119,11 +148,118 @@ defmodule SaladUI.Avatar do
     ~H"""
     <span
       data-slot="avatar-fallback"
-      class={classes(["flex size-full items-center justify-center rounded-full bg-muted", @class])}
+      class={
+        classes([
+          "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+          @class
+        ])
+      }
       {@rest}
     >
       {render_slot(@inner_block)}
     </span>
+    """
+  end
+
+  @doc """
+  A small status dot (or icon) pinned to the bottom-right of an `avatar/1`.
+  Place it inside the avatar. Its size follows the avatar's `size`; icons are
+  hidden on `size="sm"`.
+
+  ## Examples
+
+      <.avatar>
+        <.avatar_image src="/images/profile.jpg" alt="User avatar" />
+        <.avatar_fallback>JD</.avatar_fallback>
+        <.avatar_badge class="bg-green-600 dark:bg-green-800" />
+      </.avatar>
+
+      <.avatar_badge>
+        <svg>...</svg>
+      </.avatar_badge>
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: false
+
+  def avatar_badge(assigns) do
+    ~H"""
+    <span
+      data-slot="avatar-badge"
+      class={
+        classes([
+          "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background select-none",
+          "group-data-[size=sm]/avatar:size-2 group-data-[size=sm]/avatar:[&>svg]:hidden",
+          "group-data-[size=default]/avatar:size-2.5 group-data-[size=default]/avatar:[&>svg]:size-2",
+          "group-data-[size=lg]/avatar:size-3 group-data-[size=lg]/avatar:[&>svg]:size-2",
+          @class
+        ])
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  @doc """
+  Stacks avatars with a slight overlap and a ring separating them.
+
+  ## Examples
+
+      <.avatar_group>
+        <.avatar>...</.avatar>
+        <.avatar>...</.avatar>
+        <.avatar_group_count>+3</.avatar_group_count>
+      </.avatar_group>
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def avatar_group(assigns) do
+    ~H"""
+    <div
+      data-slot="avatar-group"
+      class={
+        classes([
+          "group/avatar-group flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background",
+          @class
+        ])
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  The trailing "+N" (or icon) bubble in an `avatar_group/1`. It matches the
+  size of the avatars in the group.
+
+  ## Examples
+
+      <.avatar_group_count>+3</.avatar_group_count>
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def avatar_group_count(assigns) do
+    ~H"""
+    <div
+      data-slot="avatar-group-count"
+      class={
+        classes([
+          "relative flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm text-muted-foreground ring-2 ring-background group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+          @class
+        ])
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
     """
   end
 end

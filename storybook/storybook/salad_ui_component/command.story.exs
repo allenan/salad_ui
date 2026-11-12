@@ -3,7 +3,6 @@ defmodule Storybook.SaladUIComponents.Command do
   use PhoenixStorybook.Story, :component
 
   alias SaladUI.Command
-  alias SaladUI.Separator
 
   def function, do: &Command.command/1
   def layout, do: :one_column
@@ -11,9 +10,16 @@ defmodule Storybook.SaladUIComponents.Command do
   def imports,
     do: [
       {Command,
-       [command_input: 1, command_list: 1, command_empty: 1, command_group: 1, command_item: 1, command_shortcut: 1]},
-      {Lucideicons, [earth: 1, calendar: 1, calculator: 1, user: 1, credit_card: 1, settings: 1]},
-      {Separator, [separator: 1]}
+       [
+         command_input: 1,
+         command_list: 1,
+         command_empty: 1,
+         command_group: 1,
+         command_item: 1,
+         command_shortcut: 1,
+         command_separator: 1
+       ]},
+      {Lucideicons, [earth: 1, calendar: 1, calculator: 1, user: 1, credit_card: 1, settings: 1]}
     ]
 
   def variations do
@@ -41,7 +47,7 @@ defmodule Storybook.SaladUIComponents.Command do
                 <span>Calculator</span>
               </.command_item>
             </.command_group>
-            <.separator />
+            <.command_separator />
             <.command_group heading="Settings">
               <.command_item phx-value-name="profile" phx-click="select_command">
                 <.user/>

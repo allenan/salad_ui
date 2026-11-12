@@ -186,5 +186,22 @@ defmodule SaladUI.CommandTest do
       assert html =~ "⌘B"
       assert html =~ " disabled>"
     end
+
+    test "It renders command_separator" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_separator class="my-1" />
+        <.command_separator always_render />
+        """)
+
+      assert html =~ ~s(data-slot="command-separator")
+      assert html =~ ~s(data-part="separator")
+      assert html =~ ~s(role="separator")
+      assert html =~ "-mx-1 h-px bg-border data-[visible=false]:hidden my-1"
+      assert html =~ ~s(data-always-render="true")
+      assert length(String.split(html, "data-always-render")) == 2
+    end
   end
 end

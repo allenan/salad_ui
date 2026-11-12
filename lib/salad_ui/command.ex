@@ -263,6 +263,40 @@ defmodule SaladUI.Command do
   end
 
   @doc """
+  Renders a horizontal divider between command groups.
+
+  Like cmdk, the separator is hidden while the input has a search query, so
+  filtered results don't show stray dividers. Pass `always_render` to keep it.
+
+  ## Attributes
+
+    * `:class` - Additional classes to apply.
+    * `:always_render` - Keep the separator visible while filtering.
+
+  ## Example
+
+      <.command_group heading="Suggestions">...</.command_group>
+      <.command_separator />
+      <.command_group heading="Settings">...</.command_group>
+  """
+  attr :class, :any, default: nil
+  attr :always_render, :boolean, default: false
+  attr :rest, :global
+
+  def command_separator(assigns) do
+    ~H"""
+    <div
+      data-slot="command-separator"
+      data-part="separator"
+      data-always-render={@always_render && "true"}
+      role="separator"
+      class={classes(["-mx-1 h-px bg-border data-[visible=false]:hidden", @class])}
+      {@rest}
+    />
+    """
+  end
+
+  @doc """
   Renders a single command item (button).
 
   ## Attributes

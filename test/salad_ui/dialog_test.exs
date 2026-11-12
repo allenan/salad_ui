@@ -17,13 +17,13 @@ defmodule SaladUI.DialogTest do
         |> rendered_to_string()
         |> clean_string()
 
-      for class <- ~w(flex text-center flex-col space-y-1.5 sm:text-left) do
+      for class <- ~w(flex text-center flex-col gap-2 sm:text-left) do
         assert html =~ class
       end
 
       assert html =~ "This is the content of the header"
 
-      for css_class <- ~w(flex flex-col space-y-1.5 text-center sm:text-left) do
+      for css_class <- ~w(flex flex-col gap-2 text-center sm:text-left) do
         assert html =~ css_class
       end
     end
@@ -39,7 +39,7 @@ defmodule SaladUI.DialogTest do
       assert html =~ "Edit profile\n</h3>"
       assert html =~ ~s(data-part="title")
 
-      for css_class <- ~w(text-lg font-semibold leading-none tracking-tight) do
+      for css_class <- ~w(text-lg font-semibold leading-none) do
         assert html =~ css_class
       end
     end
@@ -72,7 +72,7 @@ defmodule SaladUI.DialogTest do
 
       assert html =~ "The footer is here"
 
-      for css_class <- ~w(flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2) do
+      for css_class <- ~w(flex flex-col-reverse gap-2 sm:flex-row sm:justify-end) do
         assert html =~ css_class
       end
     end
@@ -120,6 +120,84 @@ defmodule SaladUI.DialogTest do
       assert html =~ "Edit profile"
       assert html =~ "save changes\n<\/button>"
       assert html =~ "Make changes to your profile here click save when you're done"
+    end
+
+    test "dialog_content renders the corner close button by default" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog_content>
+          <p>Body</p>
+        </.dialog_content>
+        """)
+
+      assert html =~ ~s(data-part="close-trigger")
+      assert html =~ ~s(<span class="sr-only">Close</span>)
+      assert html =~ "max-w-[calc(100%-2rem)]"
+      assert html =~ "bg-black/50"
+    end
+
+    test "dialog_content show_close_button={false} hides the corner close button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog_content show_close_button={false}>
+          <p>Body</p>
+        </.dialog_content>
+        """)
+
+      refute html =~ "close-trigger"
+      refute html =~ "dialog-close"
+      assert html =~ "Body"
+    end
+
+    test "dialog_close wraps its content in a close action" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog_close class="extra">
+          <.button type="button">Close</.button>
+        </.dialog_close>
+        <.dialog_close as="button" type="button">Dismiss</.dialog_close>
+        """)
+
+      assert html =~ ~r/<div[^>]*data-action="close"/
+      assert html =~ ~r/<button[^>]*data-action="close"[^>]*>\s*Dismiss/
+      assert html =~ ~s(data-slot="dialog-close")
+      assert html =~ ~s(data-part="close")
+      assert html =~ ~s(class="extra")
+      assert html =~ ~s(type="button")
+      # the built-in "Close dialog" label targets close-trigger only, so the
+      # wrapped element keeps its own accessible name
+      refute html =~ "close-trigger"
+    end
+
+    test "dialog_footer show_close_button appends an outline Close button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog_footer show_close_button>
+          <.button>Save</.button>
+        </.dialog_footer>
+        """)
+
+      assert html =~ ~r/<button[^>]*data-action="close"[^>]*>\s*Close\s*<\/button>/
+      assert html =~ "bg-background shadow-xs"
+    end
+
+    test "dialog_footer can hold only the built-in Close button" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog_footer show_close_button />
+        """)
+
+      assert html =~ ~r/<button[^>]*data-action="close"[^>]*>\s*Close\s*<\/button>/
     end
   end
 end

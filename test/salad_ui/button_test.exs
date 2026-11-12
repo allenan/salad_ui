@@ -150,5 +150,27 @@ defmodule SaladUI.ButtonTest do
         assert html =~ class
       end
     end
+
+    test "It renders as a link when href, navigate or patch is given" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.button href="/login" class="extra">Login</.button>
+        <.button navigate="/docs" variant="outline" size="sm">Docs</.button>
+        <.button patch="/tab" target="_blank">Tab</.button>
+        """)
+
+      assert html =~ ~r/<a href="\/login" class="[^"]*bg-primary[^"]*extra"/
+      assert html =~ ~s(data-slot="button")
+      assert html =~ ~s(data-phx-link="redirect")
+      assert html =~ ~s(href="/docs")
+      assert html =~ ~s(data-size="sm")
+      assert html =~ ~s(data-variant="outline")
+      assert html =~ ~s(data-phx-link="patch")
+      assert html =~ ~s(target="_blank")
+      refute html =~ "<button"
+      refute html =~ "phx-submit-loading"
+    end
   end
 end

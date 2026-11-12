@@ -17,6 +17,7 @@ class CommandComponent extends Component {
     this.list = this.getPart("list");
     this.empty = this.getPart("empty");
     this.groups = this.getAllParts("group");
+    this.separators = this.getAllParts("separator");
     this.items = this.getAllParts("item");
 
     // Bind event handlers
@@ -119,6 +120,12 @@ class CommandComponent extends Component {
         "data-visible",
         visibleOptions.length > 0 ? "true" : "false",
       );
+    });
+
+    // Like cmdk, separators only make sense between unfiltered groups.
+    this.separators.forEach((separator) => {
+      const visible = query === "" || separator.dataset.alwaysRender === "true";
+      separator.setAttribute("data-visible", visible ? "true" : "false");
     });
 
     this.focusItem(0);

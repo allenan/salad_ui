@@ -19,6 +19,7 @@ function buildDialog({
   closeOnOutsideClick = true,
   closeOnEscape = true,
   animations,
+  extraPanelHtml = "",
 } = {}) {
   const initialState =
     state === undefined ? `data-open="${open}"` : `data-state="${state}"`;
@@ -43,6 +44,7 @@ function buildDialog({
           <p data-part="description">Dialog description</p>
           <button data-part="close-trigger" data-action="close" type="button">Close</button>
           <button id="dialog-action" type="button">Action</button>
+          ${extraPanelHtml}
         </div>
       </div>
     </div>
@@ -104,6 +106,29 @@ test("opens from trigger and closes from close trigger", () => {
   assert.equal(panel.hasAttribute("aria-modal"), false);
   assert.equal(panel.hasAttribute("aria-labelledby"), false);
   assert.equal(panel.hasAttribute("aria-describedby"), false);
+  assert.equal(pushed.at(-1).event, "close");
+
+  component.destroy();
+});
+
+test("dialog_close wrapper closes from a nested element and keeps its label", () => {
+  const { component, trigger, el, pushed } = buildDialog({
+    extraPanelHtml: `
+      <div data-slot="dialog-close" data-part="close" data-action="close">
+        <button id="custom-close" type="button">Cancel</button>
+      </div>
+    `,
+  });
+
+  click(trigger);
+  assert.equal(component.state, "open");
+
+  const wrapper = el.querySelector('[data-part="close"]');
+  // Only the built-in corner button gets the generic "Close dialog" label.
+  assert.equal(wrapper.hasAttribute("aria-label"), false);
+
+  click(document.getElementById("custom-close"));
+  assert.equal(component.state, "closed");
   assert.equal(pushed.at(-1).event, "close");
 
   component.destroy();

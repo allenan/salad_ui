@@ -26,6 +26,29 @@ defmodule SaladUI.AlertDialog do
         </.alert_dialog_content>
       </.alert_dialog>
 
+  With an icon and a compact layout:
+
+      <.alert_dialog id="share-project">
+        <.alert_dialog_trigger>
+          <.button variant="outline">Share Project</.button>
+        </.alert_dialog_trigger>
+        <.alert_dialog_content size="sm">
+          <.alert_dialog_header>
+            <.alert_dialog_media>
+              <.icon name="hero-share" class="size-8" />
+            </.alert_dialog_media>
+            <.alert_dialog_title>Share this project?</.alert_dialog_title>
+            <.alert_dialog_description>
+              Anyone with the link will be able to view and edit this project.
+            </.alert_dialog_description>
+          </.alert_dialog_header>
+          <.alert_dialog_footer>
+            <.alert_dialog_cancel>Cancel</.alert_dialog_cancel>
+            <.alert_dialog_action>Share</.alert_dialog_action>
+          </.alert_dialog_footer>
+        </.alert_dialog_content>
+      </.alert_dialog>
+
   ## Component events
 
   * `:on-open` - Maps the `open` event. Fired when dialog enters open state.
@@ -128,8 +151,14 @@ defmodule SaladUI.AlertDialog do
 
   @doc """
   The content container of the alert dialog.
+
+  ## Options
+
+  * `:size` - `"default"` or `"sm"`. The small size is narrower (`max-w-xs`),
+    keeps the header centered and lays the footer buttons out in two columns.
   """
   attr :class, :string, default: nil
+  attr :size, :string, values: ~w(default sm), default: "default", doc: "the alert dialog size"
   attr :"aria-label", :string, default: "Alert dialog"
   slot :inner_block, required: true
   attr :rest, :global
@@ -140,14 +169,15 @@ defmodule SaladUI.AlertDialog do
       <div
         data-slot="alert-dialog-overlay"
         data-part="overlay"
-        class="fixed inset-0 z-50 bg-black/80 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        class="fixed inset-0 z-50 bg-black/50 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       />
       <div
         data-slot="alert-dialog-content"
         data-part="content-panel"
+        data-size={@size}
         class={
           classes([
-            "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
+            "group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 data-[size=sm]:max-w-xs data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[size=default]:sm:max-w-lg",
             @class
           ])
         }
@@ -173,7 +203,7 @@ defmodule SaladUI.AlertDialog do
       data-slot="alert-dialog-header"
       class={
         classes([
-          "flex flex-col space-y-2 text-center sm:text-left",
+          "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
           @class
         ])
       }
@@ -198,7 +228,7 @@ defmodule SaladUI.AlertDialog do
       data-part="title"
       class={
         classes([
-          "text-lg font-semibold",
+          "text-lg font-semibold sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
           @class
         ])
       }
@@ -235,6 +265,41 @@ defmodule SaladUI.AlertDialog do
   end
 
   @doc """
+  An icon or image shown above the title (beside it, on wider screens, for the
+  default size). Place it first inside `alert_dialog_header/1`.
+
+  ## Examples
+
+      <.alert_dialog_media>
+        <.icon name="hero-trash" class="size-8" />
+      </.alert_dialog_media>
+
+      <.alert_dialog_media class="bg-destructive/10 text-destructive dark:bg-destructive/20">
+        <.icon name="hero-trash" class="size-8" />
+      </.alert_dialog_media>
+  """
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+  attr :rest, :global
+
+  def alert_dialog_media(assigns) do
+    ~H"""
+    <div
+      data-slot="alert-dialog-media"
+      class={
+        classes([
+          "mb-2 inline-flex size-16 items-center justify-center rounded-md bg-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
+          @class
+        ])
+      }
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
   The footer section of the alert dialog containing action buttons.
   """
   attr :class, :string, default: nil
@@ -247,7 +312,7 @@ defmodule SaladUI.AlertDialog do
       data-slot="alert-dialog-footer"
       class={
         classes([
-          "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+          "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
           @class
         ])
       }
@@ -263,7 +328,7 @@ defmodule SaladUI.AlertDialog do
   """
   attr :class, :string, default: nil
   attr :variant, :string, values: ~w(default secondary destructive outline ghost link), default: "outline"
-  attr :size, :string, values: ~w(default sm lg icon), default: "default"
+  attr :size, :string, values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg), default: "default"
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -279,7 +344,6 @@ defmodule SaladUI.AlertDialog do
       class={
         classes([
           @variant_class,
-          "mt-2 sm:mt-0",
           @class
         ])
       }
@@ -295,7 +359,7 @@ defmodule SaladUI.AlertDialog do
   """
   attr :class, :string, default: nil
   attr :variant, :string, values: ~w(default secondary destructive outline ghost link), default: "default"
-  attr :size, :string, values: ~w(default sm lg icon), default: "default"
+  attr :size, :string, values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg), default: "default"
   attr :rest, :global
   slot :inner_block, required: true
 

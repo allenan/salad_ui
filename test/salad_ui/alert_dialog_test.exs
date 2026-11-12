@@ -167,7 +167,7 @@ defmodule SaladUI.AlertDialogTest do
 
       assert html =~ "Header Content"
 
-      for class <- ~w(flex flex-col space-y-2) do
+      for class <- ~w(grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center) do
         assert html =~ class
       end
     end
@@ -261,7 +261,8 @@ defmodule SaladUI.AlertDialogTest do
 
       assert html =~ "Footer Button"
 
-      for class <- ~w(flex flex-col-reverse sm:flex-row) do
+      for class <-
+            ~w(flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row) do
         assert html =~ class
       end
     end
@@ -295,7 +296,10 @@ defmodule SaladUI.AlertDialogTest do
       assert html =~ ~s(data-part="cancel")
       assert html =~ ~s(data-action="close")
 
-      for class <- ~w(mt-2 sm:mt-0) do
+      # shadcn v4: the footer's gap-2 spaces the buttons, not a margin
+      refute html =~ "mt-2"
+
+      for class <- ~w(bg-background shadow-xs) do
         assert html =~ class
       end
     end
@@ -389,6 +393,71 @@ defmodule SaladUI.AlertDialogTest do
       assert html =~ "Are you sure you want to continue?"
       assert html =~ "Cancel"
       assert html =~ "Continue"
+    end
+
+    test "alert_dialog_content defaults to the default size" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.alert_dialog_content>Body</.alert_dialog_content>
+        """)
+
+      assert html =~ ~s(data-size="default")
+      assert html =~ "group/alert-dialog-content"
+      assert html =~ "data-[size=default]:sm:max-w-lg"
+      assert html =~ "data-[size=sm]:max-w-xs"
+    end
+
+    test "alert_dialog_content size=sm" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.alert_dialog_content size="sm">Body</.alert_dialog_content>
+        """)
+
+      assert html =~ ~s(data-size="sm")
+    end
+
+    test "alert_dialog_media renders an icon tile" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.alert_dialog_header>
+          <.alert_dialog_media class="bg-destructive/10 text-destructive">
+            <svg viewBox="0 0 24 24"></svg>
+          </.alert_dialog_media>
+          <.alert_dialog_title>Delete chat?</.alert_dialog_title>
+        </.alert_dialog_header>
+        """)
+
+      assert html =~ ~s(data-slot="alert-dialog-media")
+      assert html =~ "<svg"
+
+      for class <-
+            ~w(mb-2 inline-flex size-16 items-center justify-center rounded-md bg-destructive/10 text-destructive sm:group-data-[size=default]/alert-dialog-content:row-span-2) do
+        assert html =~ class
+      end
+
+      refute html =~ "bg-muted"
+      # header and title react to the media slot
+      assert html =~ "has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr]"
+      assert html =~ "group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2"
+    end
+
+    test "cancel and action accept every button size" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.alert_dialog_cancel size="sm">Cancel</.alert_dialog_cancel>
+        <.alert_dialog_action size="xs">OK</.alert_dialog_action>
+        """)
+
+      assert html =~ "h-8 gap-1.5"
+      assert html =~ "h-6 gap-1"
     end
   end
 end

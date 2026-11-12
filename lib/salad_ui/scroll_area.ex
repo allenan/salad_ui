@@ -2,8 +2,12 @@ defmodule SaladUI.ScrollArea do
   @moduledoc """
   Implementation of a scroll area component with custom styling.
 
-  The scroll area provides a consistent scrolling experience across different browsers
-  and platforms, with customizable styling for the scrollbar.
+  The scroll area wraps content in a scrollable viewport with thin, theme-colored
+  native scrollbars (`--border` thumb on a transparent track), so it needs no
+  JavaScript and keeps native scrolling, momentum and keyboard behavior.
+
+  Scrolling is vertical by default. Set `orientation` to `"horizontal"` (the
+  equivalent of shadcn's `<ScrollBar orientation="horizontal" />`) or `"both"`.
 
   ## Examples:
 
@@ -18,6 +22,12 @@ defmodule SaladUI.ScrollArea do
           <% end %>
         </div>
       </.scroll_area>
+
+      <.scroll_area orientation="horizontal" class="w-96 rounded-md border whitespace-nowrap">
+        <div class="flex w-max space-x-4 p-4">
+          <figure :for={work <- @works} class="shrink-0">...</figure>
+        </div>
+      </.scroll_area>
   """
   use SaladUI, :component
 
@@ -26,24 +36,43 @@ defmodule SaladUI.ScrollArea do
 
   ## Options
 
+  * `:orientation` - Which axis scrolls: `"vertical"` (default), `"horizontal"`
+    or `"both"`. The other axis is clipped.
   * `:class` - Additional CSS classes to apply to the scroll area container
   """
   attr :class, :string, default: nil
+
+  attr :orientation, :string,
+    values: ~w(vertical horizontal both),
+    default: "vertical",
+    doc: "the axis (or axes) that scroll"
+
   attr :rest, :global
   slot :inner_block
 
   def scroll_area(assigns) do
     ~H"""
-    <div data-slot="scroll-area" class={classes(["relative overflow-hidden", @class])} {@rest}>
+    <div
+      data-slot="scroll-area"
+      data-orientation={@orientation}
+      class={classes(["relative", @class])}
+      {@rest}
+    >
       <div
         data-slot="scroll-area-viewport"
-        class="salad-scroll-area rounded-[inherit] size-full overflow-y-auto overflow-x-hidden"
+        class={[
+          "size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
+          "[scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]",
+          overflow_class(@orientation)
+        ]}
       >
-        <div class="-mr-3" style="min-width: 100%;">
-          {render_slot(@inner_block)}
-        </div>
+        {render_slot(@inner_block)}
       </div>
     </div>
     """
   end
+
+  defp overflow_class("vertical"), do: "overflow-x-hidden overflow-y-auto"
+  defp overflow_class("horizontal"), do: "overflow-x-auto overflow-y-hidden"
+  defp overflow_class("both"), do: "overflow-auto"
 end

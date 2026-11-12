@@ -15,7 +15,8 @@ defmodule SaladUI.CardTest do
 
       assert html =~ "The card header"
 
-      for class <- ~w(flex flex-col space-y-1.5 p-6) do
+      for class <-
+            ~w|grid auto-rows-min items-start gap-2 px-[var(--card-spacing)] has-data-[slot=card-action]:grid-cols-[1fr_auto]| do
         assert html =~ class
       end
     end
@@ -30,7 +31,7 @@ defmodule SaladUI.CardTest do
 
       assert html =~ "Card title"
 
-      for class <- ~w(text-2xl font-semibold leading-none tracking-tight) do
+      for class <- ~w(leading-none font-semibold) do
         assert html =~ class
       end
     end
@@ -60,7 +61,7 @@ defmodule SaladUI.CardTest do
 
       assert html =~ "Card Content available"
 
-      for class <- ~w(p-6 pt-0) do
+      for class <- ~w|px-[var(--card-spacing)]| do
         assert html =~ class
       end
     end
@@ -75,7 +76,7 @@ defmodule SaladUI.CardTest do
 
       assert html =~ "Card footer"
 
-      for class <- ~w(flex items-center justify-between p-6 pt-0) do
+      for class <- ~w|flex items-center px-[var(--card-spacing)] [.border-t]:pt-[var(--card-spacing)]| do
         assert html =~ class
       end
     end
@@ -107,6 +108,56 @@ defmodule SaladUI.CardTest do
       assert html =~ "Card text"
       assert html =~ "<button"
       assert html =~ "Button"
+      assert html =~ ~s(data-slot="card" data-size="default")
+      assert html =~ "[--card-spacing:--spacing(6)]"
+      assert html =~ "data-[size=sm]:[--card-spacing:--spacing(4)]"
+    end
+
+    test "It renders card_action in the header grid" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.card_header>
+          <.card_title>Login</.card_title>
+          <.card_action class="extra-action">
+            <.button variant="link">Sign Up</.button>
+          </.card_action>
+        </.card_header>
+        """)
+
+      assert html =~ ~s(data-slot="card-action")
+      assert html =~ "Sign Up"
+
+      for class <- ~w(col-start-2 row-span-2 row-start-1 self-start justify-self-end extra-action) do
+        assert html =~ class
+      end
+    end
+
+    test "It renders a small card" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.card size="sm">
+          <.card_title>Small</.card_title>
+        </.card>
+        """)
+
+      assert html =~ ~s(data-size="sm")
+      assert html =~ "group-data-[size=sm]/card:text-sm"
+    end
+
+    test "A custom --card-spacing replaces the default" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.card class="[--card-spacing:--spacing(3)]">Spaced</.card>
+        """)
+
+      assert html =~ "[--card-spacing:--spacing(3)]"
+      refute html =~ "[--card-spacing:--spacing(6)]"
     end
   end
 end

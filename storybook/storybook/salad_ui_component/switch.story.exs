@@ -69,6 +69,22 @@ defmodule Storybook.SaladUIComponents.Switch do
           checked: true,
           "on-checked-changed": "on_checked"
         }
+      },
+      %Variation{
+        id: :sizes,
+        description: ~s|`size="sm"` and `size="default"`|,
+        template: """
+        <div class="flex w-full max-w-[10rem] flex-col gap-4">
+          <div class="flex items-center gap-2">
+            <.switch id="switch-size-sm" size="sm" />
+            <label for="switch-size-sm-input" class="text-sm font-medium">Small</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <.switch id="switch-size-default" size="default" />
+            <label for="switch-size-default-input" class="text-sm font-medium">Default</label>
+          </div>
+        </div>
+        """
       }
     ]
   end

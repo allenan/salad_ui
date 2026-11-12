@@ -85,3 +85,36 @@ test("Enter selects current item and prevents parent form submit", () => {
 
   component.destroy();
 });
+
+test("separators hide while a search query is active", () => {
+  document.body.innerHTML = `
+    <div id="command" data-component="command" data-part="root">
+      <input data-part="input" />
+      <div data-part="list" role="listbox">
+        <div data-part="group"><button data-part="item">Calendar</button></div>
+        <div data-part="separator" id="sep"></div>
+        <div data-part="separator" id="sep-always" data-always-render="true"></div>
+        <div data-part="group"><button data-part="item">Profile</button></div>
+      </div>
+    </div>
+  `;
+  const el = document.getElementById("command");
+  const component = new CommandComponent(el, null);
+  component.setupEvents();
+  const input = el.querySelector('[data-part="input"]');
+  const sep = document.getElementById("sep");
+  const always = document.getElementById("sep-always");
+
+  assert.equal(sep.getAttribute("data-visible"), "true");
+
+  input.value = "cal";
+  input.dispatchEvent(new window.Event("input", { bubbles: true }));
+  assert.equal(sep.getAttribute("data-visible"), "false");
+  assert.equal(always.getAttribute("data-visible"), "true");
+
+  input.value = "";
+  input.dispatchEvent(new window.Event("input", { bubbles: true }));
+  assert.equal(sep.getAttribute("data-visible"), "true");
+
+  component.destroy();
+});

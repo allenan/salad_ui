@@ -81,5 +81,23 @@ defmodule SaladUI.BadgeTest do
       assert html =~ ~s(data-variant="link")
       assert html =~ "text-primary underline-offset-4"
     end
+
+    test "it renders as a link when href, navigate or patch is given" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.badge href="#link">Open Link</.badge>
+        <.badge variant="secondary" navigate="/inbox">Inbox</.badge>
+        <.badge variant="link" patch="/tab" class="extra">Tab</.badge>
+        """)
+
+      assert html =~ ~r/<a href="#link" class="inline-flex[^"]*\[a&amp;\]:hover:bg-primary\/90"/
+      assert html =~ ~s(data-phx-link="redirect")
+      assert html =~ ~s(href="/inbox")
+      assert html =~ ~s(data-phx-link="patch")
+      assert html =~ ~r/class="[^"]*text-primary underline-offset-4[^"]*extra"/
+      refute html =~ "<span"
+    end
   end
 end
