@@ -1,0 +1,7 @@
+{
+  "name": "salad_chat_assets",
+  "private": true,
+  "dependencies": {
+    "salad_ui": "file:../../.."
+  }
+}
