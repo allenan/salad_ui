@@ -132,6 +132,7 @@ defmodule Mix.Tasks.Salad.Install do
     js_import = """
     import SaladUI from "./ui/index.js";
     import "./ui/components/dialog.js";
+    import "./ui/components/drawer.js";
     import "./ui/components/select.js";
     import "./ui/components/tabs.js";
     import "./ui/components/carousel.js";

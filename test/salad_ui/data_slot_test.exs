@@ -239,6 +239,29 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
+  test "drawer" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.drawer id="dr">
+               <.drawer_trigger>Open</.drawer_trigger>
+               <.drawer_content>
+                 <.drawer_header>
+                   <.drawer_title>T</.drawer_title>
+                   <.drawer_description>D</.drawer_description>
+                 </.drawer_header>
+                 <.drawer_footer>
+                   <.drawer_close>Cancel</.drawer_close>
+                 </.drawer_footer>
+               </.drawer_content>
+             </.drawer>
+             """,
+             ~w(drawer drawer-trigger drawer-portal drawer-overlay drawer-content drawer-handle
+                drawer-header drawer-title drawer-description drawer-footer drawer-close)
+           ) == {[], []}
+  end
+
   test "dropdown menu" do
     assigns = %{}
 

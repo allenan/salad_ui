@@ -180,6 +180,7 @@ defmodule Mix.Tasks.Salad.Setup do
   @js_import """
   import SaladUI from "salad_ui";
   import "salad_ui/components/dialog";
+  import "salad_ui/components/drawer";
   import "salad_ui/components/select";
   import "salad_ui/components/tabs";
   import "salad_ui/components/carousel";

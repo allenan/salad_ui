@@ -59,6 +59,7 @@ defmodule SaladUI do
   - `dialog/1` - Modal dialogs and confirmations
   - `alert_dialog/1` - Alert and confirmation dialogs
   - `sheet/1` - Slide-out panels
+  - `drawer/1` - Draggable bottom/side drawers with snap points
   - `popover/1` - Contextual popup content
   - `tooltip/1` - Hover information displays
   - `hover_card/1` - Rich hover content
@@ -201,6 +202,7 @@ defmodule SaladUI do
       import SaladUI.Checkbox
       import SaladUI.Collapsible
       import SaladUI.Dialog
+      import SaladUI.Drawer
       import SaladUI.DropdownMenu
       import SaladUI.Empty
       import SaladUI.Form
