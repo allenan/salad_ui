@@ -74,7 +74,6 @@ class CalendarComponent extends Component {
     this.max = parseISODate(this.options.max);
 
     this.onKeyDown = this.onKeyDown.bind(this);
-    this.onClick = this.onClick.bind(this);
     this.onSelectChange = this.onSelectChange.bind(this);
     this.onSelectInput = this.onSelectInput.bind(this);
     this.onFocusIn = this.onFocusIn.bind(this);
@@ -104,7 +103,6 @@ class CalendarComponent extends Component {
   setupComponentEvents() {
     super.setupComponentEvents();
     this.el.addEventListener("keydown", this.onKeyDown);
-    this.el.addEventListener("click", this.onClick);
     this.el.addEventListener("change", this.onSelectChange);
     this.el.addEventListener("input", this.onSelectInput);
     this.el.addEventListener("focusin", this.onFocusIn);
@@ -114,7 +112,6 @@ class CalendarComponent extends Component {
   teardownComponentEvents() {
     super.teardownComponentEvents();
     this.el.removeEventListener("keydown", this.onKeyDown);
-    this.el.removeEventListener("click", this.onClick);
     this.el.removeEventListener("change", this.onSelectChange);
     this.el.removeEventListener("input", this.onSelectInput);
     this.el.removeEventListener("focusin", this.onFocusIn);
@@ -123,8 +120,8 @@ class CalendarComponent extends Component {
 
   /**
    * State that has to outlive this instance: the hook rebuilds the component
-   * after every LiveView patch, and the server's reply to a click or a
-   * focus request arrives as such a patch.
+   * after every LiveView patch, and the server's answer to a pick arrives as
+   * such a patch.
    */
   get shared() {
     if (!this.hook) return (this._shared ||= {});
@@ -134,17 +131,37 @@ class CalendarComponent extends Component {
   afterMount() {
     const shared = this.shared;
     const value = this.el.getAttribute("data-value") || "";
+    // The server bumps data-selection-seq for every pick by the user (a day
+    // click, Enter/Space on a day, a preset), never for a `value` the parent
+    // passes in. So only the user's own changes reach the form and on-select.
+    const seq = this.el.getAttribute("data-selection-seq") || "";
 
-    if (shared.pendingSelect && shared.lastValue !== undefined) {
-      if (value !== shared.lastValue) this.selectionChanged(value);
+    if (
+      shared.lastSeq !== undefined &&
+      seq !== shared.lastSeq &&
+      value !== shared.lastValue
+    ) {
+      this.selectionChanged(value);
     }
-    shared.pendingSelect = false;
+    shared.lastSeq = seq;
     shared.lastValue = value;
 
-    if (shared.pendingFocus) {
-      shared.pendingFocus = false;
-      this.focusDay(this.tabbableDay());
+    this.restoreFocusedDay();
+  }
+
+  /**
+   * A patch resets the server-rendered tabindex and drops data-focused; keep
+   * both on the day that still has focus.
+   */
+  restoreFocusedDay() {
+    const active = document.activeElement;
+    if (!active?.matches?.("button[data-day]") || !this.el.contains(active)) {
+      return;
     }
+    this.dayButtons().forEach((b) =>
+      b.setAttribute("tabindex", b === active ? "0" : "-1"),
+    );
+    active.parentElement?.setAttribute("data-focused", "true");
   }
 
   // -- day buttons -----------------------------------------------------------
@@ -226,20 +243,29 @@ class CalendarComponent extends Component {
     }
   }
 
-  /** Ask the server to show the month holding `date` and focus it. */
+  /**
+   * Ask the server to show the month holding `date`, then focus its answer.
+   * The reply arrives after the server's patch has been applied, by which
+   * time the hook has rebuilt the component, so go through the hook.
+   */
   requestFocus(date, dir) {
-    this.shared.pendingFocus = true;
-    this.pushToComponent("focus", { date: toISODate(date), dir });
+    const hook = this.hook;
+    this.pushToComponent("focus", { date: toISODate(date), dir }, () => {
+      const component = hook.component;
+      if (!component || component.destroyed) return;
+
+      // Leave focus alone if the user has moved on in the meantime.
+      const active = document.activeElement;
+      if (active && active !== document.body && !component.el.contains(active))
+        return;
+      component.focusDay(component.tabbableDay());
+    });
   }
 
-  pushToComponent(event, payload) {
-    this.hook?.pushEventTo?.(this.el, event, payload);
-  }
-
-  onClick(event) {
-    const target = event.target.closest?.("button[data-day], [data-preset]");
-    if (!target || !this.el.contains(target) || target.disabled) return;
-    this.shared.pendingSelect = true;
+  pushToComponent(event, payload, onReply) {
+    if (!this.hook?.pushEventTo) return;
+    if (onReply) this.hook.pushEventTo(this.el, event, payload, onReply);
+    else this.hook.pushEventTo(this.el, event, payload);
   }
 
   onFocusIn(event) {

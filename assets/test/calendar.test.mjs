@@ -64,7 +64,7 @@ function buildCalendar({
 
   const calendar = `
     <div id="cal" data-component="calendar" data-part="root" data-state="idle"
-         data-value='${JSON.stringify(value)}'
+         data-value='${JSON.stringify(value)}' data-selection-seq="0"
          data-options='${opts}'
          data-event-mappings='${JSON.stringify(mappings)}'>
       <select data-part="month-select" data-index="0" data-year="2025">
@@ -74,7 +74,7 @@ function buildCalendar({
         <option value="2024">2024</option><option value="2025" selected>2025</option>
       </select>
       ${monthGrid(grid)}
-      <div id="cal-value" hidden><input type="hidden" name="date" value="${value || ""}"></div>
+      <div id="cal-value" hidden><input type="text" hidden name="date" value="${value || ""}"></div>
     </div>`;
 
   const inner = inPopover
@@ -95,14 +95,17 @@ function buildCalendar({
   const hook = {
     ...SaladUIHook,
     el,
-    pushEventTo: (target, event, payload) =>
-      pushed.push({ target, event, payload }),
+    pushEventTo: (target, event, payload, onReply) => {
+      replies.push(onReply);
+      pushed.push({ target, event, payload });
+    },
     handleEvent() {},
     liveSocket: { execJS: (target, js) => executed.push({ target, js }) },
   };
+  const replies = [];
   hook.mounted();
 
-  return { el, hook, pushed, executed };
+  return { el, hook, pushed, executed, replies };
 }
 
 function button(el, day) {
@@ -127,11 +130,16 @@ function click(target) {
 }
 
 // Stands in for the server's re-render after a LiveView event: swap the
-// calendar markup, then run the hook's update cycle.
-function patch(hook, { value, tabDate, grid = {} }) {
+// calendar markup, then run the hook's update cycle. `picked` is a re-render
+// after a pick by the user, which bumps data-selection-seq.
+function patch(hook, { value, tabDate, grid = {}, picked = false }) {
   const el = hook.el;
   hook.beforeUpdate();
   el.setAttribute("data-value", JSON.stringify(value));
+  if (picked) {
+    const seq = Number(el.getAttribute("data-selection-seq")) + 1;
+    el.setAttribute("data-selection-seq", String(seq));
+  }
   el.querySelector("table").outerHTML = monthGrid({ tabDate, ...grid });
   el.querySelector("#cal-value input").value = value || "";
   hook.updated();
@@ -200,7 +208,7 @@ test("left and right are mirrored in rtl", () => {
 });
 
 test("leaving the visible month asks the server and focuses its answer", () => {
-  const { el, hook, pushed } = buildCalendar();
+  const { el, hook, pushed, replies } = buildCalendar();
   button(el, "2025-06-30").focus();
 
   // July 1st is rendered, but as an outside day: it does not count.
@@ -211,8 +219,10 @@ test("leaving the visible month asks the server and focuses its answer", () => {
   ]);
 
   // The server answers with the next month and July 1st as the tab stop;
-  // the fixture reuses June's markup, so stand in with June 2nd.
+  // the fixture reuses June's markup, so stand in with June 2nd. LiveView
+  // calls the reply callback once the patch is in.
   patch(hook, { value: null, tabDate: "2025-06-02" });
+  replies.at(-1)();
   assert.equal(document.activeElement, button(el, "2025-06-02"));
 
   key(document.activeElement, "PageUp");
@@ -220,6 +230,47 @@ test("leaving the visible month asks the server and focuses its answer", () => {
 
   key(document.activeElement, "PageDown", { shiftKey: true });
   assert.deepEqual(pushed.at(-1).payload, { date: "2026-06-02", dir: 1 });
+
+  hook.destroyed();
+});
+
+test("a focus reply without a patch, or after focus left, keeps focus put", () => {
+  const { el, hook, replies } = buildCalendar();
+  const outside = document.createElement("button");
+  document.body.appendChild(outside);
+
+  // The server could not show the month (e.g. past end-month): no patch.
+  button(el, "2025-06-30").focus();
+  key(document.activeElement, "ArrowRight");
+  replies.at(-1)();
+  assert.equal(document.activeElement, button(el, "2025-06-30"));
+
+  // The user tabbed away before the answer arrived.
+  key(document.activeElement, "PageDown");
+  outside.focus();
+  patch(hook, { value: null, tabDate: "2025-06-02" });
+  replies.at(-1)();
+  assert.equal(document.activeElement, outside);
+
+  hook.destroyed();
+});
+
+test("a patch keeps the roving tabindex and focus ring on the focused day", () => {
+  const { el, hook } = buildCalendar();
+  const focused = button(el, "2025-06-13");
+  focused.focus();
+
+  // An unrelated re-render morphs the day attributes back to the server's
+  // view (the 12th is the tab stop, no day is data-focused); the focused
+  // element itself stays in place.
+  hook.beforeUpdate();
+  focused.setAttribute("tabindex", "-1");
+  focused.parentElement.removeAttribute("data-focused");
+  button(el, "2025-06-12").setAttribute("tabindex", "0");
+  hook.updated();
+  assert.equal(focused.getAttribute("tabindex"), "0");
+  assert.equal(button(el, "2025-06-12").getAttribute("tabindex"), "-1");
+  assert.equal(focused.parentElement.getAttribute("data-focused"), "true");
 
   hook.destroyed();
 });
@@ -258,7 +309,7 @@ test("a user selection notifies the form, the parent and the popover", async () 
 
   click(button(el, "2025-06-03"));
   // phx-click goes to the server, which re-renders with the new value.
-  patch(hook, { value: "2025-06-03", tabDate: "2025-06-03" });
+  patch(hook, { value: "2025-06-03", tabDate: "2025-06-03", picked: true });
 
   assert.equal(inputEvents.length, 1);
   assert.equal(inputEvents[0].name, "date");
@@ -275,7 +326,7 @@ test("a user selection notifies the form, the parent and the popover", async () 
   hook.destroyed();
 });
 
-test("server-driven value changes and no-op clicks do not notify", () => {
+test("server-driven value changes and no-op picks do not notify", () => {
   const { el, hook, pushed } = buildCalendar({
     value: "2025-06-03",
     mappings: { select: "date_picked" },
@@ -284,8 +335,13 @@ test("server-driven value changes and no-op clicks do not notify", () => {
   patch(hook, { value: "2025-06-09", tabDate: "2025-06-09" });
   assert.deepEqual(pushed, []);
 
+  // A pick that leaves the value as it was (e.g. `required`).
   click(button(el, "2025-06-09"));
-  patch(hook, { value: "2025-06-09", tabDate: "2025-06-09" });
+  patch(hook, { value: "2025-06-09", tabDate: "2025-06-09", picked: true });
+  assert.deepEqual(pushed, []);
+
+  // That pick must not leave anything pending for the parent's next value.
+  patch(hook, { value: "2025-06-20", tabDate: "2025-06-20" });
   assert.deepEqual(pushed, []);
 
   hook.destroyed();
@@ -302,6 +358,7 @@ test("JS command handlers run against the parent", () => {
   patch(hook, {
     value: { from: "2025-06-03", to: "2025-06-03" },
     tabDate: "2025-06-03",
+    picked: true,
   });
 
   assert.deepEqual(executed, [
@@ -324,6 +381,7 @@ test("range close-on-select waits for a range of two days or more", async () => 
   patch(hook, {
     value: { from: "2025-06-03", to: "2025-06-03" },
     tabDate: "2025-06-03",
+    picked: true,
   });
   assert.deepEqual(commands, []);
 
@@ -331,6 +389,7 @@ test("range close-on-select waits for a range of two days or more", async () => 
   patch(hook, {
     value: { from: "2025-06-03", to: "2025-06-08" },
     tabDate: "2025-06-08",
+    picked: true,
   });
   assert.deepEqual(commands, [{ command: "close", target: "pop" }]);
 

@@ -39,6 +39,14 @@ defmodule SaladUI.CalendarTest do
     tag
   end
 
+  # {name, value} of the inputs the calendar submits. They are text inputs with
+  # the hidden attribute, so LiveView's used-input tracking sees them.
+  defp value_inputs(html) do
+    ~r/<input type="text" hidden name="([^"]*)" value="([^"]*)" tabindex="-1" autocomplete="off" aria-hidden="true">/
+    |> Regex.scan(html, capture: :all_but_first)
+    |> Enum.map(&List.to_tuple/1)
+  end
+
   defp tabbable(html) do
     [[iso]] = Regex.scan(~r/data-day="([\d-]+)" [^>]*tabindex="0"/, html, capture: :all_but_first)
     iso
@@ -144,7 +152,8 @@ defmodule SaladUI.CalendarTest do
       assert td(html, "2025-06-04") =~ ~s(data-disabled="true")
       assert td(html, "2025-06-04") =~ "text-muted-foreground opacity-50"
       refute disabled_day?(html, "2025-06-05")
-      assert html =~ ~r/aria-label="Go to the Previous Month" aria-disabled="true"/
+      # Like react-day-picker, an unavailable nav button leaves the tab order.
+      assert html =~ ~r/aria-label="Go to the Previous Month" aria-disabled="true" tabindex="-1"/
       refute html =~ ~r/phx-click="navigate" phx-value-offset="-1"/
     end
 
@@ -271,35 +280,35 @@ defmodule SaladUI.CalendarTest do
   describe "form integration" do
     test "single mode submits an ISO date" do
       html = render_calendar(%{name: "date", value: ~D[2025-06-03]})
-      assert html =~ ~s(<input type="hidden" name="date" value="2025-06-03">)
+      assert {"date", "2025-06-03"} in value_inputs(html)
       assert html =~ ~s(id="cal-value")
     end
 
     test "empty single mode submits an empty string" do
       html = render_calendar(%{name: "date"})
-      assert html =~ ~s(<input type="hidden" name="date" value="">)
+      assert {"date", ""} in value_inputs(html)
     end
 
     test "multiple mode submits a list" do
       html = render_calendar(%{name: "days", mode: "multiple", value: [~D[2025-06-03], ~D[2025-06-05]]})
 
-      assert html =~ ~s(<input type="hidden" name="days[]" value="2025-06-03">)
-      assert html =~ ~s(<input type="hidden" name="days[]" value="2025-06-05">)
+      assert {"days[]", "2025-06-03"} in value_inputs(html)
+      assert {"days[]", "2025-06-05"} in value_inputs(html)
       refute html =~ ~s(name="days" value="")
 
       html = render_calendar(%{name: "days", mode: "multiple"})
-      assert html =~ ~s(<input type="hidden" name="days" value="">)
+      assert {"days", ""} in value_inputs(html)
     end
 
     test "range mode submits from and to" do
       html = render_calendar(%{name: "stay", mode: "range", value: %{from: ~D[2025-06-03], to: nil}})
 
-      assert html =~ ~s(<input type="hidden" name="stay[from]" value="2025-06-03">)
-      assert html =~ ~s(<input type="hidden" name="stay[to]" value="">)
+      assert {"stay[from]", "2025-06-03"} in value_inputs(html)
+      assert {"stay[to]", ""} in value_inputs(html)
     end
 
     test "no name, no inputs" do
-      refute render_calendar(%{}) =~ ~s(type="hidden")
+      assert value_inputs(render_calendar(%{})) == []
     end
 
     test "form field provides name and parses params back" do
@@ -307,7 +316,7 @@ defmodule SaladUI.CalendarTest do
 
       html = render_calendar(%{mode: "range", field: form[:stay]})
 
-      assert html =~ ~s(<input type="hidden" name="booking[stay][from]" value="2025-06-03">)
+      assert {"booking[stay][from]", "2025-06-03"} in value_inputs(html)
       assert day_button(html, "2025-06-05") =~ ~s(data-range-middle="true")
     end
   end
@@ -379,6 +388,30 @@ defmodule SaladUI.CalendarTest do
       socket = event(socket, "focus", %{"date" => "2025-06-30", "dir" => -1})
       assert socket.assigns.month == ~D[2025-06-01]
       assert socket.assigns.focus == ~D[2025-06-30]
+    end
+
+    test "focus on a month navigation cannot reach changes nothing" do
+      socket = mount(%{"end-month": ~D[2025-06-01]})
+
+      assert event(socket, "focus", %{"date" => "2025-07-01", "dir" => 1}) == socket
+    end
+
+    test "user selections bump data-selection-seq; a value from the parent does not" do
+      socket = mount(%{value: ~D[2025-06-04], required: true})
+      assert socket.assigns.selection_seq == 0
+      assert render_calendar(%{}) =~ ~s(data-selection-seq="0")
+
+      # A no-op pick (required) still counts, so the hook can settle its state.
+      socket = event(socket, "select", %{"date" => "2025-06-04"})
+      assert socket.assigns.selection_seq == 1
+
+      socket = %{presets: [%{label: "Today", value: 0}]} |> mount(socket) |> event("preset", %{"index" => "0"})
+      assert socket.assigns.selection_seq == 2
+
+      socket = mount(%{value: ~D[2025-06-20]}, socket)
+      assert socket.assigns.selection_seq == 2
+
+      assert event(socket, "select", %{"date" => "nope"}).assigns.selection_seq == 2
     end
 
     test "presets set the selection and show it" do

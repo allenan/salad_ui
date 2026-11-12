@@ -40,7 +40,10 @@ defmodule SaladUI.Calendar do
   * `range` - `name[from]=2025-06-12&name[to]=2025-06-20`.
 
   After each selection made by the user the hook fires an `input` event on the
-  hidden input, so the surrounding form's `phx-change` runs. Values coming back
+  hidden input, so the surrounding form's `phx-change` runs. The inputs are
+  `type="text"` with the `hidden` attribute, so LiveView's used-input tracking
+  (`Phoenix.Component.used_input?/1`) treats the field as unused until the user
+  picks a date or submits the form. Values coming back
   from the form params (ISO strings) are parsed again, so
   `<.calendar field={@form[:date]} />` round-trips without extra code.
 
@@ -261,6 +264,7 @@ defmodule SaladUI.Calendar.LiveComponent do
       |> assign(:selected, selected)
       |> assign(:month, clamp_month(month, o))
       |> assign_new(:focus, fn -> nil end)
+      |> assign_new(:selection_seq, fn -> 0 end)
 
     {:ok, socket}
   end
@@ -285,7 +289,7 @@ defmodule SaladUI.Calendar.LiveComponent do
           {:noreply, socket}
         else
           selected = toggle(o.mode, socket.assigns.selected, date, o.required)
-          {:noreply, assign(socket, selected: selected, focus: date)}
+          {:noreply, socket |> user_selected(selected) |> assign(focus: date)}
         end
 
       _ ->
@@ -325,8 +329,14 @@ defmodule SaladUI.Calendar.LiveComponent do
     case to_date(iso) do
       %Date{} = date ->
         date = date |> clamp_date(o) |> skip_disabled(dir, o)
-        month = month_showing(date, socket.assigns.month, o.number_of_months)
-        {:noreply, assign(socket, month: clamp_month(month, o), focus: date)}
+        month = date |> month_showing(socket.assigns.month, o.number_of_months) |> clamp_month(o)
+
+        # A date navigation cannot reach (start-month / end-month) keeps focus put.
+        if month_visible?(date, month, o.number_of_months) do
+          {:noreply, assign(socket, month: month, focus: date)}
+        else
+          {:noreply, socket}
+        end
 
       _ ->
         {:noreply, socket}
@@ -350,12 +360,17 @@ defmodule SaladUI.Calendar.LiveComponent do
           end
 
         {:noreply,
-         assign(socket,
-           selected: selected,
-           month: clamp_month(month, o),
-           focus: first_selected(o.mode, selected)
-         )}
+         socket
+         |> user_selected(selected)
+         |> assign(month: clamp_month(month, o), focus: first_selected(o.mode, selected))}
     end
+  end
+
+  # A selection made by the user (not by the parent through `value`). The
+  # counter is rendered as `data-selection-seq`, so the hook can tell the two
+  # apart and only notify the form / on-select for the user's own picks.
+  defp user_selected(socket, selected) do
+    assign(socket, selected: selected, selection_seq: socket.assigns.selection_seq + 1)
   end
 
   # -- rendering ---------------------------------------------------------------
@@ -444,6 +459,7 @@ defmodule SaladUI.Calendar.LiveComponent do
         "data-state": "idle",
         "data-mode": o.mode,
         "data-value": json(value_payload(o.mode, selected)),
+        "data-selection-seq": assigns.selection_seq,
         "data-options": json(js_options),
         "data-event-mappings": json(o.event_map),
         "phx-hook": "SaladUI",
@@ -486,6 +502,7 @@ defmodule SaladUI.Calendar.LiveComponent do
           data-part="previous"
           aria-label="Go to the Previous Month"
           aria-disabled={@g.prev_disabled && "true"}
+          tabindex={@g.prev_disabled && "-1"}
           phx-click={!@g.prev_disabled && "navigate"}
           phx-value-offset="-1"
           phx-target={@myself}
@@ -499,6 +516,7 @@ defmodule SaladUI.Calendar.LiveComponent do
           data-part="next"
           aria-label="Go to the Next Month"
           aria-disabled={@g.next_disabled && "true"}
+          tabindex={@g.next_disabled && "-1"}
           phx-click={!@g.next_disabled && "navigate"}
           phx-value-offset="1"
           phx-target={@myself}
@@ -748,25 +766,41 @@ defmodule SaladUI.Calendar.LiveComponent do
     ~H""
   end
 
+  # `type="text"` with the `hidden` attribute rather than `type="hidden"`:
+  # LiveView never reports hidden-only fields as unused, so a `field`'s errors
+  # would show before the user touched the calendar. The hook dispatches its
+  # `input` event from the first input, which marks the field as used.
   defp hidden_inputs(assigns) do
     ~H"""
     <div id={@id} data-slot="calendar-value" hidden>
       <%= case @o.mode do %>
         <% "single" -> %>
-          <input type="hidden" name={@o.name} value={iso(@selected)} />
+          <.value_input name={@o.name} value={iso(@selected)} />
         <% "multiple" -> %>
-          <input :if={@selected in [nil, []]} type="hidden" name={@o.name} value="" />
-          <input
-            :for={date <- @selected || []}
-            type="hidden"
-            name={@o.name <> "[]"}
-            value={iso(date)}
-          />
+          <.value_input :if={@selected in [nil, []]} name={@o.name} value="" />
+          <.value_input :for={date <- @selected || []} name={@o.name <> "[]"} value={iso(date)} />
         <% "range" -> %>
-          <input type="hidden" name={@o.name <> "[from]"} value={iso(@selected && @selected.from)} />
-          <input type="hidden" name={@o.name <> "[to]"} value={iso(@selected && @selected.to)} />
+          <.value_input name={@o.name <> "[from]"} value={iso(@selected && @selected.from)} />
+          <.value_input name={@o.name <> "[to]"} value={iso(@selected && @selected.to)} />
       <% end %>
     </div>
+    """
+  end
+
+  attr :name, :string
+  attr :value, :string
+
+  defp value_input(assigns) do
+    ~H"""
+    <input
+      type="text"
+      hidden
+      name={@name}
+      value={@value}
+      tabindex="-1"
+      autocomplete="off"
+      aria-hidden="true"
+    />
     """
   end
 
@@ -1054,6 +1088,11 @@ defmodule SaladUI.Calendar.LiveComponent do
   end
 
   # The first visible month to show `date`, moving as little as possible.
+  defp month_visible?(date, first, count) do
+    month = Date.beginning_of_month(date)
+    not Date.before?(month, first) and not Date.after?(month, shift_month(first, count - 1))
+  end
+
   defp month_showing(date, current, count) do
     target = Date.beginning_of_month(date)
     last = shift_month(current, count - 1)

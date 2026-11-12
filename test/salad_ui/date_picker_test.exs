@@ -91,7 +91,7 @@ defmodule SaladUI.DatePickerTest do
     html = render_picker(%{field: form[:due]})
 
     [_, after_popover] = String.split(html, ~s(id="dp-calendar-value"))
-    assert after_popover =~ ~s(<input type="hidden" name="task[due]" value="2025-06-03">)
+    assert after_popover =~ ~s(<input type="text" hidden name="task[due]" value="2025-06-03")
     # The inputs come after the popover root has closed.
     [before_inputs, _] = String.split(html, ~s(id="dp-calendar-value"))
     assert count_substring(before_inputs, "<input") == 0
