@@ -79,8 +79,10 @@ defmodule SaladChatWeb do
     quote do
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components
-      import SaladChatWeb.CoreComponents
+      # SaladUI is the component library for the whole app
+      use SaladUI
+      # Not part of `use SaladUI` (yet)
+      import SaladUI.Command
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

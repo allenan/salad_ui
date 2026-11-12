@@ -48,17 +48,17 @@ import "salad_ui/components/input_group";
 import "salad_ui/components/code_block";
 import "salad_ui/components/command";
 import "salad_ui/components/menu";
+import {Hooks as ChatHooks, currentTheme} from "./chat";
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks,
-    SaladUI: SaladUI.SaladUIHook},
+  params: () => ({_csrf_token: csrfToken, theme: currentTheme()}),
+  hooks: {...colocatedHooks, ...ChatHooks, SaladUI: SaladUI.SaladUIHook},
 })
 
 // Show progress bar on live navigation and form submits
-topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
+topbar.config({barColors: {0: "#16a34a"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
