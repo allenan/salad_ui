@@ -234,5 +234,21 @@ defmodule SaladUI.SliderTest do
       assert html =~ "&quot;dir&quot;:&quot;rtl&quot;"
       assert html =~ "&quot;inverted&quot;:true"
     end
+
+    test "without dir the hook is left to inherit the page direction" do
+      assigns = %{}
+
+      html =
+        ~H"""
+        <.slider id="inherit" value={50} />
+        """
+        |> rendered_to_string()
+        |> clean_string()
+
+      # No `dir` attribute and a null `dir` option: the JS reads the nearest
+      # ancestor's `dir` (e.g. `<html dir="rtl">`) instead of forcing ltr.
+      refute html =~ ~s(dir=")
+      assert html =~ "&quot;dir&quot;:null"
+    end
   end
 end

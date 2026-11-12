@@ -74,7 +74,7 @@ defmodule SaladUI.MenuParts do
       tabindex="-1"
       {@rest}
     >
-      <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <span data-part="item-indicator" hidden={!@checked}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -131,7 +131,7 @@ defmodule SaladUI.MenuParts do
       tabindex="-1"
       {@rest}
     >
-      <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <span data-part="item-indicator" hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"

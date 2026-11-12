@@ -336,7 +336,7 @@ defmodule SaladUI.DropdownMenu do
     <div
       data-slot="dropdown-menu-label"
       data-part="label"
-      class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "pl-8", @class])}
+      class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "ps-8", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -380,7 +380,7 @@ defmodule SaladUI.DropdownMenu do
       data-event-mappings={@event_map}
       class={
         classes([
-          "relative flex cursor-default select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:mr-2",
+          "relative flex cursor-default select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:me-2",
           @variant == "destructive" &&
             "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
           @class
@@ -422,7 +422,7 @@ defmodule SaladUI.DropdownMenu do
       data-disabled={@disabled}
       class={
         classes([
-          "relative flex cursor-default select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:mr-2",
+          "relative flex cursor-default select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:me-2",
           @variant == "destructive" &&
             "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
           @class
@@ -475,14 +475,14 @@ defmodule SaladUI.DropdownMenu do
       data-event-mappings={@event_map}
       class={
         classes([
-          "relative flex cursor-default select-none items-center rounded-xs py-1.5 pr-2 pl-8 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          "relative flex cursor-default select-none items-center rounded-xs py-1.5 pe-2 ps-8 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
           @class
         ])
       }
       tabindex={if @disabled, do: "-1", else: "0"}
       {@rest}
     >
-      <span class="absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="absolute start-2 flex size-3.5 items-center justify-center">
         <span
           data-part="item-indicator"
           data-state={(@checked && "checked") || "unchecked"}
@@ -594,14 +594,14 @@ defmodule SaladUI.DropdownMenu do
       data-event-mappings={@event_map}
       class={
         classes([
-          "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pe-2 ps-8 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           @class
         ])
       }
       tabindex={if @disabled, do: "-1", else: "0"}
       {@rest}
     >
-      <span class="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <span data-part="item-indicator" hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -685,7 +685,7 @@ defmodule SaladUI.DropdownMenu do
       aria-expanded="false"
       class={
         classes([
-          "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[inset]:pl-8 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+          "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[inset]:ps-8 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
           @class
         ])
       }

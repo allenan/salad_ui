@@ -216,7 +216,7 @@ defmodule SaladUI.DropdownMenuTest do
       assert html =~ ~s(<circle cx="12" cy="12" r="10"></circle>)
       assert html =~ "size-2 fill-current"
       assert html =~ ~r/data-part="item-indicator"[^>]*hidden/
-      assert html =~ "pl-8"
+      assert html =~ "ps-8"
       assert html =~ ~r/data-value="bottom"[^>]*data-disabled[^>]*tabindex="-1"/s
     end
 

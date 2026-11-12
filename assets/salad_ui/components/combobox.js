@@ -1,5 +1,6 @@
 // saladui/components/combobox.js
 import Component from "../core/component.js";
+import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
 
@@ -490,10 +491,7 @@ class ComboboxComponent extends Component {
 
   /** The arrow key pointing towards the chips, by text direction. */
   backKey(node) {
-    const rtl =
-      typeof window !== "undefined" &&
-      window.getComputedStyle?.(node)?.direction === "rtl";
-    return rtl ? "ArrowRight" : "ArrowLeft";
+    return isRtl(node) ? "ArrowRight" : "ArrowLeft";
   }
 
   chipElements() {

@@ -176,8 +176,8 @@ defmodule SaladUI.Combobox do
   @input_group_class [
     "group/input-group relative flex w-full items-center rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none dark:bg-input/30",
     "h-9 min-w-0 has-[>textarea]:h-auto",
-    "has-[>[data-align=inline-start]]:[&>input]:pl-2",
-    "has-[>[data-align=inline-end]]:[&>input]:pr-2",
+    "has-[>[data-align=inline-start]]:[&>input]:ps-2",
+    "has-[>[data-align=inline-end]]:[&>input]:pe-2",
     "has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-[3px] has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50",
     "has-[[data-slot][aria-invalid=true]]:border-destructive has-[[data-slot][aria-invalid=true]]:ring-destructive/20 dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40",
     "group-data-[invalid=true]/combobox:border-destructive group-data-[invalid=true]/combobox:ring-destructive/20 dark:group-data-[invalid=true]/combobox:ring-destructive/40",
@@ -540,7 +540,7 @@ defmodule SaladUI.Combobox do
       aria-selected="false"
       class={
         classes([
-          "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pe-8 ps-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           @class
         ])
       }
@@ -551,7 +551,7 @@ defmodule SaladUI.Combobox do
         data-slot="combobox-item-indicator"
         data-part="item-indicator"
         hidden
-        class="pointer-events-none absolute right-2 flex size-4 items-center justify-center"
+        class="pointer-events-none absolute end-2 flex size-4 items-center justify-center"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -741,7 +741,7 @@ defmodule SaladUI.Combobox do
         class={
           classes([
             button_variant(%{variant: "ghost", size: "icon-xs"}),
-            "-ml-1 opacity-50 hover:opacity-100"
+            "-ms-1 opacity-50 hover:opacity-100"
           ])
         }
       >

@@ -141,9 +141,11 @@ defmodule SaladUI.Pagination do
   end
 
   @doc """
-  Renders a next page button.
+  Renders a next page button. Pass `text` to translate the label (e.g. for
+  an RTL page); the chevron flips under `dir="rtl"`.
   """
   attr :class, :string, default: nil
+  attr :text, :string, default: "Next", doc: "Visible label"
   attr :rest, :global, include: ~w(href navigate patch)
 
   def pagination_next(assigns) do
@@ -151,10 +153,10 @@ defmodule SaladUI.Pagination do
     <.pagination_link
       aria-label="Go to next page"
       size="default"
-      class={classes(["gap-1 px-2.5 sm:pr-2.5", @class])}
+      class={classes(["gap-1 px-2.5 sm:pe-2.5", @class])}
       {@rest}
     >
-      <span>Next</span>
+      <span>{@text}</span>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -170,9 +172,11 @@ defmodule SaladUI.Pagination do
   end
 
   @doc """
-  Renders a previous page button.
+  Renders a previous page button. Pass `text` to translate the label (e.g.
+  for an RTL page); the chevron flips under `dir="rtl"`.
   """
   attr :class, :string, default: nil
+  attr :text, :string, default: "Previous", doc: "Visible label"
   attr :rest, :global, include: ~w(href navigate patch)
 
   def pagination_previous(assigns) do
@@ -180,7 +184,7 @@ defmodule SaladUI.Pagination do
     <.pagination_link
       aria-label="Go to previous page"
       size="default"
-      class={classes(["gap-1 px-2.5 sm:pl-2.5", @class])}
+      class={classes(["gap-1 px-2.5 sm:ps-2.5", @class])}
       {@rest}
     >
       <svg
@@ -193,7 +197,7 @@ defmodule SaladUI.Pagination do
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
       </svg>
-      <span>Previous</span>
+      <span>{@text}</span>
     </.pagination_link>
     """
   end

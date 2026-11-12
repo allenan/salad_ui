@@ -213,6 +213,22 @@ test("switching items sets motion direction and resizes the viewport", async () 
   assert.equal(viewport.hidden, false);
 });
 
+test("under rtl a later item, which sits to the left, slides in from the left", () => {
+  const { el, homeTrigger, componentsTrigger, homeContent, componentsContent } =
+    buildMenu();
+  el.setAttribute("dir", "rtl");
+
+  homeTrigger.click();
+  componentsTrigger.click();
+  // Physical motion, as Radix does by reversing the item order under RTL.
+  assert.equal(homeContent.dataset.motion, "to-end");
+  assert.equal(componentsContent.dataset.motion, "from-start");
+
+  homeTrigger.click();
+  assert.equal(homeContent.dataset.motion, "from-end");
+  assert.equal(componentsContent.dataset.motion, "to-start");
+});
+
 test("hover opens after the delay; moving between triggers is instant", async () => {
   const { homeTrigger, componentsTrigger, viewport, component } = buildMenu({
     delayDuration: 30,

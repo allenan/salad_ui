@@ -453,7 +453,8 @@ class QuestionnaireComponent extends Component {
       event.preventDefault();
       if (event.repeat) return;
 
-      if (event.key === "ArrowLeft") {
+      // Back/forward follow the reading direction (mirrored under RTL).
+      if (event.key === this.backKey()) {
         if (!this.isFirst()) this.submitWith("previous");
       } else if (!this.isLast() && this.status(item) !== "unanswered") {
         this.submitWith("next");
@@ -561,6 +562,15 @@ class QuestionnaireComponent extends Component {
       default:
         return this.validateAll();
     }
+  }
+
+  /** The arrow key that goes back a question (`ArrowRight` under RTL). */
+  backKey() {
+    return this.isRtl() ? "ArrowRight" : "ArrowLeft";
+  }
+
+  forwardKey() {
+    return this.isRtl() ? "ArrowLeft" : "ArrowRight";
   }
 
   goPrevious() {
@@ -807,8 +817,8 @@ class QuestionnaireComponent extends Component {
       ? [
           "Meta+Enter Control+Enter",
           answers.length ? "ArrowUp ArrowDown" : null,
-          !first ? "ArrowLeft" : null,
-          !last && status !== "unanswered" ? "ArrowRight" : null,
+          !first ? this.backKey() : null,
+          !last && status !== "unanswered" ? this.forwardKey() : null,
         ]
           .filter(Boolean)
           .join(" ")

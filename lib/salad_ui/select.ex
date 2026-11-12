@@ -411,7 +411,7 @@ defmodule SaladUI.Select do
     <div
       data-slot="select-label"
       data-part="label"
-      class={classes(["py-1.5 pl-8 pr-2 text-sm font-semibold", @class])}
+      class={classes(["py-1.5 ps-8 pe-2 text-sm font-semibold", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -434,14 +434,14 @@ defmodule SaladUI.Select do
       data-disabled={@disabled && "true"}
       class={
         classes([
-          "relative flex w-full cursor-default select-none items-center rounded-xs py-1.5 pl-8 pr-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          "relative flex w-full cursor-default select-none items-center rounded-xs py-1.5 ps-8 pe-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
           @class
         ])
       }
       tabindex={(@disabled && "-1") || "0"}
       {@rest}
     >
-      <span class="absolute left-2 flex size-3.5 items-center justify-center">
+      <span class="absolute start-2 flex size-3.5 items-center justify-center">
         <span data-slot="select-item-indicator" data-part="item-indicator" hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"

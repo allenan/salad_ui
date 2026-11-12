@@ -465,6 +465,34 @@ test("ArrowDown/ArrowUp move between answers; arrows left/right move items", () 
   assert.ok(visible(item("direction")));
 });
 
+test("under rtl ArrowLeft goes forward and ArrowRight goes back", () => {
+  document.documentElement.setAttribute("dir", "rtl");
+  try {
+    const { item, choice } = build();
+    choice("direction", "a").click();
+    item("direction").focus();
+    assert.equal(
+      item("direction").getAttribute("aria-keyshortcuts"),
+      "Meta+Enter Control+Enter ArrowUp ArrowDown ArrowLeft",
+    );
+
+    key(item("direction"), "ArrowRight");
+    assert.ok(visible(item("direction")), "ArrowRight is back under rtl");
+
+    key(item("direction"), "ArrowLeft");
+    assert.ok(visible(item("signals")));
+    assert.match(
+      item("signals").getAttribute("aria-keyshortcuts"),
+      / ArrowRight/,
+    );
+
+    key(item("signals"), "ArrowRight");
+    assert.ok(visible(item("direction")));
+  } finally {
+    document.documentElement.removeAttribute("dir");
+  }
+});
+
 test("ArrowRight does nothing while the item is unanswered", () => {
   const { item } = build();
   key(item("direction"), "ArrowRight");

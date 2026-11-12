@@ -175,7 +175,9 @@ class NavigationMenuComponent extends Component {
 
     let motion = { prev: null, next: null };
     if (prevItem && nextItem) {
-      const forward = nextItem.index > prevItem.index;
+      // Motion is physical (`from-end` slides in from the right), so under
+      // RTL a later item, which sits to the left, comes in from the start.
+      const forward = nextItem.index > prevItem.index !== this.isRtl();
       motion = {
         prev: forward ? "to-start" : "to-end",
         next: forward ? "from-end" : "from-start",

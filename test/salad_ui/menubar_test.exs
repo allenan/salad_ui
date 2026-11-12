@@ -125,6 +125,6 @@ defmodule SaladUI.MenubarTest do
 
     assert html =~ ~s(role="menuitemcheckbox")
     assert html =~ ~s(role="menuitemradio")
-    assert html =~ "rounded-xs py-1.5 pr-2 pl-8"
+    assert html =~ "rounded-xs py-1.5 pe-2 ps-8"
   end
 end

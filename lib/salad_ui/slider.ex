@@ -166,7 +166,8 @@ defmodule SaladUI.Slider do
       step: step,
       minStepsBetweenThumbs: assigns[:"min-steps-between-thumbs"],
       orientation: assigns.orientation,
-      dir: assigns.dir || "ltr",
+      # nil lets the hook inherit the direction of the page (see `:dir`).
+      dir: assigns.dir,
       inverted: assigns.inverted,
       defaultValue: assigns[:"default-value"],
       disabled: assigns.disabled

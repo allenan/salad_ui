@@ -549,6 +549,32 @@ test("multiple: chip remove buttons and Backspace remove values", () => {
   assert.deepEqual(c.hiddenValues(), [["framework[]", "Next.js"]]);
 });
 
+test("multiple: under an rtl ancestor ArrowRight moves back onto the chips", () => {
+  const c = buildCombobox({
+    mode: "chips",
+    multiple: true,
+    value: ["Next.js", "Remix"],
+  });
+  c.el.parentElement.setAttribute("dir", "rtl");
+  try {
+    const chip = (value) =>
+      c.chips.querySelector(`[data-part="chip"][data-value="${value}"]`);
+
+    c.input.focus();
+    keydown(c.input, "ArrowLeft");
+    assert.equal(document.activeElement, c.input, "ArrowLeft is forward");
+
+    keydown(c.input, "ArrowRight");
+    assert.equal(document.activeElement, chip("Remix"));
+    keydown(chip("Remix"), "ArrowRight");
+    assert.equal(document.activeElement, chip("Next.js"));
+    keydown(chip("Next.js"), "ArrowLeft");
+    assert.equal(document.activeElement, chip("Remix"));
+  } finally {
+    c.el.parentElement.removeAttribute("dir");
+  }
+});
+
 test("multiple: the arrow keys move between chips; Backspace/Delete remove one", () => {
   const c = buildCombobox({
     mode: "chips",

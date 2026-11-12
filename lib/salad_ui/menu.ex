@@ -90,7 +90,7 @@ defmodule SaladUI.Menu do
     ~H"""
     <div
       data-slot="menu-label"
-      class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "pl-8", @class])}
+      class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "ps-8", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

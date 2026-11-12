@@ -311,7 +311,7 @@ function buildSlider({ wrapperDir = "rtl", dir } = {}) {
   document.body.innerHTML = `
     <div id="wrapper" dir="${wrapperDir}">
       <div id="slider" data-component="slider" data-state="idle" data-value="50"
-           data-options='${JSON.stringify({ min: 0, max: 100, step: 1, dir })}'
+           data-options='${JSON.stringify({ min: 0, max: 100, step: 1, dir: dir ?? null })}'
            data-event-mappings='{}' data-part="root">
         <span data-part="track"><span data-part="range"></span></span>
         <span data-part="thumb" data-index="0" role="slider" tabindex="0"></span>

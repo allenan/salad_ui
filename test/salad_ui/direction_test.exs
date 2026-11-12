@@ -98,5 +98,15 @@ defmodule SaladUI.DirectionTest do
       assert rendered_to_string(~H|<.pagination_next href="#" />|) =~ "rtl:rotate-180"
       assert rendered_to_string(~H|<.breadcrumb_separator />|) =~ "rtl:rotate-180"
     end
+
+    test "pagination previous/next take a translated label" do
+      import SaladUI.Pagination
+
+      assigns = %{}
+
+      assert rendered_to_string(~H|<.pagination_previous href="#" />|) =~ "<span>Previous</span>"
+      assert rendered_to_string(~H|<.pagination_next href="#" text="التالي" />|) =~ "<span>التالي</span>"
+      assert rendered_to_string(~H|<.pagination_previous href="#" text="السابق" />|) =~ "<span>السابق</span>"
+    end
   end
 end
