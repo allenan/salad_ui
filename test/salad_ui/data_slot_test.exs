@@ -314,6 +314,25 @@ defmodule SaladUI.DataSlotTest do
     assert check(~H"<.input name={@name} />", ~w(input)) == {[], []}
   end
 
+  test "input otp" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.input_otp id="otp" maxlength={2}>
+               <.input_otp_group>
+                 <.input_otp_slot index={0} />
+               </.input_otp_group>
+               <.input_otp_separator />
+               <.input_otp_group>
+                 <.input_otp_slot index={1} />
+               </.input_otp_group>
+             </.input_otp>
+             """,
+             ~w(input-otp input-otp-group input-otp-slot input-otp-separator)
+           ) == {[], []}
+  end
+
   test "label" do
     assigns = %{}
     assert check(~H"<.label>L</.label>", ~w(label)) == {[], []}

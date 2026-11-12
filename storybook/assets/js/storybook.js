@@ -14,6 +14,7 @@ import "salad_ui/components/tooltip";
 import "salad_ui/components/accordion";
 import "salad_ui/components/slider";
 import "salad_ui/components/resizable";
+import "salad_ui/components/input_otp";
 import "salad_ui/components/switch";
 import "salad_ui/components/dropdown_menu";
 import "salad_ui/components/navigation_menu";

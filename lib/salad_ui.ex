@@ -39,6 +39,7 @@ defmodule SaladUI do
   ### Forms & Input
   - `button/1` - Interactive buttons with multiple variants
   - `input/1` - Text inputs with validation support
+  - `input_otp/1` - One-time password inputs with copy-paste support
   - `textarea/1` - Multi-line text input areas
   - `checkbox/1` - Binary choice inputs
   - `radio_group/1` - Single choice from multiple options
@@ -205,6 +206,7 @@ defmodule SaladUI do
       import SaladUI.HoverCard
       import SaladUI.Icon
       import SaladUI.Input
+      import SaladUI.InputOTP
       import SaladUI.Item
       import SaladUI.Kbd
       import SaladUI.Label
