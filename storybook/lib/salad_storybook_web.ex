@@ -42,9 +42,9 @@ defmodule SaladStorybookWeb do
         formats: [:html, :json],
         layouts: [html: SaladStorybookWeb.Layouts]
 
-      import Plug.Conn
-
       use Gettext, backend: SaladStorybookWeb.Gettext
+
+      import Plug.Conn
 
       unquote(verified_routes())
     end
@@ -91,12 +91,11 @@ defmodule SaladStorybookWeb do
 
   defp html_helpers do
     quote do
+      use Gettext, backend: SaladStorybookWeb.Gettext
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
       import SaladStorybookWeb.CoreComponents, only: [flash_group: 1]
-
-      use Gettext, backend: SaladStorybookWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

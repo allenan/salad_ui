@@ -8,7 +8,7 @@ defmodule Storybook.SaladUIComponents.AlertDialog do
 
   def imports,
     do: [
-      {SaladUI.AlertDialog,
+      {AlertDialog,
        [
          alert_dialog_trigger: 1,
          alert_dialog_content: 1,

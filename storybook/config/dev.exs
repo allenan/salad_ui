@@ -1,14 +1,31 @@
 import Config
 
-# Configure your database
-config :salad_storybook, SaladStorybook.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "salad_storybook_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+config :esbuild,
+  version: "0.17.11",
+  default: [
+    args:
+      ~w(js/app.js js/storybook.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{
+      "NODE_PATH" =>
+        "#{Path.expand("../deps", __DIR__)}:#{Path.expand("../../../", __DIR__)}:#{Path.expand("../assets/node_modules", __DIR__)}"
+    }
+  ]
+
+# Do not include metadata nor timestamps in development logs
+config :logger, :console, format: "[$level] $message\n"
+
+# Initialize plugs at runtime for faster development compilation
+config :phoenix, :plug_init_mode, :runtime
+
+# Set a higher stacktrace during development. Avoid configuring such
+# in production as building large stacktraces may be expensive.
+config :phoenix, :stacktrace_depth, 20
+
+config :phoenix_live_reload, :dirs, ["", "../"]
+
+# Include HEEx debug annotations as HTML comments in rendered markup
+config :phoenix_live_view, :debug_heex_annotations, true
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
@@ -66,23 +83,8 @@ config :salad_storybook, SaladStorybookWeb.Endpoint,
   ],
   reloadable_apps: [:salad_ui, :salad_storybook]
 
-config :phoenix_live_reload, :dirs, ["", "../"]
-
 # Enable dev routes for dashboard and mailbox
 config :salad_storybook, dev_routes: true
-
-# Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
-
-# Set a higher stacktrace during development. Avoid configuring such
-# in production as building large stacktraces may be expensive.
-config :phoenix, :stacktrace_depth, 20
-
-# Initialize plugs at runtime for faster development compilation
-config :phoenix, :plug_init_mode, :runtime
-
-# Include HEEx debug annotations as HTML comments in rendered markup
-config :phoenix_live_view, :debug_heex_annotations, true
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
@@ -101,16 +103,4 @@ config :tailwind,
           --output=priv/static/assets/app.css
         ),
     cd: Path.expand("..", __DIR__)
-  ]
-
-config :esbuild,
-  version: "0.17.11",
-  default: [
-    args:
-      ~w(js/app.js js/storybook.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{
-      "NODE_PATH" =>
-        "#{Path.expand("../deps", __DIR__)}:#{Path.expand("../../../", __DIR__)}:#{Path.expand("../assets/node_modules", __DIR__)}"
-    }
   ]
