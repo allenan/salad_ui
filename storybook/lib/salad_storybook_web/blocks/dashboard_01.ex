@@ -1180,7 +1180,20 @@ defmodule SaladStorybookWeb.Blocks.Dashboard01 do
     rows = Enum.map(socket.assigns.rows, &if(&1.id == id, do: Map.put(&1, key, value), else: &1))
     row = Enum.find(rows, &(&1.id == id))
 
-    {:noreply, socket |> assign(:rows, rows) |> toast_success("Saved #{row.header}")}
+    # shadcn's block fakes a 1s save with toast.promise; here the save runs in
+    # start_async and the same toast morphs from loading to "Done".
+    toast_id = "save-#{id}-#{field}"
+
+    {:noreply,
+     socket
+     |> assign(:rows, rows)
+     |> toast_promise(toast_id, loading: "Saving #{row.header}")
+     |> start_async({:save_cell, toast_id}, fn -> Process.sleep(1000) end)}
+  end
+
+  @impl true
+  def handle_async({:save_cell, toast_id}, result, socket) do
+    {:noreply, toast_resolve(socket, toast_id, result, success: "Done", error: "Error")}
   end
 
   defp visible?(hidden_columns, column), do: not MapSet.member?(hidden_columns, column)

@@ -184,6 +184,19 @@ defmodule SaladStorybookWeb.BlocksTest do
       |> render_submit()
 
       assert view |> element("#5-target") |> render() =~ ~s(value="42")
+
+      # One toast morphs from loading to success, like shadcn's toast.promise.
+      assert_push_event(view, "saladui:command", %{
+        command: "add",
+        params: %{id: "save-5-target", variant: "loading", title: "Saving Design"}
+      })
+
+      render_async(view, 3000)
+
+      assert_push_event(view, "saladui:command", %{
+        command: "update",
+        params: %{id: "save-5-target", variant: "success", title: "Done"}
+      })
     end
 
     test "switches views from the select", %{conn: conn} do
