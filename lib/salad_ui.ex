@@ -96,6 +96,7 @@ defmodule SaladUI do
 
   ### Chat
   - `message/1`, `message_group/1` - Chat message layout with avatar, header and footer
+  - `message_scroller/1` - Chat transcript scroller: turn anchoring, follow-output, history prepends, jumps
   - `bubble/1`, `bubble_group/1` - Chat bubbles with variants, alignment and reactions
   - `marker/1` - Inline notes, statuses and dividers between turns
   - `attachment/1`, `attachment_upload_entry/1` - File cards, including LiveView upload entries
@@ -249,6 +250,7 @@ defmodule SaladUI do
       import SaladUI.Menu
       import SaladUI.Menubar
       import SaladUI.Message
+      import SaladUI.MessageScroller
       import SaladUI.NativeSelect
       import SaladUI.NavigationMenu
       import SaladUI.Pagination

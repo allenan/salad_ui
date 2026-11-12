@@ -839,6 +839,24 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
+  test "message scroller" do
+    assigns = %{}
+
+    assert check(
+             ~H"""
+             <.message_scroller id="ms">
+               <.message_scroller_viewport>
+                 <.message_scroller_content>
+                   <.message_scroller_item message_id="m1">M</.message_scroller_item>
+                 </.message_scroller_content>
+               </.message_scroller_viewport>
+               <.message_scroller_button />
+             </.message_scroller>
+             """,
+             ~w(message-scroller message-scroller-viewport message-scroller-content message-scroller-item message-scroller-button)
+           ) == {[], []}
+  end
+
   test "marker" do
     assigns = %{}
 

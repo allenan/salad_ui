@@ -158,6 +158,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/code_block.js";
     import "./ui/components/calendar.js";
     import "./ui/components/questionnaire.js";
+    import "./ui/components/message_scroller.js";
     """
 
     js_hooks = "SaladUI: SaladUI.SaladUIHook"
