@@ -23,6 +23,7 @@ import "salad_ui/components/navigation_menu";
 import "salad_ui/components/chart";
 import "salad_ui/components/toast";
 import "salad_ui/components/toast-flash";
+import "salad_ui/components/input_group";
 
 // import * as Params from "./params";
 // import * as Uploaders from "./uploaders";
