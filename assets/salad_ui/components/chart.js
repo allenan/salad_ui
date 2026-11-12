@@ -159,13 +159,9 @@ class ChartComponent extends Component {
               },
             },
           },
-      ariaConfig: legacy
-        ? {}
-        : {
-            tooltip: {
-              all: { live: "polite" },
-            },
-          },
+      // The tooltip's live-region attributes are server-rendered (chart.ex)
+      // so LiveView patches keep them.
+      ariaConfig: {},
     };
   }
 
@@ -184,11 +180,16 @@ class ChartComponent extends Component {
   // -- state ----------------------------------------------------------------
 
   readState() {
-    this.allParts = this.queryParts();
-    this.canvas = this.getPart("canvas");
-    this.tooltipEl = this.getPart("tooltip") || null;
-    this.legendEl = this.getPart("legend") || null;
+    this.readParts();
+    this.readData();
+  }
 
+  /**
+   * Config, chart options and rows. After mount, only re-read when the server
+   * sent new values, so rows pushed with send_command "update" survive
+   * unrelated re-renders.
+   */
+  readData() {
     this._configRaw = this.el.getAttribute("data-config");
     this._optionsRaw = this.canvas?.getAttribute("data-chart-options");
     this._dataRaw = this.canvas?.getAttribute("data-chart-data");
@@ -196,6 +197,14 @@ class ChartComponent extends Component {
     this.chartConfig = parseJSON(this._configRaw, {});
     this.chartOptions = parseJSON(this._optionsRaw, {});
     this.rows = parseJSON(this._dataRaw, []);
+  }
+
+  /** Parts and tooltip/legend options; re-read after every LiveView patch. */
+  readParts() {
+    this.allParts = this.queryParts();
+    this.canvas = this.getPart("canvas");
+    this.tooltipEl = this.getPart("tooltip") || null;
+    this.legendEl = this.getPart("legend") || null;
     this.tooltipOptions = parseJSON(
       this.tooltipEl?.getAttribute("data-tooltip-options"),
       {},
@@ -486,10 +495,11 @@ class ChartComponent extends Component {
       canvas.getAttribute("data-chart-options") !== this._optionsRaw ||
       canvas.getAttribute("data-chart-data") !== this._dataRaw;
 
-    this.readState();
+    this.readParts();
     this.hideTooltip();
     this.chart.resize();
     if (changed) {
+      this.readData();
       this.refreshChart();
     } else {
       this.renderLegend();

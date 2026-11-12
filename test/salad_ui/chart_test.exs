@@ -62,6 +62,8 @@ defmodule SaladUI.ChartTest do
 
       refute html =~ "<script>"
       refute html =~ "<style>"
+      # JS must not point at the --color-evil variable that was never written
+      assert decode_attr(html, "data-config")["evil"]["color"] == nil
     end
 
     test "renders config icons into a template keyed by config key" do
@@ -100,7 +102,9 @@ defmodule SaladUI.ChartTest do
 
       assert html =~ ~s(data-slot="chart-canvas")
       assert html =~ ~s(data-part="canvas")
-      assert html =~ ~s(role="img")
+      # Focusable and arrow-key driven, like Recharts' accessibilityLayer
+      assert html =~ ~s(role="application")
+      assert html =~ ~s(aria-roledescription="chart")
       assert html =~ ~s(aria-label="Visitors")
       assert html =~ ~s(tabindex="0")
       refute html =~ "phx-hook"
@@ -115,6 +119,14 @@ defmodule SaladUI.ChartTest do
       refute Map.has_key?(options, "dataKey")
 
       assert [%{"month" => "January"} | _] = decode_attr(html, "data-chart-data")
+    end
+
+    test "the focusable canvas always has an accessible name" do
+      assigns = %{}
+
+      html = rendered_to_string(~H|<.chart type="pie" data={[]} />|)
+
+      assert html =~ ~s(aria-label="Pie chart")
     end
 
     test "legacy attributes render a standalone Chart.js canvas" do
@@ -149,6 +161,8 @@ defmodule SaladUI.ChartTest do
       assert html =~ ~s(data-slot="chart-tooltip")
       assert html =~ ~s(data-part="tooltip")
       assert html =~ "hidden"
+      assert html =~ ~s(role="status")
+      assert html =~ ~s(aria-live="polite")
 
       assert html =~
                "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl"

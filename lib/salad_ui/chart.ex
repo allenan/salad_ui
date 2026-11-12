@@ -276,8 +276,8 @@ defmodule SaladUI.Chart do
         data-part="canvas"
         data-chart-options={json(@chart_options)}
         data-chart-data={json(@data || [])}
-        role="img"
-        aria-label={@name}
+        role="application"
+        aria-label={@name || String.capitalize(@type) <> " chart"}
         aria-roledescription="chart"
         tabindex="0"
         class="outline-hidden focus-visible:rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -322,6 +322,8 @@ defmodule SaladUI.Chart do
       data-slot="chart-tooltip"
       data-part="tooltip"
       data-tooltip-options={json(@tooltip_options)}
+      role="status"
+      aria-live="polite"
       hidden
       class={
         classes([
@@ -452,7 +454,13 @@ defmodule SaladUI.Chart do
   defp js_color(_key, nil), do: nil
 
   defp js_color(key, color) do
-    if valid_ident?(key), do: "var(--color-#{key})", else: color
+    # Unsafe values are left out of the <style> (see color_vars/2), so the
+    # variable would be empty; JS gets nothing and falls back to --chart-N.
+    cond do
+      not safe_css_value?(color) -> nil
+      valid_ident?(key) -> "var(--color-#{key})"
+      true -> color
+    end
   end
 
   @doc false

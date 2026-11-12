@@ -529,6 +529,51 @@ test("update command replaces the rows", () => {
   assert.deepEqual(chart.data.datasets[0].data, [9]);
 });
 
+test("rows pushed with update survive a patch that leaves the data as-is", () => {
+  const { el, component, chart, tooltipEl } = buildChart({
+    options: { type: "pie", dataKey: "visitors", nameKey: "browser" },
+    config: { chrome: { label: "Chrome" }, safari: { label: "Safari" } },
+    data: [{ browser: "chrome", visitors: 1 }],
+  });
+
+  component.handleCommand("update", {
+    data: [
+      { browser: "chrome", visitors: 5 },
+      { browser: "safari", visitors: 7 },
+    ],
+  });
+
+  // An unrelated re-render: the server still renders the original rows.
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(component.rows.length, 2);
+  assert.deepEqual(chart.data.datasets[0].data, [5, 7]);
+
+  showTooltip(chart, [{ dataIndex: 1, dataset: chart.data.datasets[0] }]);
+  assert.deepEqual(
+    tooltipRows(tooltipEl).map((r) => [r.name, r.value]),
+    [["Safari", "7"]],
+  );
+});
+
+test("a patch re-reads tooltip and legend options", () => {
+  const { el, component, chart, tooltipEl } = buildChart();
+
+  tooltipEl.setAttribute(
+    "data-tooltip-options",
+    JSON.stringify({ indicator: "dot", hideLabel: true }),
+  );
+  assert.equal(component.skipReinitialize(el), true);
+
+  showTooltip(chart, [
+    { dataIndex: 0, dataset: chart.data.datasets[0] },
+    { dataIndex: 0, dataset: chart.data.datasets[1] },
+  ]);
+  assert.equal(
+    tooltipEl.querySelector('[data-slot="chart-tooltip-label"]').hidden,
+    true,
+  );
+});
+
 test("destroy tears down the Chart.js instance", () => {
   const { component, chart } = buildChart();
 
