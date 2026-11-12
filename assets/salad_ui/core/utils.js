@@ -54,18 +54,28 @@ export function executeAnimation(targetElement, animOptions) {
       [].concat(transitionRun).concat(transitionEnd),
     );
 
+    // rAF and setTimeout are independent clocks: when frames are delayed or
+    // paused (busy main thread, background tab) the cleanup timer can fire
+    // first. Without this guard the late frames would then re-add the
+    // running/end classes after cleanup and leave them on the element for
+    // good (e.g. content stuck at `opacity-0`).
+    let finished = false;
+
     // Next frame: apply running classes
     window.requestAnimationFrame(() => {
+      if (finished) return;
       addOrRemoveClasses(targetElement, transitionRun, []);
 
       // Next frame: apply end classes
-      window.requestAnimationFrame(() =>
-        addOrRemoveClasses(targetElement, transitionEnd, transitionStart),
-      );
+      window.requestAnimationFrame(() => {
+        if (finished) return;
+        addOrRemoveClasses(targetElement, transitionEnd, transitionStart);
+      });
     });
 
     // After duration, clean up classes and resolve promise
     setTimeout(() => {
+      finished = true;
       addOrRemoveClasses(
         targetElement,
         [],
