@@ -855,6 +855,7 @@ defmodule SaladChatWeb.ChatLive do
               min-size={35}
               class="flex min-h-0 min-w-0 flex-col"
             >
+              <%!-- TODO(salad-pass-2): use message_scroller (stand-in: a plain scroll container + ChatScroll hook) --%>
               <div
                 id="message-scroll"
                 phx-hook="ChatScroll"
