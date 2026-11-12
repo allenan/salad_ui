@@ -62,7 +62,7 @@ defmodule SaladUI.AlertTest do
         assert html =~ class
       end
 
-      assert html =~ "<h5 class=\"mb-1"
+      assert html =~ "<h5 data-slot=\"alert-title\" class=\"mb-1"
       assert html =~ "Alert title"
       assert html =~ "</h5>"
     end
@@ -76,7 +76,7 @@ defmodule SaladUI.AlertTest do
         """)
 
       assert html =~ "Alert description"
-      assert html =~ "<div class=\"text-sm [&amp;_p]:leading-relaxed\">"
+      assert html =~ ~s(<div data-slot="alert-description" class="text-sm [&amp;_p]:leading-relaxed">)
 
       for class <- ~w(text-sm leading-relaxed) do
         assert html =~ class

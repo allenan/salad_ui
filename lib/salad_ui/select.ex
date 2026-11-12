@@ -134,6 +134,7 @@ defmodule SaladUI.Select do
 
     ~H"""
     <div
+      data-slot="select"
       id={@id}
       class={classes(["group/select relative inline-flex", @class])}
       data-part="root"
@@ -249,6 +250,7 @@ defmodule SaladUI.Select do
 
     ~H"""
     <div
+      data-slot="select-content"
       data-part="content"
       data-side={@side}
       style="min-width: var(--salad-reference-width)"
@@ -276,7 +278,7 @@ defmodule SaladUI.Select do
 
   def select_group(assigns) do
     ~H"""
-    <div data-part="group" class={classes([@class])} {@rest}>
+    <div data-slot="select-group" data-part="group" class={classes([@class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -288,7 +290,12 @@ defmodule SaladUI.Select do
 
   def select_label(assigns) do
     ~H"""
-    <div data-part="label" class={classes(["py-1.5 pl-8 pr-2 text-sm font-semibold", @class])} {@rest}>
+    <div
+      data-slot="select-label"
+      data-part="label"
+      class={classes(["py-1.5 pl-8 pr-2 text-sm font-semibold", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -303,6 +310,7 @@ defmodule SaladUI.Select do
   def select_item(assigns) do
     ~H"""
     <div
+      data-slot="select-item"
       data-part="item"
       data-value={@value}
       data-disabled={@disabled && "true"}
@@ -316,7 +324,7 @@ defmodule SaladUI.Select do
       {@rest}
     >
       <span class="absolute left-2 flex size-3.5 items-center justify-center">
-        <span data-part="item-indicator" hidden>
+        <span data-slot="select-item-indicator" data-part="item-indicator" hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -341,7 +349,12 @@ defmodule SaladUI.Select do
 
   def select_separator(assigns) do
     ~H"""
-    <div data-part="separator" class={classes(["-mx-1 my-1 h-px bg-muted"])}></div>
+    <div
+      data-slot="select-separator"
+      data-part="separator"
+      class={classes(["-mx-1 my-1 h-px bg-muted"])}
+    >
+    </div>
     """
   end
 

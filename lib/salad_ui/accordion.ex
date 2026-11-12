@@ -87,6 +87,7 @@ defmodule SaladUI.Accordion do
 
     ~H"""
     <div
+      data-slot="accordion"
       id={@id}
       class={classes(["w-full", @class])}
       data-component="accordion"
@@ -120,6 +121,7 @@ defmodule SaladUI.Accordion do
   def accordion_item(assigns) do
     ~H"""
     <div
+      data-slot="accordion-item"
       data-part="item"
       data-value={@value}
       data-disabled={to_string(@disabled)}
@@ -147,6 +149,7 @@ defmodule SaladUI.Accordion do
   def accordion_trigger(assigns) do
     ~H"""
     <button
+      data-slot="accordion-trigger"
       type="button"
       data-part="item-trigger"
       class={
@@ -193,6 +196,7 @@ defmodule SaladUI.Accordion do
   def accordion_content(assigns) do
     ~H"""
     <div
+      data-slot="accordion-content"
       data-part="item-content"
       data-state="closed"
       class={

@@ -75,6 +75,7 @@ defmodule SaladUI.Popover do
 
     ~H"""
     <div
+      data-slot="popover"
       id={@id}
       class={classes(["relative inline-block", @class])}
       data-component="popover"
@@ -113,6 +114,7 @@ defmodule SaladUI.Popover do
     ~H"""
     <button
       :if={@as == "button"}
+      data-slot="popover-trigger"
       type={@type || "button"}
       data-part="trigger"
       data-action="toggle"
@@ -123,6 +125,7 @@ defmodule SaladUI.Popover do
     </button>
     <.dynamic
       :if={@as != "button"}
+      data-slot="popover-trigger"
       tag={@as}
       type={@type}
       data-part="trigger"
@@ -168,6 +171,7 @@ defmodule SaladUI.Popover do
       hidden
     >
       <div
+        data-slot="popover-content"
         data-part="content"
         data-side={@side}
         data-align={@align}

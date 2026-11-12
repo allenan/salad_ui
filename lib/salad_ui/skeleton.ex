@@ -48,6 +48,7 @@ defmodule SaladUI.Skeleton do
   def skeleton(assigns) do
     ~H"""
     <div
+      data-slot="skeleton"
       class={
         classes([
           "animate-pulse rounded-md bg-muted",

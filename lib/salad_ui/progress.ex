@@ -35,6 +35,7 @@ defmodule SaladUI.Progress do
 
     ~H"""
     <div
+      data-slot="progress"
       role="progressbar"
       aria-valuemin="0"
       aria-valuemax={@max || 100}
@@ -44,6 +45,7 @@ defmodule SaladUI.Progress do
       {@rest}
     >
       <div
+        data-slot="progress-indicator"
         class={
           classes([
             "size-full flex-1 bg-primary transition-all",

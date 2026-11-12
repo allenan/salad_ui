@@ -82,6 +82,7 @@ defmodule SaladUI.Tooltip do
 
     ~H"""
     <div
+      data-slot="tooltip"
       id={@id}
       class={classes(["relative inline-block", @class])}
       data-component="tooltip"
@@ -108,7 +109,7 @@ defmodule SaladUI.Tooltip do
 
   def tooltip_trigger(assigns) do
     ~H"""
-    <div data-part="trigger" class={classes(["", @class])} {@rest}>
+    <div data-slot="tooltip-trigger" data-part="trigger" class={classes(["", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """

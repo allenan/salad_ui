@@ -94,6 +94,7 @@ defmodule SaladUI.Slider do
 
     ~H"""
     <div
+      data-slot="slider"
       id={@id}
       class={classes(["relative", @disabled && "opacity-50", @class])}
       data-component="slider"
@@ -111,10 +112,10 @@ defmodule SaladUI.Slider do
       <div
         class="relative flex w-full touch-none select-none items-center"
       >
-        <div data-part="track" class="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
-          <div data-part="range" class="absolute h-full bg-primary" />
+        <div data-slot="slider-track" data-part="track" class="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
+          <div data-slot="slider-range" data-part="range" class="absolute h-full bg-primary" />
         </div>
-        <div
+        <div data-slot="slider-thumb"
           data-disabled={if @disabled, do: "true", else: nil}
           data-part="thumb"
           class={

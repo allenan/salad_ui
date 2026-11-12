@@ -1,6 +1,10 @@
 defmodule SaladUI.Menu do
   @moduledoc """
   Implement menu components
+
+  shadcn/ui has no standalone menu, so its parts carry `data-slot` names in
+  shadcn's `<component>-<part>` scheme: `menu`, `menu-group`, `menu-label`,
+  `menu-item`, `menu-shortcut` and `menu-separator`.
   """
   use SaladUI, :component
 
@@ -41,6 +45,7 @@ defmodule SaladUI.Menu do
   def menu(assigns) do
     ~H"""
     <div
+      data-slot="menu"
       class={[
         "min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
         @class
@@ -60,6 +65,7 @@ defmodule SaladUI.Menu do
   def menu_item(assigns) do
     ~H"""
     <div
+      data-slot="menu-item"
       class={
         classes([
           "hover:bg-accent",
@@ -82,7 +88,11 @@ defmodule SaladUI.Menu do
 
   def menu_label(assigns) do
     ~H"""
-    <div class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "pl-8", @class])} {@rest}>
+    <div
+      data-slot="menu-label"
+      class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "pl-8", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -93,7 +103,11 @@ defmodule SaladUI.Menu do
 
   def menu_separator(assigns) do
     ~H"""
-    <div role="separator" class={classes(["-mx-1 my-1 h-px bg-muted", @class])}>
+    <div
+      data-slot="menu-separator"
+      role="separator"
+      class={classes(["-mx-1 my-1 h-px bg-muted", @class])}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -105,7 +119,11 @@ defmodule SaladUI.Menu do
 
   def menu_shortcut(assigns) do
     ~H"""
-    <span class={classes(["ml-auto text-xs tracking-widest opacity-60", @class])} {@rest}>
+    <span
+      data-slot="menu-shortcut"
+      class={classes(["ml-auto text-xs tracking-widest opacity-60", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </span>
     """
@@ -117,7 +135,9 @@ defmodule SaladUI.Menu do
 
   def menu_group(assigns) do
     ~H"""
-    <div class={classes([@class])} role="group" {@rest}>{render_slot(@inner_block)}</div>
+    <div data-slot="menu-group" class={classes([@class])} role="group" {@rest}>
+      {render_slot(@inner_block)}
+    </div>
     """
   end
 end

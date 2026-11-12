@@ -45,6 +45,7 @@ defmodule SaladUI.Table do
   def table(assigns) do
     ~H"""
     <table
+      data-slot="table"
       class={classes(["w-full caption-bottom text-sm", @class])}
       aria-label={assigns[:"aria-label"]}
       aria-describedby={assigns[:"aria-describedby"]}
@@ -64,7 +65,11 @@ defmodule SaladUI.Table do
 
   def table_header(assigns) do
     ~H"""
-    <thead class={classes(["[&_tr]:border-b [&_tr]:border-border", @class])} {@rest}>
+    <thead
+      data-slot="table-header"
+      class={classes(["[&_tr]:border-b [&_tr]:border-border", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </thead>
     """
@@ -86,6 +91,7 @@ defmodule SaladUI.Table do
   def table_row(assigns) do
     ~H"""
     <tr
+      data-slot="table-row"
       class={
         classes([
           "border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
@@ -118,6 +124,7 @@ defmodule SaladUI.Table do
   def table_head(assigns) do
     ~H"""
     <th
+      data-slot="table-head"
       class={
         classes([
           "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
@@ -142,7 +149,7 @@ defmodule SaladUI.Table do
 
   def table_body(assigns) do
     ~H"""
-    <tbody class={classes(["[&_tr:last-child]:border-0", @class])} {@rest}>
+    <tbody data-slot="table-body" class={classes(["[&_tr:last-child]:border-0", @class])} {@rest}>
       {render_slot(@inner_block)}
     </tbody>
     """
@@ -161,7 +168,11 @@ defmodule SaladUI.Table do
 
   def table_cell(assigns) do
     ~H"""
-    <td class={classes(["p-4 align-middle [&:has([role=checkbox])]:pr-0", @class])} {@rest}>
+    <td
+      data-slot="table-cell"
+      class={classes(["p-4 align-middle [&:has([role=checkbox])]:pr-0", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </td>
     """
@@ -177,6 +188,7 @@ defmodule SaladUI.Table do
   def table_footer(assigns) do
     ~H"""
     <tfoot
+      data-slot="table-footer"
       class={
         classes([
           "border-t border-border bg-muted/50 font-medium [&>tr]:last:border-b-0",
@@ -201,7 +213,11 @@ defmodule SaladUI.Table do
 
   def table_caption(assigns) do
     ~H"""
-    <caption class={classes(["mt-4 text-sm text-muted-foreground", @class])} {@rest}>
+    <caption
+      data-slot="table-caption"
+      class={classes(["mt-4 text-sm text-muted-foreground", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </caption>
     """

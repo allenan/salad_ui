@@ -49,6 +49,7 @@ defmodule SaladUI.Avatar do
   def avatar(assigns) do
     ~H"""
     <span
+      data-slot="avatar"
       class={classes(["relative size-10 shrink-0 overflow-hidden rounded-full", @class])}
       {@rest}
     >
@@ -84,6 +85,7 @@ defmodule SaladUI.Avatar do
   def avatar_image(assigns) do
     ~H"""
     <img
+      data-slot="avatar-image"
       class={classes(["absolute inset-0 aspect-square size-full object-cover", @class])}
       onerror="this.remove()"
       {@rest}
@@ -116,6 +118,7 @@ defmodule SaladUI.Avatar do
   def avatar_fallback(assigns) do
     ~H"""
     <span
+      data-slot="avatar-fallback"
       class={classes(["flex size-full items-center justify-center rounded-full bg-muted", @class])}
       {@rest}
     >

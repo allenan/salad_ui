@@ -34,6 +34,7 @@ defmodule SaladUI.Card do
   def card(assigns) do
     ~H"""
     <div
+      data-slot="card"
       class={
         classes(["rounded-xl border border-border bg-card text-card-foreground shadow-sm", @class])
       }
@@ -53,7 +54,7 @@ defmodule SaladUI.Card do
 
   def card_header(assigns) do
     ~H"""
-    <div class={classes(["flex flex-col space-y-1.5 p-6", @class])} {@rest}>
+    <div data-slot="card-header" class={classes(["flex flex-col space-y-1.5 p-6", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -68,7 +69,11 @@ defmodule SaladUI.Card do
 
   def card_title(assigns) do
     ~H"""
-    <h3 class={classes(["text-2xl font-semibold leading-none tracking-tight", @class])} {@rest}>
+    <h3
+      data-slot="card-title"
+      class={classes(["text-2xl font-semibold leading-none tracking-tight", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </h3>
     """
@@ -83,7 +88,7 @@ defmodule SaladUI.Card do
 
   def card_description(assigns) do
     ~H"""
-    <p class={classes(["text-sm text-muted-foreground", @class])} {@rest}>
+    <p data-slot="card-description" class={classes(["text-sm text-muted-foreground", @class])} {@rest}>
       {render_slot(@inner_block)}
     </p>
     """
@@ -98,7 +103,7 @@ defmodule SaladUI.Card do
 
   def card_content(assigns) do
     ~H"""
-    <div class={classes(["p-6 pt-0", @class])} {@rest}>
+    <div data-slot="card-content" class={classes(["p-6 pt-0", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -113,7 +118,11 @@ defmodule SaladUI.Card do
 
   def card_footer(assigns) do
     ~H"""
-    <div class={classes(["flex items-center justify-between p-6 pt-0 ", @class])} {@rest}>
+    <div
+      data-slot="card-footer"
+      class={classes(["flex items-center justify-between p-6 pt-0 ", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """

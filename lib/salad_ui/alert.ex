@@ -67,6 +67,7 @@ defmodule SaladUI.Alert do
 
     ~H"""
     <div
+      data-slot="alert"
       role="alert"
       data-part="root"
       class={
@@ -104,6 +105,7 @@ defmodule SaladUI.Alert do
   def alert_title(assigns) do
     ~H"""
     <h5
+      data-slot="alert-title"
       class={
         classes([
           "mb-1 font-medium leading-none tracking-tight",
@@ -140,6 +142,7 @@ defmodule SaladUI.Alert do
   def alert_description(assigns) do
     ~H"""
     <div
+      data-slot="alert-description"
       class={
         classes([
           "text-sm [&_p]:leading-relaxed",

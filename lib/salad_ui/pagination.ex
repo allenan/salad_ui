@@ -39,6 +39,7 @@ defmodule SaladUI.Pagination do
   def pagination(assigns) do
     ~H"""
     <nav
+      data-slot="pagination"
       aria-label="pagination"
       role="pagination"
       class={
@@ -64,6 +65,7 @@ defmodule SaladUI.Pagination do
   def pagination_content(assigns) do
     ~H"""
     <ul
+      data-slot="pagination-content"
       class={
         classes([
           "flex flex-row items-center gap-1",
@@ -87,6 +89,7 @@ defmodule SaladUI.Pagination do
   def pagination_item(assigns) do
     ~H"""
     <li
+      data-slot="pagination-item"
       class={
         classes([
           "",
@@ -127,6 +130,7 @@ defmodule SaladUI.Pagination do
 
     ~H"""
     <.link
+      data-slot="pagination-link"
       aria-current={(assigns[:"is-active"] && "page") || ""}
       class={classes([@variation_class, @class])}
       {@rest}
@@ -203,6 +207,7 @@ defmodule SaladUI.Pagination do
   def pagination_ellipsis(assigns) do
     ~H"""
     <span
+      data-slot="pagination-ellipsis"
       class={
         classes([
           "flex size-9 items-center justify-center",

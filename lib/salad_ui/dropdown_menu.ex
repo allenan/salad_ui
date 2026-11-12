@@ -126,6 +126,7 @@ defmodule SaladUI.DropdownMenu do
 
     ~H"""
     <div
+      data-slot="dropdown-menu"
       id={@id}
       class={classes(["relative inline-block", @class])}
       data-component="dropdown-menu"
@@ -169,6 +170,7 @@ defmodule SaladUI.DropdownMenu do
     ~H"""
     <button
       :if={@as == "button"}
+      data-slot="dropdown-menu-trigger"
       type={@type || "button"}
       data-part="trigger"
       class={classes(["", @class])}
@@ -178,6 +180,7 @@ defmodule SaladUI.DropdownMenu do
     </button>
     <.dynamic
       :if={@as != "button"}
+      data-slot="dropdown-menu-trigger"
       tag={@as}
       type={@type}
       data-part="trigger"
@@ -228,6 +231,7 @@ defmodule SaladUI.DropdownMenu do
       hidden
     >
       <div
+        data-slot="dropdown-menu-content"
         data-part="content"
         data-side={@side}
         data-align={@align}
@@ -258,7 +262,13 @@ defmodule SaladUI.DropdownMenu do
 
   def dropdown_menu_group(assigns) do
     ~H"""
-    <div data-part="group" role="group" class={classes([@class])} {@rest}>
+    <div
+      data-slot="dropdown-menu-group"
+      data-part="group"
+      role="group"
+      class={classes([@class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -280,6 +290,7 @@ defmodule SaladUI.DropdownMenu do
   def dropdown_menu_label(assigns) do
     ~H"""
     <div
+      data-slot="dropdown-menu-label"
       data-part="label"
       class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "pl-8", @class])}
       {@rest}
@@ -317,6 +328,7 @@ defmodule SaladUI.DropdownMenu do
 
     ~H"""
     <.dynamic
+      data-slot="dropdown-menu-item"
       tag={@as}
       data-part="item"
       data-value={@value}
@@ -360,6 +372,7 @@ defmodule SaladUI.DropdownMenu do
 
     ~H"""
     <.link
+      data-slot="dropdown-menu-item"
       data-part="item"
       data-value={@value}
       data-disabled={@disabled}
@@ -409,6 +422,7 @@ defmodule SaladUI.DropdownMenu do
 
     ~H"""
     <div
+      data-slot="dropdown-menu-checkbox-item"
       data-part="checkbox-item"
       data-value={@value}
       data-disabled={@disabled}
@@ -465,6 +479,7 @@ defmodule SaladUI.DropdownMenu do
   def dropdown_menu_separator(assigns) do
     ~H"""
     <div
+      data-slot="dropdown-menu-separator"
       data-part="separator"
       role="separator"
       class={classes(["-mx-1 my-1 h-px bg-muted", @class])}
@@ -489,6 +504,7 @@ defmodule SaladUI.DropdownMenu do
   def dropdown_menu_shortcut(assigns) do
     ~H"""
     <span
+      data-slot="dropdown-menu-shortcut"
       data-part="shortcut"
       class={classes(["ml-auto text-xs tracking-widest opacity-60", @class])}
       {@rest}

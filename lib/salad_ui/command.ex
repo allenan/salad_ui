@@ -60,6 +60,7 @@ defmodule SaladUI.Command do
   def command(assigns) do
     ~H"""
     <div
+      data-slot="command"
       id={@id}
       tabindex="-1"
       data-component="command"
@@ -128,9 +129,14 @@ defmodule SaladUI.Command do
 
   def command_input(assigns) do
     ~H"""
-    <div data-part="input-wrapper" class="flex items-center border-b border-border px-3">
+    <div
+      data-slot="command-input-wrapper"
+      data-part="input-wrapper"
+      class="flex items-center border-b border-border px-3"
+    >
       <.icon name="hero-magnifying-glass" />
       <input
+        data-slot="command-input"
         type="text"
         data-part="input"
         autocomplete="off"
@@ -174,6 +180,7 @@ defmodule SaladUI.Command do
   def command_list(assigns) do
     ~H"""
     <div
+      data-slot="command-list"
       data-part="list"
       tabindex="-1"
       role="listbox"
@@ -207,6 +214,7 @@ defmodule SaladUI.Command do
   def command_empty(assigns) do
     ~H"""
     <div
+      data-slot="command-empty"
       data-visible="false"
       data-part="empty"
       class={classes(["py-6 text-center text-sm data-[visible=false]:hidden", @class])}
@@ -239,6 +247,7 @@ defmodule SaladUI.Command do
   def command_group(assigns) do
     ~H"""
     <div
+      data-slot="command-group"
       role="presentation"
       data-part="group"
       class="overflow-hidden p-1 text-foreground data-[visible=false]:hidden"
@@ -281,6 +290,7 @@ defmodule SaladUI.Command do
   def command_item(assigns) do
     ~H"""
     <button
+      data-slot="command-item"
       tabindex="-1"
       role="option"
       data-part="item"
@@ -316,6 +326,7 @@ defmodule SaladUI.Command do
   def command_shortcut(assigns) do
     ~H"""
     <span
+      data-slot="command-shortcut"
       data-part="shortcut"
       class={classes(["ml-auto text-xs tracking-widest text-muted-foreground", @class])}
     >

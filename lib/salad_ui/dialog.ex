@@ -91,6 +91,7 @@ defmodule SaladUI.Dialog do
 
     ~H"""
     <div
+      data-slot="dialog"
       id={@id}
       class="relative z-50 group/dialog"
       data-component="dialog"
@@ -112,7 +113,14 @@ defmodule SaladUI.Dialog do
 
   def dialog_trigger(assigns) do
     ~H"""
-    <.dynamic data-part="trigger" data-action="open" tag={@as} class={classes(["", @class])} {@rest}>
+    <.dynamic
+      data-slot="dialog-trigger"
+      data-part="trigger"
+      data-action="open"
+      tag={@as}
+      class={classes(["", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </.dynamic>
     """
@@ -123,13 +131,15 @@ defmodule SaladUI.Dialog do
 
   def dialog_content(assigns) do
     ~H"""
-    <div data-part="content" tabindex="0" hidden class="z-50">
+    <div data-slot="dialog-portal" data-part="content" tabindex="0" hidden class="z-50">
       <div
+        data-slot="dialog-overlay"
         data-part="overlay"
         class="fixed inset-0 bg-black/80  data-[state=open]/dialog:animate-in data-[state=closed]/dialog:animate-out data-[state=closed]/dialog:fade-out-0 data-[state=open]/dialog:fade-in-0"
       />
 
       <div
+        data-slot="dialog-content"
         data-part="content-panel"
         class={
           classes([
@@ -141,6 +151,7 @@ defmodule SaladUI.Dialog do
         {render_slot(@inner_block)}
 
         <button
+          data-slot="dialog-close"
           type="button"
           data-part="close-trigger"
           data-action="close"
@@ -173,7 +184,10 @@ defmodule SaladUI.Dialog do
 
   def dialog_header(assigns) do
     ~H"""
-    <div class={classes(["flex flex-col space-y-1.5 text-center sm:text-left", @class])}>
+    <div
+      data-slot="dialog-header"
+      class={classes(["flex flex-col space-y-1.5 text-center sm:text-left", @class])}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -185,6 +199,7 @@ defmodule SaladUI.Dialog do
   def dialog_title(assigns) do
     ~H"""
     <h3
+      data-slot="dialog-title"
       data-part="title"
       class={classes(["text-lg font-semibold leading-none tracking-tight", @class])}
     >
@@ -198,7 +213,11 @@ defmodule SaladUI.Dialog do
 
   def dialog_description(assigns) do
     ~H"""
-    <p data-part="description" class={classes(["text-sm text-muted-foreground", @class])}>
+    <p
+      data-slot="dialog-description"
+      data-part="description"
+      class={classes(["text-sm text-muted-foreground", @class])}
+    >
       {render_slot(@inner_block)}
     </p>
     """
@@ -209,7 +228,10 @@ defmodule SaladUI.Dialog do
 
   def dialog_footer(assigns) do
     ~H"""
-    <div class={classes(["flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", @class])}>
+    <div
+      data-slot="dialog-footer"
+      class={classes(["flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", @class])}
+    >
       {render_slot(@inner_block)}
     </div>
     """

@@ -75,6 +75,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb(assigns) do
     ~H"""
     <nav
+      data-slot="breadcrumb"
       aria-label="breadcrumb"
       class={
         classes([
@@ -105,6 +106,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_list(assigns) do
     ~H"""
     <ol
+      data-slot="breadcrumb-list"
       class={
         classes([
           "flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5",
@@ -134,6 +136,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_item(assigns) do
     ~H"""
     <li
+      data-slot="breadcrumb-item"
       class={
         classes([
           "inline-flex items-center gap-1.5",
@@ -164,6 +167,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_link(assigns) do
     ~H"""
     <.link
+      data-slot="breadcrumb-link"
       class={
         classes([
           "transition-colors hover:text-foreground",
@@ -194,6 +198,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_page(assigns) do
     ~H"""
     <span
+      data-slot="breadcrumb-page"
       role="link"
       aria-disabled="true"
       aria-current="page"
@@ -226,6 +231,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_separator(assigns) do
     ~H"""
     <li
+      data-slot="breadcrumb-separator"
       role="presentation"
       class={
         classes([
@@ -265,6 +271,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_ellipsis(assigns) do
     ~H"""
     <div
+      data-slot="breadcrumb-ellipsis"
       class={
         classes([
           "flex size-9 items-center justify-center",

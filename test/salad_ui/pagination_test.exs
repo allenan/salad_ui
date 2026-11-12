@@ -35,7 +35,7 @@ defmodule SaladUi.PaginationTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ "<li class=\"\""
+      assert html =~ ~s(<li data-slot="pagination-item" class="")
       assert html =~ "</li>"
       assert html =~ "Item writings"
     end

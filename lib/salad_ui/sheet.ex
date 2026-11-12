@@ -94,6 +94,7 @@ defmodule SaladUI.Sheet do
 
     ~H"""
     <div
+      data-slot="sheet"
       id={@id}
       class={classes(["relative inline-block", @class])}
       data-component="dialog"
@@ -119,6 +120,7 @@ defmodule SaladUI.Sheet do
   def sheet_trigger(assigns) do
     ~H"""
     <div
+      data-slot="sheet-trigger"
       data-part="trigger"
       data-action="open"
       class={classes(["", @class])}
@@ -143,11 +145,15 @@ defmodule SaladUI.Sheet do
   slot :inner_block, required: true
 
   def sheet_content(assigns) do
-    assigns = assign(assigns, :variant_class, sheet_variants(assigns))
+    assigns =
+      assigns
+      |> assign(:variant_class, sheet_variants(assigns))
+      |> put_data_slot("sheet-content")
 
     ~H"""
-    <div data-part="content" tabindex="0" hidden>
+    <div data-slot="sheet-portal" data-part="content" tabindex="0" hidden>
       <div
+        data-slot="sheet-overlay"
         data-part="overlay"
         class="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300 data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       />
@@ -170,6 +176,7 @@ defmodule SaladUI.Sheet do
         </div>
 
         <button
+          data-slot="sheet-close"
           type="button"
           data-part="close-trigger"
           data-action="close"
@@ -202,7 +209,11 @@ defmodule SaladUI.Sheet do
 
   def sheet_header(assigns) do
     ~H"""
-    <div class={classes(["flex flex-col space-y-1.5 text-center sm:text-left", @class])} {@rest}>
+    <div
+      data-slot="sheet-header"
+      class={classes(["flex flex-col space-y-1.5 text-center sm:text-left", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -218,6 +229,7 @@ defmodule SaladUI.Sheet do
   def sheet_title(assigns) do
     ~H"""
     <h3
+      data-slot="sheet-title"
       data-part="title"
       class={classes(["flex flex-col space-y-2 text-center sm:text-left", @class])}
       {@rest}
@@ -236,7 +248,12 @@ defmodule SaladUI.Sheet do
 
   def sheet_description(assigns) do
     ~H"""
-    <p data-part="description" class={classes(["text-sm text-muted-foreground", @class])} {@rest}>
+    <p
+      data-slot="sheet-description"
+      data-part="description"
+      class={classes(["text-sm text-muted-foreground", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </p>
     """
@@ -252,6 +269,7 @@ defmodule SaladUI.Sheet do
   def sheet_footer(assigns) do
     ~H"""
     <div
+      data-slot="sheet-footer"
       class={classes(["flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", @class])}
       {@rest}
     >
@@ -269,7 +287,13 @@ defmodule SaladUI.Sheet do
 
   def sheet_close(assigns) do
     ~H"""
-    <div data-part="close-trigger" data-action="close" class={classes(["", @class])} {@rest}>
+    <div
+      data-slot="sheet-close"
+      data-part="close-trigger"
+      data-action="close"
+      class={classes(["", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """

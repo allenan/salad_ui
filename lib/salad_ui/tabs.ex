@@ -68,6 +68,7 @@ defmodule SaladUI.Tabs do
 
     ~H"""
     <div
+      data-slot="tabs"
       id={@id}
       class={classes(["", @class])}
       data-component="tabs"
@@ -93,6 +94,7 @@ defmodule SaladUI.Tabs do
   def tabs_list(assigns) do
     ~H"""
     <div
+      data-slot="tabs-list"
       data-part="list"
       class={
         classes([
@@ -119,6 +121,7 @@ defmodule SaladUI.Tabs do
   def tabs_trigger(assigns) do
     ~H"""
     <button
+      data-slot="tabs-trigger"
       type="button"
       data-part="trigger"
       data-value={@value}
@@ -149,6 +152,7 @@ defmodule SaladUI.Tabs do
   def tabs_content(assigns) do
     ~H"""
     <div
+      data-slot="tabs-content"
       data-part="content"
       data-value={@value}
       data-state="inactive"

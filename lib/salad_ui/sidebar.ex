@@ -25,6 +25,7 @@ defmodule SaladUI.Sidebar do
 
     ~H"""
     <div
+      data-slot="sidebar-wrapper"
       style={
         style([
           %{
@@ -65,6 +66,7 @@ defmodule SaladUI.Sidebar do
   def sidebar(%{collapsible: "none"} = assigns) do
     ~H"""
     <div
+      data-slot="sidebar"
       class={
         classes([
           "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
@@ -85,6 +87,7 @@ defmodule SaladUI.Sidebar do
     ~H"""
     <.sheet id={@id}>
       <.sheet_content
+        data-slot="sidebar"
         data-sidebar="sidebar"
         data-mobile="true"
         class="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
@@ -110,6 +113,7 @@ defmodule SaladUI.Sidebar do
   def sidebar(assigns) do
     ~H"""
     <div
+      data-slot="sidebar"
       class="group peer hidden md:block text-sidebar-foreground sidebar-root"
       data-state={@state}
       data-collapsible={(@state == "collapsed" && @collapsible) || "none"}
@@ -118,17 +122,21 @@ defmodule SaladUI.Sidebar do
       id={@id}
       phx-toggle-sidebar={toggle_sidebar({"none", @collapsible})}
     >
-      <div class={
-        classes([
-          "duration-200 relative h-svh w-(--sidebar-width) bg-transparent transition-[width] ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-[side=right]:rotate-180",
-          ((@variant == "floating" || @variant == "inset") &&
-             "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_1rem)]") ||
-            "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
-        ])
-      } />
       <div
+        data-slot="sidebar-gap"
+        class={
+          classes([
+            "duration-200 relative h-svh w-(--sidebar-width) bg-transparent transition-[width] ease-linear",
+            "group-data-[collapsible=offcanvas]:w-0",
+            "group-data-[side=right]:rotate-180",
+            ((@variant == "floating" || @variant == "inset") &&
+               "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_1rem)]") ||
+              "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
+          ])
+        }
+      />
+      <div
+        data-slot="sidebar-container"
         class={
           classes([
             "duration-200 fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] ease-linear md:flex",
@@ -144,6 +152,7 @@ defmodule SaladUI.Sidebar do
         {@rest}
       >
         <div
+          data-slot="sidebar-inner"
           data-sidebar="sidebar"
           class="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
         >
@@ -165,6 +174,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_trigger(assigns) do
     ~H"""
     <.dynamic
+      data-slot="sidebar-trigger"
       tag={@as}
       data-sidebar="trigger"
       variant="ghost"
@@ -202,6 +212,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_rail(assigns) do
     ~H"""
     <button
+      data-slot="sidebar-rail"
       data-sidebar="rail"
       aria-label="Toggle Sidebar"
       tabindex={-1}
@@ -233,6 +244,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_inset(assigns) do
     ~H"""
     <main
+      data-slot="sidebar-inset"
       class={
         classes([
           "relative flex min-h-svh flex-1 flex-col bg-background",
@@ -279,6 +291,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_header(assigns) do
     ~H"""
     <div
+      data-slot="sidebar-header"
       data-sidebar="header"
       class={
         classes([
@@ -303,6 +316,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_footer(assigns) do
     ~H"""
     <div
+      data-slot="sidebar-footer"
       data-sidebar="footer"
       class={
         classes([
@@ -326,6 +340,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_separator(assigns) do
     ~H"""
     <.separator
+      data-slot="sidebar-separator"
       data-sidebar="separator"
       class={classes(["mx-2 w-auto bg-sidebar-border", @class])}
       {@rest}
@@ -343,6 +358,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_content(assigns) do
     ~H"""
     <div
+      data-slot="sidebar-content"
       data-sidebar="content"
       class={
         classes([
@@ -368,6 +384,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_group(assigns) do
     ~H"""
     <div
+      data-slot="sidebar-group"
       data-sidebar="group"
       class={
         classes([
@@ -394,6 +411,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_group_label(assigns) do
     ~H"""
     <.dynamic
+      data-slot="sidebar-group-label"
       data-sidebar="group-label"
       tag={@as}
       class={
@@ -423,6 +441,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_group_action(assigns) do
     ~H"""
     <button
+      data-slot="sidebar-group-action"
       data-sidebar="group-action"
       class={
         classes([
@@ -449,6 +468,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_group_content(assigns) do
     ~H"""
     <div
+      data-slot="sidebar-group-content"
       data-sidebar="group-content"
       class={
         classes([
@@ -473,6 +493,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu(assigns) do
     ~H"""
     <ul
+      data-slot="sidebar-menu"
       data-sidebar="menu"
       class={
         classes([
@@ -497,6 +518,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_item(assigns) do
     ~H"""
     <li
+      data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
       class={
         classes([
@@ -528,6 +550,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_button(assigns) do
     button = ~H"""
     <.dynamic
+      data-slot="sidebar-menu-button"
       tag={@as}
       data-sidebar="menu-button"
       data-size={@size}
@@ -568,6 +591,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_action(assigns) do
     ~H"""
     <button
+      data-slot="sidebar-menu-action"
       data-sidebar="menu-action"
       class={
         classes([
@@ -599,6 +623,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_badge(assigns) do
     ~H"""
     <div
+      data-slot="sidebar-menu-badge"
       data-sidebar="menu-badge"
       class={
         classes([
@@ -630,6 +655,7 @@ defmodule SaladUI.Sidebar do
 
     ~H"""
     <div
+      data-slot="sidebar-menu-skeleton"
       data-sidebar="menu-skeleton"
       class={classes(["rounded-md h-8 flex gap-2 px-2 items-center", @class])}
       {@rest}
@@ -660,6 +686,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_sub(assigns) do
     ~H"""
     <ul
+      data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
       class={
         classes([
@@ -685,6 +712,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_sub_item(assigns) do
     ~H"""
     <li
+      data-slot="sidebar-menu-sub-item"
       class={
         classes([
           @class
@@ -710,6 +738,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_sub_button(assigns) do
     ~H"""
     <.dynamic
+      data-slot="sidebar-menu-sub-button"
       tag={@as}
       data-sidebar="menu-sub-button"
       data-size={@size}

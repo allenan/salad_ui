@@ -47,7 +47,7 @@ defmodule SaladUI.ToggleGroup do
     ensure_valid_value_type!(assigns)
 
     ~H"""
-    <div class={classes(["flex items-center justify-center gap-1", @class])}>
+    <div data-slot="toggle-group" class={classes(["flex items-center justify-center gap-1", @class])}>
       {render_slot(@inner_block, assigns)}
     </div>
     """
@@ -81,6 +81,7 @@ defmodule SaladUI.ToggleGroup do
 
     ~H"""
     <button
+      data-slot="toggle-group-item"
       onclick="this.querySelector('.toggle-input').click()"
       type="button"
       disabled={@disabled || @builder.disabled}
@@ -114,6 +115,7 @@ defmodule SaladUI.ToggleGroup do
 
     ~H"""
     <button
+      data-slot="toggle-group-item"
       onclick="this.querySelector('.toggle-input').click()"
       type="button"
       disabled={@disabled || @builder.disabled}

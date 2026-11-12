@@ -80,6 +80,7 @@ defmodule SaladUI.Collapsible do
 
     ~H"""
     <div
+      data-slot="collapsible"
       id={@id}
       class={classes(["relative", @class])}
       data-component="collapsible"
@@ -106,6 +107,7 @@ defmodule SaladUI.Collapsible do
   def collapsible_trigger(assigns) do
     ~H"""
     <.dynamic
+      data-slot="collapsible-trigger"
       data-part="trigger"
       data-action="toggle"
       tag={@as}
@@ -129,6 +131,7 @@ defmodule SaladUI.Collapsible do
   def collapsible_content(assigns) do
     ~H"""
     <div
+      data-slot="collapsible-content"
       data-part="content"
       hidden
       class={

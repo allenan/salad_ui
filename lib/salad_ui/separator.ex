@@ -22,6 +22,8 @@ defmodule SaladUI.Separator do
   attr :rest, :global, include: ~w(disabled form name value)
 
   def separator(assigns) do
+    assigns = put_data_slot(assigns, "separator")
+
     ~H"""
     <div
       role="separator"

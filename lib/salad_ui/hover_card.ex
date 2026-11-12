@@ -81,6 +81,7 @@ defmodule SaladUI.HoverCard do
 
     ~H"""
     <div
+      data-slot="hover-card"
       id={@id}
       class={classes(["inline-block relative", @class])}
       data-component="hover-card"
@@ -105,7 +106,7 @@ defmodule SaladUI.HoverCard do
 
   def hover_card_trigger(assigns) do
     ~H"""
-    <div data-part="trigger" class={classes(["", @class])} {@rest}>
+    <div data-slot="hover-card-trigger" data-part="trigger" class={classes(["", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -139,6 +140,7 @@ defmodule SaladUI.HoverCard do
 
     ~H"""
     <div
+      data-slot="hover-card-portal"
       data-part="content"
       data-side={@side}
       data-align={@align}
@@ -149,6 +151,7 @@ defmodule SaladUI.HoverCard do
       {@rest}
     >
       <div
+        data-slot="hover-card-content"
         data-side={@side}
         class={
           classes([

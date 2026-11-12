@@ -60,6 +60,7 @@ defmodule SaladUI.Chart do
 
     ~H"""
     <canvas
+      data-slot="chart"
       id={@id}
       name={@name}
       phx-hook="SaladUI"

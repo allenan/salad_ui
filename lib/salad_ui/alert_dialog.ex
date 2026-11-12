@@ -87,6 +87,7 @@ defmodule SaladUI.AlertDialog do
 
     ~H"""
     <div
+      data-slot="alert-dialog"
       id={@id}
       class={classes(["relative z-50 group/alert-dialog", @class])}
       data-component="dialog"
@@ -112,7 +113,14 @@ defmodule SaladUI.AlertDialog do
 
   def alert_dialog_trigger(assigns) do
     ~H"""
-    <.dynamic data-part="trigger" data-action="open" tag={@as} class={classes(["", @class])} {@rest}>
+    <.dynamic
+      data-slot="alert-dialog-trigger"
+      data-part="trigger"
+      data-action="open"
+      tag={@as}
+      class={classes(["", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </.dynamic>
     """
@@ -128,12 +136,14 @@ defmodule SaladUI.AlertDialog do
 
   def alert_dialog_content(assigns) do
     ~H"""
-    <div data-part="content" tabindex="0" hidden class="z-50">
+    <div data-slot="alert-dialog-portal" data-part="content" tabindex="0" hidden class="z-50">
       <div
+        data-slot="alert-dialog-overlay"
         data-part="overlay"
         class="fixed inset-0 z-50 bg-black/80 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
       />
       <div
+        data-slot="alert-dialog-content"
         data-part="content-panel"
         class={
           classes([
@@ -160,6 +170,7 @@ defmodule SaladUI.AlertDialog do
   def alert_dialog_header(assigns) do
     ~H"""
     <div
+      data-slot="alert-dialog-header"
       class={
         classes([
           "flex flex-col space-y-2 text-center sm:text-left",
@@ -183,6 +194,7 @@ defmodule SaladUI.AlertDialog do
   def alert_dialog_title(assigns) do
     ~H"""
     <h2
+      data-slot="alert-dialog-title"
       data-part="title"
       class={
         classes([
@@ -207,6 +219,7 @@ defmodule SaladUI.AlertDialog do
   def alert_dialog_description(assigns) do
     ~H"""
     <p
+      data-slot="alert-dialog-description"
       data-part="description"
       class={
         classes([
@@ -231,6 +244,7 @@ defmodule SaladUI.AlertDialog do
   def alert_dialog_footer(assigns) do
     ~H"""
     <div
+      data-slot="alert-dialog-footer"
       class={
         classes([
           "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
@@ -258,6 +272,7 @@ defmodule SaladUI.AlertDialog do
 
     ~H"""
     <button
+      data-slot="alert-dialog-cancel"
       type="button"
       data-part="cancel"
       data-action="close"
@@ -289,6 +304,7 @@ defmodule SaladUI.AlertDialog do
 
     ~H"""
     <button
+      data-slot="alert-dialog-action"
       type="button"
       data-part="action"
       data-action="close"

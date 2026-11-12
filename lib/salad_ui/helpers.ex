@@ -113,6 +113,19 @@ defmodule SaladUI.Helpers do
   end
 
   @doc """
+  Sets shadcn's `data-slot` on the `:rest` global attributes unless the caller
+  already passed one.
+
+  Use it in components that other components wrap and re-label, the way shadcn
+  does (e.g. `sidebar_separator` renders `separator` with
+  `data-slot="sidebar-separator"`). A literal `data-slot` in the template would
+  render the attribute twice, and the browser keeps the first one.
+  """
+  def put_data_slot(assigns, slot) do
+    assign(assigns, :rest, Map.put_new(assigns[:rest] || %{}, :"data-slot", slot))
+  end
+
+  @doc """
   Builds a map of client event mappings from all assigned `on-*` attributes.
 
   Each `on-*` attribute (e.g. `on-open`, `on-value-changed`) is mapped to its bare

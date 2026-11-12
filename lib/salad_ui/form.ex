@@ -60,7 +60,7 @@ defmodule SaladUI.Form do
 
   def form_item(assigns) do
     ~H"""
-    <div class={classes(["space-y-2", @class])} {@rest}>
+    <div data-slot="form-item" class={classes(["space-y-2", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -95,6 +95,7 @@ defmodule SaladUI.Form do
 
     ~H"""
     <SaladUI.Label.label
+      data-slot="form-label"
       for={(@field && @field.id) || @for}
       class={
         classes([
@@ -143,7 +144,7 @@ defmodule SaladUI.Form do
 
   def form_description(assigns) do
     ~H"""
-    <p class={classes(["text-muted-foreground text-sm", @class])} {@rest}>
+    <p data-slot="form-description" class={classes(["text-muted-foreground text-sm", @class])} {@rest}>
       {render_slot(@inner_block)}
     </p>
     """
@@ -193,6 +194,7 @@ defmodule SaladUI.Form do
     ~H"""
     <p
       :if={(msg = render_slot(@inner_block)) || @error}
+      data-slot="form-message"
       class={classes(["text-sm font-medium", (msg || @error) && "text-destructive", @class])}
       {@rest}
     >
