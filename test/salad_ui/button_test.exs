@@ -16,7 +16,7 @@ defmodule SaladUI.ButtonTest do
       assert html =~ "<button class=\"phx-submit-loading:opacity-75 inline-flex"
 
       for class <-
-            ~w(inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90) do
+            ~w(inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 bg-primary text-primary-foreground shadow-xs hover:bg-primary/90) do
         assert html =~ class
       end
     end
@@ -45,7 +45,8 @@ defmodule SaladUI.ButtonTest do
       assert html =~ "phx-click=\"go\""
       assert html =~ "Destructive act"
 
-      for class <- ~w(bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90) do
+      for class <-
+            ~w(bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40) do
         assert html =~ class
       end
     end

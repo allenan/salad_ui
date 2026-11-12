@@ -156,7 +156,7 @@ defmodule SaladUI.Dialog do
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="lucide lucide-x h-4 w-4"
+            class="lucide lucide-x size-4"
           >
             <path d="M18 6 6 18"></path>
             <path d="m6 6 12 12"></path>

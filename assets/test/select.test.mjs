@@ -43,15 +43,18 @@ function buildSelect({
   inForm = false,
   extraHidden = false,
   disabled = false,
+  invalid = false,
+  triggerAttrs = "",
 } = {}) {
   const options = { name, multiple, value, defaultValue, usePortal: false };
   const root = `
     <div id="${id}" data-component="select" data-state="closed"
          data-disabled="${disabled}"
+         ${invalid ? 'data-invalid="true"' : ""}
          data-options='${JSON.stringify(options)}'
          data-event-mappings='{"value-changed":"value_changed"}'
          data-part="root">
-      <button type="button" data-part="trigger" ${disabled ? "disabled" : ""}>
+      <button type="button" data-part="trigger" ${disabled ? "disabled" : ""} ${triggerAttrs}>
         <span data-part="value" data-placeholder="Choose one">Choose one</span>
       </button>
       <div data-part="content" hidden>
@@ -107,6 +110,27 @@ function keydown(el, key) {
   el.dispatchEvent(event);
   return event;
 }
+
+test("root data-invalid is mirrored onto the trigger as aria-invalid", () => {
+  const { trigger } = buildSelect({ invalid: true });
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "true");
+});
+
+test("trigger has no aria-invalid when the root is not invalid", () => {
+  const { trigger } = buildSelect();
+
+  assert.equal(trigger.hasAttribute("aria-invalid"), false);
+});
+
+test("an explicit trigger aria-invalid wins over root data-invalid", () => {
+  const { trigger } = buildSelect({
+    invalid: true,
+    triggerAttrs: 'aria-invalid="false"',
+  });
+
+  assert.equal(trigger.getAttribute("aria-invalid"), "false");
+});
 
 test("trigger keyboard opens select and focuses the selected item", () => {
   const { content, item, trigger } = buildSelect({ value: "banana" });

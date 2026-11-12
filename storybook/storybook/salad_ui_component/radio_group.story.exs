@@ -152,6 +152,29 @@ defmodule Storybook.SaladUIComponents.RadioGroup do
           "on-value-changed": "handle_radio_group_change",
           "aria-label": "Question 6"
         }
+      },
+      %Variation{
+        id: :invalid,
+        description: ~s|Error styling via aria-invalid on the group (set automatically when a form field has errors)|,
+        slots: [
+          """
+          <div class="flex flex-col space-y-2">
+            <div class="flex items-center space-x-2">
+              <.radio_group_item value="option-one" id="option-one-invalid" />
+              <.label for="option-one-invalid">Option One</.label>
+            </div>
+            <div class="flex items-center space-x-2">
+              <.radio_group_item value="option-two" id="option-two-invalid" />
+              <.label for="option-two-invalid">Option Two</.label>
+            </div>
+          </div>
+          """
+        ],
+        attributes: %{
+          name: "question-7",
+          "aria-label": "Question 7",
+          "aria-invalid": "true"
+        }
       }
     ]
   end

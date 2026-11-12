@@ -89,7 +89,15 @@ defmodule SaladUI.HelperTest do
   end
 
   test "build error with custom translation function" do
+    previous = Application.fetch_env(:salad_ui, :error_translator_function)
     Application.put_env(:salad_ui, :error_translator_function, {__MODULE__, :translate_error})
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(:salad_ui, :error_translator_function, value)
+        :error -> Application.delete_env(:salad_ui, :error_translator_function)
+      end
+    end)
 
     assigns = %{
       __changed__: %{},

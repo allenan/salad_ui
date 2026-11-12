@@ -13,10 +13,10 @@ defmodule SaladUI.Avatar do
         <.avatar_fallback>JD</.avatar_fallback>
       </.avatar>
 
-      <.avatar class="h-12 w-12">
+      <.avatar class="size-12">
         <.avatar_image src={@user.avatar_url} alt={@user.name} />
         <.avatar_fallback>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
             <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0zm-5.5-2.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM10 12a5.99 5.99 0 0 0-4.793 2.39A6.483 6.483 0 0 0 10 16.5a6.483 6.483 0 0 0 4.793-2.11A5.99 5.99 0 0 0 10 12z" clip-rule="evenodd" />
           </svg>
         </.avatar_fallback>
@@ -40,7 +40,7 @@ defmodule SaladUI.Avatar do
         <.avatar_fallback>JD</.avatar_fallback>
       </.avatar>
 
-      <.avatar class="h-16 w-16">...</.avatar>
+      <.avatar class="size-16">...</.avatar>
   """
   attr :class, :string, default: nil
   attr :rest, :global
@@ -49,7 +49,7 @@ defmodule SaladUI.Avatar do
   def avatar(assigns) do
     ~H"""
     <span
-      class={classes(["relative h-10 w-10 shrink-0 overflow-hidden rounded-full", @class])}
+      class={classes(["relative size-10 shrink-0 overflow-hidden rounded-full", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

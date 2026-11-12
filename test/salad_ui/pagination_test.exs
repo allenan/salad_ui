@@ -53,7 +53,7 @@ defmodule SaladUi.PaginationTest do
       assert html =~ ~r/<a[^>]*aria-current=""[^>]*>3<\/a>/
 
       for css_class <-
-            ~w(inline-flex rounded-md transition-colors whitespace-nowrap items-center justify-center font-medium text-sm w-9 h-9 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground) do
+            ~w(inline-flex rounded-md transition-all whitespace-nowrap items-center justify-center font-medium text-sm size-9 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground) do
         assert html =~ css_class
       end
     end

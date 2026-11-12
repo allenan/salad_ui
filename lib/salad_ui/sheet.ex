@@ -181,7 +181,7 @@ defmodule SaladUI.Sheet do
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-5 h-5"
+            class="size-5"
           >
             <path d="M18 6 6 18"></path>
             <path d="m6 6 12 12"></path>

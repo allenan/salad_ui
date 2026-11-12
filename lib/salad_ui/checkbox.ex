@@ -31,6 +31,7 @@ defmodule SaladUI.Checkbox do
   * `:disabled` - Whether the checkbox is disabled
   * `:field` - A Phoenix form field
   * `:class` - Additional classes to add to the checkbox
+  * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
   """
   attr :name, :any, default: nil
   attr :value, :any, default: nil
@@ -41,18 +42,24 @@ defmodule SaladUI.Checkbox do
 
   def checkbox(assigns) do
     assigns =
-      prepare_assign(assigns)
+      assigns
+      |> prepare_assign()
+      |> put_aria_invalid()
 
     assigns =
       assign_new(assigns, :checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", assigns.value) end)
 
+    # `focus:ring-0 focus:ring-offset-0` neutralises @tailwindcss/forms'
+    # `[type=checkbox]:focus` ring (2px blue, 2px offset), which would
+    # otherwise show on mouse focus; `focus-visible:` restores shadcn's ring.
     ~H"""
     <input type="hidden" name={@name} value="false" />
     <input
       type="checkbox"
       class={
         classes([
-          "peer h-4 w-4 shrink-0 rounded-xs border border-primary shadow-sm focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 checked:bg-primary checked:focus:bg-primary checked:hover:bg-primary checked:text-primary-foreground",
+          "peer size-4 shrink-0 rounded-[4px] border border-input bg-transparent shadow-xs transition-shadow outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 checked:border-primary checked:bg-primary checked:text-primary-foreground dark:bg-input/30 dark:aria-invalid:ring-destructive/40 dark:checked:bg-primary",
+          "focus:ring-0 focus:ring-offset-0",
           @class
         ])
       }

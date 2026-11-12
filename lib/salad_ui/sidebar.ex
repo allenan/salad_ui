@@ -169,7 +169,7 @@ defmodule SaladUI.Sidebar do
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      class={classes(["h-7 w-7", @class])}
+      class={classes(["size-7", @class])}
       phx-click={JS.exec("phx-toggle-sidebar", to: "#" <> @target)}
       {@rest}
     >
@@ -183,7 +183,7 @@ defmodule SaladUI.Sidebar do
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="h-4 w-4"
+        class="size-4"
       >
         <rect width="18" height="18" x="3" y="3" rx="2"></rect>
         <path d="M9 3v18"></path>
@@ -735,7 +735,7 @@ defmodule SaladUI.Sidebar do
       variant: %{
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]"
+          "bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]"
       },
       size: %{
         default: "h-8 text-sm",

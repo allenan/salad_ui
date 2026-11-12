@@ -103,7 +103,7 @@ defmodule SaladUI.SidebarTest do
         |> clean_string()
 
       assert html =~ "data-sidebar=\"trigger\""
-      assert html =~ "h-7 w-7"
+      assert html =~ "size-7"
       assert html =~ "custom-class"
       assert html =~ "Toggle"
       assert html =~ "Toggle Sidebar"

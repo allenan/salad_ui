@@ -31,5 +31,5 @@
 
 .psb-text-indigo-600,
 .group-hover\:psb-text-indigo-600 {
-    color: hsl(var(--primary)) !important;
+    color: var(--primary) !important;
 }

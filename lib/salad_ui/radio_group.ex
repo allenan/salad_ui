@@ -30,6 +30,12 @@ defmodule SaladUI.RadioGroup do
 
   Radio group does not support `SaladUI.LiveView.send_command/4`. To change the
   selected value from the server, update the `value` assign and let LiveView re-render.
+
+  ## Validation
+
+  When `field` has errors the group renders `aria-invalid="true"` on its
+  `role="radiogroup"` root and every item picks up the destructive error styling.
+  Pass `aria-invalid` to the group (or a single item) to set it explicitly.
   """
   use SaladUI, :component
 
@@ -51,7 +57,11 @@ defmodule SaladUI.RadioGroup do
   slot :inner_block, required: true
 
   def radio_group(assigns) do
-    assigns = prepare_assign(assigns)
+    assigns =
+      assigns
+      |> prepare_assign()
+      |> put_aria_invalid()
+
     assigns = assign_new(assigns, :id, fn -> "radio-group-#{System.unique_integer()}" end)
 
     # Collect event mappings
@@ -71,7 +81,7 @@ defmodule SaladUI.RadioGroup do
     ~H"""
     <div
       id={@id}
-      class={classes(["grid gap-2", @class])}
+      class={classes(["group/radio-group grid gap-2", @class])}
       data-component="radio-group"
       data-state="idle"
       data-options={@options}
@@ -104,7 +114,8 @@ defmodule SaladUI.RadioGroup do
       class={
         classes([
           "group/item",
-          "relative aspect-square h-4 w-4 rounded-full border border-primary text-primary focus:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50 inline-flex",
+          "relative inline-flex aspect-square size-4 shrink-0 rounded-full border border-input text-primary shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:ring-destructive/40",
+          "group-aria-invalid/radio-group:border-destructive group-aria-invalid/radio-group:ring-destructive/20 dark:group-aria-invalid/radio-group:ring-destructive/40",
           @class
         ])
       }
@@ -123,7 +134,7 @@ defmodule SaladUI.RadioGroup do
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="lucide lucide-circle absolute top-1/2 left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 fill-current text-current"
+          class="lucide lucide-circle absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 fill-current text-current"
         >
           <circle cx="12" cy="12" r="10"></circle>
         </svg>

@@ -20,6 +20,15 @@ defmodule Storybook.SaladUIComponents.Textarea do
           disabled: true,
           placeholder: "I'm disabled"
         }
+      },
+      %Variation{
+        id: :textarea_invalid,
+        description: ~s|Error styling via aria-invalid (set automatically when a form field has errors)|,
+        attributes: %{
+          name: "my-textarea",
+          placeholder: "Type your message here",
+          "aria-invalid": "true"
+        }
       }
     ]
   end

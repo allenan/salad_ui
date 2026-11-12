@@ -22,7 +22,7 @@ defmodule SaladUI.Alert do
 
       <.alert>
         <span class="mr-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24">
+          <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24">
             <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M9 12l2 2l4-4"></path>
           </svg>
         </span>

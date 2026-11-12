@@ -39,6 +39,13 @@ defmodule SaladUI.Select do
 
   Changing the selected value from the server is done through the controlled
   `value` assign rather than `SaladUI.LiveView.send_command/4`.
+
+  ## Validation
+
+  When `field` has errors the root renders `data-invalid="true"`: the trigger
+  picks up the destructive error styling and the JS hook mirrors it onto the
+  trigger as `aria-invalid="true"`. You can also pass `aria-invalid` to
+  `select_trigger/1` directly, as in shadcn.
   """
   use SaladUI, :component
 
@@ -83,6 +90,7 @@ defmodule SaladUI.Select do
 
   def select(assigns) do
     assigns = prepare_assign(assigns)
+    assigns = assign(assigns, :invalid, invalid?(assigns))
 
     # Collect event mappings
     event_map = event_mappings(assigns)
@@ -106,9 +114,10 @@ defmodule SaladUI.Select do
     ~H"""
     <div
       id={@id}
-      class={classes(["relative inline-flex", @class])}
+      class={classes(["group/select relative inline-flex", @class])}
       data-part="root"
       data-component="select"
+      data-invalid={@invalid && "true"}
       data-state="closed"
       data-options={@options}
       data-event-mappings={@event_map}
@@ -131,14 +140,15 @@ defmodule SaladUI.Select do
       data-part="trigger"
       class={
         classes([
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-hidden focus:border-ring focus:ring-ring/50 focus:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+          "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:ring-destructive/40 [&>span]:line-clamp-1",
+          "group-data-[invalid=true]/select:border-destructive group-data-[invalid=true]/select:ring-destructive/20 dark:group-data-[invalid=true]/select:ring-destructive/40",
           @class
         ])
       }
       {@rest}
     >
       {render_slot(@inner_block)}
-      <span class="h-4 w-4 opacity-50">
+      <span class="size-4 opacity-50">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -149,7 +159,7 @@ defmodule SaladUI.Select do
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="lucide lucide-chevron-down h-4 w-4"
+          class="lucide lucide-chevron-down size-4"
         >
           <path d="M6 9l6 6 6-6"></path>
         </svg>
@@ -258,7 +268,7 @@ defmodule SaladUI.Select do
       tabindex={(@disabled && "-1") || "0"}
       {@rest}
     >
-      <span class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span class="absolute left-2 flex size-3.5 items-center justify-center">
         <span data-part="item-indicator" hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -270,7 +280,7 @@ defmodule SaladUI.Select do
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="h-4 w-4"
+            class="size-4"
           >
             <path d="M20 6 9 17l-5-5"></path>
           </svg>

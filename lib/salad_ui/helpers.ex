@@ -57,6 +57,29 @@ defmodule SaladUI.Helpers do
   def has_error?(_field), do: false
 
   @doc """
+  Returns `true` when the assigns carry one or more errors, as populated by
+  `prepare_assign/1` from a `%Phoenix.HTML.FormField{}`.
+  """
+  def invalid?(assigns) do
+    assigns[:errors] not in [nil, []]
+  end
+
+  @doc """
+  Adds `aria-invalid="true"` to the `:rest` global attributes when the assigns
+  carry errors (see `invalid?/1`), so form controls pick up shadcn's
+  `aria-invalid:` error styling automatically when given a `field` with errors.
+
+  An explicitly passed `aria-invalid` attribute always wins.
+  """
+  def put_aria_invalid(assigns) do
+    if invalid?(assigns) do
+      assign(assigns, :rest, Map.put_new(assigns[:rest] || %{}, :"aria-invalid", "true"))
+    else
+      assigns
+    end
+  end
+
+  @doc """
   Builds a map of client event mappings from all assigned `on-*` attributes.
 
   Each `on-*` attribute (e.g. `on-open`, `on-value-changed`) is mapped to its bare
@@ -88,8 +111,9 @@ defmodule SaladUI.Helpers do
 
   @variants %{
     variant: %{
-      "default" => "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
-      "destructive" => "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90",
+      "default" => "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+      "destructive" =>
+        "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
       "outline" => "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
       "secondary" => "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
       "ghost" => "hover:bg-accent hover:text-accent-foreground",
@@ -99,7 +123,7 @@ defmodule SaladUI.Helpers do
       "default" => "h-9 px-4 py-2",
       "sm" => "h-8 rounded-md px-3 text-xs",
       "lg" => "h-10 rounded-md px-8",
-      "icon" => "h-9 w-9"
+      "icon" => "size-9"
     }
   }
 
@@ -120,7 +144,7 @@ defmodule SaladUI.Helpers do
     variation_classes = Enum.map_join(variants, " ", fn {key, value} -> @variants[key][value] end)
 
     shared_classes =
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50"
+      "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40"
 
     "#{shared_classes} #{variation_classes}"
   end
@@ -138,7 +162,7 @@ defmodule SaladUI.Helpers do
       variant: %{
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
+          "bg-background shadow-[0_0_0_1px_var(--sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--sidebar-accent)]",
       },
       size: %{
         default: "h-8 text-sm",

@@ -28,6 +28,7 @@ defmodule SaladUI.Input do
   * `:required` - Whether the input is required (passed through as rest)
   * `:readonly` - Whether the input is readonly (passed through as rest)
   * `:autocomplete` - Hints for form autofill feature (passed through as rest)
+  * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
   """
   attr :id, :any, default: nil
   attr :name, :any, default: nil
@@ -44,7 +45,10 @@ defmodule SaladUI.Input do
                 multiple pattern placeholder readonly required rows size step)
 
   def input(assigns) do
-    assigns = prepare_assign(assigns)
+    assigns =
+      assigns
+      |> prepare_assign()
+      |> put_aria_invalid()
 
     rest =
       Map.merge(assigns.rest, Map.take(assigns, [:id, :name, :value, :type]))
@@ -55,7 +59,9 @@ defmodule SaladUI.Input do
     <input
       class={
         classes([
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
+          "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
           @class
         ])
       }

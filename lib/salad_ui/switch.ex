@@ -26,6 +26,7 @@ defmodule SaladUI.Switch do
     * `:field` - Phoenix form field
     * `:disabled` - Whether the switch is disabled
     * `:on-checked-changed` - Handler for value change event
+    * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
 
   ## Component events
 
@@ -48,7 +49,10 @@ defmodule SaladUI.Switch do
   attr :rest, :global
 
   def switch(assigns) do
-    assigns = prepare_assign(assigns)
+    assigns =
+      assigns
+      |> prepare_assign()
+      |> put_aria_invalid()
 
     # Normalize value for boolean
     assigns = assign_new(assigns, :checked, fn -> normalize_boolean(assigns.value) end)
@@ -81,7 +85,7 @@ defmodule SaladUI.Switch do
       aria-checked={to_string(@checked)}
       class={
         classes([
-          "switch-root inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
+          "switch-root inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-input/80 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
           @class
         ])
       }
@@ -103,7 +107,7 @@ defmodule SaladUI.Switch do
       <span
         data-part="thumb"
         data-state={@initial_state}
-        class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+        class="pointer-events-none block size-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
       />
     </div>
     """

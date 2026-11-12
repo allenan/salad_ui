@@ -182,6 +182,20 @@ class SelectComponent extends Component {
     // Initialize select items
     this.initializeItems();
     this.initializePlaceholder();
+    this.syncInvalidState();
+  }
+
+  /**
+   * Mirror the root's `data-invalid` (set server-side when a form field has
+   * errors) onto the trigger as `aria-invalid`, so assistive tech announces
+   * the error. An `aria-invalid` passed explicitly to the trigger wins.
+   * Re-run on every LiveView patch, since the hook reinitializes.
+   */
+  syncInvalidState() {
+    if (!this.trigger || this.trigger.hasAttribute("aria-invalid")) return;
+    if (this.el.dataset.invalid === "true") {
+      this.trigger.setAttribute("aria-invalid", "true");
+    }
   }
 
   getComponentConfig() {

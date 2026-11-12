@@ -41,7 +41,8 @@ defmodule SaladUI.BadgeTest do
         <.badge variant="destructive">Destructive</.badge>
         """)
 
-      for class <- ~w(border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80) do
+      for class <-
+            ~w(border-transparent bg-destructive text-white hover:bg-destructive/80 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40) do
         assert html =~ class
       end
 
