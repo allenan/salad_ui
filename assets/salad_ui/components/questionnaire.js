@@ -98,8 +98,13 @@ class QuestionnaireComponent extends Component {
     // message) stay invalid until their answer changes.
     this.forced = new Set(restore ? persisted.forced : []);
     this.inputSelected = new Map(restore ? persisted.inputSelected : []);
-
+    // The skip and invalid state the page was rendered with; form.reset()
+    // returns to it (render() rewrites the DOM attributes it was read from).
     if (!restore) this.seedFromDom();
+    this.initial = (restore && persisted.initial) || {
+      skipped: [...this.skipped],
+      forced: [...this.forced],
+    };
 
     this.items().forEach((item) => {
       const name = item.dataset.name;
@@ -364,10 +369,9 @@ class QuestionnaireComponent extends Component {
     this.resetTimer = setTimeout(() => {
       if (this.destroyed || event.defaultPrevented) return;
 
-      this.skipped.clear();
-      this.attempted.clear();
-      this.forced.clear();
-      if (this.serverDriven) this.seedFromDom();
+      this.skipped = new Set(this.initial.skipped);
+      this.attempted = new Set(this.initial.forced);
+      this.forced = new Set(this.initial.forced);
       this.items().forEach((item) => {
         this.inputSelected.set(
           item.dataset.name,
@@ -704,6 +708,7 @@ class QuestionnaireComponent extends Component {
       attempted: [...this.attempted],
       forced: [...this.forced],
       inputSelected: [...this.inputSelected],
+      initial: this.initial,
       awaitingServer: false,
       ...extra,
     };
@@ -791,14 +796,8 @@ class QuestionnaireComponent extends Component {
       );
     }
     const ids = [
-      ...Array.from(item.querySelectorAll('[data-part="description"]')).map(
-        (node) => node.id,
-      ),
-      ...(invalid
-        ? Array.from(item.querySelectorAll('[data-part="error"]')).map(
-            (node) => node.id,
-          )
-        : []),
+      ...this.partIds(item, "description"),
+      ...(invalid ? this.partIds(item, "error") : []),
       item.getAttribute("data-describedby-base"),
     ].filter(Boolean);
     setAttr(item, "aria-describedby", ids.length ? ids.join(" ") : null);
@@ -876,6 +875,17 @@ class QuestionnaireComponent extends Component {
       toggleAttr(error, "data-invalid", invalid);
       setAttr(error, "role", invalid ? "alert" : null);
     });
+  }
+
+  /** Ids of the item's `part` nodes, giving any without one a stable id. */
+  partIds(item, part) {
+    const base = item.id || `${this.el.id}-${item.dataset.name}`;
+    return Array.from(item.querySelectorAll(`[data-part="${part}"]`)).map(
+      (node, index) => {
+        if (!node.id) node.id = `${base}-${part}${index ? `-${index}` : ""}`;
+        return node.id;
+      },
+    );
   }
 
   renderProgress({ current, total, first, last }) {

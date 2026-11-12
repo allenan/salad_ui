@@ -539,6 +539,58 @@ test("form reset restores the initial item, defaults and skips", async () => {
   assert.equal(el.querySelectorAll('[data-part="skipped-input"]').length, 0);
 });
 
+test("form reset restores server-rendered skips and errors, even after a rebuild", async () => {
+  const { el, item, choice } = build({
+    item: "signals",
+    items: [
+      DEFAULT_ITEMS[0],
+      { ...DEFAULT_ITEMS[1], status: "skipped" },
+      { ...DEFAULT_ITEMS[2], invalid: true },
+    ],
+    skipped: ["signals"],
+  });
+
+  pick(choice("signals", "x"));
+  assert.equal(item("signals").dataset.status, "answered");
+  pick(choice("timing", "now"));
+  assert.ok(!item("timing").hasAttribute("data-invalid"));
+
+  // a LiveView patch rebuilds the component from the mutated DOM
+  mount();
+  el.reset();
+
+  await waitFor(() => item("signals").dataset.status === "skipped");
+  assert.equal(choice("signals", "x").checked, false);
+  assert.ok(item("timing").hasAttribute("data-invalid"));
+  assert.deepEqual(
+    Array.from(el.querySelectorAll('[data-part="skipped-input"]')).map(
+      (input) => input.value,
+    ),
+    ["signals"],
+  );
+});
+
+test("descriptions and errors without ids are still linked to the item", () => {
+  const { el, item, button } = build({ item: "direction" });
+  const fieldset = item("direction");
+  fieldset
+    .querySelectorAll('[data-part="description"], [data-part="error"]')
+    .forEach((node) => {
+      node.removeAttribute("id");
+    });
+
+  button("next").click();
+
+  const description = fieldset.querySelector('[data-part="description"]');
+  const error = fieldset.querySelector('[data-part="error"]');
+  assert.ok(description.id && error.id);
+  assert.equal(
+    fieldset.getAttribute("aria-describedby"),
+    `${description.id} ${error.id}`,
+  );
+  assert.equal(el.querySelectorAll(`#${description.id}`).length, 1);
+});
+
 test("server-driven: validates the active item, then lets the server move", () => {
   const { item, button, choice, el } = build({
     item: "direction",

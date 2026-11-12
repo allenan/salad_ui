@@ -35,8 +35,8 @@ defmodule SaladUI.Questionnaire do
         <.questionnaire_progress questionnaire={q} />
         <.questionnaire_item :for={question <- @items} :let={item} questionnaire={q} name={question.name}>
           <.questionnaire_title>{question.prompt}</.questionnaire_title>
-          <.questionnaire_description>{question.description}</.questionnaire_description>
-          <.questionnaire_choices>
+          <.questionnaire_description item={item}>{question.description}</.questionnaire_description>
+          <.questionnaire_choices item={item}>
             <.questionnaire_choice :for={choice <- question.choices} item={item} value={choice.value}>
               <span class="font-medium">{choice.label}</span>
               <.questionnaire_choice_description :if={choice[:description]}>
