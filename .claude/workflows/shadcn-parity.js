@@ -105,14 +105,14 @@ for (const it of ITEMS) it.deps = it.deps.flatMap(d => d === '__ALL_COMPONENTS__
 const fill = s => s.replace(/\$\{DECISION:(\w+)\}/g, (_, k) => CFG.decisions[k])
 
 // ---------------------------------------------------------------- shared prompt text
-const ENV = `Toolchain: run \`export ASDF_ELIXIR_VERSION=1.20.0-otp-28 ASDF_ERLANG_VERSION=28.3.3\` in every shell. In a fresh checkout run \`mix deps.get\` and \`(cd assets && npm ci)\` first.`
-const GATES = `Gates (all must pass): \`mix compile --warnings-as-errors\`, \`mix format --check-formatted\`, \`mix test\`, \`mix credo\` (no new issues), \`cd assets && npm test && npm run lint && npm run format:check\`. Baseline before this project: 203 Elixir + 242 JS tests green.`
+const ENV = `Toolchain: Elixir 1.20.5 on OTP 29.1.2, pinned in .tool-versions (asdf picks it up). If your checkout has no .tool-versions yet, run \`export ASDF_ELIXIR_VERSION=1.20.5-otp-29 ASDF_ERLANG_VERSION=29.1.2\` in every shell. In a fresh checkout run \`mix deps.get\` and \`(cd assets && npm ci)\` first.`
+const GATES = `Gates (all must pass; they mirror .github/workflows/ci.yml): \`mix deps.unlock --check-unused\`, \`mix compile --warnings-as-errors\`, \`mix format --check-formatted\`, \`mix credo\`, \`mix test\`; \`cd assets && npm ci && npm run lint && npm run format:check && npm test\`; \`cd storybook && mix deps.get && mix compile --warnings-as-errors && mix format --check-formatted && mix test\` (StorybookSmokeTest mounts every story, so every new story must render). If you touched lib/mix/**, CSS tokens/theme, or JS registration, also run \`.github/scripts/installer-e2e/run.sh setup\` (needs \`mix archive.install hex phx_new --force\` once). In JS tests use \`waitFor(predicate)\` from assets/test/helpers/dom.mjs instead of fixed \`wait(ms)\` when asserting rAF/timer-driven state.`
 const SHADCN = `shadcn source is pinned at ${CFG.shadcnRef}. Fetch with gh, e.g.
   gh api "repos/shadcn-ui/ui/contents/apps/v4/registry/new-york-v4/ui/<name>.tsx?ref=${CFG.shadcnRef}" --jq .content | base64 -d
   gh api "repos/shadcn-ui/ui/contents/apps/v4/content/docs/components/radix/<name>.mdx?ref=${CFG.shadcnRef}" --jq .content | base64 -d
   examples: list "repos/shadcn-ui/ui/contents/apps/v4/registry/new-york-v4/examples?ref=${CFG.shadcnRef}" and read files starting with <name>-.
 Copy shadcn's Tailwind classes nearly verbatim (Tailwind v4, oklch tokens already in place) and use its data-slot names.`
-const SHARED_FILES = `Do NOT edit these shared registration files — the integrator applies them from your manifest: lib/salad_ui.ex, lib/mix/tasks/salad.install.ex, lib/mix/tasks/salad.setup.ex, storybook/assets/js/storybook.js, README.md, CHANGELOG.md, docs/shadcn-parity.md.`
+const SHARED_FILES = `Registration lists are applied by the integrator from your manifest — do NOT edit them: the \`import SaladUI.*\` list in lib/salad_ui.ex \`__using__\` (and its moduledoc component list), the \`@js_import\` lists in lib/mix/tasks/salad.setup.ex and lib/mix/tasks/salad.install.ex, the component imports in storybook/assets/js/storybook.js, README.md component lists, CHANGELOG.md, docs/shadcn-parity.md. Any OTHER change to any file (including the mix tasks, patchers, CSS, helpers) is allowed when your item needs it.`
 const CONVENTIONS = `Follow repo conventions (CLAUDE.md; docs/implement_simple_component.md, docs/complex_component_guide.md, docs/js_component_patterns.md). Mirror the closest existing SaladUI component's structure. Deliverables per component: lib/salad_ui/<name>.ex with @moduledoc + attr docs; assets/salad_ui/components/<name>.js if interactive (extends Component, registers itself, ARIA config, keyboard nav); test/salad_ui/<name>_test.exs; assets/test/<name>.test.mjs if JS; storybook/storybook/salad_ui_component/<name>.story.exs covering every shadcn docs example for this component. LiveView-native where it helps (FormField support, on-* event attrs, SaladUI.LiveView.send_command commands).
 Commits: conventional style, e.g. "feat(<id>): ...". Per the user's global rule, NO AI/tool attribution anywhere — no Co-Authored-By, no "Generated with" lines.`
 
@@ -189,7 +189,7 @@ async function runItem(item, runSet) {
   let impl = await agent(`Implement SaladUI parity item "${item.id}".
 Task: ${spec}
 ${refs}
-Setup: you are in a fresh git worktree of ${CFG.repo}. Run: git checkout -B ${branch} ${CFG.integrationBranch}
+Setup: you are in a fresh git worktree of ${CFG.repo}. If branch ${branch} already exists (git rev-parse --verify ${branch}), a previous run started this item: \`git checkout ${branch} && git merge --no-edit ${CFG.integrationBranch}\`, resolve conflicts, then review that work against the task and finish it (don't start over). Otherwise: \`git checkout -B ${branch} ${CFG.integrationBranch}\`.
 ${ENV}
 ${SHADCN}
 ${CONVENTIONS}
@@ -207,13 +207,13 @@ When gates pass, commit on ${branch}, then run \`git switch --detach\` so the br
 ${refs}
 ${SHADCN}
 Read the diff read-only from ${CFG.repo}: git diff ${CFG.integrationBranch}...${branch} (and git show ${branch}:<path>).
-Your job is to find what is missing or different, not to approve. Check: every sub-part/exported function, every variant/size/orientation, props/attrs, data-slot names, class strings, and that EVERY example in the shadcn docs page can be expressed with this API (list any that cannot). Mark "must" for missing functionality, "should" for cosmetic drift. verdict=fail if any "must".`,
+Your job is to find what is missing or different, not to approve. Check: every sub-part/exported function, every variant/size/orientation, props/attrs, data-slot names, class strings, and that EVERY example in the shadcn docs page can be expressed with this API (list any that cannot). Mark "must" for missing functionality, "should" for cosmetic drift. Severity rules: "must" ONLY for (a) this item's spec not met, (b) behaviour broken or regressed by this branch's diff, (c) failing gates, (d) registration-list edits. Problems that already exist on ${CFG.integrationBranch} outside this diff, or that belong to another parity item, are "should" (say which item) — never "must". verdict=fail if any "must".`,
         { phase: 'Review', label: `parity:${item.id}#${round}`, schema: REVIEW_SCHEMA }),
       () => agent(`Adversarial QUALITY review of branch ${branch} (item "${item.id}": ${spec}).
 You are in a fresh worktree: git checkout --detach ${branch}. ${ENV}
 Re-run the gates yourself; do not trust the implementer. ${GATES}
 Then check: WAI-ARIA pattern + keyboard behaviour for this widget; LiveView integration (FormField support where relevant, on-* events, send_command, survives LiveView re-render/patch without losing JS state, works inside phx-update="stream" where relevant); tests actually exercise behaviour (not just render); no edits to shared files: ${SHARED_FILES}; no AI attribution in commit messages (git log ${CFG.integrationBranch}..${branch}).
-Mark "must" for failing gates, broken a11y/keyboard, LiveView breakage, or shared-file edits. verdict=fail if any "must".`,
+Mark "must" for failing gates, broken a11y/keyboard, or LiveView breakage introduced by this branch, or registration-list edits. Severity rules: "must" ONLY for (a) this item's spec not met, (b) behaviour broken or regressed by this branch's diff, (c) failing gates, (d) registration-list edits. Problems that already exist on ${CFG.integrationBranch} outside this diff, or that belong to another parity item, are "should" (say which item) — never "must". verdict=fail if any "must".`,
         { phase: 'Review', label: `quality:${item.id}#${round}`, isolation: 'worktree', schema: REVIEW_SCHEMA }),
     ])
     const gaps = [parity, quality].filter(Boolean).flatMap(r => r.gaps)
