@@ -28,7 +28,7 @@ class TabsComponent extends Component {
     this.initialize();
   }
 
-  initialize() {
+  initialize(value = this.options.value) {
     // Initialize registry and selection state for tabs
     this.registry = new CollectionRegistry({
       getItemValue: (item) => item.getAttribute("data-value"),
@@ -37,7 +37,7 @@ class TabsComponent extends Component {
     this.selection = new Selection(this.registry, {
       type: "single",
       defaultValue: this.options.defaultValue,
-      value: this.options.value,
+      value,
     });
 
     // Register triggers with the registry
@@ -53,6 +53,51 @@ class TabsComponent extends Component {
 
     // Initial UI update
     this.updateActiveTab();
+  }
+
+  /**
+   * A LiveView patch puts back the server-rendered markup: every trigger and
+   * panel inactive, the panels `hidden`, and (because they get
+   * client-assigned ids) often new trigger and panel elements. Rebuilding
+   * would jump back to the server's tab. Keep the tab the user chose and
+   * re-apply it, unless the options or event mappings changed; a new server
+   * `value` selects that tab.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el, ["value"])) return false;
+
+    const current = this.selection.getValue();
+    this.refreshParts();
+    this.list = this.getPart("list");
+    this.triggers = this.getAllParts("trigger");
+    this.contents = this.getAllParts("content");
+
+    const changed = this.adoptOptions(el, ["value"]);
+    this.updateUI();
+    this.initialize(changed.includes("value") ? this.options.value : current);
+    this.restoreFocus();
+    return true;
+  }
+
+  // A replaced trigger takes keyboard focus with it; remember which tab had
+  // it so skipReinitialize() can hand focus to its replacement.
+  beforeUpdate() {
+    const active = document.activeElement;
+    this.focusedValue = this.triggers.includes(active)
+      ? active.getAttribute("data-value")
+      : null;
+  }
+
+  restoreFocus() {
+    const value = this.focusedValue;
+    this.focusedValue = null;
+    if (value === null) return;
+
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    this.triggers
+      .find((trigger) => trigger.getAttribute("data-value") === value)
+      ?.focus();
   }
 
   ensureValidSelection() {

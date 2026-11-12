@@ -27,6 +27,14 @@ defmodule SaladUI.Dialog do
         </.dialog_close>
         <.button type="submit">Save</.button>
       </.dialog_footer>
+
+  ## Re-renders
+
+  A LiveView re-render (a `phx-change` form inside the dialog validating, a
+  flash anywhere on the page) keeps a dialog the user opened open, with focus
+  where it was and without firing `on-open` again. Changing the rendered
+  `open` value opens or closes it; changing other options rebuilds it from the
+  new markup.
   """
   use SaladUI, :component
 

@@ -47,6 +47,45 @@ class TooltipComponent extends Component {
     );
   }
 
+  /**
+   * A LiveView patch anywhere around the tooltip puts back its server-rendered
+   * markup: the content `hidden` and closed, and, because the content gets a
+   * client-assigned id, often a new content element. Rebuilding would close a
+   * tooltip the pointer is still on. Keep the instance (and its pending
+   * open/close timer) and re-apply the state, unless the options or event
+   * mappings changed.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el)) return false;
+
+    // A trigger found by position had its data-part stamped by the client,
+    // which the patch removed.
+    if (!this.queryParts().some((part) => part.dataset.part === "trigger")) {
+      const fallback = this.getFallbackTrigger();
+      if (fallback) fallback.dataset.part = "trigger";
+    }
+    this.refreshParts();
+    const trigger = this.getPart("trigger");
+    const content = this.getPart("content");
+    if (trigger !== this.trigger || content !== this.content) {
+      // The positioned element is bound to the old elements.
+      this.positionedElement?.destroy();
+      this.positionedElement = null;
+      this.trigger = trigger;
+      this.content = content;
+    }
+
+    this.reapplyState();
+    if (this.state === "open") {
+      // The patch dropped the inline position: place the content again.
+      this.positionedElement?.deactivate();
+      this.initializePositionedElement();
+      this.positionedElement?.activate();
+    }
+
+    return true;
+  }
+
   getComponentConfig() {
     return {
       stateMachine: {

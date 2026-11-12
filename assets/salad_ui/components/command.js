@@ -13,12 +13,7 @@ class CommandComponent extends Component {
     this.currentItemIdx = 0;
 
     // Core elements
-    this.input = this.getPart("input");
-    this.list = this.getPart("list");
-    this.empty = this.getPart("empty");
-    this.groups = this.getAllParts("group");
-    this.separators = this.getAllParts("separator");
-    this.items = this.getAllParts("item");
+    this.collectElements();
 
     // Bind event handlers
     this.input?.addEventListener("input", this.handleSearch);
@@ -33,6 +28,52 @@ class CommandComponent extends Component {
       "ArrowDown",
       "ArrowUp",
     ];
+  }
+
+  /**
+   * A LiveView patch puts back the server-rendered markup: every item, group
+   * and separator visible again and the highlight reset, even though the
+   * input still holds the query (LiveView leaves a focused input alone).
+   * Rebuilding would lose the highlighted item. Keep the instance, re-read
+   * the items (the server may have sent new ones) and filter them again,
+   * unless the options or event mappings changed.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el)) return false;
+
+    const highlighted = this.selectableItems?.[this.currentItemIdx];
+    const highlightedValue = highlighted?.getAttribute("data-value");
+    const input = this.input;
+
+    this.refreshParts();
+    this.collectElements();
+    if (this.input !== input) {
+      input?.removeEventListener("input", this.handleSearch);
+      this.input?.addEventListener("input", this.handleSearch);
+    }
+
+    this.handleSearch();
+
+    // Keep the highlight on the same item: the same element, or one with the
+    // same value when the server replaced it.
+    const index = this.selectableItems.findIndex(
+      (item) =>
+        item === highlighted ||
+        (highlightedValue != null &&
+          item.getAttribute("data-value") === highlightedValue),
+    );
+    if (index > 0) this.focusItem(index);
+
+    return true;
+  }
+
+  collectElements() {
+    this.input = this.getPart("input");
+    this.list = this.getPart("list");
+    this.empty = this.getPart("empty");
+    this.groups = this.getAllParts("group");
+    this.separators = this.getAllParts("separator");
+    this.items = this.getAllParts("item");
   }
 
   getComponentConfig() {

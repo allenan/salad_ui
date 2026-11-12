@@ -39,6 +39,14 @@ defmodule SaladUI.Sheet do
 
   * `"open"` - Opens the sheet.
   * `"close"` - Closes the sheet.
+
+  ## Re-renders
+
+  A LiveView re-render (a `phx-change` form inside the sheet validating, a
+  flash anywhere on the page) keeps a sheet the user opened open, with focus
+  where it was and without firing `on-open` again. Changing the rendered
+  `open` value opens or closes it; changing other options rebuilds it from the
+  new markup.
   """
   use SaladUI, :component
 

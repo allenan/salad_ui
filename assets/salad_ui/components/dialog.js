@@ -16,6 +16,44 @@ class DialogComponent extends Component {
     this.content = this.getPart("content");
     this.contentPanel = this.getPart("content-panel");
     this.config.preventDefaultKeys = ["Escape"];
+    this.serverOpen = this.readServerOpen(el);
+  }
+
+  /**
+   * The open state the server rendered: `data-open` (dialog/1), else the
+   * root's `data-state` (sheet/1, alert_dialog/1).
+   */
+  readServerOpen(el) {
+    return el.dataset.open === undefined
+      ? el.dataset.state === "open"
+      : el.dataset.open === "true";
+  }
+
+  /**
+   * A LiveView patch (a phx-change form inside the dialog, a flash anywhere
+   * on the page) puts back the server-rendered markup: the content `hidden`,
+   * the closed `data-state` and no ARIA. Rebuilding from that would close a
+   * dialog the user opened. Keep the instance and re-apply its state instead,
+   * unless the options or event mappings changed. A new server open state is
+   * applied as an open/close.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el)) return false;
+    // The focus trap is bound to the panel.
+    if (!this.refreshParts(["content", "content-panel"])) return false;
+
+    // Read before reapplyState() overwrites the root's data-state.
+    const serverOpen = this.readServerOpen(el);
+    this.reapplyState();
+
+    if (serverOpen !== this.serverOpen) {
+      this.serverOpen = serverOpen;
+      if (serverOpen !== (this.state === "open")) {
+        this.transition(serverOpen ? "open" : "close");
+      }
+    }
+
+    return true;
   }
 
   afterMount() {

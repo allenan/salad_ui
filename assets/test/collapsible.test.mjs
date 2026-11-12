@@ -3,7 +3,13 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/collapsible.js"; // self-registers "collapsible"
-import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  simulatePatch,
+  uninstallDom,
+  waitFor,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -167,4 +173,73 @@ test("open_to_closed animation hides content only after the transition finishes"
   assert.equal(content.hidden, true);
   assert.equal(content.classList.contains("opacity-0"), false);
   assert.equal(content.classList.contains("opacity-100"), false);
+});
+
+// The trigger and content get client-assigned ids, so morphdom swaps them for
+// fresh server-rendered copies on a patch.
+function patch(el, { open = false } = {}) {
+  simulatePatch(el, {
+    hidden: open ? [] : ['[data-part="content"]'],
+    replace: ['[data-part="trigger"]', '[data-part="content"]'],
+  });
+  el.dataset.state = open ? "open" : "closed";
+}
+
+test("a LiveView patch keeps a client-opened collapsible open", () => {
+  const { component, el, trigger, pushed } = buildCollapsible();
+  const hook = hookFor(el, component);
+  click(trigger);
+
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  const newTrigger = el.querySelector('[data-part="trigger"]');
+  const newContent = el.querySelector('[data-part="content"]');
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(el.dataset.state, "open");
+  assert.equal(newContent.hidden, false);
+  assert.equal(newContent.dataset.state, "open");
+  assert.equal(newTrigger.getAttribute("aria-expanded"), "true");
+  assert.equal(newTrigger.getAttribute("aria-controls"), newContent.id);
+  assert.equal(pushed.filter(({ event }) => event === "handle_open").length, 1);
+
+  // The replaced trigger still toggles, by click and by keyboard.
+  keydown(newTrigger, "Enter");
+  assert.equal(component.state, "closed");
+  assert.equal(newContent.hidden, true);
+  click(newTrigger);
+  assert.equal(component.state, "open");
+  component.destroy();
+});
+
+test("a new server open value opens and closes the live collapsible", () => {
+  const { component, el } = buildCollapsible();
+  const hook = hookFor(el, component);
+
+  patch(el, { open: true });
+  el.dataset.options = JSON.stringify({ open: true });
+  hook.updated();
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+
+  patch(el);
+  el.dataset.options = JSON.stringify({ open: false });
+  hook.updated();
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "closed");
+  assert.equal(el.querySelector('[data-part="content"]').hidden, true);
+  component.destroy();
+});
+
+test("changed collapsible options rebuild it", () => {
+  const { component, el } = buildCollapsible();
+  const hook = hookFor(el, component);
+
+  el.dataset.options = JSON.stringify({ open: false, animations: {} });
+  hook.updated();
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  hook.destroyed();
 });

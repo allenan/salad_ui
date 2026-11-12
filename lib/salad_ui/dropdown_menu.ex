@@ -120,6 +120,13 @@ defmodule SaladUI.DropdownMenu do
   * `"open"` - Opens the dropdown menu.
   * `"close"` - Closes the dropdown menu.
   * `"toggle"` - Toggles the dropdown menu.
+
+  ## Re-renders
+
+  A LiveView re-render keeps an open menu open, with its open sub-menus and
+  focus. Closing fires `on-close` and returns focus as soon as the menu starts
+  closing, so a re-render during the exit animation (such as the reply to an
+  item's `on-select`) cannot drop them.
   """
   use SaladUI, :component
 

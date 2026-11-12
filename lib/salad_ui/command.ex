@@ -29,6 +29,11 @@ defmodule SaladUI.Command do
           </.command_group>
         </.command_list>
       </.command>
+
+  ## Re-renders
+
+  A LiveView re-render keeps the current filter and the highlighted item, and
+  filters any items the server adds or replaces with the query in the input.
   """
   use SaladUI, :component
 

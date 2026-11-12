@@ -38,6 +38,13 @@ defmodule SaladUI.Accordion do
 
   Accordion is a pure client-side interaction (trigger click) and does not support
   `SaladUI.LiveView.send_command/4`.
+
+  ## Re-renders
+
+  A LiveView re-render keeps the items the user opened open, and keyboard focus
+  on the trigger that had it; items the server adds or removes are picked up.
+  A new `value` opens exactly those items; changing other options rebuilds the
+  accordion from the new markup.
   """
   use SaladUI, :component
 

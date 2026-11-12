@@ -3,7 +3,7 @@ import { after, afterEach, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/dropdown_menu.js"; // self-registers "dropdown-menu"
-import { installDom, setRect, uninstallDom } from "./helpers/dom.mjs";
+import { installDom, setRect, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -11,10 +11,23 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function buildDropdown({ id = "dropdown-1", state = "closed" } = {}) {
+function buildDropdown({
+  id = "dropdown-1",
+  state = "closed",
+  // The exit animation dropdown_menu/1 configures.
+  animated = false,
+} = {}) {
+  const options = JSON.stringify({
+    usePortal: false,
+    ...(animated && {
+      animations: {
+        open_to_closed: { duration: 130, target_part: "content" },
+      },
+    }),
+  });
   document.body.innerHTML = `
     <div id="${id}" data-component="dropdown-menu" data-state="${state}"
-         data-options='{"usePortal":false}'
+         data-options='${options}'
          data-event-mappings='{"open":"open","close":"close"}'
          data-part="root">
       <button type="button" data-part="trigger" tabindex="0">Open</button>
@@ -247,4 +260,61 @@ test("checkbox item starts checked and exposes menuitemcheckbox ARIA", () => {
   assert.equal(component.state, "open");
 
   component.destroy();
+});
+
+test("with the exit animation, closing returns focus and fires close at once, then hides", async () => {
+  const { component, positioner, pushed, trigger } = buildDropdown({
+    animated: true,
+  });
+  trigger.focus();
+
+  click(trigger);
+  assert.equal(pushed.at(-1).event, "open");
+
+  keydown(positioner.querySelector('[data-part="content"]'), "Escape");
+  assert.equal(component.state, "closed");
+  assert.equal(pushed.at(-1).event, "close");
+  assert.equal(document.activeElement, trigger);
+  // The panel stays up while it animates out.
+  assert.equal(positioner.hidden, false);
+
+  await waitFor(() => positioner.hidden === true);
+  component.destroy();
+});
+
+test("a LiveView rebuild during the exit animation still returns focus and fires close", async () => {
+  const { component, el, positioner, profile, pushed, trigger } = buildDropdown(
+    { animated: true },
+  );
+  trigger.focus();
+
+  // Keep hold of the exit animation so the test can let it drain.
+  let exitAnimation = null;
+  const machine = component.stateMachine;
+  const onStateChanged = machine.options.onStateChanged;
+  machine.options.onStateChanged = (...args) =>
+    (exitAnimation = onStateChanged(...args));
+
+  click(trigger);
+  // Selecting an item pushes its on-select; the server's reply patches the
+  // menu before the 130ms exit animation finishes.
+  click(profile);
+  assert.equal(component.state, "closed");
+  component.beforeUpdate();
+  component.destroy();
+  positioner.hidden = true;
+
+  const rebuilt = registry.create("dropdown-menu", el, {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  });
+  assert.equal(rebuilt.state, "closed");
+  assert.equal(document.activeElement, trigger);
+  assert.deepEqual(
+    pushed.map(({ event }) => event).filter((event) => event !== "selected"),
+    ["open", "close"],
+  );
+
+  rebuilt.destroy();
+  await exitAnimation;
 });

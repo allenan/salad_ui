@@ -95,6 +95,15 @@ defmodule SaladUI.Select do
   `disabled` and only takes part in LiveView's used-input tracking. The hook
   dispatches its form `change` events from that input, so the select counts as
   used once the user picks a value or submits the form.
+
+  ## Re-renders
+
+  A LiveView re-render (such as the `phx-change` round trip of the surrounding
+  form) keeps an open dropdown open, with its highlighted item and selection,
+  and without firing `on-open` again; items the server adds or removes are
+  picked up. A new `value` is selected in place without firing
+  `on-value-changed`. Changing other options rebuilds the select from the new
+  markup.
   """
   use SaladUI, :component
 

@@ -29,6 +29,12 @@ defmodule SaladUI.Collapsible do
   * `"open"` - Opens the collapsible.
   * `"close"` - Closes the collapsible.
   * `"toggle"` - Toggles the collapsible.
+
+  ## Re-renders
+
+  A LiveView re-render keeps a collapsible the user opened (or closed) that
+  way, without firing `on-open`/`on-close` again. A new `open` value opens or
+  closes it; changing other options rebuilds it from the new markup.
   """
   use SaladUI, :component
 

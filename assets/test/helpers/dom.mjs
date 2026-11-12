@@ -1,5 +1,7 @@
 import { JSDOM } from "jsdom";
 
+import { SaladUIHook } from "../../salad_ui/core/hook.js";
+
 const GLOBAL_KEYS = [
   "window",
   "document",
@@ -107,4 +109,44 @@ export function setRect(element, rect) {
       configurable: true,
     });
   }
+}
+
+/**
+ * Approximates what a LiveView patch does to a component's DOM: whatever the
+ * client wrote reverts to the server-rendered markup. On the root and every
+ * `[data-part]` below it, `data-state`, inline `style`, `role` and `aria-*`
+ * are dropped, as is any id other than `keepIds` (ids the server renders).
+ * Elements matching `hidden` get `hidden` back, elements matching `remove`
+ * (client-inserted nodes) go, and elements matching `replace` are swapped for
+ * fresh copies, the way morphdom replaces an element whose client-assigned id
+ * the server does not render. Selectors are matched before anything changes.
+ */
+export function simulatePatch(
+  el,
+  { hidden = [], remove = [], replace = [], keepIds = [el.id] } = {},
+) {
+  const all = (selectors) =>
+    selectors.flatMap((selector) => [...el.querySelectorAll(selector)]);
+  const toHide = all(hidden);
+  const toRemove = all(remove);
+  const toReplace = all(replace);
+
+  toRemove.forEach((node) => node.remove());
+  [el, ...el.querySelectorAll("[data-part]")].forEach((node) => {
+    node.removeAttribute("data-state");
+    node.removeAttribute("style");
+    for (const { name } of [...node.attributes]) {
+      if (name.startsWith("aria-") || name === "role") {
+        node.removeAttribute(name);
+      }
+    }
+    if (node.id && !keepIds.includes(node.id)) node.removeAttribute("id");
+  });
+  toHide.forEach((node) => (node.hidden = true));
+  toReplace.forEach((node) => node.replaceWith(node.cloneNode(true)));
+}
+
+/** A SaladUIHook bound to `el` that already holds `component`. */
+export function hookFor(el, component) {
+  return { ...SaladUIHook, el, component, handleEvent() {} };
 }

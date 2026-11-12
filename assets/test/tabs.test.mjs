@@ -3,7 +3,12 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/tabs.js";
-import { installDom, uninstallDom } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  simulatePatch,
+  uninstallDom,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -190,4 +195,77 @@ test("vertical tabs use Up/Down, ignore Left/Right and set aria-orientation", ()
   keydown(getTrigger("password"), "ArrowUp");
   assert.equal(document.activeElement, getTrigger("account"));
   assert.equal(getTrigger("account").getAttribute("data-state"), "active");
+});
+
+// Triggers and panels get client-assigned ids, so morphdom swaps them for
+// fresh server-rendered copies on a patch.
+function patch(el, options) {
+  simulatePatch(el, {
+    hidden: ['[data-part="content"]'],
+    replace: ['[data-part="trigger"]', '[data-part="content"]'],
+  });
+  if (options) el.dataset.options = JSON.stringify(options);
+}
+
+test("a LiveView patch keeps the tab chosen on the client", () => {
+  const { component, el, getTrigger, getContent, pushed } = buildTabs({
+    defaultValue: "account",
+  });
+  const hook = hookFor(el, component);
+  click(getTrigger("password"));
+  assert.equal(document.activeElement, getTrigger("password"));
+
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(getTrigger("password").getAttribute("data-state"), "active");
+  assert.equal(getTrigger("password").getAttribute("aria-selected"), "true");
+  assert.equal(getTrigger("password").getAttribute("role"), "tab");
+  assert.equal(getTrigger("password").id, "tabs-1-trigger-password");
+  assert.equal(getContent("password").hidden, false);
+  assert.equal(getContent("account").hidden, true);
+  assert.equal(
+    getContent("password").getAttribute("aria-labelledby"),
+    "tabs-1-trigger-password",
+  );
+  // Focus moves to the replacement trigger.
+  assert.equal(document.activeElement, getTrigger("password"));
+  assert.equal(pushed.length, 1);
+
+  // The new triggers are wired up.
+  click(getTrigger("billing"));
+  assert.equal(getContent("billing").hidden, false);
+  keydown(el.querySelector('[data-part="list"]'), "Home");
+  assert.equal(getContent("account").hidden, false);
+  component.destroy();
+});
+
+test("a new server value selects that tab in place", () => {
+  const { component, el, getContent, pushed } = buildTabs({
+    value: "account",
+  });
+  const hook = hookFor(el, component);
+
+  patch(el, { value: "billing", defaultValue: null });
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(getContent("billing").hidden, false);
+  assert.equal(getContent("account").hidden, true);
+  assert.equal(pushed.length, 0);
+  component.destroy();
+});
+
+test("changed tabs options rebuild them", () => {
+  const { component, el } = buildTabs();
+  const hook = hookFor(el, component);
+
+  patch(el, { value: null, defaultValue: null, orientation: "vertical" });
+  hook.updated();
+
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  hook.destroyed();
 });

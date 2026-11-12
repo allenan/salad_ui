@@ -58,6 +58,13 @@ defmodule SaladUI.AlertDialog do
 
   * `"open"` - Opens the dialog.
   * `"close"` - Closes the dialog.
+
+  ## Re-renders
+
+  A LiveView re-render keeps an alert dialog the user opened open, with focus
+  where it was and without firing `on-open` again. Changing the rendered
+  `open` value opens or closes it; changing other options rebuilds it from the
+  new markup.
   """
   use SaladUI, :component
 

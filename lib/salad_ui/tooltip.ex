@@ -28,6 +28,12 @@ defmodule SaladUI.Tooltip do
 
   Tooltip is a pure client-side interaction (hover/focus driven) and does not
   support `SaladUI.LiveView.send_command/4`.
+
+  ## Re-renders
+
+  A LiveView re-render keeps an open tooltip open and positioned, and a
+  pending open or close still runs. Changing the options rebuilds it from the
+  new markup.
   """
   use SaladUI, :component
 

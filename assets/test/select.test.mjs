@@ -3,7 +3,14 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/select.js"; // self-registers "select"
-import { installDom, setRect, uninstallDom, waitFor } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  setRect,
+  simulatePatch,
+  uninstallDom,
+  waitFor,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -49,14 +56,16 @@ function buildSelect({
   invalid = false,
   triggerAttrs = "",
   scrollable = false,
+  eventMappings = { "value-changed": "value_changed" },
+  usePortal = false,
 } = {}) {
-  const options = { name, multiple, value, defaultValue, usePortal: false };
+  const options = { name, multiple, value, defaultValue, usePortal };
   const root = `
     <div id="${id}" data-component="select" data-state="closed"
          data-disabled="${disabled}"
          ${invalid ? 'data-invalid="true"' : ""}
          data-options='${JSON.stringify(options)}'
-         data-event-mappings='{"value-changed":"value_changed"}'
+         data-event-mappings='${JSON.stringify(eventMappings)}'
          data-part="root">
       <button type="button" data-part="trigger" ${disabled ? "disabled" : ""} ${triggerAttrs}>
         <span data-part="value" data-placeholder="Choose one">Choose one</span>
@@ -729,4 +738,187 @@ test("closed-trigger typeahead leaves disabled and multiple selects alone", () =
   assert.deepEqual(multiple.component.selection.getValue(true), []);
   assert.equal(multiple.component.state, "closed");
   multiple.component.destroy();
+});
+
+const OPEN_MAPPINGS = {
+  "value-changed": "value_changed",
+  open: "opened",
+  close: "closed",
+};
+
+// The select's server-rendered markup: closed, nothing selected, and no
+// hook-managed hidden inputs.
+function patch(el, options) {
+  simulatePatch(el, {
+    hidden: ['[data-part="content"]', '[data-part="item-indicator"]'],
+    remove: ['input[data-salad-ui-select-input="true"]'],
+  });
+  el.dataset.state = "closed";
+  const display = el.querySelector('[data-part="value"]');
+  display.textContent = "Choose one";
+  display.removeAttribute("data-content");
+  if (options) el.dataset.options = JSON.stringify(options);
+}
+
+const count = (pushed, name) =>
+  pushed.filter(({ event }) => event === name).length;
+
+test("a LiveView patch keeps an open select open with its selection", () => {
+  const { component, el, trigger, content, item, valueDisplay, pushed } =
+    buildSelect({ defaultValue: "banana", eventMappings: OPEN_MAPPINGS });
+  const hook = hookFor(el, component);
+  click(trigger);
+  assert.equal(component.state, "open");
+
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(el.dataset.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(content.style.position, "fixed");
+  assert.equal(trigger.getAttribute("aria-expanded"), "true");
+  assert.equal(content.getAttribute("role"), "listbox");
+  assert.equal(item("banana").getAttribute("aria-selected"), "true");
+  assert.equal(
+    item("banana").querySelector('[data-part="item-indicator"]').hidden,
+    false,
+  );
+  assert.equal(valueDisplay.textContent, "Banana");
+  assert.equal(
+    el.querySelector('input[data-salad-ui-select-input="true"]').value,
+    "banana",
+  );
+  assert.equal(count(pushed, "opened"), 1);
+
+  // Still interactive.
+  keydown(content, "ArrowDown");
+  assert.equal(document.activeElement, item("orange"));
+  click(item("orange"));
+  assert.equal(component.state, "closed");
+  assert.equal(valueDisplay.textContent, "Orange");
+  component.destroy();
+});
+
+test("a multiple select stays open while the form round-trips its value", () => {
+  const { component, el, trigger, item, valueDisplay, pushed } = buildSelect({
+    multiple: true,
+    value: [],
+    inForm: true,
+    eventMappings: OPEN_MAPPINGS,
+  });
+  const hook = hookFor(el, component);
+  click(trigger);
+  click(item("apple"));
+  assert.equal(component.state, "open");
+
+  // phx-change: the server re-renders the controlled value it received.
+  hook.beforeUpdate();
+  patch(el, {
+    name: "fruit",
+    multiple: true,
+    value: ["apple"],
+    defaultValue: null,
+    usePortal: false,
+  });
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(item("apple").getAttribute("aria-selected"), "true");
+  assert.equal(valueDisplay.textContent, "Apple");
+  assert.equal(count(pushed, "value_changed"), 1);
+  assert.equal(count(pushed, "opened"), 1);
+  component.destroy();
+});
+
+test("a new server value is selected in place without value-changed", () => {
+  const { component, el, item, valueDisplay, pushed } = buildSelect({
+    value: "apple",
+  });
+  const hook = hookFor(el, component);
+
+  patch(el, {
+    name: "fruit",
+    multiple: false,
+    value: "orange",
+    defaultValue: null,
+    usePortal: false,
+  });
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(item("orange").getAttribute("aria-selected"), "true");
+  assert.equal(item("apple").getAttribute("aria-selected"), "false");
+  assert.equal(valueDisplay.textContent, "Orange");
+  assert.equal(pushed.length, 0);
+  component.destroy();
+});
+
+test("new items from the server keep the selection and the open state", () => {
+  const { component, el, trigger, content, item, valueDisplay } = buildSelect({
+    defaultValue: "banana",
+  });
+  const hook = hookFor(el, component);
+  click(trigger);
+
+  hook.beforeUpdate();
+  patch(el);
+  content.insertAdjacentHTML(
+    "beforeend",
+    `<div data-part="item" data-value="kiwi" tabindex="0">
+       <span data-part="item-indicator" hidden></span>
+       <span data-part="item-text">Kiwi</span>
+     </div>`,
+  );
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(item("banana").getAttribute("aria-selected"), "true");
+  assert.equal(valueDisplay.textContent, "Banana");
+
+  click(item("kiwi"));
+  assert.equal(valueDisplay.textContent, "Kiwi");
+  component.destroy();
+});
+
+test("changed select options rebuild it", () => {
+  const { component, el } = buildSelect();
+  const hook = hookFor(el, component);
+
+  patch(el, { name: "fruit", multiple: true, value: null });
+  hook.updated();
+
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  hook.destroyed();
+});
+
+test("portaled content is handed back for the patch and portaled again", () => {
+  const { component, el, trigger, content, item } = buildSelect({
+    defaultValue: "banana",
+    usePortal: true,
+  });
+  const hook = hookFor(el, component);
+  const orange = item("orange");
+  click(trigger);
+  keydown(content, "ArrowDown");
+  assert.equal(document.activeElement, orange);
+  assert.equal(el.contains(content), false);
+
+  hook.beforeUpdate();
+  // LiveView patches the content inside the root.
+  assert.equal(el.contains(content), true);
+  patch(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(el.contains(content), false);
+  assert.equal(content.hidden, false);
+  assert.equal(document.activeElement, orange);
+  component.destroy();
 });

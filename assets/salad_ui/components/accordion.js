@@ -245,6 +245,62 @@ class AccordionComponent extends Component {
     });
   }
 
+  /**
+   * A LiveView patch puts back the server-rendered markup: every item closed
+   * and its content `hidden`, and (because items get client-assigned ids)
+   * usually new item elements. Rebuilding would collapse the items the user
+   * opened. Keep the open values and rebuild only the items, unless the
+   * options or event mappings changed; a new server `value` opens exactly
+   * those items.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el, ["value"])) return false;
+
+    this.refreshParts();
+    const changed = this.adoptOptions(el, ["value"]);
+    if (changed.includes("value")) {
+      this.selection.values = this.selection.normalizeValues(
+        this.options.value,
+      );
+    }
+
+    this.destroyItems();
+    this.initializeItems();
+    this.restoreFocus();
+    return true;
+  }
+
+  // A replaced item takes keyboard focus with it; remember which item's
+  // trigger had it so skipReinitialize() can hand focus to its replacement.
+  beforeUpdate() {
+    const trigger = document.activeElement?.closest?.(
+      "[data-part='item-trigger']",
+    );
+    const item = this.items.find((item) => item.trigger === trigger);
+    this.focusedValue = trigger && item ? item.value : null;
+  }
+
+  restoreFocus() {
+    const value = this.focusedValue;
+    this.focusedValue = null;
+    if (value === null) return;
+
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    this.items.find((item) => item.value === value)?.trigger?.focus();
+  }
+
+  destroyItems() {
+    this.items?.forEach((item) => item.destroy());
+    this.items = [];
+    this.registry.clear();
+    this.rovingFocus.reset();
+  }
+
+  beforeDestroy() {
+    this.destroyItems();
+  }
+
   toggleItem(item) {
     const collectionItem = this.registry.getItemByInstance(item);
     if (!collectionItem) return;

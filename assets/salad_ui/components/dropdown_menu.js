@@ -255,25 +255,24 @@ class DropdownMenuComponent extends Component {
     this.activateOpenState();
   }
 
-  onOpenExit() {
+  // Runs as soon as the menu starts closing, before the exit animation: the
+  // close event and the focus return must not wait for it, since a LiveView
+  // patch in that window (e.g. the reply to an item's on-select) rebuilds the
+  // component and the deferred closed-state handler never runs.
+  onOpenExit({ restoreFocus = true } = {}) {
     this.menu?.closeSubmenus();
-  }
-
-  onClosedEnter({ restoreFocus = true } = {}) {
-    this.positionedElement?.deactivate();
     this.pushEvent("close");
-
-    if (!restoreFocus) {
-      this.previousFocusEl = null;
-      return;
-    }
 
     const focusTarget = this.previousFocusEl?.isConnected
       ? this.previousFocusEl
       : this.trigger;
-
-    focusTarget?.focus();
     this.previousFocusEl = null;
+    if (restoreFocus) focusTarget?.focus();
+  }
+
+  // After the exit animation.
+  onClosedEnter() {
+    this.positionedElement?.deactivate();
   }
 
   onItemSelect() {

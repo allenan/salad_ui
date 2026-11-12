@@ -51,6 +51,12 @@ defmodule SaladUI.Tabs do
 
   Tabs does not support `SaladUI.LiveView.send_command/4`. To change the active
   tab from the server, update the `value` assign and let LiveView re-render.
+
+  ## Re-renders
+
+  A LiveView re-render keeps the tab the user chose, and keyboard focus on its
+  trigger. A new `value` selects that tab; changing other options rebuilds the
+  tabs from the new markup.
   """
   use SaladUI, :component
 

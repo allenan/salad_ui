@@ -3,7 +3,15 @@ import { after, afterEach, before, test } from "node:test";
 
 import "../salad_ui/components/hover-card.js";
 import { registry } from "../salad_ui/core/factory.js";
-import { installDom, setRect, uninstallDom, wait } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  setRect,
+  simulatePatch,
+  uninstallDom,
+  wait,
+  waitFor,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -134,4 +142,46 @@ test("content hover cancels pending close, then mouseleave closes", async () => 
   assert.equal(pushed.at(-1).target, el);
 
   component.destroy();
+});
+
+test("a LiveView patch keeps an open hover card open and positioned", async () => {
+  const { el, trigger, button, content, pushed, hookContext } = buildHoverCard({
+    closeDelay: 1000,
+  });
+  const component = registry.create("hover-card", el, hookContext);
+  const hook = hookFor(el, component);
+
+  focusEvent("focusin", button);
+  await waitFor(() => component.state === "open");
+
+  hook.beforeUpdate();
+  simulatePatch(el, { hidden: ['[data-part="content"]'] });
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(content.dataset.state, "open");
+  assert.equal(content.style.top, "132px");
+  assert.equal(trigger.getAttribute("aria-expanded"), "true");
+  assert.equal(component.positionedElement.active, true);
+  assert.equal(pushed.filter(({ event }) => event === "opened").length, 1);
+
+  component.config.closeDelay = 1;
+  mouseEvent("mouseleave", trigger);
+  await waitFor(() => component.state === "closed");
+  assert.equal(content.hidden, true);
+  component.destroy();
+});
+
+test("changed hover card options rebuild it", () => {
+  const { el, hookContext } = buildHoverCard();
+  const component = registry.create("hover-card", el, hookContext);
+  const hook = hookFor(el, component);
+
+  el.dataset.options = JSON.stringify({ openDelay: 500 });
+  hook.updated();
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  hook.destroyed();
 });

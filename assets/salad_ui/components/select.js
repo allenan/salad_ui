@@ -13,6 +13,16 @@ import { Typeahead, getTextValue } from "../core/typeahead.js";
 const AVAILABLE_HEIGHT_VAR = "--salad-select-content-available-height";
 // sideOffset (4px) plus a little breathing room from the window edge.
 const SELECT_COLLISION_MARGIN = 12;
+// Parts that listeners or the positioned element are bound to: a patch that
+// replaces one rebuilds the select (see skipReinitialize).
+const STABLE_PARTS = [
+  "trigger",
+  "value",
+  "content",
+  "viewport",
+  "scroll-up-button",
+  "scroll-down-button",
+];
 
 /**
  * SelectItem class to manage individual select options
@@ -29,6 +39,14 @@ class SelectItem extends Component {
     this.label = itemElement.textContent.trim();
 
     this.setupEvents();
+  }
+
+  // Re-apply the selected state after a LiveView patch kept this element.
+  resync() {
+    this.disabled = this.isElementDisabled(this.el);
+    this.label = this.el.textContent.trim();
+    this.refreshParts();
+    this.reapplyState();
   }
 
   isElementDisabled(itemElement) {
@@ -213,7 +231,7 @@ class SelectComponent extends Component {
    * Mirror the root's `data-invalid` (set server-side when a form field has
    * errors) onto the trigger as `aria-invalid`, so assistive tech announces
    * the error. An `aria-invalid` passed explicitly to the trigger wins.
-   * Re-run on every LiveView patch, since the hook reinitializes; the
+   * Re-run on every LiveView patch (see skipReinitialize); the
    * `data-invalid-synced` marker tells our own attribute apart from an
    * explicit one, so it is removed again once the field becomes valid.
    */
@@ -230,6 +248,94 @@ class SelectComponent extends Component {
       this.trigger.removeAttribute("aria-invalid");
       this.trigger.removeAttribute("data-invalid-synced");
     }
+  }
+
+  /**
+   * Portaled content must be back inside the root for LiveView to patch it,
+   * and the patch drops its inline position anyway: take it down here and
+   * put it back up in skipReinitialize().
+   */
+  beforeUpdate() {
+    // Moving portaled content back blurs the highlighted item.
+    const active = document.activeElement;
+    this.focusBeforePatch =
+      active && this.content?.contains(active) ? active : null;
+    this.suspendedForPatch = !!this.positionedElement?.active;
+    this.positionedElement?.deactivate();
+  }
+
+  /**
+   * A LiveView patch (a phx-change on the surrounding form, a flash) puts back
+   * the server-rendered markup: the content `hidden` and closed, the items
+   * unselected, the hook-managed hidden inputs gone. Rebuilding would close
+   * an open dropdown. Keep the instance and re-apply its state, unless the
+   * options or event mappings changed; a new server `value` is selected in
+   * place, without firing `value-changed`.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el, ["value"])) return false;
+    if (!this.refreshParts(STABLE_PARTS)) return false;
+
+    const changed = this.adoptOptions(el, ["value"]);
+    this.disabled = el.dataset.disabled === "true";
+
+    const itemElements = Array.from(el.querySelectorAll("[data-part='item']"));
+    const sameItems =
+      itemElements.length === this.registry.items.length &&
+      itemElements.every(
+        (element, index) => this.registry.items[index].instance.el === element,
+      );
+
+    if (changed.includes("value")) {
+      this.selection.values = this.selection.normalizeValues(
+        this.options.value,
+      );
+    }
+
+    if (sameItems) {
+      this.registry.each((item) => item.resync());
+      this.selection.updateSelectedStates();
+      this.updateValueDisplay();
+      this.syncHiddenInputs();
+    } else {
+      const highlighted = this.rovingFocus.focusedItem?.value;
+      this.destroyItems();
+      // Re-reads the selection onto the new items and syncs the display.
+      this.initializeItems();
+      const item = this.registry.getItemByValue(highlighted);
+      if (item && this.state === "open") this.rovingFocus.focus(item);
+    }
+
+    this.initializePlaceholder();
+    this.syncInvalidState();
+    this.reapplyState();
+
+    const resume = this.suspendedForPatch || this.positionedElement?.active;
+    this.suspendedForPatch = false;
+    if (this.state === "open" && resume) {
+      this.positionedElement.deactivate();
+      this.positionedElement.activate();
+      this.updateScrollButtons();
+    }
+
+    const focused = this.focusBeforePatch;
+    this.focusBeforePatch = null;
+    if (
+      this.state === "open" &&
+      focused?.isConnected &&
+      this.content.contains(focused) &&
+      document.activeElement !== focused
+    ) {
+      focused.focus({ preventScroll: true });
+    }
+
+    return true;
+  }
+
+  destroyItems() {
+    this.registry.each((item) => item.destroy());
+    this.registry.clear();
+    this.rovingFocus.reset();
   }
 
   getComponentConfig() {
@@ -787,12 +893,7 @@ class SelectComponent extends Component {
       this.positionedElement = null;
     }
 
-    // Clean up item instances
-    this.registry.each((item) => {
-      if (typeof item.destroy === "function") {
-        item.destroy();
-      }
-    });
+    this.destroyItems();
 
     this.registry = null;
     this.rovingFocus = null;

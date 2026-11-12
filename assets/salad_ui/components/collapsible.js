@@ -14,6 +14,32 @@ class CollapsibleComponent extends Component {
     this.config.preventDefaultKeys = ["Enter", " "];
   }
 
+  /**
+   * A LiveView patch puts back the server-rendered markup (the content
+   * `hidden`, the server's `data-state`) and, since the trigger and content
+   * get client-assigned ids, may replace them outright. Rebuilding would
+   * close an item the user opened. Keep the instance and re-apply its state,
+   * unless the options or event mappings changed; a new server `open` value
+   * is applied as an open/close.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el, ["open"])) return false;
+
+    this.refreshParts();
+    this.trigger = this.getPart("trigger");
+    this.content = this.getPart("content");
+
+    const changed = this.adoptOptions(el, ["open"]);
+    this.reapplyState();
+
+    const open = this.options.open === true;
+    if (changed.includes("open") && open !== (this.state === "open")) {
+      this.transition(open ? "open" : "close");
+    }
+
+    return true;
+  }
+
   getComponentConfig() {
     return {
       stateMachine: {

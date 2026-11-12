@@ -35,6 +35,38 @@ class HoverCardComponent extends Component {
     this.closeTimer = null;
   }
 
+  /**
+   * A LiveView patch around the hover card puts back its server-rendered
+   * markup: the content `hidden` and closed, the trigger without its ARIA.
+   * Rebuilding would close a card the pointer is still on. Keep the instance
+   * (and its pending open/close timer) and re-apply the state, unless the
+   * options or event mappings changed.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el)) return false;
+
+    this.refreshParts();
+    const trigger = this.getPart("trigger");
+    const content = this.getPart("content");
+    if (trigger !== this.trigger || content !== this.content) {
+      // The positioned element is bound to the old elements.
+      this.positionedElement?.destroy();
+      this.positionedElement = null;
+      this.trigger = trigger;
+      this.content = content;
+    }
+
+    this.reapplyState();
+    if (this.state === "open") {
+      // The patch dropped the inline position: place the content again.
+      this.positionedElement?.deactivate();
+      this.initializePositionedElement();
+      this.positionedElement?.activate();
+    }
+
+    return true;
+  }
+
   getComponentConfig() {
     return {
       stateMachine: {
