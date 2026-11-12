@@ -145,6 +145,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/slider.js";
     import "./ui/components/resizable.js";
     import "./ui/components/input_otp.js";
+    import "./ui/components/checkbox.js";
     import "./ui/components/switch.js";
     import "./ui/components/dropdown_menu.js";
     import "./ui/components/navigation_menu.js";

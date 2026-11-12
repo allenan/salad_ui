@@ -22,4 +22,41 @@ defmodule SaladUI.CheckboxTest do
       end
     end
   end
+
+  describe "indeterminate" do
+    test "a boolean attaches the checkbox hook and renders data-indeterminate" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="select-all" indeterminate={true} aria-label="Select all" />
+        """)
+
+      assert html =~ ~s(phx-hook="SaladUI")
+      assert html =~ ~s(data-component="checkbox")
+      assert html =~ ~s(data-part="root")
+      assert html =~ ~s(data-indeterminate="true")
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="select-all" value={true} indeterminate={false} />
+        """)
+
+      assert html =~ ~s(data-indeterminate="false")
+      assert html =~ "checked"
+    end
+
+    test "nil (the default) renders a plain checkbox without the hook" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="terms" />
+        """)
+
+      refute html =~ "phx-hook"
+      refute html =~ "data-component"
+      refute html =~ "data-indeterminate"
+    end
+  end
 end

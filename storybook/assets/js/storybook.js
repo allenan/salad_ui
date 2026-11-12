@@ -17,6 +17,7 @@ import "salad_ui/components/accordion";
 import "salad_ui/components/slider";
 import "salad_ui/components/resizable";
 import "salad_ui/components/input_otp";
+import "salad_ui/components/checkbox";
 import "salad_ui/components/switch";
 import "salad_ui/components/dropdown_menu";
 import "salad_ui/components/navigation_menu";
@@ -60,6 +61,11 @@ import "salad_ui/components/calendar";
 //     }
 //   };
 // })();
+
+// Used by the data table example's "Copy payment ID" action.
+window.addEventListener("storybook:clipboard", ({ detail }) => {
+  navigator.clipboard?.writeText(detail.text);
+});
 
 window.addEventListener("phx:js-exec", ({ detail }) => {
   document.querySelectorAll(detail.to).forEach((el) => {

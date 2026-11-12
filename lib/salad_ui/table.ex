@@ -24,6 +24,9 @@ defmodule SaladUI.Table do
            </.table_row>
          </.table_body>
       </.table>
+
+  For sorting, filtering, pagination, column visibility and row selection,
+  see `SaladUI.DataTable`.
   """
   use SaladUI, :component
 
@@ -114,11 +117,12 @@ defmodule SaladUI.Table do
   * `:class` - Additional CSS classes
   * `:scope` - Scope of the header cell (default: "col")
   * `:aria-sort` - Sort direction for screen readers (ascending, descending, or none)
+  * `:colspan`, `:rowspan`, `:headers`, `:abbr` - Passed through to the `<th>`
   """
   attr :class, :string, default: nil
   attr :scope, :string, default: "col"
   attr :"aria-sort", :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(colspan rowspan headers abbr)
   slot :inner_block, required: true
 
   def table_head(assigns) do
@@ -161,9 +165,10 @@ defmodule SaladUI.Table do
   ## Attributes
 
   * `:class` - Additional CSS classes
+  * `:colspan`, `:rowspan`, `:headers` - Passed through to the `<td>`
   """
   attr :class, :any, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(colspan rowspan headers)
   slot :inner_block, required: true
 
   def table_cell(assigns) do

@@ -81,6 +81,7 @@ defmodule SaladUI do
 
   ### Data Display
   - `table/1` - Data tables with sorting and selection
+  - `data_table_column_header/1`, `data_table_view_options/1`, `data_table_pagination/1` - Data table parts; state helpers in `SaladUI.DataTable`
   - `chart/1` - Data visualization charts
   - `code_block/1` - Code, terminal output and diffs with line numbers and a copy button
   - `avatar/1` - User profile images
@@ -218,6 +219,10 @@ defmodule SaladUI do
       import SaladUI.Checkbox
       import SaladUI.CodeBlock
       import SaladUI.Collapsible
+
+      import SaladUI.DataTable,
+        only: [data_table_column_header: 1, data_table_pagination: 1, data_table_view_options: 1]
+
       import SaladUI.DatePicker
       import SaladUI.Dialog
       import SaladUI.Drawer

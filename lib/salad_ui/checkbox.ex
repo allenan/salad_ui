@@ -32,6 +32,28 @@ defmodule SaladUI.Checkbox do
   * `:field` - A Phoenix form field
   * `:class` - Additional classes to add to the checkbox
   * `:aria-invalid` - rendered as `aria-invalid="true"` automatically when `:field` has errors, which applies the destructive error styling; pass it explicitly to override
+  * `:indeterminate` - `true` shows the "some selected" dash, as on a select-all
+    checkbox when only some rows are selected. Requires an `:id`. Leave it `nil`
+    (the default) for an ordinary two-state checkbox.
+
+  ## Indeterminate
+
+  `indeterminate` is a DOM property with no HTML attribute, so passing
+  `indeterminate={true}` or `indeterminate={false}` attaches the SaladUI hook
+  (`data-component="checkbox"`), which sets the property on mount and after
+  every LiveView patch. The browser then applies the `indeterminate:` styles
+  and reports the checkbox as "mixed" to screen readers. A click clears it, as
+  in any browser; the server's next render decides the new state. Keep passing
+  a boolean (not `nil`) for as long as the checkbox can become indeterminate,
+  so the hook stays attached.
+
+      <.checkbox
+        id="select-all"
+        value={@selection == true}
+        indeterminate={@selection == :indeterminate}
+        aria-label="Select all"
+        phx-click="toggle_all"
+      />
 
   ## Differences from shadcn
 
@@ -45,6 +67,11 @@ defmodule SaladUI.Checkbox do
   attr :value, :any, default: nil
   attr :"default-value", :any, values: [true, false, "true", "false"], default: false
   attr :field, Phoenix.HTML.FormField
+
+  attr :indeterminate, :boolean,
+    default: nil,
+    doc: "`true` renders the indeterminate (dash) state; any boolean attaches the hook that syncs it. Requires `id`."
+
   attr :class, :string, default: nil
   attr :rest, :global
 
@@ -87,8 +114,14 @@ defmodule SaladUI.Checkbox do
       name={@name}
       value="true"
       checked={@checked}
+      phx-hook={hooked?(@indeterminate) && "SaladUI"}
+      data-component={hooked?(@indeterminate) && "checkbox"}
+      data-part={hooked?(@indeterminate) && "root"}
+      data-indeterminate={hooked?(@indeterminate) && to_string(@indeterminate)}
       {@rest}
     />
     """
   end
+
+  defp hooked?(indeterminate), do: is_boolean(indeterminate)
 end
