@@ -103,6 +103,23 @@ defmodule MyAppWeb.PageLive do
 end
 ```
 
+### Method 3: Add Only the Components You Need
+
+Like `npx shadcn add`: copy selected components plus everything they depend on
+(other components, helpers and JavaScript), and add more later.
+
+```bash
+mix salad.add button dialog dropdown-menu
+mix salad.add sidebar --prefix MyAppWeb.UI --color-scheme slate
+
+# later: the existing prefix is reused, existing files are kept
+mix salad.add data-table
+```
+
+Then `use MyAppWeb.UI` (or the default `MyAppUi`) wherever you render components.
+Run `mix salad.add` with no arguments to list the components, and pass
+`--overwrite` to replace files you already have.
+
 ## What Each Method Does
 
 ### `mix salad.setup`
@@ -119,6 +136,12 @@ end
 - ✅ Full customization possible
 - ✅ No external runtime dependencies
 - ✅ Custom module prefixes
+
+### `mix salad.add <component...>`
+- ✅ Same setup and options as `mix salad.install`
+- ✅ Copies only the selected components and their dependencies
+- ✅ Imports only the JavaScript those components need
+- ✅ Safe to re-run: adds new imports, keeps files you've changed
 
 ## More configuration
 
