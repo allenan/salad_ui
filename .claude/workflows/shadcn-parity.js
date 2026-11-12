@@ -17,6 +17,7 @@ const CFG = {
   shadcnRef: A.shadcnRef || 'dd41d19e2f80ff6891951f7ced74c2c9a650b065',
   only: A.only || null,
   done: A.done || [],
+  review: A.review || [],   // already-pushed JS items that still need their review-and-fix pass
   criticRounds: A.criticRounds ?? 2,
   includeStyles: A.includeStyles === true,
   decisions: Object.assign({
@@ -101,11 +102,13 @@ const CONVENTIONS = `Follow CLAUDE.md and mirror the closest existing SaladUI co
 
 const GATES = `Gates before pushing. Always: \`mix compile --warnings-as-errors && mix format --check-formatted && mix credo && mix test\`, then \`cd storybook && mix deps.get && mix test\` (StorybookSmokeTest mounts every story). If assets/ changed: \`cd assets && npm run lint && npm run format:check && npm test\`. If lib/mix/** or CSS tokens/theme changed: \`.github/scripts/installer-e2e/run.sh setup\` (needs \`mix archive.install hex phx_new --force\` once). Full CI also runs on draft PR #1 after each push, as a backstop.`
 
-const PUSH = (id, subject) => `Land it on ${CFG.branch} (optimistic, no lock; other agents push concurrently):
-  1. git fetch origin && git rebase origin/${CFG.branch} (resolve conflicts, keeping both sides; registration lists usually conflict trivially)
-  2. squash to one commit: git reset --soft origin/${CFG.branch} && git commit -m "${subject}" (body: what changed; no attribution)
-  3. if step 1 pulled in new commits, re-run the "Always" gates
-  4. git push origin HEAD:${CFG.branch}; if rejected as non-fast-forward, repeat from 1 (up to 5 times)
+const PUSH = (id, subject) => `Land it on ${CFG.branch} (optimistic, no lock; other agents push concurrently). Follow EXACTLY — a previous protocol silently reverted other items' work:
+  1. Commit everything. Squash against the merge-base (NEVER \`git reset --soft origin/...\`):
+     git reset --soft $(git merge-base HEAD origin/${CFG.branch}) && git commit -m "${subject}" (body: what changed; no attribution)
+  2. git fetch origin && git rebase origin/${CFG.branch} (resolve conflicts keeping both sides; registration lists usually conflict trivially)
+  3. Safety check: \`git diff --stat origin/${CFG.branch} HEAD\` must show ONLY files this item changed, and no deletions of files you didn't add. If it shows anything else you have the wrong base: stop, fix it, and never push a commit that reverts other work.
+  4. If step 2 pulled in new commits, re-run the "Always" gates.
+  5. git push origin HEAD:${CFG.branch}. If rejected as non-fast-forward, repeat from step 2 (rebase again; do NOT squash again), up to 5 times.
   Also keep a local branch: git branch -f parity/${id} HEAD.`
 
 const IMPL_SCHEMA = { type: 'object', required: ['status', 'summary'], properties: {
@@ -168,21 +171,24 @@ ${PUSH(item.id, subject)}`,
   results[item.id] = { status: 'pushed', commit: impl.commit, summary: impl.summary, notCovered: impl.notCovered || [] }
 
   // Reviewer-fixer for interactive items. Dependents don't wait for it.
-  if (item.kind === 'js') {
-    const review = agent(`Review-and-fix SaladUI parity item "${item.id}", already pushed to ${CFG.branch} as commit ${impl.commit || `(subject "${subject}")`}.
+  if (item.kind === 'js') reviews.push(runReview(item, impl.commit))
+  return results[item.id]
+}
+
+function runReview(item, commit) {
+  const subject = `feat(parity/${item.id})`
+  const refs = `shadcn ui files: [${item.refs.join(', ') || 'none'}]${item.docs ? `; docs-only pages: [${item.docs.join(', ')}]` : ''}.`
+  return agent(`Review-and-fix SaladUI parity item "${item.id}", already pushed to ${CFG.branch}${commit ? ` as commit ${commit}` : ''}.
 Task it implemented: ${item.spec}
 ${refs}
-You are in a fresh worktree: git fetch origin && git checkout -B review-${item.id} origin/${CFG.branch}. ${SETUP}
-Inspect: git show ${impl.commit || `$(git log origin/${CFG.branch} --grep '^feat(parity/${item.id})' --format=%H -1)`}.
+You are in a fresh worktree: git fetch origin. If branch parity-review/${item.id} exists, an interrupted review left work there: \`git checkout -B review-${item.id} parity-review/${item.id} && git rebase origin/${CFG.branch}\` and continue it. Otherwise \`git checkout -B review-${item.id} origin/${CFG.branch}\`. ${SETUP}
+Inspect the item: git log origin/${CFG.branch} --grep '^\\(feat\\|fix\\)(parity/${item.id})' -p
 ${SHADCN}
-Find and FIX directly (don't just report), limited to this item's code: WAI-ARIA pattern + keyboard behaviour; LiveView integration (FormField, on-* events, send_command, survives re-render/patch, phx-update="stream" where relevant); parity gaps vs shadcn docs examples; tests that only check rendering rather than behaviour. Ignore cosmetic nits and anything outside this item.
+Find and FIX directly (don't just report), limited to this item's code: WAI-ARIA pattern + keyboard behaviour; LiveView integration (FormField, on-* events, send_command, survives re-render/patch, phx-update="stream" where relevant); parity gaps vs shadcn docs examples; tests that only check rendering rather than behaviour. Ignore cosmetic nits and anything outside this item. Checkpoint WIP with \`git add -A && git commit -qm wip && git branch -f parity-review/${item.id} HEAD\`.
 If you changed anything: ${GATES} then ${PUSH(item.id, `fix(parity/${item.id}): review fixes`)}
 Return what you fixed and anything left unfixed.`,
-      { phase: 'Review', label: `review:${item.id}`, isolation: 'worktree', schema: REVIEW_SCHEMA })
-      .then(r => { if (r) { results[item.id].review = r; log(`${item.id}: review fixed ${r.fixed.length}, left ${r.remaining.length}`) } })
-    reviews.push(review)
-  }
-  return results[item.id]
+    { phase: 'Review', label: `review:${item.id}`, isolation: 'worktree', schema: REVIEW_SCHEMA })
+    .then(r => { if (r) { results[item.id] = Object.assign(results[item.id] || { status: 'pushed' }, { review: r }); log(`${item.id}: review fixed ${r.fixed.length}, left ${r.remaining.length}`) } })
 }
 
 const reviews = []
@@ -197,6 +203,7 @@ async function runBatch(items) {
 const todo = ITEMS.filter(i => !results[i.id] && (!CFG.only || CFG.only.includes(i.id)))
 if (CFG.only) log(`Pilot: ${todo.map(i => i.id).join(', ')} (${ITEMS.length - todo.length - CFG.done.length} items not in this run)`)
 log(`Running ${todo.length} items; ${CFG.done.length} already done`)
+for (const id of CFG.review) { const it = ITEMS.find(i => i.id === id); if (it) reviews.push(runReview(it, null)) }
 phase('Implement')
 await runBatch(todo)
 
@@ -212,7 +219,7 @@ Fresh worktree: git fetch origin && git checkout -B critic-${round} origin/${CFG
 ${last ? '' : `${SHADCN}
 Compare every shadcn ui file + docs page (registry/new-york-v4/ui, content/docs/components/radix) against SaladUI on this branch: missing components/sub-parts/variants/props, and docs examples that can't be expressed. React-only concepts (Portal, Provider, asChild internals) are not gaps. Known items (don't re-propose unless clearly broken; then use id "<old>-followup"): ${known.join(', ')}.
 Return only REAL remaining gaps as small, precise work items (group related ones). Empty list = parity reached.`}
-Then, in any case, update docs/shadcn-parity.md with a "Status" section (item -> status table from this JSON, plus notCovered/remaining review issues), and add an "Unreleased" CHANGELOG.md entry summarising what landed (from \`git log origin/main..HEAD --format=%s%n%b\`, user-visible changes and behaviour changes called out). Commit "docs: parity status + changelog" and push to ${CFG.branch} (rebase + retry on rejection). No attribution.
+First run \`.github/scripts/parity-audit.sh origin/${CFG.branch}\`; if it reports a BAD squash, restore the reverted commits (\`git diff <base> <last-reverted> | git apply -3\`, resolve, run the gates, push a fix commit) before anything else, and mention it in the status. Then, in any case, update docs/shadcn-parity.md with a "Status" section (item -> status table from this JSON, plus notCovered/remaining review issues), and add an "Unreleased" CHANGELOG.md entry summarising what landed (from \`git log origin/main..HEAD --format=%s%n%b\`, user-visible changes and behaviour changes called out). Commit "docs: parity status + changelog" and push to ${CFG.branch} (rebase + retry on rejection). No attribution.
 ${JSON.stringify(results)}`,
     { phase: 'Critique', label: last ? 'report' : `critic#${round + 1}`, isolation: 'worktree', schema: CRITIC_SCHEMA })
   if (last) break
