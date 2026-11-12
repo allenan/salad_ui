@@ -130,8 +130,54 @@ class ResizableComponent extends Component {
     this.onHandleKeyDown = this.onHandleKeyDown.bind(this);
 
     this.layout = this.resolveInitialLayout();
+    this.signature = this.structureSignature();
     this.applyLayout();
     this.updateUI();
+  }
+
+  // What a LiveView patch must leave untouched for the live instance to be
+  // reused: panel constraints/ids and handle disabled flags.
+  structureSignature() {
+    return JSON.stringify([
+      this.panels.map((panel) => [
+        panel.id,
+        panel.dataset.minSize,
+        panel.dataset.maxSize,
+      ]),
+      this.handles.map((handle) => handle.hasAttribute("data-disabled")),
+    ]);
+  }
+
+  // An unrelated patch (e.g. content inside a panel re-rendering) resets the
+  // panels' server-rendered styles and the handles' ARIA. Re-apply them on the
+  // live instance instead of rebuilding it, so an in-progress drag survives.
+  skipReinitialize(el) {
+    if (
+      el.dataset.options !== this._optionsRaw ||
+      el.dataset.eventMappings !== this._eventMappingsRaw
+    ) {
+      return false;
+    }
+
+    const parts = this.queryParts();
+    const same = (name, current) => {
+      const found = parts
+        .filter((part) => part.dataset.part === name)
+        .sort(byDocumentOrder);
+      return (
+        found.length === current.length &&
+        found.every((part, i) => part === current[i])
+      );
+    };
+    if (!same("panel", this.panels) || !same("handle", this.handles)) {
+      return false;
+    }
+    if (this.structureSignature() !== this.signature) return false;
+
+    this.applyLayout();
+    this.updateUI();
+    this.drag?.handle.setAttribute("data-separator", "active");
+    return true;
   }
 
   getComponentConfig() {

@@ -99,8 +99,6 @@ defmodule SaladUI.MixProject do
     [
       {:tw_merge, "~> 0.1"},
       {:phoenix_live_view, "~> 1.2"},
-      # Optional: server-side syntax highlighting in SaladUI.CodeBlock
-      {:makeup, "~> 1.0", optional: true},
       {:mix_test_watch, "~> 1.2", only: [:dev, :test]},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:styler, "~> 1.0", only: [:dev, :test], runtime: false},

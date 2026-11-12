@@ -167,13 +167,11 @@ All v1 component are not covered by UnitTest. Currently I'm working on an import
 | Dialog         | ✅    | ✅     |
 | Drawer         | ❌    |      |
 | Dropdown Menu  | ✅    | ✅     |
-| Field          | ❌    | ✅     |
-| Form (legacy; use Field) | ✅    | ✅     |
+| Form           | ✅    | ✅     |
 | Hover Card     | ✅    | ✅      |
 | Input          | ✅    | ✅     |
 | Input OTP      | ❌    |      |
 | Label          | ✅    | ✅      |
-| Native Select  | ❌    | ✅     |
 | Pagination     | ✅    | ✅     |
 | Popover        | ✅    | ✅     |
 | Progress       | ✅    | ✅    |

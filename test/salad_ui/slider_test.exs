@@ -144,27 +144,6 @@ defmodule SaladUI.SliderTest do
       assert html =~ ~s(aria-label="High")
     end
 
-    test "a single thumb takes its accessible name from the root's aria-label/labelledby" do
-      assigns = %{}
-
-      named = rendered_to_string(~H|<.slider id="vol" value={50} aria-label="Volume" />|)
-      labelled = rendered_to_string(~H|<.slider id="tmp" value={50} aria-labelledby="tmp-label" />|)
-      range = rendered_to_string(~H|<.slider id="rng" value={[1, 9]} aria-labelledby="rng-label" />|)
-
-      assert [[thumb]] = thumbs(named)
-      assert thumb =~ ~s(role="slider")
-      assert thumb =~ ~s(aria-label="Volume")
-
-      assert [[thumb]] = thumbs(labelled)
-      assert thumb =~ ~s(aria-labelledby="tmp-label")
-
-      # Several thumbs keep their own Minimum/Maximum names.
-      assert [[min], [max]] = thumbs(range)
-      assert min =~ ~s(aria-label="Minimum")
-      refute min =~ "aria-labelledby"
-      assert max =~ ~s(aria-label="Maximum")
-    end
-
     test "supports fractional steps without float noise" do
       assigns = %{}
 

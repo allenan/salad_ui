@@ -15,7 +15,6 @@ defmodule Storybook.SaladUIComponents.Form do
     [
       %Variation{
         id: :form,
-        description: "Legacy: new forms should use the Field components (see the Field story).",
         template: """
         <.form :let={f} for={%{}} class="w-2/3 space-y-6">
           <% f = %{f | data: %{name: ""}} %>

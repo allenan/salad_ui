@@ -371,10 +371,7 @@ per value; every thumb is focusable and keyboard-driven on its own.
 - `inverted` - Reverse the visual direction
 - `disabled`
 
-Values are read from the root's `data-value` (comma-separated). A LiveView
-patch that renders the same `data-value` as the previous render keeps the
-current instance and the user's values (and any drag in progress); a new
-`data-value`, new options, or a different thumb count rebuilds the component.
+Values are read from the root's `data-value` (comma-separated).
 
 **Events:**
 - `value-changed` - On drag end or key press. Payload: `value` (number for one

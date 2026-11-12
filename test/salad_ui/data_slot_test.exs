@@ -159,26 +159,6 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
-  test "code block" do
-    assigns = %{}
-
-    assert check(
-             ~H"""
-             <.code_block>
-               <.code_block_header>
-                 <.code_block_title>T</.code_block_title>
-                 <.code_block_actions>
-                   <.code_block_copy_button id="cb-copy" />
-                 </.code_block_actions>
-               </.code_block_header>
-               <.code_block_content code="a" line_numbers />
-               <.code_block_footer>F</.code_block_footer>
-             </.code_block>
-             """,
-             ~w(code-block code-block-header code-block-title code-block-actions code-block-copy-button code-block-content code-block-code code-block-line code-block-line-content code-block-footer)
-           ) == {[], []}
-  end
-
   test "checkbox" do
     assigns = %{name: "x"}
     assert check(~H"<.checkbox name={@name} />", ~w(checkbox)) == {[], []}
@@ -268,34 +248,6 @@ defmodule SaladUI.DataSlotTest do
            ) == {[], []}
   end
 
-  test "field" do
-    assigns = %{}
-
-    assert check(
-             ~H"""
-             <.field_set>
-               <.field_legend>Profile</.field_legend>
-               <.field_group>
-                 <.field orientation="horizontal">
-                   <.field_content>
-                     <.field_label for="n">Name</.field_label>
-                     <.field_description>D</.field_description>
-                   </.field_content>
-                   <.input id="n" name="n" />
-                   <.field_error>is required</.field_error>
-                 </.field>
-                 <.field_separator>Or</.field_separator>
-                 <.field>
-                   <.field_title>T</.field_title>
-                 </.field>
-               </.field_group>
-             </.field_set>
-             """,
-             ~w(field-set field-legend field-group field field-content field-label field-description input field-error
-                field-separator separator field-separator-content)
-           ) == {[], []}
-  end
-
   test "form" do
     assigns = %{}
 
@@ -355,21 +307,6 @@ defmodule SaladUI.DataSlotTest do
   test "label" do
     assigns = %{}
     assert check(~H"<.label>L</.label>", ~w(label)) == {[], []}
-  end
-
-  test "native select" do
-    assigns = %{}
-
-    assert check(
-             ~H"""
-             <.native_select name="s">
-               <.native_select_optgroup label="G">
-                 <.native_select_option value="a">A</.native_select_option>
-               </.native_select_optgroup>
-             </.native_select>
-             """,
-             ~w(native-select-wrapper native-select native-select-icon native-select-optgroup native-select-option)
-           ) == {[], []}
   end
 
   test "pagination" do

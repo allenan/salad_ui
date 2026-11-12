@@ -289,6 +289,56 @@ test("layout survives re-initialisation after a LiveView patch", () => {
   assert.equal(panelsOf(el)[0].style.flexGrow, "60");
 });
 
+test("an unrelated LiveView patch keeps the instance and an active drag", () => {
+  const { el, component, pushed } = mount(
+    panel({ id: "a", size: 50 }) + handle() + panel({ size: 50 }),
+  );
+  const [h] = handlesOf(el);
+  setRect(el, { width: 200 });
+  setRect(h, { width: 0 });
+
+  pointer(h, "pointerdown", { clientX: 100 });
+  pointer(document, "pointermove", { clientX: 120 });
+  assert.deepEqual(component.layout, [60, 40]);
+
+  // The patch restores the server-rendered attributes mid-drag.
+  el.setAttribute("data-state", "idle");
+  panelsOf(el).forEach((p) => p.setAttribute("style", "flex: 50 1 0px"));
+  ["aria-valuenow", "aria-orientation", "data-separator"].forEach((a) =>
+    h.removeAttribute(a),
+  );
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(panelsOf(el)[0].style.flexGrow, "60");
+  assert.equal(h.getAttribute("aria-valuenow"), "60");
+  assert.equal(h.getAttribute("aria-orientation"), "vertical");
+  assert.equal(h.getAttribute("data-separator"), "active");
+  assert.equal(el.getAttribute("data-state"), "dragging");
+
+  pointer(document, "pointermove", { clientX: 140 });
+  pointer(document, "pointerup", {});
+  assert.deepEqual(component.layout, [70, 30], "drag continued after patch");
+  assert.deepEqual(pushed.at(-1).payload.layout, [70, 30]);
+});
+
+test("a structural patch rebuilds the component", () => {
+  const { el, component } = mount(
+    panel({ size: 50 }) + handle() + panel({ size: 50 }),
+  );
+  const [first] = panelsOf(el);
+
+  first.setAttribute("data-min-size", "60");
+  assert.equal(component.skipReinitialize(el), false, "constraints changed");
+  first.removeAttribute("data-min-size");
+
+  el.insertAdjacentHTML("beforeend", handle() + panel());
+  assert.equal(component.skipReinitialize(el), false, "panel added");
+  [...el.children].slice(-2).forEach((child) => child.remove());
+
+  el.setAttribute("data-options", JSON.stringify({ orientation: "vertical" }));
+  assert.equal(component.skipReinitialize(el), false, "options changed");
+});
+
 test("nested groups are independent", () => {
   const inner = `
     <div id="inner" data-component="resizable" data-part="root" phx-hook="SaladUI"
