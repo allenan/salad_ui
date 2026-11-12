@@ -14,6 +14,37 @@ class CodeBlockCopyButtonComponent extends Component {
   constructor(el, hookContext) {
     super(el, { hookContext, initialState: "idle" });
     this.resetTimer = null;
+    this.syncCopiedDom();
+  }
+
+  /**
+   * A LiveView patch (e.g. the re-render an `on-copy` event causes) puts back
+   * the server-rendered `data-state="idle"`, `aria-label="Copy"` and drops
+   * `data-copied`. When the options and event mappings are unchanged, keep
+   * this instance (and its reset timer) and re-apply the current state, so
+   * the check mark stays for its full two seconds. A new value rebuilds.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (el.getAttribute("data-options") !== this._optionsRaw) return false;
+    if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
+      return false;
+    }
+
+    this.updateUI();
+    this.syncCopiedDom();
+    return true;
+  }
+
+  syncCopiedDom() {
+    const copied = this.state === "copied";
+    this.el.toggleAttribute("data-copied", copied);
+    // The live region is phx-update="ignore", so a rebuilt (idle) instance
+    // must clear an announcement left by the previous one.
+    // Only write on a change: rewriting the same text can re-announce it.
+    const status = this.statusElement;
+    const text = copied ? "Copied" : "";
+    if (status && status.textContent !== text) status.textContent = text;
   }
 
   getComponentConfig() {
@@ -99,13 +130,11 @@ class CodeBlockCopyButtonComponent extends Component {
   }
 
   onIdleEnter() {
-    this.el.removeAttribute("data-copied");
-    if (this.statusElement) this.statusElement.textContent = "";
+    this.syncCopiedDom();
   }
 
   onCopiedEnter() {
-    this.el.setAttribute("data-copied", "");
-    if (this.statusElement) this.statusElement.textContent = "Copied";
+    this.syncCopiedDom();
     this.scheduleReset();
   }
 

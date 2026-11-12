@@ -140,6 +140,26 @@ defmodule SaladUI.CodeBlockTest do
       assert html =~ "after:content-[&#39;−&#39;]"
     end
 
+    test "diff mode keeps hunk headers and no-newline notes whole" do
+      assigns = %{patch: "@@ -1,2 +1,2 @@\n-old\n+new\n\\ No newline at end of file"}
+
+      html =
+        rendered_to_string(~H"""
+        <.code_block_content code={@patch} diff />
+        """)
+
+      assert [
+               ~s(data-variant="default"),
+               ~s(data-variant="removed"),
+               ~s(data-variant="added"),
+               ~s(data-variant="default")
+             ] ==
+               Enum.map(lines(html), &(~r/data-variant="[^"]+"/ |> Regex.run(&1) |> hd()))
+
+      assert html =~ ">@@ -1,2 +1,2 @@</span>"
+      assert html =~ ">\\ No newline at end of file</span>"
+    end
+
     test "language highlights with Makeup" do
       assigns = %{}
 
@@ -216,6 +236,8 @@ defmodule SaladUI.CodeBlockTest do
       assert html =~ "{&quot;value&quot;:&quot;mix deps.get&quot;}"
       assert html =~ "{&quot;copy&quot;:&quot;copied&quot;}"
       assert html =~ ~s(aria-live="polite")
+      # the live region keeps its "Copied" text across LiveView patches
+      assert html =~ ~r/<span[^>]*id="copy-install-status"[^>]*phx-update="ignore"/
       assert html =~ ~s(data-icon="copy")
       assert html =~ ~s(data-icon="check")
     end
@@ -246,6 +268,17 @@ defmodule SaladUI.CodeBlockTest do
       [first, second] = highlight("\e[31mred\nplain", "ansi")
       assert Phoenix.HTML.safe_to_string(first) =~ "text-red-600"
       assert Phoenix.HTML.safe_to_string(second) == "plain"
+    end
+
+    test "ansi 256-color and true-color arguments are not read as other codes" do
+      # 31 here is a palette index, not "red"; 0s are color components, not resets
+      [line] = highlight("\e[1m\e[38;5;31mA\e[38;2;0;32;0mB\e[38;5;2mC\e[48;5;9mD", "ansi")
+      html = Phoenix.HTML.safe_to_string(line)
+
+      assert html =~ ~s(<span class="font-bold">A</span>)
+      assert html =~ ~s(<span class="font-bold">B</span>)
+      assert html =~ ~s(<span class="text-green-600 dark:text-green-400 font-bold">C</span>)
+      assert html =~ ~s(<span class="text-green-600 dark:text-green-400 bg-red-500/15 font-bold">D</span>)
     end
 
     test "ansi reset and bold" do

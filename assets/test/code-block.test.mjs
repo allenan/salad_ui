@@ -187,3 +187,103 @@ test("destroy clears the pending reset", async () => {
 
   assert.equal(component.resetTimer, null);
 });
+
+// Mimics a LiveView patch: morphdom puts back the server-rendered attributes
+// of the button; the phx-update="ignore" live region keeps its text.
+function patchFromServer(el, { options } = {}) {
+  el.setAttribute("data-state", "idle");
+  el.setAttribute("aria-label", "Copy");
+  el.removeAttribute("data-copied");
+  if (options) el.setAttribute("data-options", options);
+}
+
+test("a patch with unchanged options keeps the copied state and timer", async () => {
+  stubClipboard();
+  const { el, component, status } = build({ value: "x", resetDelay: 40 });
+
+  click(el);
+  await waitFor(() => el.getAttribute("data-state") === "copied");
+
+  patchFromServer(el);
+  assert.equal(component.skipReinitialize(el), true);
+
+  assert.equal(el.getAttribute("data-state"), "copied");
+  assert.equal(el.getAttribute("aria-label"), "Copied");
+  assert.equal(el.hasAttribute("data-copied"), true);
+  assert.equal(status.textContent, "Copied");
+
+  await waitFor(() => el.getAttribute("data-state") === "idle");
+  assert.equal(el.getAttribute("aria-label"), "Copy");
+  assert.equal(status.textContent, "");
+});
+
+test("a patch with a new value rebuilds idle and clears the announcement", async () => {
+  stubClipboard();
+  const { el, component, status } = build({ value: "x", resetDelay: 1000 });
+
+  click(el);
+  await waitFor(() => el.getAttribute("data-state") === "copied");
+
+  patchFromServer(el, { options: JSON.stringify({ value: "y" }) });
+  assert.equal(component.skipReinitialize(el), false);
+
+  component.destroy();
+  components = [];
+  const rebuilt = new CodeBlockCopyButtonComponent(el, {
+    pushEventTo() {},
+    liveSocket: { execJS: () => {} },
+  });
+  rebuilt.setupEvents();
+  components.push(rebuilt);
+
+  assert.equal(rebuilt.state, "idle");
+  assert.equal(el.hasAttribute("data-copied"), false);
+  assert.equal(status.textContent, "");
+});
+
+test("a disabled button does not copy", async () => {
+  const writes = stubClipboard();
+  const { el, pushed } = build({ value: "x" });
+  el.disabled = true;
+
+  click(el);
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.deepEqual(writes, []);
+  assert.equal(el.getAttribute("data-state"), "idle");
+  assert.equal(pushed.length, 0);
+});
+
+test("without the clipboard API the button stays idle", async () => {
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {},
+  });
+  const { el, status, pushed } = build({ value: "x" });
+
+  click(el);
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.equal(el.getAttribute("data-state"), "idle");
+  assert.equal(status.textContent, "");
+  assert.equal(pushed.length, 0);
+});
+
+test("copying again while copied restarts the reset delay", async () => {
+  const writes = stubClipboard();
+  const { el, component, pushed } = build({ value: "x", resetDelay: 60 });
+
+  click(el);
+  await waitFor(() => el.getAttribute("data-state") === "copied");
+  const firstTimer = component.resetTimer;
+
+  click(el);
+  await waitFor(() => writes.length === 2);
+  await waitFor(() => component.resetTimer !== firstTimer);
+
+  assert.equal(el.getAttribute("data-state"), "copied");
+  assert.equal(pushed.length, 2);
+  await waitFor(() => el.getAttribute("data-state") === "idle");
+});

@@ -251,7 +251,8 @@ defmodule SaladUI.CodeBlock do
     diff markers or ANSI escape codes).
   * `:variant` / `:size` - Button variant and size (`"ghost"` / `"icon-xs"`).
   * `:"on-copy"` - A LiveView event name or `Phoenix.LiveView.JS` command run
-    after a successful copy. An event receives `%{"value" => text}`.
+    after a successful copy. An event receives `%{"value" => text}`. The
+    "copied" state survives the re-render the event may cause.
   * `:class` - Additional CSS classes.
 
   ## Examples
@@ -319,7 +320,13 @@ defmodule SaladUI.CodeBlock do
         <path d="M20 6 9 17l-5-5" />
       </svg>
     </button>
-    <span data-slot="code-block-copy-status" aria-live="polite" class="sr-only"></span>
+    <span
+      id={"#{@id}-status"}
+      data-slot="code-block-copy-status"
+      aria-live="polite"
+      phx-update="ignore"
+      class="sr-only"
+    ></span>
     """
   end
 
@@ -340,7 +347,8 @@ defmodule SaladUI.CodeBlock do
     render with the `"highlighted"` variant.
   * `:diff` - Treat `code` as a unified diff: lines starting with `+` render
     as `"added"`, lines starting with `-` as `"removed"`, and the first column
-    (the marker) is dropped from every line.
+    (the marker) is dropped from every line. Hunk headers (`@@ ... @@`) and
+    `\\ No newline at end of file` notes are kept whole.
   * `:tabindex` - `0` by default so the content can be scrolled by keyboard;
     pass `-1` to remove the tab stop.
   * `:class` - Additional CSS classes, such as `max-h-72` to cap the height.
@@ -406,6 +414,8 @@ defmodule SaladUI.CodeBlock do
       if assigns.diff do
         raw
         |> Enum.map(fn
+          "@@" <> _ = hunk -> {"default", hunk}
+          "\\" <> _ = note -> {"default", note}
           "+" <> rest -> {"added", rest}
           "-" <> rest -> {"removed", rest}
           line -> {"default", drop_first(line)}
@@ -698,8 +708,35 @@ defmodule SaladUI.CodeBlock do
     params
     |> String.split(";")
     |> Enum.map(&parse_int/1)
-    |> Enum.reduce(style, &apply_sgr_code/2)
+    |> apply_sgr_codes(style)
   end
+
+  # 38/48 take extra arguments: `5;n` (256-color palette) or `2;r;g;b`
+  # (true color). They must be consumed here, or `38;5;31` would read as red
+  # and `38;2;0;0;0` as a reset. Palette colors 0-15 map to the standard
+  # colors; other extended colors fall back to the default color.
+  defp apply_sgr_codes([], style), do: style
+
+  defp apply_sgr_codes([code, 5, n | rest], style) when code in [38, 48] do
+    apply_sgr_codes(rest, apply_extended_color(style, code, palette_code(code, n)))
+  end
+
+  defp apply_sgr_codes([code, 2, _r, _g, _b | rest], style) when code in [38, 48] do
+    apply_sgr_codes(rest, apply_extended_color(style, code, nil))
+  end
+
+  defp apply_sgr_codes([code | _rest], style) when code in [38, 48], do: style
+
+  defp apply_sgr_codes([code | rest], style), do: apply_sgr_codes(rest, apply_sgr_code(code, style))
+
+  defp palette_code(38, n) when n in 0..7, do: 30 + n
+  defp palette_code(38, n) when n in 8..15, do: 90 + n - 8
+  defp palette_code(48, n) when n in 0..15, do: 40 + rem(n, 8)
+  defp palette_code(_code, _n), do: nil
+
+  defp apply_extended_color(style, 38, nil), do: Map.delete(style, :fg)
+  defp apply_extended_color(style, 48, nil), do: Map.delete(style, :bg)
+  defp apply_extended_color(style, _code, sgr), do: apply_sgr_code(sgr, style)
 
   defp parse_int(""), do: 0
 
