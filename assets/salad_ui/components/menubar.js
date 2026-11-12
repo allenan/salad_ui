@@ -1,5 +1,6 @@
 // saladui/components/menubar.js
 import Component from "../core/component.js";
+import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
 import PositionedElement from "../core/positioned-element.js";
@@ -9,10 +10,6 @@ import Menu, { assignId, clearGeneratedIds } from "./menu.js";
 // The open menu, tab stop and focus, handed from the instance a LiveView
 // patch tears down to the one rebuilt in its place (keyed by root element).
 const pendingRestores = new WeakMap();
-
-function isRtl(el) {
-  return el?.closest("[dir]")?.getAttribute("dir") === "rtl";
-}
 
 function isDisabled(trigger) {
   if (!trigger) return true;

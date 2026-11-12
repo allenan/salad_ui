@@ -161,7 +161,7 @@ defmodule SaladUI.Pagination do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-3.5"
+        class="size-6 w-3.5 rtl:rotate-180"
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
       </svg>
@@ -189,7 +189,7 @@ defmodule SaladUI.Pagination do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-3.5"
+        class="size-6 w-3.5 rtl:rotate-180"
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
       </svg>

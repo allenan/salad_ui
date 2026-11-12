@@ -5,6 +5,7 @@
  */
 import StateMachine from "./state-machine.js";
 import { animateTransition, queryDOM } from "./utils.js";
+import { getDirection } from "./direction.js";
 
 /**
  * Base class every interactive SaladUI component extends.
@@ -594,6 +595,19 @@ class Component {
    * counterpart and also runs if setupEvents() is ever re-invoked.
    */
   beforeDestroy() {}
+
+  /**
+   * Reading direction of the component (`"ltr"` or `"rtl"`): the nearest
+   * `dir` attribute on or above the root, else the computed CSS direction.
+   * Read on demand so a `dir` toggled after mount is honoured.
+   */
+  getDirection() {
+    return getDirection(this.el);
+  }
+
+  isRtl() {
+    return this.getDirection() === "rtl";
+  }
 
   // Alias for transition()
   handleCommand(command, params = {}) {

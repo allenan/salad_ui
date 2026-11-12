@@ -242,7 +242,7 @@ defmodule SaladUI.MenuParts do
     <span
       data-slot={@slot}
       data-part="shortcut"
-      class={classes(["ml-auto text-xs tracking-widest text-muted-foreground", @class])}
+      class={classes(["ms-auto text-xs tracking-widest text-muted-foreground", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

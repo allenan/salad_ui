@@ -119,6 +119,7 @@ defmodule SaladUI.HoverCard do
 
   * `:side` - Placement of the hover card relative to the trigger (top, right, bottom, left). Defaults to `"top"`.
   * `:align` - Alignment of the hover card (start, center, end). Defaults to `"center"`.
+    `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.

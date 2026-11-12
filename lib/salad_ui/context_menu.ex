@@ -333,7 +333,7 @@ defmodule SaladUI.ContextMenu do
 
   def context_menu_sub_trigger(assigns) do
     assigns
-    |> assign(slot: "context-menu-sub-trigger", base: @sub_trigger_class, chevron_class: "ml-auto")
+    |> assign(slot: "context-menu-sub-trigger", base: @sub_trigger_class, chevron_class: "ms-auto rtl:rotate-180")
     |> MenuParts.sub_trigger()
   end
 

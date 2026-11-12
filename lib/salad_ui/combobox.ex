@@ -445,7 +445,7 @@ defmodule SaladUI.Combobox do
   ## Options
 
   * `:side` - `"bottom"` (default) or `"top"`; flips when there is no room.
-  * `:align` - `"start"` (default), `"center"` or `"end"`.
+  * `:align` - `"start"` (default), `"center"` or `"end"`; mirrored under `dir="rtl"`.
   * `:side-offset` - Gap to the anchor in px (default `6`).
   * `:align-offset` - Shift along the anchor in px (default `0`).
   """

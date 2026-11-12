@@ -400,7 +400,7 @@ defmodule SaladUI.Menubar do
 
   def menubar_sub_trigger(assigns) do
     assigns
-    |> assign(slot: "menubar-sub-trigger", base: @sub_trigger_class, chevron_class: "ml-auto h-4 w-4")
+    |> assign(slot: "menubar-sub-trigger", base: @sub_trigger_class, chevron_class: "ms-auto h-4 w-4 rtl:rotate-180")
     |> MenuParts.sub_trigger()
   end
 

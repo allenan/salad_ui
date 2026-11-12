@@ -121,7 +121,7 @@ defmodule SaladUI.Menu do
     ~H"""
     <span
       data-slot="menu-shortcut"
-      class={classes(["ml-auto text-xs tracking-widest opacity-60", @class])}
+      class={classes(["ms-auto text-xs tracking-widest opacity-60", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

@@ -193,11 +193,6 @@ class CalendarComponent extends Component {
     button.focus();
   }
 
-  isRtl() {
-    const dir = this.el.closest("[dir]")?.getAttribute("dir");
-    return dir === "rtl";
-  }
-
   outOfBounds(date, dir) {
     if (dir < 0 && this.min && date < this.min) return true;
     if (dir > 0 && this.max && date > this.max) return true;

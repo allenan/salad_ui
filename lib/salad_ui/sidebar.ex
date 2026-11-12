@@ -53,7 +53,17 @@ defmodule SaladUI.Sidebar do
   """
 
   attr :id, :string, required: true, doc: "The id of the sidebar, used for the trigger to identify the target sidebar"
-  attr :side, :string, values: ~w(left right), default: "left"
+
+  attr :side, :string,
+    values: ~w(left right),
+    default: "left",
+    doc: "Physical side of the viewport. Under RTL pick `\"right\"` to keep the sidebar at the start, as shadcn does."
+
+  attr :dir, :string,
+    values: [nil, "ltr", "rtl"],
+    default: nil,
+    doc: "Reading direction of the sidebar (and its mobile sheet, which is portaled out of the page)."
+
   attr :variant, :string, values: ~w(sidebar floating inset), default: "sidebar"
   attr :collapsible, :string, values: ~w(offcanvas icon none), default: "offcanvas"
   attr :is_mobile, :boolean, default: false
@@ -74,6 +84,7 @@ defmodule SaladUI.Sidebar do
         ])
       }
       data-variant={@variant}
+      dir={@dir}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -87,6 +98,7 @@ defmodule SaladUI.Sidebar do
     ~H"""
     <.sheet id={@id}>
       <.sheet_content
+        dir={@dir}
         data-slot="sidebar"
         data-sidebar="sidebar"
         data-mobile="true"
@@ -119,6 +131,7 @@ defmodule SaladUI.Sidebar do
       data-collapsible={(@state == "collapsed" && @collapsible) || "none"}
       data-variant={@variant}
       data-side={@side}
+      dir={@dir}
       id={@id}
       phx-toggle-sidebar={toggle_sidebar({"none", @collapsible})}
     >
@@ -137,12 +150,11 @@ defmodule SaladUI.Sidebar do
       />
       <div
         data-slot="sidebar-container"
+        data-side={@side}
         class={
           classes([
             "duration-200 fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] ease-linear md:flex",
-            (@side == "left" &&
-               "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]") ||
-              "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            "data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
             ((@variant == "floating" || @variant == "inset") &&
                "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_1rem_+_2px)]") ||
               "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=left]:border-sidebar-border group-data-[side=right]:border-l group-data-[side=right]:border-sidebar-border",
@@ -193,7 +205,7 @@ defmodule SaladUI.Sidebar do
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="size-4"
+        class="size-4 rtl:rotate-180"
       >
         <rect width="18" height="18" x="3" y="3" rx="2"></rect>
         <path d="M9 3v18"></path>

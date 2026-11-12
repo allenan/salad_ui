@@ -106,6 +106,7 @@ defmodule SaladUI do
   - `toggle/1`, `toggle_group/1` - Toggle controls and groups
   - `collapsible/1` - Expandable content areas
   - `command/1` - Command palette interfaces
+  - `direction_provider/1` - Right-to-left (`dir="rtl"`) support for a subtree
 
   ## Architecture
 
@@ -232,6 +233,7 @@ defmodule SaladUI do
 
       import SaladUI.DatePicker
       import SaladUI.Dialog
+      import SaladUI.Direction
       import SaladUI.Drawer
       import SaladUI.DropdownMenu
       import SaladUI.Empty

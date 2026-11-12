@@ -82,11 +82,16 @@ class TabsComponent extends Component {
   }
 
   getComponentConfig() {
-    // Like Radix, only the arrow keys on the tabs' axis move between tabs.
-    const [prevKey, nextKey] =
-      this.getOrientation() === "vertical"
-        ? ["ArrowUp", "ArrowDown"]
-        : ["ArrowLeft", "ArrowRight"];
+    // Like Radix, only the arrow keys on the tabs' axis move between tabs;
+    // horizontal tabs follow the reading direction (mirrored under RTL).
+    const vertical = this.getOrientation() === "vertical";
+    const [prevKey, nextKey] = vertical
+      ? ["ArrowUp", "ArrowDown"]
+      : ["ArrowLeft", "ArrowRight"];
+    const step = (physical) =>
+      !vertical && this.isRtl()
+        ? { prev: "next", next: "prev" }[physical]
+        : physical;
 
     return {
       stateMachine: {
@@ -98,8 +103,8 @@ class TabsComponent extends Component {
         idle: {
           keyEventTarget: "list",
           keyMap: {
-            [prevKey]: () => this.navigateTab("prev"),
-            [nextKey]: () => this.navigateTab("next"),
+            [prevKey]: () => this.navigateTab(step("prev")),
+            [nextKey]: () => this.navigateTab(step("next")),
             Home: () => this.navigateTab("first"),
             End: () => this.navigateTab("last"),
           },

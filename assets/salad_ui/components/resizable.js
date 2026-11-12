@@ -330,15 +330,9 @@ class ResizableComponent extends Component {
     return !!this.disabled || handle.hasAttribute("data-disabled");
   }
 
+  // Only a horizontal group mirrors under RTL.
   isRtl() {
-    if (this.orientation !== "horizontal") return false;
-    const dirEl = this.el.closest("[dir]");
-    if (dirEl) return dirEl.getAttribute("dir") === "rtl";
-    try {
-      return window.getComputedStyle(this.el).direction === "rtl";
-    } catch {
-      return false;
-    }
+    return this.orientation === "horizontal" && super.isRtl();
   }
 
   pointerCoordinate(event) {

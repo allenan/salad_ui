@@ -45,7 +45,7 @@ defmodule SaladUI.Slider do
   On a focused thumb:
 
   * `ArrowRight` / `ArrowUp` - increase by `step` (`ArrowLeft`/`ArrowRight`
-    flip when `dir="rtl"` or `inverted`).
+    flip under RTL or `inverted`).
   * `ArrowLeft` / `ArrowDown` - decrease by `step`.
   * `Shift` + arrow, `PageUp` / `PageDown` - change by `10 * step`.
   * `Home` / `End` - jump to `min` / `max`.
@@ -92,6 +92,9 @@ defmodule SaladUI.Slider do
     neighbouring thumbs (defaults to 0).
   * `:orientation` - `"horizontal"` (default) or `"vertical"`.
   * `:dir` - `"ltr"` or `"rtl"`; `"rtl"` makes a horizontal slider start at the right.
+    Defaults to the inherited direction (`<html dir>`, `direction_provider/1`),
+    applied once the hook mounts; set it to render the thumbs on the right
+    side from the first paint.
   * `:inverted` - Reverse the visual direction.
   * `:disabled` - Disable the slider.
   * `:name` / `:field` - Form binding.
@@ -123,7 +126,7 @@ defmodule SaladUI.Slider do
     values: ~w(horizontal vertical),
     doc: "Slider orientation"
 
-  attr :dir, :string, default: nil, values: [nil, "ltr", "rtl"], doc: "Reading direction"
+  attr :dir, :string, default: nil, values: [nil, "ltr", "rtl"], doc: "Reading direction; inherited when nil"
   attr :inverted, :boolean, default: false, doc: "Reverse the visual direction of the slider"
   attr :disabled, :boolean, default: false, doc: "Whether the slider is disabled"
 

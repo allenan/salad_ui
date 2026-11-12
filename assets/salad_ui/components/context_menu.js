@@ -1,5 +1,6 @@
 // saladui/components/context_menu.js
 import Component from "../core/component.js";
+import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import Positioner from "../core/positioner.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
@@ -13,10 +14,6 @@ const LONG_PRESS_DELAY = 700;
 // sub-menus/item were open, handed from the instance a LiveView patch tears
 // down to the one rebuilt in its place (keyed by root element).
 const pendingRestores = new WeakMap();
-
-function isRtl(el) {
-  return el?.closest("[dir]")?.getAttribute("dir") === "rtl";
-}
 
 /**
  * Context menu: a menu opened at the pointer on right click (`contextmenu`),

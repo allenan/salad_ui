@@ -82,10 +82,8 @@ class SliderComponent extends Component {
       parseInt(this.options.minStepsBetweenThumbs ?? 0, 10) || 0;
     this.orientation =
       this.options.orientation === "vertical" ? "vertical" : "horizontal";
-    this.dir = this.options.dir === "rtl" ? "rtl" : "ltr";
     this.inverted = !!this.options.inverted;
     this.disabled = !!this.options.disabled;
-    this.startEdge = this.computeStartEdge();
 
     const raw = this.el.dataset.value;
     const fallback = this.options.defaultValue;
@@ -106,6 +104,19 @@ class SliderComponent extends Component {
       .map((value) => (Number.isFinite(value) ? value : this.min))
       .map((value) => this.snapToStep(value))
       .sort((a, b) => a - b);
+  }
+
+  // The `dir` option wins; without it the slider inherits the direction of
+  // the page (`<html dir>`, `direction_provider/1`, ...). Read on demand so
+  // a direction change after mount is picked up on the next update.
+  get dir() {
+    const dir = this.options?.dir;
+    if (dir === "rtl" || dir === "ltr") return dir;
+    return this.getDirection();
+  }
+
+  get startEdge() {
+    return this.computeStartEdge();
   }
 
   computeStartEdge() {

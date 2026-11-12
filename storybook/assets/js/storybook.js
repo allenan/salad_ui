@@ -67,6 +67,72 @@ import "salad_ui/components/message_scroller";
 //   };
 // })();
 
+// LTR/RTL switch: sets `dir` on every story sandbox so each component can be
+// checked right-to-left. The choice is kept in localStorage (iframe stories
+// read it too) and a toggle reloads the page, so components mount under the
+// new direction rather than being flipped mid-life.
+(function () {
+  const KEY = "salad-storybook-dir";
+  const SANDBOX = ".salad-storybook-web";
+  const TOGGLE_ID = "salad-storybook-dir-toggle";
+
+  let dir = "ltr";
+  try {
+    dir = localStorage.getItem(KEY) === "rtl" ? "rtl" : "ltr";
+  } catch {
+    // Storage blocked: stay LTR.
+  }
+
+  function applyDir() {
+    document.querySelectorAll(SANDBOX).forEach((el) => {
+      if (el.getAttribute("dir") !== dir) el.setAttribute("dir", dir);
+    });
+  }
+
+  function mountToggle() {
+    if (window.self !== window.top || document.getElementById(TOGGLE_ID)) {
+      return;
+    }
+    const button = document.createElement("button");
+    button.id = TOGGLE_ID;
+    button.type = "button";
+    button.textContent = dir === "rtl" ? "RTL" : "LTR";
+    button.title = "Switch story direction (LTR / RTL)";
+    button.setAttribute("aria-pressed", String(dir === "rtl"));
+    button.style.cssText =
+      "position:fixed;bottom:12px;left:12px;z-index:100000;padding:4px 10px;" +
+      "border-radius:6px;border:1px solid #d4d4d8;background:#fff;color:#18181b;" +
+      "font:600 12px/1.5 ui-sans-serif,system-ui,sans-serif;cursor:pointer;";
+    button.addEventListener("click", () => {
+      try {
+        localStorage.setItem(KEY, dir === "rtl" ? "ltr" : "rtl");
+      } catch {
+        return;
+      }
+      window.location.reload();
+    });
+    document.body.appendChild(button);
+  }
+
+  // LiveView patches can drop the attribute from a re-rendered sandbox.
+  new MutationObserver(applyDir).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["dir"],
+  });
+
+  const start = () => {
+    applyDir();
+    mountToggle();
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+})();
+
 // Used by the data table example's "Copy payment ID" action.
 window.addEventListener("storybook:clipboard", ({ detail }) => {
   navigator.clipboard?.writeText(detail.text);

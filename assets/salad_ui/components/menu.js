@@ -1,5 +1,6 @@
 // saladui/components/menu.js
 import Component from "../core/component.js";
+import { isRtl } from "../core/direction.js";
 import { CollectionRegistry, RovingFocus } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
 
@@ -60,10 +61,6 @@ function readItemValue(itemElement) {
     itemElement.getAttribute("data-value") ||
     itemElement.textContent.trim()
   );
-}
-
-function isRtl(el) {
-  return el?.closest("[dir]")?.getAttribute("dir") === "rtl";
 }
 
 /**

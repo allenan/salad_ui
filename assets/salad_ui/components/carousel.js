@@ -55,11 +55,9 @@ class CarouselComponent extends Component {
     return this.getOrientation() === "vertical";
   }
 
+  // Only a horizontal carousel mirrors under RTL.
   isRtl() {
-    if (this.isVertical()) return false;
-    const dir = this.el.closest("[dir]")?.getAttribute("dir");
-    if (dir) return dir.toLowerCase() === "rtl";
-    return window.getComputedStyle?.(this.el)?.direction === "rtl";
+    return !this.isVertical() && super.isRtl();
   }
 
   getComponentConfig() {

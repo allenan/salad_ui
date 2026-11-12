@@ -3,13 +3,17 @@
  * Core Positioning utility for SaladUI components
  * Handles pure positioning calculations without side effects
  */
+import { mirrorAlignment } from "./direction.js";
+
 class Positioner {
   /**
    * Calculate position for an element relative to a reference element
    *
    * @param {HTMLElement} element - The element to position
    * @param {HTMLElement} reference - The reference element to position against
-   * @param {Object} options - Positioning options
+   * @param {Object} options - Positioning options. `dir: "rtl"` mirrors a
+   *   top/bottom `start`/`end` alignment (and its `alignOffset`), as
+   *   floating-ui does; `left`/`right` sides stay physical, as in Radix.
    * @returns {Object} The computed position data
    */
   static calculate(element, reference, options = {}) {
@@ -21,6 +25,7 @@ class Positioner {
       alignOffset = 0,
       sideOffset = 8,
     } = options;
+    const dir = options.dir === "rtl" ? "rtl" : "ltr";
 
     // Get element and reference rects for positioning
     const referenceRect = reference.getBoundingClientRect();
@@ -52,6 +57,7 @@ class Positioner {
       referenceRect,
       alignOffset,
       sideOffset,
+      dir,
     );
 
     // Apply flipping if needed
@@ -72,6 +78,7 @@ class Positioner {
           referenceRect,
           alignOffset,
           sideOffset,
+          dir,
         );
         x = flippedPosition.x;
         y = flippedPosition.y;
@@ -109,9 +116,18 @@ class Positioner {
     referenceRect,
     alignOffset = 0,
     sideOffset = 8,
+    dir = "ltr",
   ) {
     let x = 0;
     let y = 0;
+
+    // Under RTL a top/bottom element's `start` is the reference's right
+    // edge, and a positive alignOffset moves it towards the start (left).
+    const horizontalAlign = placement === "top" || placement === "bottom";
+    if (horizontalAlign && dir === "rtl") {
+      alignment = mirrorAlignment(alignment, dir);
+      alignOffset = -alignOffset;
+    }
 
     // Position based on placement
     switch (placement) {

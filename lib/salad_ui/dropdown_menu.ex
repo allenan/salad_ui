@@ -243,6 +243,7 @@ defmodule SaladUI.DropdownMenu do
 
   * `:side` - Placement of the dropdown menu relative to the trigger (top, right, bottom, left). Defaults to `"bottom"`.
   * `:align` - Alignment of the dropdown menu (start, center, end). Defaults to `"start"`.
+    `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.
@@ -702,7 +703,7 @@ defmodule SaladUI.DropdownMenu do
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="ml-auto size-4"
+        class="ms-auto size-4 rtl:rotate-180"
       >
         <path d="m9 18 6-6-6-6"></path>
       </svg>
@@ -809,7 +810,7 @@ defmodule SaladUI.DropdownMenu do
     <span
       data-slot="dropdown-menu-shortcut"
       data-part="shortcut"
-      class={classes(["ml-auto text-xs tracking-widest opacity-60", @class])}
+      class={classes(["ms-auto text-xs tracking-widest opacity-60", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

@@ -472,10 +472,6 @@ class NavigationMenuComponent extends Component {
   // Keyboard
   // ---------------------------------------------------------------------------
 
-  isRtl() {
-    return this.el.closest("[dir]")?.getAttribute("dir") === "rtl";
-  }
-
   /** Top-level triggers and links, in DOM order, that can take focus. */
   topLevelFocusables() {
     const scope = this.list || this.el;
