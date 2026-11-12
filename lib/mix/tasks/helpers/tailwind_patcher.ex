@@ -7,6 +7,9 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
     --color-background: var(--background);
@@ -26,7 +29,12 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     --color-ring: var(--ring);
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
-    --color-sidebar: var(--sidebar-background);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar, var(--sidebar-background));
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -36,6 +44,13 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     --color-sidebar-ring: var(--sidebar-ring);
   }
   """
+
+  # shadcn's theme CSS names the sidebar background `--sidebar`; SaladUI
+  # color schemes used to call it `--sidebar-background`. The theme reads
+  # `--sidebar` first and falls back to the old name, and `patch/2` upgrades
+  # an existing theme block that still reads only the old name.
+  @legacy_sidebar_token "--color-sidebar: var(--sidebar-background);"
+  @sidebar_token "--color-sidebar: var(--sidebar, var(--sidebar-background));"
 
   # `assets/salad_ui` is scanned separately from `lib` because the toast
   # component builds its card/viewport classes at runtime in JS (its DOM is
@@ -102,6 +117,7 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     |> replace_v3_imports()
     |> ensure_tailwind_import()
     |> ensure_theme()
+    |> upgrade_sidebar_token()
     |> ensure_dark_variant()
     |> ensure_directives()
   end
@@ -130,6 +146,10 @@ defmodule SaladUI.Patcher.TailwindPatcher do
     else
       append_block(content, @theme_block)
     end
+  end
+
+  defp upgrade_sidebar_token(content) do
+    String.replace(content, @legacy_sidebar_token, @sidebar_token)
   end
 
   # Replace any existing `dark` variant (Phoenix 1.8 ships a data-theme-only

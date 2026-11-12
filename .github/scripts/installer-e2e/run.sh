@@ -62,6 +62,11 @@ grep -q 'SaladUI: SaladUI.SaladUIHook' assets/js/app.js || fail "hook not regist
 [ "$(grep -c '@custom-variant dark' assets/css/app.css)" = 1 ] || fail "duplicate dark variant"
 grep -q 'border-border' assets/css/app.css || fail "base border rule missing"
 grep -q 'hsl(var(' assets/css/app.css && fail "hsl() wrapping oklch tokens (invalid CSS)"
+# shadcn's theme CSS names the sidebar background `--sidebar`; the theme must
+# read it (falling back to the legacy `--sidebar-background`).
+grep -q -- '--sidebar:' assets/css/app.css || fail "color scheme does not define --sidebar"
+grep -qF -- '--color-sidebar: var(--sidebar, var(--sidebar-background));' assets/css/app.css ||
+  fail "theme does not map --color-sidebar to --sidebar"
 
 if [ "$MODE" = add ]; then
   step "assert only the selected components and their dependencies were copied"
@@ -114,6 +119,8 @@ step "build assets"
 mix assets.build
 grep -q 'SaladUIHook' priv/static/assets/js/app.js || fail "SaladUI hook missing from JS bundle"
 grep -q 'bg-primary' priv/static/assets/css/app.css || fail "SaladUI classes missing from CSS bundle"
+grep -qE 'var\(--sidebar, ?var\(--sidebar-background\)\)' priv/static/assets/css/app.css ||
+  fail "bg-sidebar does not resolve to --sidebar in the CSS bundle"
 
 step "mount components in a LiveView"
 mkdir -p test/demo_web
