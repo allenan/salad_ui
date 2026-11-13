@@ -144,7 +144,7 @@ class PopoverComponent extends Component {
       const placement = this.positioner.getAttribute("data-side") || "bottom";
       const alignment = this.positioner.getAttribute("data-align") || "center";
       const sideOffset = parseInt(
-        this.positioner.getAttribute("data-side-offset") || "8",
+        this.positioner.getAttribute("data-side-offset") || "4",
         10,
       );
       const alignOffset = parseInt(

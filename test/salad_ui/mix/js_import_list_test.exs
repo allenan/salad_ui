@@ -26,7 +26,8 @@ defmodule SaladUI.Mix.JSImportListTest do
 
   for {task, pattern} <- [
         {"lib/mix/tasks/salad.setup.ex", ~s(import "salad_ui/components/NAME";)},
-        {"lib/mix/tasks/salad.install.ex", ~s(import "./ui/components/NAME.js";)}
+        {"lib/mix/tasks/salad.install.ex", ~s(import "./ui/components/NAME.js";)},
+        {"examples/salad_chat/assets/js/app.js", ~s(import "salad_ui/components/NAME";)}
       ] do
     test "#{task} imports every registered component" do
       source = File.read!(Path.join(@root, unquote(task)))

@@ -138,7 +138,7 @@ class DropdownMenuComponent extends Component {
   initializePositionedElement() {
     if (this.positioner && this.trigger && !this.positionedElement) {
       const side = this.positioner.getAttribute("data-side") || "bottom";
-      const align = this.positioner.getAttribute("data-align") || "start";
+      const align = this.positioner.getAttribute("data-align") || "center";
       const sideOffset = parseInt(
         this.positioner.getAttribute("data-side-offset") || "4",
         10,

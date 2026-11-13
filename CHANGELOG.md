@@ -122,6 +122,13 @@ for status and known gaps. Every new JS-backed component is registered in
 - Dropdown menus are modal by default, as in Radix: while open, outside clicks
   only close the menu, the page is hidden from assistive tech and page scroll is
   locked. Pass `modal={false}` for the old behaviour.
+- Select, context menu and the sidebar's mobile sheet are modal too, as in
+  Radix (context menu takes `modal={false}`; select is always modal). Menubar
+  stays non-modal, also as in Radix.
+- Placement defaults match shadcn/ui: `select_content` is `item-aligned` with
+  `align="center"` (pass `position="popper"` for the old placement);
+  `dropdown_menu_content` aligns `center`; popover and hover card use a 4px
+  `side-offset`; hover card opens on the `bottom` side.
 - Menus no longer wrap with the arrow keys by default (Radix `loop={false}`);
   set `loop` on the content to wrap. Menubar trigger navigation still loops.
 - Class merging follows tailwind-merge v3 exactly, e.g. `outline outline-2`

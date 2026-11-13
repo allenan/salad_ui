@@ -1,7 +1,8 @@
 // saladui/core/modal-layer.js
 /**
  * Radix-style modal behaviour shared by every modal surface (dialog, sheet,
- * alert dialog, drawer, a modal dropdown menu). While a modal layer is open:
+ * alert dialog, drawer, select, the sidebar's mobile sheet, and a modal
+ * dropdown or context menu). While a modal layer is open:
  *
  * - Outside pointer events are disabled, as Radix's DismissableLayer does
  *   with `disableOutsidePointerEvents`: `<body>` gets `pointer-events: none`

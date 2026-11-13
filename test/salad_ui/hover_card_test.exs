@@ -58,9 +58,9 @@ defmodule SaladUI.HoverCardTest do
         |> clean_string()
 
       assert html =~ "data-part=\"content\""
-      assert html =~ "data-side=\"top\""
+      assert html =~ "data-side=\"bottom\""
       assert html =~ "data-align=\"center\""
-      assert html =~ "data-side-offset=\"8\""
+      assert html =~ "data-side-offset=\"4\""
       assert html =~ "data-align-offset=\"0\""
       assert html =~ "class=\"z-50\""
       assert html =~ "hidden"

@@ -87,7 +87,7 @@ function buildSelect({
       <button type="button" data-part="trigger" ${triggerDisabled ? "disabled" : ""} ${triggerAttrs}>
         <span data-part="value" data-placeholder="Choose one">Choose one</span>
       </button>
-      <div data-part="content" ${contentAttrs} hidden>
+      <div data-part="content" ${/data-position=/.test(contentAttrs) ? "" : 'data-position="popper"'} ${contentAttrs} hidden>
         ${
           scrollable
             ? `<div data-part="scroll-up-button" aria-hidden="true" hidden></div>
@@ -1494,4 +1494,39 @@ test("a patch re-places an open item-aligned select, and follows a new position"
   // Below the trigger (300 + 36), with no sideOffset in popper mode.
   assert.equal(content.style.top, "336px");
   component.destroy();
+});
+
+test("the open list is modal, as in Radix: page blocked and aria-hidden until it closes", async () => {
+  const { resetModalLayers } = await import("../salad_ui/core/modal-layer.js");
+  const { component, content, trigger } = buildSelect();
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    '<button id="elsewhere" type="button">x</button>',
+  );
+  const elsewhere = document.getElementById("elsewhere");
+
+  click(trigger);
+  assert.equal(component.state, "open");
+  assert.equal(document.body.style.pointerEvents, "none");
+  assert.equal(trigger.getAttribute("aria-hidden"), "true");
+  assert.equal(elsewhere.getAttribute("aria-hidden"), "true");
+  assert.equal(content.closest("[aria-hidden]"), null);
+
+  keydown(content, "Escape");
+  assert.equal(component.state, "closed");
+  assert.notEqual(document.body.style.pointerEvents, "none");
+  assert.equal(trigger.hasAttribute("aria-hidden"), false);
+  assert.equal(elsewhere.hasAttribute("aria-hidden"), false);
+  resetModalLayers();
+});
+
+test("content without data-position/data-align uses shadcn's defaults", () => {
+  const { component, content } = buildSelect();
+  content.removeAttribute("data-position");
+  content.removeAttribute("data-align");
+
+  component.readPlacement();
+
+  assert.equal(component.position, "item-aligned");
+  assert.equal(component.align, "center");
 });

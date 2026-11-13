@@ -51,6 +51,14 @@ defmodule SaladUI.ContextMenu do
   * The keyboard context-menu key (or `Shift+F10`) on a focused element inside
     the trigger opens it at the trigger and focuses the first item.
 
+  ## Modal behaviour
+
+  As with Radix's ContextMenu, the menu is modal by default (`modal={true}`):
+  while it is open, a click outside only closes it, everything outside the
+  menu is `aria-hidden`, and page scrolling is locked. Right clicking inside
+  the trigger still moves the menu to the pointer. See "Modal behaviour" in
+  `SaladUI.DropdownMenu`. Pass `modal={false}` to leave the page interactive.
+
   ## Keyboard
 
   `ArrowUp`/`ArrowDown`/`Home`/`End` move between items, `Enter`/`Space`
@@ -90,6 +98,11 @@ defmodule SaladUI.ContextMenu do
   attr :id, :string, required: true, doc: "Unique identifier for the context menu"
   attr :"use-portal", :boolean, default: false, doc: "Render the open menu in a portal (`document.body` by default)"
   attr :"portal-container", :string, default: nil, doc: "CSS selector for the portal container"
+
+  attr :modal, :boolean,
+    default: true,
+    doc: "block, hide and scroll-lock the page while open; `false` leaves the page interactive"
+
   attr :"on-open", :any, default: nil, doc: "Handler fired when the menu opens"
   attr :"on-close", :any, default: nil, doc: "Handler fired when the menu closes"
   attr :class, :string, default: nil
@@ -105,6 +118,7 @@ defmodule SaladUI.ContextMenu do
         json(%{
           usePortal: assigns[:"use-portal"],
           portalContainer: assigns[:"portal-container"],
+          modal: assigns.modal,
           animations: %{"open_to_closed" => %{duration: 130, target_part: "content"}}
         })
       )

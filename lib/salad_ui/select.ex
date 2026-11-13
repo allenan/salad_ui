@@ -96,11 +96,7 @@ defmodule SaladUI.Select do
 
   `select_content/1` takes Radix's two positioning modes:
 
-  * `position="popper"` (SaladUI's default, kept for backward compatibility)
-    places the panel beside the trigger, on `side` (`top`, `right`, `bottom`
-    or `left`, flipping when there is no room) with `align` (`start`, `center`
-    or `end`). It is at least as wide as the trigger.
-  * `position="item-aligned"` (the default in shadcn/ui and Radix) places the
+  * `position="item-aligned"` (the default, as in shadcn/ui and Radix) places the
     panel over the trigger so the selected item (or the first enabled one)
     sits exactly where the trigger shows its value, scrolling a long list so
     it can. `side` and `align` are ignored; when the panel cannot line up
@@ -108,17 +104,26 @@ defmodule SaladUI.Select do
     back to popper placement. The item is lined up each time the dropdown
     opens; while it stays open the panel just follows the trigger, so page
     scrolls and LiveView patches keep the list where the user scrolled it.
+  * `position="popper"` places the panel beside the trigger, on `side` (`top`,
+    `right`, `bottom` or `left`, flipping when there is no room) with `align`
+    (`start`, `center` or `end`). It is at least as wide as the trigger.
 
       <.select id="fruit" default-value="banana">
         <.select_trigger class="w-[180px]">
           <.select_value />
         </.select_trigger>
-        <.select_content position="item-aligned">
+        <.select_content position="popper">
           <.select_item value="apple">Apple</.select_item>
           <.select_item value="banana">Banana</.select_item>
           <.select_item value="blueberry">Blueberry</.select_item>
         </.select_content>
       </.select>
+
+  ## Modal behaviour
+
+  As in Radix's Select, the open list is always modal: a click outside only
+  closes it, everything outside the list is `aria-hidden`, and page scrolling
+  is locked. See "Modal behaviour" in `SaladUI.DropdownMenu`.
 
   ## Validation
 
@@ -385,22 +390,21 @@ defmodule SaladUI.Select do
 
   ## Options
 
-  * `:position` - `"popper"` (default) places the panel beside the trigger,
-    on `side` with `align`; `"item-aligned"` (shadcn's and Radix's default)
-    places it over the trigger with the selected item lined up on the
-    trigger's value, falling back to popper near the window edges. See
-    "Position" in `SaladUI.Select`.
+  * `:position` - `"item-aligned"` (default, as in shadcn/ui) places the panel
+    over the trigger with the selected item lined up on the trigger's value,
+    falling back to popper near the window edges; `"popper"` places it beside
+    the trigger, on `side` with `align`. See "Position" in `SaladUI.Select`.
   * `:side` - Preferred side of the trigger in popper mode (`"top"`,
     `"right"`, `"bottom"` or `"left"`). Flips when there is no room.
   * `:align` - Alignment against the trigger in popper mode (`"start"`,
-    `"center"` or `"end"`). Defaults to `"start"` (shadcn uses `"center"`;
-    the two only differ when the panel is wider than the trigger).
+    `"center"` or `"end"`). Defaults to `"center"`, as in shadcn/ui (it only
+    matters when the panel is wider than the trigger).
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
-  attr :position, :string, values: ~w(popper item-aligned), default: "popper"
+  attr :position, :string, values: ~w(popper item-aligned), default: "item-aligned"
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
-  attr :align, :string, values: ~w(start center end), default: "start"
+  attr :align, :string, values: ~w(start center end), default: "center"
   slot :inner_block, required: true
 
   attr :rest, :global

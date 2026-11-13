@@ -1,9 +1,8 @@
 defmodule SaladChatWeb.AppSidebar do
   @moduledoc """
   The workspace sidebar: workspace menu, channels, direct messages and the
-  user menu. Rendered twice by the chat page: once as the desktop sidebar
-  (collapsible to icons) and once inside a sheet on phones, so every id is
-  prefixed with the sidebar's `id`.
+  user menu. Collapsible to icons on desktop; below 768px the sidebar
+  provider turns it into a modal sheet, which picking a destination closes.
   """
   use SaladChatWeb, :html
 
@@ -13,7 +12,6 @@ defmodule SaladChatWeb.AppSidebar do
   alias SaladChatWeb.Paths
 
   attr :id, :string, required: true
-  attr :mobile, :boolean, default: false
   attr :me, :any, required: true, doc: "the current %User{}"
   attr :users, :map, required: true
   attr :channels, :list, required: true
@@ -25,7 +23,7 @@ defmodule SaladChatWeb.AppSidebar do
 
   def app_sidebar(assigns) do
     ~H"""
-    <.sidebar id={@id} collapsible="icon" is_mobile={@mobile}>
+    <.sidebar id={@id} collapsible="icon">
       <.sidebar_header>
         <.workspace_menu id={@id} theme={@theme} />
       </.sidebar_header>
@@ -36,7 +34,7 @@ defmodule SaladChatWeb.AppSidebar do
             <.sidebar_menu_item>
               <.sidebar_menu_button
                 tooltip="Search (⌘K)"
-                phx-click={close_mobile(@mobile) |> open("#quick-switcher_dialog")}
+                phx-click={close_mobile() |> open("#quick-switcher_dialog")}
                 class="text-sidebar-foreground/80"
               >
                 <.icon name="hero-magnifying-glass" />
@@ -54,7 +52,7 @@ defmodule SaladChatWeb.AppSidebar do
             <.sidebar_group_action
               title="Create channel"
               aria-label="Create channel"
-              phx-click={close_mobile(@mobile) |> open("#create-channel-dialog")}
+              phx-click={close_mobile() |> open("#create-channel-dialog")}
             >
               <.icon name="hero-plus" />
             </.sidebar_group_action>
@@ -63,8 +61,8 @@ defmodule SaladChatWeb.AppSidebar do
             <.sidebar_menu_button
               is_active={channel.id == @active_id}
               tooltip={"#" <> channel.name}
-              phx-click={navigate(@me.handle, channel.id, @mobile)}
-              data-shortcut={!@mobile && i < 9 && i + 1}
+              phx-click={navigate(@me.handle, channel.id)}
+              data-shortcut={i < 9 && i + 1}
             >
               <.icon name={if channel.private?, do: "hero-lock-closed", else: "hero-hashtag"} />
               <span class={unread?(@unread, channel.id) && "font-semibold text-sidebar-foreground"}>
@@ -81,7 +79,7 @@ defmodule SaladChatWeb.AppSidebar do
             <.sidebar_menu_button
               is_active={dm.id == @active_id}
               tooltip={peer.name}
-              phx-click={navigate(@me.handle, dm.id, @mobile)}
+              phx-click={navigate(@me.handle, dm.id)}
             >
               <.user_avatar
                 user={peer}
@@ -99,7 +97,7 @@ defmodule SaladChatWeb.AppSidebar do
             <.sidebar_menu_button
               tooltip="New message"
               class="text-sidebar-foreground/70"
-              phx-click={close_mobile(@mobile) |> open("#quick-switcher_dialog")}
+              phx-click={close_mobile() |> open("#quick-switcher_dialog")}
             >
               <.icon name="hero-pencil-square" />
               <span>New message</span>
@@ -111,7 +109,7 @@ defmodule SaladChatWeb.AppSidebar do
       <.sidebar_footer>
         <.user_menu id={@id} me={@me} online={MapSet.member?(@online, @me.handle)} />
       </.sidebar_footer>
-      <.sidebar_rail :if={!@mobile} />
+      <.sidebar_rail />
     </.sidebar>
     """
   end
@@ -282,13 +280,14 @@ defmodule SaladChatWeb.AppSidebar do
   defp away_toggle("away"), do: "active"
   defp away_toggle(_), do: "away"
 
-  defp navigate(handle, channel_id, mobile) do
-    JS.patch(Paths.channel_path(handle, channel_id)) |> close_mobile(mobile)
+  defp navigate(handle, channel_id) do
+    JS.patch(Paths.channel_path(handle, channel_id)) |> close_mobile()
   end
 
-  defp close_mobile(js \\ %JS{}, mobile)
-  defp close_mobile(js, true), do: SaladUI.JS.dispatch_command(js, "close", to: "#mobile-sidebar")
-  defp close_mobile(js, false), do: js
+  # shadcn's setOpenMobile(false): closes the phone sheet, leaves the desktop
+  # sidebar alone.
+  defp close_mobile(js \\ %JS{}),
+    do: SaladUI.JS.dispatch_command(js, "close-mobile", to: "#app-sidebar")
 
   defp open(js \\ %JS{}, selector), do: SaladUI.JS.dispatch_command(js, "open", to: selector)
 end
