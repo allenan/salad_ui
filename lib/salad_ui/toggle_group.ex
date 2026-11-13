@@ -66,6 +66,24 @@ defmodule SaladUI.ToggleGroup do
   * With only `default-value` the group is uncontrolled: the pressed items
     survive unrelated re-renders; while the server keeps rendering the same
     value the hook keeps what the user pressed.
+
+  ## Required
+
+  `required` is a SaladUI extension (Radix's ToggleGroup has no such prop): the
+  user cannot empty the group. In a `type="single"` group, pressing the pressed
+  item (click, Space or Enter) does nothing: it stays pressed, no `value-changed`
+  event is pushed, and a controlled group has nothing to wait for, so nothing
+  blinks. In a `type="multiple"` group the last pressed item cannot be
+  released. It works controlled or uncontrolled. An item's own `phx-click`
+  still fires, as a native radio's click does.
+
+      <.toggle_group :let={builder} id="filter" type="single" value={@filter} required on-value-changed="filter">
+        <.toggle_group_item value="all" builder={builder}>All</.toggle_group_item>
+        <.toggle_group_item value="mine" builder={builder}>Mine</.toggle_group_item>
+      </.toggle_group>
+
+  The server still owns the value: it can render the group with nothing
+  pressed, and `required` only stops the user from getting there.
   """
   use SaladUI, :component
 
@@ -85,6 +103,8 @@ defmodule SaladUI.ToggleGroup do
   * `:orientation` - `"horizontal"` (default) or `"vertical"`
   * `:loop` - whether keyboard focus wraps around (default `true`)
   * `:disabled` - disables every item
+  * `:required` - the user cannot release the last pressed item (a SaladUI
+    extension, see "Required" above)
   """
   attr :id, :string, default: nil, doc: "required unless `field` is given (the hook needs a stable id)"
   attr :name, :string, default: nil
@@ -104,6 +124,11 @@ defmodule SaladUI.ToggleGroup do
     doc: "The value of the toggle group. It's a single value for single type and a list of values for multiple type."
 
   attr :disabled, :boolean, default: false
+
+  attr :required, :boolean,
+    default: false,
+    doc: "the user cannot release the last pressed item (SaladUI extension; Radix has no `required`)"
+
   attr :variant, :string, values: [nil, "default", "outline"], default: nil
   attr :size, :string, values: [nil, "default", "sm", "lg"], default: nil
   attr :spacing, :integer, default: 0, doc: "gap between items, in Tailwind spacing units"
@@ -162,7 +187,8 @@ defmodule SaladUI.ToggleGroup do
             orientation: assigns.orientation,
             loop: assigns.loop,
             disabled: assigns.disabled,
-            controlled: controlled
+            controlled: controlled,
+            required: assigns.required
           })
       )
 
@@ -174,6 +200,7 @@ defmodule SaladUI.ToggleGroup do
       data-component="toggle-group"
       data-part="root"
       data-state="idle"
+      data-required={@required && ""}
       data-variant={@variant}
       data-size={@size}
       data-spacing={@spacing}

@@ -83,7 +83,19 @@ defmodule SaladUI.ResizableTest do
       assert html =~ ~s(data-default-size="25")
       assert html =~ ~s(data-min-size="10")
       assert html =~ ~s(data-max-size="40.5")
-      assert html =~ ~s(style="flex: 25 1 0px; overflow: hidden; overflow: clip;")
+      # The size is a custom property read by a class, so app CSS can
+      # override the flex without !important.
+      assert html =~ ~s(style="--panel-size: 25;")
+      assert html =~ "flex-[var(--panel-size,1)_1_0px] overflow-clip min-h-0 min-w-0"
+      refute html =~ "flex: 25"
+    end
+
+    test "merges the app's classes after the sizing classes" do
+      assigns = %{}
+
+      html = to_html(~H|<.resizable_panel class="flex flex-col max-lg:flex-1">Body</.resizable_panel>|)
+
+      assert html =~ "flex-[var(--panel-size,1)_1_0px] overflow-clip min-h-0 min-w-0 flex flex-col max-lg:flex-1"
     end
 
     test "omits constraints that are not given" do
@@ -93,7 +105,7 @@ defmodule SaladUI.ResizableTest do
 
       refute html =~ "data-default-size"
       refute html =~ "data-min-size"
-      assert html =~ ~s(style="flex: 1 1 0px; overflow: hidden; overflow: clip;")
+      assert html =~ ~s(style="--panel-size: 1;")
     end
 
     test "rejects non-percentage sizes" do
@@ -182,6 +194,86 @@ defmodule SaladUI.ResizableTest do
       assert attr_of(side, "data-collapsible") == "true"
       assert attr_of(side, "data-collapsed-size") == "4"
       assert length(Regex.scan(~r/data-collapsible=/, html)) == 1
+    end
+
+    test "collapsed renders the panel collapsed and inert before the JS runs" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.resizable_panel_group id="g" on-collapse="side_collapsed" on-expand="side_expanded">
+          <.resizable_panel id="main" default-size={75}>Main</.resizable_panel>
+          <.resizable_handle />
+          <.resizable_panel id="side" default-size={25} min-size={15} collapsible collapsed>
+            Side
+          </.resizable_panel>
+        </.resizable_panel_group>
+        """)
+
+      side = tag(html, "#side")
+      assert attr_of(side, "data-server-collapsed") == "true"
+      assert attr_of(side, "data-collapsed") == ""
+      assert attr_of(side, "inert") == ""
+      # Starts at its collapsed size, not its default size: no flash.
+      assert attr_of(side, "style") == "--panel-size: 0;"
+      assert attr_of(tag(html, "#main"), "style") == "--panel-size: 75;"
+      assert html =~ ~s(&quot;collapse&quot;:&quot;side_collapsed&quot;)
+      assert html =~ ~s(&quot;expand&quot;:&quot;side_expanded&quot;)
+    end
+
+    test "collapsed={false} is sent to the JS and renders the default size" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.resizable_panel id="side" default-size={25} collapsible collapsed={false}>
+          Side
+        </.resizable_panel>
+        """)
+
+      side = tag(html, "#side")
+      assert attr_of(side, "data-server-collapsed") == "false"
+      assert attr_of(side, "data-collapsed") == nil
+      assert attr_of(side, "inert") == nil
+      assert attr_of(side, "style") == "--panel-size: 25;"
+    end
+
+    test "a panel collapsed to a collapsed-size above 0 stays interactive" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.resizable_panel id="rail" default-size={25} collapsible collapsed-size={4} collapsed>
+          Rail
+        </.resizable_panel>
+        """)
+
+      rail = tag(html, "#rail")
+      assert attr_of(rail, "data-collapsed") == ""
+      assert attr_of(rail, "inert") == nil
+      assert attr_of(rail, "style") == "--panel-size: 4;"
+    end
+
+    test "without collapsed the client owns the state" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.resizable_panel id="side" default-size={25} collapsible>Side</.resizable_panel>
+        """)
+
+      side = tag(html, "#side")
+      assert attr_of(side, "data-server-collapsed") == nil
+      assert attr_of(side, "data-collapsed") == nil
+      assert attr_of(side, "inert") == nil
+    end
+
+    test "collapsed needs a collapsible panel" do
+      assigns = %{}
+
+      assert_raise ArgumentError, ~r/collapsible/, fn ->
+        rendered_to_string(~H|<.resizable_panel collapsed>Body</.resizable_panel>|)
+      end
     end
   end
 end

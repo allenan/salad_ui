@@ -409,6 +409,57 @@ for status and known gaps. Every new JS-backed component is registered in
 - Toaster takes `label` (Sonner's `containerAriaLabel`, default
   "Notifications") and global attributes.
 
+**Resizable: collapsed panels from downstream use**
+- With `auto-save-id`, the size a collapsed panel expands back to is stored
+  with the layout (react-resizable-panels' `expandToSizes`), so `expand`
+  restores the width the person set after a reload, not `min-size`. A panel
+  collapsed by a drag or the keyboard remembers its size too; with nothing
+  remembered, `expand` opens to `default-size`, then `min-size`. The stored
+  value is now `{layout, expandToSizes}`; a layout stored as a bare array
+  still loads.
+- `resizable_panel` takes `collapsed`: the server's state for a
+  `collapsible` panel. It is rendered collapsed (at `collapsed-size`, with
+  `data-collapsed`) from the first paint, so a panel hidden last time no
+  longer shows for a moment on load, and a change to `collapsed` collapses or
+  expands it, as `dialog` follows `open`. The group's new `on-collapse` /
+  `on-expand` events report changes made by a drag, the keyboard or a command,
+  with the panel's id and index, so the server can keep the state (the
+  moduledoc shows the pattern, or a cookie as react-resizable-panels
+  recommends).
+- A panel collapsed to size 0 is `inert` (out of the tab order and the
+  accessibility tree) until it expands; focus inside it moves to its handle. A
+  panel with a `collapsed-size` above 0, such as an icon rail, stays
+  interactive.
+- Panel sizes are an inline `--panel-size` custom property read by the
+  panel's `flex-[var(--panel-size,1)_1_0px]` class instead of an inline
+  `flex`, so app CSS overrides them without `!important` (e.g. one full-width
+  panel at a time below a breakpoint).
+- Panels are `min-h-0 min-w-0`: with `overflow: clip` (not a scroll
+  container) a panel could not shrink below its content's min-content size,
+  so a collapsed panel with content still showed, and small sizes were wider
+  than their percentage.
+
+**Extensions from downstream use** (not in shadcn/Radix/Sonner; defaults unchanged)
+- Toggle group takes `required`: in a `type="single"` group pressing the
+  pressed item (click, Space, Enter) does nothing: no release, no
+  `value-changed` event, and so no blink in a controlled group waiting for
+  the server. In a `type="multiple"` group the last pressed item cannot be
+  released. Radix has no `required`; without it nothing changes.
+- Toaster takes `breakpoint` (px, default 600 as in Sonner) for the switch to
+  the phone layout, which used a Tailwind `max-[600px]` fixed at build time.
+  The viewport now carries `data-mobile` from a `(max-width: <breakpoint>px)`
+  media query. Phone-layout cards fill the viewport width, as Sonner's do
+  (they kept 356px). The switch is now at or below 600px, as in Sonner (it
+  was below 600px).
+- `top-center` / `bottom-center` toasts centre on
+  `var(--toaster-center-x, 50%)`, so an app can centre them on the page
+  beside a sidebar (example in `SaladUI.Toast`, "Placement"). In the phone
+  layout they sit between the mobile offsets, as in Sonner. `offset` and
+  `mobile-offset` already took CSS lengths such as `"var(--header-height)"`;
+  now documented.
+- `sidebar_trigger` takes an `:icon` slot that replaces shadcn's panel icon
+  (e.g. an app logo), keeping the trigger's toggle wiring and label.
+
 # 0.14.0
 
 **Changes**

@@ -9,7 +9,8 @@ const ITEM_SELECTOR = '[data-part="item"]';
  *
  * - `type: "single"` items behave like radios (role="radio", aria-checked),
  *   pressing one releases the others and pressing the pressed one releases it;
- *   `type: "multiple"` items toggle independently (aria-pressed).
+ *   `type: "multiple"` items toggle independently (aria-pressed). With
+ *   `required` the last pressed item cannot be released.
  * - Roving tabindex: the group is a single tab stop. The arrow keys on the
  *   group's axis move focus (Left/Right are mirrored under RTL), Home/End jump
  *   to the ends, and focus wraps around unless `loop` is false. Moving focus
@@ -245,8 +246,28 @@ class ToggleGroupComponent extends Component {
     this.setTabStop(item);
   }
 
+  /**
+   * `required` (a SaladUI extension; Radix has none): the user cannot release
+   * the last pressed item, so a single group's pressed item and a multiple
+   * group's only pressed item ignore presses.
+   */
+  isRequired() {
+    return this.options?.required === true;
+  }
+
+  wouldEmpty(item) {
+    if (!this.isPressed(item)) return false;
+    return this.getItems().every(
+      (other) => other === item || !this.isPressed(other),
+    );
+  }
+
   toggleItem(item) {
     const pressed = !this.isPressed(item);
+
+    // Nothing changes, so no event: a controlled group would otherwise wait
+    // for the server's answer to put the item back (a visible blink).
+    if (!pressed && this.isRequired() && this.wouldEmpty(item)) return;
 
     if (pressed && this.getType() === "single") {
       this.getItems()

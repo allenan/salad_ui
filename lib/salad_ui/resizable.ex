@@ -75,21 +75,76 @@ defmodule SaladUI.Resizable do
       </.resizable_panel_group>
 
   `collapse` and `expand` commands take the panel's `id` (or its index) as
-  `panel`; `expand` restores the size the panel had before `collapse`, or its
+  `panel`. `expand` restores the size the panel had before it collapsed (by
+  `collapse`, a drag or the keyboard), else its `default-size`, else its
   `min-size`:
 
       SaladUI.LiveView.send_command(socket, "layout", "collapse", %{panel: "side-pane"})
 
-  ## Persistence
+  A panel collapsed to size 0 is `inert`: its content leaves the tab order and
+  the accessibility tree until it expands (focus inside it moves to the
+  adjacent handle). A panel with a `collapsed-size` above 0, such as an icon
+  rail, stays interactive.
 
-  Set `auto-save-id` to store the layout in `localStorage` under that key and
-  restore it on the next mount. Within a LiveView session the current layout is
-  always kept across server patches, with or without `auto-save-id`.
+  ### Collapsed from the first paint
+
+  The JS restores a layout when it mounts, after the first paint. To render a
+  panel collapsed from the start, keep its state on the server and pass it as
+  `collapsed`: the panel is rendered at its `collapsed-size`, with
+  `data-collapsed` (and `inert` at size 0). When the server changes
+  `collapsed`, the panel collapses or expands. The user can still drag or
+  press Enter, and the group reports each change with `on-collapse` /
+  `on-expand`, so the server can keep its state in step:
+
+      <.resizable_panel_group
+        id="layout"
+        auto-save-id="layout"
+        on-collapse="side_pane"
+        on-expand="side_pane"
+      >
+        <.resizable_panel default-size={75}>Main</.resizable_panel>
+        <.resizable_handle />
+        <.resizable_panel
+          id="side-pane"
+          default-size={25}
+          min-size={15}
+          collapsible
+          collapsed={@side_collapsed}
+        >
+          Side
+        </.resizable_panel>
+      </.resizable_panel_group>
+
+      def handle_event("side_pane", %{"collapsed" => collapsed}, socket) do
+        {:noreply, assign(socket, :side_collapsed, collapsed)}
+      end
+
+  Where the state lives is up to the app: the session or the database, or a
+  cookie read in `mount/3` (react-resizable-panels recommends a cookie for
+  server rendering). A button that toggles the panel can change the assign, or
+  send `collapse` / `expand` commands. With `auto-save-id`, the size to expand
+  back to is stored with the layout, so it survives reloads.
+
+  ## Styling at a breakpoint
+
+  A panel's size is the inline custom property `--panel-size`, read by the
+  panel's `flex-[var(--panel-size,1)_1_0px]` class, so ordinary CSS overrides
+  it without `!important`. For example, one full-width panel at a time on
+  small screens:
+
+      @media (max-width: 1023px) {
+        #layout > [data-slot="resizable-panel"] { flex: 1 1 auto; }
+      }
 
   ## Component events
 
   * `:on-layout-change` - Maps the `layout-change` event. Fired when a drag
     ends or a keyboard resize happens, with `%{"layout" => [sizes...]}`.
+  * `:on-collapse` / `:on-expand` - Map the `collapse` / `expand` events.
+    Fired when a collapsible panel collapses or expands by a drag, the
+    keyboard or a command (not when it follows its `collapsed` attribute),
+    with `%{"panel" => id, "index" => index, "collapsed" => boolean,
+    "layout" => [sizes...]}`.
 
   ## Server commands
 
@@ -115,6 +170,8 @@ defmodule SaladUI.Resizable do
   * `:keyboard-resize-by` - Percentage moved per arrow-key press (default 10).
   * `:disabled` - Disables resizing for every handle in the group.
   * `:on-layout-change` - Handler for the `layout-change` event.
+  * `:on-collapse` / `:on-expand` - Handlers for the `collapse` / `expand`
+    events (see "Collapsed from the first paint").
   * `:class` - Additional CSS classes.
   """
   attr :id, :string, required: true, doc: "Unique identifier for the panel group"
@@ -133,6 +190,8 @@ defmodule SaladUI.Resizable do
   attr :"keyboard-resize-by", :any, default: 10, doc: "Percentage moved per arrow-key press"
   attr :disabled, :boolean, default: false, doc: "Whether resizing is disabled"
   attr :"on-layout-change", :any, default: nil, doc: "Handler for the layout-change event"
+  attr :"on-collapse", :any, default: nil, doc: "Handler for the collapse event"
+  attr :"on-expand", :any, default: nil, doc: "Handler for the expand event"
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -186,6 +245,9 @@ defmodule SaladUI.Resizable do
   * `:collapsible` - Whether the panel can collapse below `min-size` to
     `collapsed-size` (see "Collapsible panels").
   * `:collapsed-size` - Size in percent of the collapsed panel (default 0).
+  * `:collapsed` - The server's collapsed state for a `collapsible` panel
+    (see "Collapsed from the first paint"). `nil` (default) leaves it to the
+    client.
   * `:class` - Additional CSS classes.
   """
   attr :id, :string, default: nil
@@ -194,22 +256,38 @@ defmodule SaladUI.Resizable do
   attr :"max-size", :any, default: nil, doc: "Maximum size in percent"
   attr :collapsible, :boolean, default: false, doc: "Whether the panel can collapse below its min size"
   attr :"collapsed-size", :any, default: nil, doc: "Size in percent when collapsed (default 0)"
+
+  attr :collapsed, :boolean,
+    default: nil,
+    doc: "Server-controlled collapsed state of a collapsible panel; nil leaves it to the client"
+
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
   def resizable_panel(assigns) do
     default_size = parse_size(assigns[:"default-size"])
+    collapsed_size = parse_size(assigns[:"collapsed-size"])
+    collapsed = assigns.collapsed
+
+    if is_boolean(collapsed) and !assigns.collapsible do
+      raise ArgumentError, "SaladUI.Resizable: `collapsed` needs a `collapsible` panel"
+    end
+
+    # Pre-JS approximation of the layout (flex-grow ratios); the JS component
+    # takes over on mount. A collapsed panel starts at its collapsed size, so
+    # it does not show for a moment before the JS collapses it.
+    size = if collapsed, do: collapsed_size || 0, else: default_size || 1
 
     assigns =
       assigns
       |> assign(:default_size, default_size)
       |> assign(:min_size, parse_size(assigns[:"min-size"]))
       |> assign(:max_size, parse_size(assigns[:"max-size"]))
-      |> assign(:collapsed_size, parse_size(assigns[:"collapsed-size"]))
-      # Pre-JS approximation of the layout; the JS component takes over on mount.
-      # `overflow: clip` (not a scroll container) with `hidden` as the fallback.
-      |> assign(:style, "flex: #{default_size || 1} 1 0px; overflow: hidden; overflow: clip;")
+      |> assign(:collapsed_size, collapsed_size)
+      |> assign(:server_collapsed, if(is_boolean(collapsed), do: to_string(collapsed)))
+      |> assign(:inert, collapsed == true and (collapsed_size || 0) == 0)
+      |> assign(:style, "--panel-size: #{size};")
 
     ~H"""
     <div
@@ -221,8 +299,23 @@ defmodule SaladUI.Resizable do
       data-max-size={@max_size}
       data-collapsible={@collapsible && "true"}
       data-collapsed-size={@collapsed_size}
+      data-server-collapsed={@server_collapsed}
+      data-collapsed={@collapsed == true}
+      inert={@inert}
       style={@style}
-      class={@class}
+      class={
+        classes([
+          # The size is a custom property read by a class, not an inline flex,
+          # so app CSS can override it (e.g. at a breakpoint). `overflow: clip`,
+          # not hidden: a hidden panel is a scroll container, so focusing an
+          # input inside it (iOS Safari, scrollIntoView) can scroll the panel
+          # itself, and nothing lets the user scroll it back. A clipped panel
+          # is not a scroll container, so its min size is its content's:
+          # min-w-0/min-h-0 let it shrink to its size (and to 0 collapsed).
+          "flex-[var(--panel-size,1)_1_0px] overflow-clip min-h-0 min-w-0",
+          @class
+        ])
+      }
       {@rest}
     >
       {render_slot(@inner_block)}
