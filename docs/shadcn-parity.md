@@ -122,26 +122,27 @@ Deliberate omissions and limits the implementers recorded. React-only concepts
 - **scroll-fade-typeset**: the `/typeset` builder page is not ported; the
   markdown story uses a small parser, not Streamdown; streaming re-highlights the
   whole partial block on each update.
-- **dropdown-menu-v4-sync**: no Radix `modal` prop (outside pointer blocking,
-  `aria-hidden` on the rest of the page); no dropdown-menu-dialog story.
-- **tw-merge-v4**: no upstream PR to `bluzky/tw_merge` (needs the user's OK to
-  post publicly); tailwind-merge v3's `mask-*`, v4 `bg-size`/`bg-position`,
-  `text-*/leading` postfix and v3-vs-v4 group cross-conflicts are not added.
+- **dropdown-menu-v4-sync**: no dropdown-menu-dialog story. (The Radix `modal`
+  prop landed after the run, #17.)
+- **tw-merge-v4**: superseded by #14, a port of tailwind-merge 3.7.0 (full
+  default config, checked against the JS library). Deliberate differences:
+  `bg-gradient-to-*` stays a background image; `!text-lg/7 !text-sm` follows
+  tailwind-merge's main branch. No upstream PR to `bluzky/tw_merge`.
 
 ### Remaining review issues
 
 Issues reviewers found but didn't fix. None blocks a merge.
 
-- **Menus**: keyboard navigation loops (Radix defaults to `loop=false`);
-  `Portal.restore` re-appends portaled content at the end of its parent, so a
-  dropdown root with siblings after the content is patched out of order;
-  context menu and menubar radio indicators still render only on the client.
-  `menu.js` keeps its own copy of `assignId()`/`clearGeneratedIds()`. A
-  sub-menu opened by hover can carry its typeahead search over for up to 1s.
-- **Modals**: no outside pointer blocking or wheel/touch blocking (Radix's
-  `disableOutsidePointerEvents`, react-remove-scroll); scroll lock is
-  overflow-only. With two sidebars in one provider, the mobile focus trap covers
-  only the first.
+- **Menus**: a sub-menu opened by hover can carry its typeahead search over for
+  up to 1s; context menu and menubar radio indicators still render only on the
+  client. (Loop default, `Portal.restore` order and the duplicate `assignId()`
+  were fixed after the run: #15, #13.)
+- **Modals**: dialog, sheet, alert dialog, drawer and dropdown menu now block
+  outside pointers, hide the rest of the page from assistive tech and block
+  outside wheel/touch scroll (#17, shared `core/modal-layer.js`). Select,
+  context menu, menubar and the sidebar's mobile sheet don't use the modal
+  layer yet (Radix makes them modal too). With two sidebars in one provider,
+  the mobile focus trap covers only the first.
 - **Carousel**: no autoplay pause button and no `aria-controls` on previous/next
   (shadcn has neither).
 - **Code block**: "Copy"/"Copied" labels are hard-coded; hunk headers go through
@@ -158,16 +159,22 @@ Issues reviewers found but didn't fix. None blocks a merge.
   live browser; there is no `live_isolated` test infrastructure.
 - **Data table**: the rows-per-page select ignores `target`; view-option toggles
   bake `visible` in at render time.
-- **Combobox**: with server filtering in single mode, reopening shows the last
-  query's results; no PageUp/PageDown/Home/End keys; no listbox accessible name.
+- **Combobox**: no `ComboboxValue` render prop or `ComboboxCollection`; the
+  "with dropdown menu" example is not ported (menu typeahead would fight the
+  nested input). Portal, paging keys, listbox name and server-filter reopen
+  landed in #13; with server filtering, handle `on-open` (`%{"query" => ""}`)
+  to reset results.
 - **Questionnaire**: in server-driven mode, freeform text is lost when a fixed
   choice is picked; no server-rendered `aria-describedby`.
 - **Message scroller**: LiveView 1.0 only, a focused scroll button loses focus on
   patch; a tail spacer after `scroll_to_message` without `auto_scroll` stays (as in
   shadcn).
-- **Direction**: physical classes remain in dialog/sheet close buttons, the
-  navigation-menu viewport, the sidebar rail and input-group (new-york-v4 has them
-  physical too); `tw_merge` doesn't treat `pl-*` as conflicting with `ps-*`.
+- **Direction**: logical classes across components, mirrored toast swipe
+  (`swipe-direction="start"/"end"`), chart axes/keys and a slider that renders
+  RTL before its hook mounts landed in #16. Kept physical on purpose: sheet,
+  drawer and sidebar `side`, the sidebar rail, Radix `side` offsets, centring
+  pairs, JS-positioned elements. Many storybook demo templates still use
+  physical classes.
 - **Select**: item-aligned doesn't shrink near window edges; server-rendered
   trigger `aria-invalid`/`disabled` need `:let`.
 - **Toggle group**: a multiple group with every item released submits nothing
@@ -176,18 +183,17 @@ Issues reviewers found but didn't fix. None blocks a merge.
 - **Toast**: a per-toast `icon`/`color` on a loading toast carries over after it
   resolves (as Sonner); `buildCloseTrigger` in `toast.js` is dead code.
 - **Patch survival**: the server can override client-kept open/value state only by
-  rendering a different value. Not yet exercised in a real browser.
+  rendering a different value. Checked in a real browser (Salad Chat) for
+  dialogs, tabs, radio groups and combobox. Client-generated ids are cleared
+  before every patch (#10).
 - **Sidebar**: `mix salad.add`'s moduledoc still names `tooltip` as a sidebar
   dependency; controlled `open` can't be pulled back by re-rendering the same
-  value (use `send_command`); menu tooltips set no `aria-describedby`.
-- **Tooling**: storybook `mix format --check-formatted` flags
-  `storybook/storybook/salad_ui_component/pagination.story.exs` (from `737e992`);
-  `test/salad_ui/pagination_test.exs:84` asserts attribute order and fails with
-  some seeds (e.g. `--seed 982493`); `storybook/.../demo/sidebar_six.ex` still puts
-  `mr-2` on dropdown item icons, doubling the new `gap-2`; the project `CLAUDE.md`
-  still says color schemes live in `assets/tailwind.colors.json`. None of the
-  parity work has been checked end to end in a real browser for every component;
-  jsdom and LiveViewTest are the main evidence.
+  value (use `send_command`). Menu tooltips set `aria-describedby` while shown
+  (#15).
+- **Tooling**: the project `CLAUDE.md` still says color schemes live in
+  `assets/tailwind.colors.json`. `toast.js`'s `buildCloseTrigger` is never
+  called, so toasts have no close button (Sonner's `closeButton` is opt-in).
+  `message_scroller` uses `inset-s-1/2`, which needs Tailwind 4.2+.
 - **Attribution**: every parity commit leaves out the harness's Co-Authored-By
   trailer, following the user's CLAUDE.md.
 

@@ -4,11 +4,13 @@ config :esbuild,
   version: "0.17.11",
   default: [
     args:
-      ~w(js/app.js js/storybook.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+      ~w(js/app.js js/storybook.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*) ++
+        ["--alias:salad_ui=#{Path.expand("../../assets/salad_ui", __DIR__)}"],
     cd: Path.expand("../assets", __DIR__),
     env: %{
-      "NODE_PATH" =>
-        "#{Path.expand("../deps", __DIR__)}:#{Path.expand("../../../", __DIR__)}:#{Path.expand("../assets/node_modules", __DIR__)}"
+      # salad_ui itself resolves through the alias above (the library source in
+      # this checkout), whatever the checkout's directory is called.
+      "NODE_PATH" => "#{Path.expand("../deps", __DIR__)}:#{Path.expand("../assets/node_modules", __DIR__)}"
     }
   ]
 

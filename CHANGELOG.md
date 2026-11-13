@@ -119,6 +119,13 @@ for status and known gaps. Every new JS-backed component is registered in
 - Theme maps shadcn's `--sidebar`, `chart-1..5` and the `radius-2xl..4xl` scale.
 
 **Behaviour changes**
+- Dropdown menus are modal by default, as in Radix: while open, outside clicks
+  only close the menu, the page is hidden from assistive tech and page scroll is
+  locked. Pass `modal={false}` for the old behaviour.
+- Menus no longer wrap with the arrow keys by default (Radix `loop={false}`);
+  set `loop` on the content to wrap. Menubar trigger navigation still loops.
+- Class merging follows tailwind-merge v3 exactly, e.g. `outline outline-2`
+  now gives `outline-2`.
 - Form errors are now hidden on fields the user has not touched
   (`Phoenix.Component.used_input?/1`): `form_label`, `form_message` and
   `aria-invalid` all follow this rule.
@@ -210,6 +217,27 @@ for status and known gaps. Every new JS-backed component is registered in
   skip files that already exist instead of aborting.
 
 **Fixes**
+- Modals (dialog, sheet, alert dialog, drawer, dropdown menu) block outside
+  pointers, hide the rest of the page with `aria-hidden` and block outside
+  wheel/touch scroll, restoring everything across LiveView patches. Content
+  portaled from inside a modal stays interactive; toasts stay clickable. New
+  `modal` attr. Fixed elements can opt into scrollbar compensation with
+  `width-before-scroll-bar` / `right-scroll-bar-position`.
+- RTL: logical classes across components; toast `swipe-direction` accepts
+  `start`/`end`; chart axes and arrow keys mirror; sliders render RTL before the
+  hook mounts.
+- Combobox: `use-portal`, PageUp/PageDown/Home/End, an accessible name on the
+  listbox, and an `open` event payload (`%{"query" => q}`) so server filtering
+  can reset its results. `Portal.restore` returns content to its original
+  position.
+- Class merging is a port of tailwind-merge 3.7.0: `mask-*`, `bg-size`,
+  `bg-position`, `text-*/N` vs `leading-*`, logical properties, `(--var)`,
+  `!` suffix and `*:` variants. About 25x faster on a cache miss, and the cache
+  is bounded (flushed at 10,000 entries).
+- Attributes from an outer trigger no longer duplicate the child's
+  (`data-slot` appeared twice on `as_child` triggers). Pagination renders
+  `aria-current` only on the active page and lucide icons with `aria-hidden`.
+  Sidebar menu tooltips set `aria-describedby` while shown.
 - Dialog and alert dialog content is centered with `inset-0 m-auto h-fit`
   instead of a translate, so a combobox or date picker opened inside a dialog
   is positioned correctly.
