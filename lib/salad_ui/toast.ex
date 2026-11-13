@@ -173,6 +173,29 @@ defmodule SaladUI.Toast do
   towards the end of the line whatever the direction, set
   `swipe-direction="end"` (left under RTL). The close button sits on the
   card's inline-end corner.
+
+  ## Placement
+
+  `offset` and `mobile-offset` take px integers or any CSS length, per side
+  (`%{top: "var(--app-header)", right: 16}`). At or below `breakpoint` px
+  wide (600 by default, Sonner's phone breakpoint) the toaster uses
+  `mobile-offset` and full-width cards. `breakpoint` is a SaladUI extension:
+  Sonner's 600px is fixed.
+
+  `top-center` and `bottom-center` centre on `--toaster-center-x` (default
+  `50%`, the middle of the window). To centre toasts on the page beside an
+  open left sidebar, set it from CSS (a 16rem sidebar here):
+
+      :root:has([data-slot="sidebar"][data-side="left"][data-state="expanded"]) {
+        --toaster-center-x: calc(50% + 8rem);
+      }
+
+  or from JS, e.g. measured from your main element:
+
+      const r = document.querySelector("main").getBoundingClientRect()
+      document.documentElement.style.setProperty("--toaster-center-x", `${r.left + r.width / 2}px`)
+
+  The phone layout ignores it and spans the window between the mobile offsets.
   """
   attr :id, :string, default: "toaster"
 
@@ -192,8 +215,20 @@ defmodule SaladUI.Toast do
         "`start`/`end` are logical: `end` is right in LTR and left in RTL"
 
   attr :width, :integer, default: 356, doc: "Fixed card width in px"
-  attr :offset, :any, default: 24, doc: "px gap from the viewport edge, or a %{top:, right:, bottom:, left:} map"
-  attr :"mobile-offset", :any, default: 16, doc: "Same as :offset, applied below the 600px breakpoint"
+
+  attr :offset, :any,
+    default: 24,
+    doc:
+      "gap from the viewport edge: px (integer) or a CSS length string such as \"var(--header-height)\", " <>
+        "or a %{top:, right:, bottom:, left:} map of those"
+
+  attr :"mobile-offset", :any, default: 16, doc: "Same as :offset, applied at or below `breakpoint`"
+
+  attr :breakpoint, :integer,
+    default: 600,
+    doc:
+      "viewport width in px at or below which the phone layout applies (mobile-offset, full-width cards). " <>
+        "Sonner's is a fixed 600; this attr is a SaladUI extension"
 
   attr :hotkey, :string,
     default: "Alt+T",
@@ -260,7 +295,8 @@ defmodule SaladUI.Toast do
       class: assigns.class,
       hotkey: assigns.hotkey,
       duration: if(assigns.duration == :infinity, do: "infinity", else: assigns.duration),
-      closeButton: assigns[:"close-button"]
+      closeButton: assigns[:"close-button"],
+      breakpoint: assigns.breakpoint
     }
 
     assigns =
@@ -636,33 +672,36 @@ defmodule SaladUI.Toast do
   defp px(value) when is_binary(value), do: value
   defp px(value), do: "#{value}px"
 
+  # The phone layout keys on `data-mobile`, which toast.js sets from a media
+  # query at `breakpoint` (a Tailwind breakpoint would be fixed at build
+  # time). Keep in sync with viewportClasses() in toast.js.
   defp viewport_class(position) do
     classes([
       "group/toast-viewport fixed z-[9999] flex flex-col outline-hidden",
-      "w-[var(--toast-width)] max-[600px]:w-[calc(100%-var(--mobile-offset-l)-var(--mobile-offset-r))]",
+      "w-[var(--toast-width)] data-[mobile=true]:w-[calc(100%-var(--mobile-offset-l)-var(--mobile-offset-r))]",
       vertical_class(position),
       horizontal_class(position)
     ])
   end
 
   defp vertical_class("top-" <> _) do
-    "flex-col-reverse top-[var(--offset-t)] max-[600px]:top-[var(--mobile-offset-t)]"
+    "flex-col-reverse top-[var(--offset-t)] data-[mobile=true]:top-[var(--mobile-offset-t)]"
   end
 
   defp vertical_class(_bottom_position) do
-    "bottom-[var(--offset-b)] max-[600px]:bottom-[var(--mobile-offset-b)]"
+    "bottom-[var(--offset-b)] data-[mobile=true]:bottom-[var(--mobile-offset-b)]"
   end
 
   defp horizontal_class(position) do
     cond do
       String.ends_with?(position, "left") ->
-        "left-[var(--offset-l)] items-start rtl:items-end max-[600px]:left-[var(--mobile-offset-l)]"
+        "left-[var(--offset-l)] items-start rtl:items-end data-[mobile=true]:left-[var(--mobile-offset-l)]"
 
       String.ends_with?(position, "right") ->
-        "right-[var(--offset-r)] items-end rtl:items-start max-[600px]:right-[var(--mobile-offset-r)]"
+        "right-[var(--offset-r)] items-end rtl:items-start data-[mobile=true]:right-[var(--mobile-offset-r)]"
 
       true ->
-        "left-1/2 -translate-x-1/2 items-center"
+        "left-[var(--toaster-center-x,50%)] -translate-x-1/2 items-center data-[mobile=true]:left-[var(--mobile-offset-l)] data-[mobile=true]:translate-x-0"
     end
   end
 end

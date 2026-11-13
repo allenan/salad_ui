@@ -1721,3 +1721,120 @@ test("toast.promise() settles as an error when the promise factory throws synchr
 
   component.destroy();
 });
+
+// -- placement: breakpoint and centring ---------------------------------------
+
+// jsdom has no matchMedia: a controllable stand-in that records the query.
+function installMatchMedia(matches) {
+  const listeners = new Set();
+  const media = {
+    matches,
+    queries: [],
+    addEventListener: (_type, fn) => listeners.add(fn),
+    removeEventListener: (_type, fn) => listeners.delete(fn),
+    set(value) {
+      this.matches = value;
+      listeners.forEach((fn) => fn({ matches: value }));
+    },
+    listeners,
+  };
+  window.matchMedia = (query) => {
+    media.queries.push(query);
+    return media;
+  };
+  return media;
+}
+
+test("the phone layout follows a media query at Sonner's 600px by default", () => {
+  const media = installMatchMedia(false);
+  try {
+    const { component, viewport } = buildToaster();
+
+    assert.deepEqual(media.queries, ["(max-width: 600px)"]);
+    assert.equal(viewport.dataset.mobile, "false");
+    assert.doesNotMatch(viewport.className, /max-\[600px\]/);
+    assert.match(
+      viewport.className,
+      /data-\[mobile=true\]:w-\[calc\(100%-var\(--mobile-offset-l\)-var\(--mobile-offset-r\)\)\]/,
+    );
+
+    media.set(true);
+    assert.equal(viewport.dataset.mobile, "true");
+    media.set(false);
+    assert.equal(viewport.dataset.mobile, "false");
+
+    component.destroy();
+    assert.equal(media.listeners.size, 0);
+  } finally {
+    delete window.matchMedia;
+  }
+});
+
+test("breakpoint moves the phone layout's media query", () => {
+  const media = installMatchMedia(true);
+  try {
+    const { component, viewport } = buildToaster({
+      options: { breakpoint: 1024 },
+    });
+
+    assert.deepEqual(media.queries, ["(max-width: 1024px)"]);
+    assert.equal(viewport.dataset.mobile, "true");
+
+    // A per-toast position's viewport gets the layout too, and follows it.
+    component.handleCommand("add", { title: "Elsewhere", position: "top-left" });
+    const topLeft = document.querySelector(
+      '[data-part="viewport"][data-position="top-left"]',
+    );
+    assert.equal(topLeft.dataset.mobile, "true");
+    media.set(false);
+    assert.equal(topLeft.dataset.mobile, "false");
+
+    component.destroy();
+  } finally {
+    delete window.matchMedia;
+  }
+});
+
+test("without matchMedia the toaster keeps the desktop layout", () => {
+  const { component, viewport } = buildToaster();
+
+  assert.equal(viewport.dataset.mobile, "false");
+
+  component.destroy();
+});
+
+test("phone-layout cards fill the viewport", () => {
+  const { component, viewport } = buildToaster();
+  const id = component.handleCommand("add", { title: "Hi" });
+
+  assert.match(
+    cardFor(viewport, id).className,
+    /group-data-\[mobile=true\]\/toast-viewport:w-full/,
+  );
+
+  component.destroy();
+});
+
+test("centred positions centre on --toaster-center-x, falling back to the window", () => {
+  const { component, viewport } = buildToaster({
+    options: { position: "top-center" },
+  });
+
+  assert.equal(viewport.dataset.position, "top-center");
+  assert.match(viewport.className, /left-\[var\(--toaster-center-x,50%\)\]/);
+  assert.match(viewport.className, /-translate-x-1\/2/);
+  assert.match(
+    viewport.className,
+    /data-\[mobile=true\]:left-\[var\(--mobile-offset-l\)\]/,
+  );
+  assert.match(viewport.className, /data-\[mobile=true\]:translate-x-0/);
+  assert.doesNotMatch(viewport.className, /(^| )left-1\/2/);
+
+  component.handleCommand("add", { title: "Below", position: "bottom-center" });
+  const bottom = document.querySelector(
+    '[data-part="viewport"][data-position="bottom-center"]',
+  );
+  assert.match(bottom.className, /left-\[var\(--toaster-center-x,50%\)\]/);
+
+  component.destroy();
+});

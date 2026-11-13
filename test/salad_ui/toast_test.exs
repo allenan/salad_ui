@@ -96,16 +96,64 @@ defmodule SaladUI.ToastTest do
       assert html =~ ~s(data-position="top-left")
     end
 
-    test "top-center / bottom-center anchor to the horizontal midpoint" do
+    test "top-center / bottom-center centre on --toaster-center-x (default the window's midpoint)" do
+      for position <- ~w(top-center bottom-center) do
+        assigns = %{position: position}
+
+        html =
+          rendered_to_string(~H"""
+          <.toaster id="toaster" position={@position} />
+          """)
+
+        assert html =~ "left-[var(--toaster-center-x,50%)]"
+        assert html =~ "-translate-x-1/2"
+        # The phone layout spans the window between the mobile offsets.
+        assert html =~ "data-[mobile=true]:left-[var(--mobile-offset-l)]"
+        assert html =~ "data-[mobile=true]:translate-x-0"
+        refute html =~ "left-1/2"
+      end
+    end
+
+    test "breakpoint defaults to Sonner's 600 and reaches the options" do
+      assigns = %{}
+
+      default = rendered_to_string(~H|<.toaster id="toaster" />|)
+      custom = rendered_to_string(~H|<.toaster id="toaster" breakpoint={768} />|)
+
+      assert default =~ ~s(&quot;breakpoint&quot;:600)
+      assert custom =~ ~s(&quot;breakpoint&quot;:768)
+    end
+
+    test "the phone layout keys on data-mobile, not a fixed 600px media query" do
+      for position <- ~w(top-left top-center top-right bottom-left bottom-center bottom-right) do
+        assigns = %{position: position}
+
+        html =
+          rendered_to_string(~H"""
+          <.toaster id="toaster" position={@position} />
+          """)
+
+        refute html =~ "max-[600px]"
+        assert html =~ "data-[mobile=true]:w-[calc(100%-var(--mobile-offset-l)-var(--mobile-offset-r))]"
+      end
+    end
+
+    test "offsets take CSS values as well as px" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.toaster id="toaster" position="top-center" />
+        <.toaster
+          id="toaster"
+          offset={%{top: "var(--toast-top, 68px)"}}
+          mobile-offset={%{top: "calc(env(safe-area-inset-top) + 8px)", left: 16, right: 16}}
+        />
         """)
 
-      assert html =~ "left-1/2"
-      assert html =~ "-translate-x-1/2"
+      assert html =~ "--offset-t: var(--toast-top, 68px)"
+      assert html =~ "--offset-r: 0px"
+      assert html =~ "--mobile-offset-t: calc(env(safe-area-inset-top) + 8px)"
+      assert html =~ "--mobile-offset-l: 16px"
     end
 
     test "a single integer offset fans out to all four sides" do
