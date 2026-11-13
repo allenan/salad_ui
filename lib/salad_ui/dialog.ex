@@ -72,25 +72,21 @@ defmodule SaladUI.Dialog do
           <.dialog_header>
             <.dialog_title>Edit profile</.dialog_title>
             <.dialog_description>
-              Make changes to your profile here click save when you're done
+              Make changes to your profile here. Click save when you're done.
             </.dialog_description>
           </.dialog_header>
-          <div class_name="grid gap-4 py-4">
-            <div class_name="grid grid-cols_4 items-center gap-4">
-              <.label for="name" class-name="text-right">
-                name
-              </.label>
-              <input id="name" value="pedro duarte" class-name="col-span-3" />
+          <div class="grid gap-4 py-4">
+            <div class="grid grid-cols-4 items-center gap-4">
+              <.label for="name" class="text-right">Name</.label>
+              <.input id="name" name="name" value="Pedro Duarte" class="col-span-3" />
             </div>
-            <div class="grid grid-cols-4 items_center gap-4">
-              <.label for="username" class="text-right">
-                username
-              </.label>
-              <input id="username" value="@peduarte" class="col-span-3" />
+            <div class="grid grid-cols-4 items-center gap-4">
+              <.label for="username" class="text-right">Username</.label>
+              <.input id="username" name="username" value="@peduarte" class="col-span-3" />
             </div>
           </div>
           <.dialog_footer>
-            <.button type="submit">save changes</.button>
+            <.button type="submit">Save changes</.button>
           </.dialog_footer>
         </.dialog_content>
       </.dialog>
