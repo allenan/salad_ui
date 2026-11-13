@@ -16,6 +16,9 @@ const EXIT_FALLBACK_MS = 500;
 const SWIPE_THRESHOLD_PX = 45;
 const SWIPE_VELOCITY_THRESHOLD = 0.11; // px/ms, matches Sonner's flick-to-dismiss
 const SWIPE_EXIT_DISTANCE = "150%";
+// Sonner's phone layout: full-width cards at the mobile offsets at or below
+// 600px (`@media (max-width: 600px)`). The toaster's `breakpoint` moves it.
+const DEFAULT_BREAKPOINT = 600;
 
 // shadcn's Toaster icon set (lucide CircleCheck / Info / TriangleAlert /
 // OctagonX / Loader2), inlined as SVG so the library carries no icon-font or
@@ -48,6 +51,7 @@ const NEUTRAL_CARD_CLASSES = "border-border bg-popover text-popover-foreground";
 
 const CARD_BASE_CLASSES = [
   "group relative flex w-[var(--toast-width)] items-center gap-3 rounded-(--radius) border p-4 text-sm shadow-lg",
+  "group-data-[mobile=true]/toast-viewport:w-full",
   "[&_svg]:shrink-0",
   "[transition:translate_300ms_ease-out,scale_300ms_ease-out,transform_300ms_ease-out,opacity_300ms_ease-out,height_300ms_ease-out,background-color_300ms_ease-out,border-color_300ms_ease-out,color_300ms_ease-out,box-shadow_200ms_ease-out]",
   "data-[swiping=true]:transition-none",
@@ -188,32 +192,39 @@ function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// The phone layout keys on `data-mobile`, which the toaster sets from a
+// media query at its `breakpoint` (a Tailwind breakpoint would be fixed at
+// build time). Centred positions centre on `--toaster-center-x` (default
+// 50%, the window), so an app can centre toasts on the content beside a
+// sidebar. Keep in sync with SaladUI.Toast's viewport_class/1.
 function viewportClasses(position) {
   const classes = [
     "group/toast-viewport fixed z-[9999] flex flex-col outline-hidden",
-    "w-[var(--toast-width)] max-[600px]:w-[calc(100%-var(--mobile-offset-l)-var(--mobile-offset-r))]",
+    "w-[var(--toast-width)] data-[mobile=true]:w-[calc(100%-var(--mobile-offset-l)-var(--mobile-offset-r))]",
   ];
 
   if (position.startsWith("top")) {
     classes.push(
-      "flex-col-reverse top-[var(--offset-t)] max-[600px]:top-[var(--mobile-offset-t)]",
+      "flex-col-reverse top-[var(--offset-t)] data-[mobile=true]:top-[var(--mobile-offset-t)]",
     );
   } else {
     classes.push(
-      "bottom-[var(--offset-b)] max-[600px]:bottom-[var(--mobile-offset-b)]",
+      "bottom-[var(--offset-b)] data-[mobile=true]:bottom-[var(--mobile-offset-b)]",
     );
   }
 
   if (position.endsWith("left")) {
     classes.push(
-      "left-[var(--offset-l)] items-start rtl:items-end max-[600px]:left-[var(--mobile-offset-l)]",
+      "left-[var(--offset-l)] items-start rtl:items-end data-[mobile=true]:left-[var(--mobile-offset-l)]",
     );
   } else if (position.endsWith("right")) {
     classes.push(
-      "right-[var(--offset-r)] items-end rtl:items-start max-[600px]:right-[var(--mobile-offset-r)]",
+      "right-[var(--offset-r)] items-end rtl:items-start data-[mobile=true]:right-[var(--mobile-offset-r)]",
     );
   } else {
-    classes.push("left-1/2 -translate-x-1/2 items-center");
+    classes.push(
+      "left-[var(--toaster-center-x,50%)] -translate-x-1/2 items-center data-[mobile=true]:left-[var(--mobile-offset-l)] data-[mobile=true]:translate-x-0",
+    );
   }
 
   return classes.join(" ");
@@ -251,6 +262,9 @@ class ToastComponent extends Component {
     super(el, { hookContext, initialState: "idle" });
 
     this.viewport = this.getPart("viewport");
+    // The phone layout's media query (see viewportClasses), watched from
+    // setupComponentEvents.
+    this.mobileQuery = this.createMobileQuery();
     this.stack = new Map(); // id -> record
     this.templates = new Map(); // name -> <template>
     this.viewports = new Map(); // position -> viewport element
@@ -274,6 +288,7 @@ class ToastComponent extends Component {
       }
       this.viewport.className = viewportClasses(position);
       this.viewports.set(position, this.viewport);
+      this.applyLayout(this.viewport);
       this.attachViewportInteractions(this.viewport);
     }
 
@@ -292,6 +307,18 @@ class ToastComponent extends Component {
     };
 
     this.onHotkey = (event) => this.handleHotkey(event);
+
+    // Crossing the breakpoint changes the cards' width, so their heights.
+    this.onMediaChange = () => {
+      this.viewports.forEach((viewport) => this.applyLayout(viewport));
+      this.stack.forEach((record) => {
+        record.el.style.height = "";
+        record.naturalHeight = record.el.offsetHeight;
+      });
+      this.viewports.forEach((viewport) =>
+        this.recomputeStackPositions(viewport),
+      );
+    };
   }
 
   getComponentConfig() {
@@ -316,12 +343,39 @@ class ToastComponent extends Component {
     super.setupComponentEvents();
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     document.addEventListener("keydown", this.onHotkey);
+    this.mobileQuery?.addEventListener?.("change", this.onMediaChange);
   }
 
   teardownComponentEvents() {
     super.teardownComponentEvents();
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     document.removeEventListener("keydown", this.onHotkey);
+    this.mobileQuery?.removeEventListener?.("change", this.onMediaChange);
+  }
+
+  /** The px width at or below which the phone layout applies. */
+  getBreakpoint() {
+    const breakpoint = Number(this.options?.breakpoint);
+    return Number.isFinite(breakpoint) && breakpoint > 0
+      ? breakpoint
+      : DEFAULT_BREAKPOINT;
+  }
+
+  createMobileQuery() {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
+      return null;
+    return window.matchMedia(`(max-width: ${this.getBreakpoint()}px)`);
+  }
+
+  isMobile() {
+    return this.mobileQuery?.matches === true;
+  }
+
+  applyLayout(viewport) {
+    viewport.dataset.mobile = this.isMobile() ? "true" : "false";
   }
 
   beforeDestroy() {
@@ -398,6 +452,7 @@ class ToastComponent extends Component {
     viewport.dataset.expanded = this.options.expand ? "true" : "false";
     viewport.setAttribute("data-salad-layer-branch", "");
     viewport.className = viewportClasses(position);
+    this.applyLayout(viewport);
     if (this.viewport) viewport.style.cssText = this.viewport.style.cssText;
 
     // Inside the root <section>, as all of Sonner's lists are, so every
