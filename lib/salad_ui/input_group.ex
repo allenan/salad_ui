@@ -247,6 +247,7 @@ defmodule SaladUI.InputGroup do
     assigns =
       assigns
       |> put_data_slot("button")
+      |> put_own_attrs("data-variant": assigns.variant, "data-size": assigns.size)
       |> assign(
         :button_class,
         classes([
@@ -260,8 +261,8 @@ defmodule SaladUI.InputGroup do
     ~H"""
     <button
       type={@type}
-      data-variant={@variant}
-      data-size={@size}
+      data-variant={@own_attrs[:"data-variant"]}
+      data-size={@own_attrs[:"data-size"]}
       class={@button_class}
       {@rest}
     >

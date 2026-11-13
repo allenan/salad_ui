@@ -66,12 +66,23 @@ defmodule SaladUI.Drawer do
   the rendered `open` value opens or closes it; changing other options
   rebuilds it from the new markup.
 
+  ## Modal behaviour
+
+  Like vaul's, a drawer is modal by default (`modal={true}`): while it is
+  open, clicks outside it never reach the page (a click outside only closes
+  the drawer through its overlay), everything outside it is `aria-hidden`,
+  and wheel and touch scrolling outside it are cancelled. Pass
+  `modal={false}` for a non-modal drawer: no overlay, the page stays
+  interactive and scrollable. See "Modal behaviour" in `SaladUI.Dialog`.
+
   ## Scroll lock
 
   As with vaul, an open drawer locks page scrolling and pads `<body>` by the
   scrollbar's width so the page does not shift. The lock is shared with
   dialogs and sheets and counted, so nested modals unlock the page only once
-  the last one has closed. See `SaladUI.Dialog` for details.
+  the last one has closed. Fixed-position elements can opt out of the shift
+  with the `right-scroll-bar-position` and `width-before-scroll-bar` classes.
+  See `SaladUI.Dialog` for details.
 
   ## Component events
 
@@ -104,6 +115,7 @@ defmodule SaladUI.Drawer do
   * `:dismissible` - When `false`, dragging, Escape and overlay clicks cannot close it. Defaults to `true`.
   * `:handle_only` - Only the handle starts a drag. Defaults to `false`.
   * `:"close-on-outside-click"` - Whether an overlay click closes it. Defaults to `true`.
+  * `:modal` - Whether it blocks, hides and scroll-locks the page while open. Defaults to `true`.
   * `:on-open`, `:on-close`, `:on-snap-point-change` - Event handlers: a server event name or `%Phoenix.LiveView.JS{}`.
   """
   attr :id, :string, required: true
@@ -122,6 +134,11 @@ defmodule SaladUI.Drawer do
   attr :dismissible, :boolean, default: true, doc: "whether drag, Escape and overlay click can close it"
   attr :handle_only, :boolean, default: false, doc: "only the handle starts a drag"
   attr :"close-on-outside-click", :boolean, default: true, doc: "whether an overlay click closes it"
+
+  attr :modal, :boolean,
+    default: true,
+    doc: "block, hide and scroll-lock the page while open; `false` makes a non-modal drawer"
+
   attr :class, :string, default: nil
 
   attr :"on-open", :any, default: nil, doc: "handler for the open event (server event name or JS command)"
@@ -148,6 +165,7 @@ defmodule SaladUI.Drawer do
           handleOnly: assigns.handle_only,
           closeOnEscape: assigns.dismissible,
           closeOnOutsideClick: assigns.dismissible && assigns[:"close-on-outside-click"],
+          modal: assigns.modal,
           animations: %{"open_to_closed" => %{duration: 500, target_part: "content"}}
         })
       )
@@ -185,7 +203,7 @@ defmodule SaladUI.Drawer do
 
     ~H"""
     <.dynamic
-      data-slot="drawer-trigger"
+      data-slot={@rest[:"data-slot"] || "drawer-trigger"}
       data-part="trigger"
       data-action="open"
       tag={@as}
@@ -348,7 +366,7 @@ defmodule SaladUI.Drawer do
 
     ~H"""
     <.dynamic
-      data-slot="drawer-close"
+      data-slot={@rest[:"data-slot"] || "drawer-close"}
       data-part="close"
       data-action="close"
       tag={@as}

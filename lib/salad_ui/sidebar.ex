@@ -60,7 +60,7 @@ defmodule SaladUI.Sidebar do
           <.sidebar_group_content>
             <.sidebar_menu>
               <.sidebar_menu_item>
-                <.sidebar_menu_button as="a" href="#" is_active tooltip="Home">
+                <.sidebar_menu_button id="nav-home" as="a" href="#" is_active tooltip="Home">
                   <Lucideicons.house /> <span>Home</span>
                 </.sidebar_menu_button>
               </.sidebar_menu_item>
@@ -430,7 +430,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_trigger(assigns) do
     ~H"""
     <.dynamic
-      data-slot="sidebar-trigger"
+      data-slot={@rest[:"data-slot"] || "sidebar-trigger"}
       tag={@as}
       data-sidebar="trigger"
       data-action={is_nil(@target) && "toggle"}
@@ -677,7 +677,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_group_label(assigns) do
     ~H"""
     <.dynamic
-      data-slot="sidebar-group-label"
+      data-slot={@rest[:"data-slot"] || "sidebar-group-label"}
       data-sidebar="group-label"
       tag={@as}
       class={
@@ -809,6 +809,12 @@ defmodule SaladUI.Sidebar do
   `sidebar_menu_badge` (styled through `peer/menu-button`) and an outer
   component's trigger (`as_child` with `collapsible_trigger` or
   `dropdown_menu_trigger`) keep working on the button.
+
+  While the tooltip is shown, the button is `aria-describedby` it, as with a
+  Radix tooltip. Give the button an `id` and the tooltip gets a stable,
+  server-rendered `"<id>-tooltip"`; without one, the hook generates a
+  client-side id while the tooltip shows (a text-derived id would collide
+  when the same item renders twice, e.g. in the desktop and mobile sidebar).
   """
   attr :variant, :string, values: ~w(default outline), default: "default"
   attr :size, :string, values: ~w(default sm lg), default: "default"
@@ -832,9 +838,11 @@ defmodule SaladUI.Sidebar do
   slot(:inner_block, required: true)
 
   def sidebar_menu_button(assigns) do
+    assigns = assign(assigns, :tooltip_id, assigns.rest[:id] && "#{assigns.rest[:id]}-tooltip")
+
     ~H"""
     <.dynamic
-      data-slot="sidebar-menu-button"
+      data-slot={@rest[:"data-slot"] || "sidebar-menu-button"}
       tag={@as}
       data-sidebar="menu-button"
       data-size={@size}
@@ -846,6 +854,7 @@ defmodule SaladUI.Sidebar do
     </.dynamic>
     <div
       :if={@tooltip && !@is_mobile}
+      id={@tooltip_id}
       data-slot="tooltip-content"
       data-sidebar="menu-tooltip"
       role="tooltip"
@@ -882,10 +891,12 @@ defmodule SaladUI.Sidebar do
   slot(:inner_block, required: true)
 
   def sidebar_menu_action(assigns) do
+    assigns = put_own_attrs(assigns, "data-slot": "sidebar-menu-action", "data-sidebar": "menu-action")
+
     ~H"""
     <button
-      data-slot="sidebar-menu-action"
-      data-sidebar="menu-action"
+      data-slot={@own_attrs[:"data-slot"]}
+      data-sidebar={@own_attrs[:"data-sidebar"]}
       class={
         classes([
           "absolute end-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-hidden ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
@@ -1031,7 +1042,7 @@ defmodule SaladUI.Sidebar do
   def sidebar_menu_sub_button(assigns) do
     ~H"""
     <.dynamic
-      data-slot="sidebar-menu-sub-button"
+      data-slot={@rest[:"data-slot"] || "sidebar-menu-sub-button"}
       tag={@as}
       data-sidebar="menu-sub-button"
       data-size={@size}

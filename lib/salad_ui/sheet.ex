@@ -51,12 +51,24 @@ defmodule SaladUI.Sheet do
   `open` value opens or closes it; changing other options rebuilds it from the
   new markup.
 
+  ## Modal behaviour
+
+  A sheet is a Radix Dialog, modal by default (`modal={true}`): while it is
+  open, clicks outside it never reach the page (`<body>` gets
+  `pointer-events: none`, so a click outside only closes the sheet through
+  its overlay), everything outside it is `aria-hidden`, and wheel and touch
+  scrolling outside it are cancelled. Pass `modal={false}` for a non-modal
+  sheet: no overlay, the page stays interactive and scrollable, and a click
+  outside closes it. See "Modal behaviour" in `SaladUI.Dialog`.
+
   ## Scroll lock
 
   An open sheet locks page scrolling, as shadcn's (Radix) Sheet does, and
   pads `<body>` by the scrollbar's width so the page does not shift. The lock
   is shared with dialogs and drawers and counted, so the page unlocks once
-  the last open one has closed. See `SaladUI.Dialog` for details.
+  the last open one has closed. Fixed-position elements can opt out of the
+  shift with the `right-scroll-bar-position` and `width-before-scroll-bar`
+  classes. See `SaladUI.Dialog` for details.
   """
   use SaladUI, :component
 
@@ -70,6 +82,7 @@ defmodule SaladUI.Sheet do
   * `:on-open` - Handler for `open` event. Accepts a server event name or `%Phoenix.LiveView.JS{}`.
   * `:on-close` - Handler for `close` event. Accepts a server event name or `%Phoenix.LiveView.JS{}`.
   * `:"close-on-outside-click"` - Whether overlay/outside click closes the sheet. Defaults to `true`.
+  * `:modal` - Whether the sheet blocks, hides and scroll-locks the page while open. Defaults to `true`.
   * `:class` - Additional CSS classes.
 
   ## Component events
@@ -89,6 +102,10 @@ defmodule SaladUI.Sheet do
   attr :class, :string, default: nil
   attr :"close-on-outside-click", :boolean, default: true
 
+  attr :modal, :boolean,
+    default: true,
+    doc: "block, hide and scroll-lock the page while open; `false` makes a non-modal sheet"
+
   attr :"on-open", :any, default: nil, doc: "Handler for sheet open event"
   attr :"on-close", :any, default: nil, doc: "Handler for sheet close event"
   attr :rest, :global
@@ -106,7 +123,8 @@ defmodule SaladUI.Sheet do
         :options,
         json(%{
           animations: get_animation_config(),
-          closeOnOutsideClick: assigns[:"close-on-outside-click"]
+          closeOnOutsideClick: assigns[:"close-on-outside-click"],
+          modal: assigns.modal
         })
       )
 

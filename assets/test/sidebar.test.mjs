@@ -69,7 +69,7 @@ function sidebarMarkup({
           <ul>
             <li data-sidebar="menu-item">
               <a href="#home" id="home-link" data-sidebar="menu-button"><span>Home</span></a>
-              <div data-sidebar="menu-tooltip" role="tooltip" data-state="closed"
+              <div id="home-link-tooltip" data-sidebar="menu-tooltip" role="tooltip" data-state="closed"
                    data-side="right" data-side-offset="8" hidden>Home tip</div>
             </li>
             <li data-sidebar="menu-item" data-component="collapsible">
@@ -272,6 +272,63 @@ test("menu tooltips show only while collapsed, following client toggles", () => 
   assert.equal(tooltip.hidden, true);
 });
 
+test("the button is aria-describedby its tooltip only while the tooltip shows", () => {
+  const { el } = buildSidebar({ state: "collapsed" });
+  mountHook(el);
+  const button = document.getElementById("home-link");
+
+  assert.equal(button.hasAttribute("aria-describedby"), false);
+  hover(button);
+  assert.equal(button.getAttribute("aria-describedby"), "home-link-tooltip");
+  unhover(button);
+  assert.equal(button.hasAttribute("aria-describedby"), false);
+
+  // A description the button already has is kept.
+  button.setAttribute("aria-describedby", "home-hint");
+  button.focus();
+  assert.equal(
+    button.getAttribute("aria-describedby"),
+    "home-hint home-link-tooltip",
+  );
+  keydown("Escape");
+  assert.equal(button.getAttribute("aria-describedby"), "home-hint");
+});
+
+test("a tooltip rendered without an id gets a generated one, stripped before a patch and re-assigned after", () => {
+  const { el } = buildSidebar({ state: "collapsed" });
+  const { hook } = mountHook(el);
+  const button = document.getElementById("home-link");
+  const tooltip = el.querySelector('[data-sidebar="menu-tooltip"]');
+  tooltip.removeAttribute("id");
+
+  hover(button);
+  assert.ok(tooltip.id, "an id is generated");
+  assert.equal(button.getAttribute("aria-describedby"), tooltip.id);
+
+  // What SaladUIHook does around a patch that keeps the nodes: the
+  // client-only id goes first, and morphdom drops the client-set describedby.
+  hook.beforeUpdate();
+  assert.equal(tooltip.hasAttribute("id"), false);
+  button.removeAttribute("aria-describedby");
+  hook.updated();
+
+  assert.equal(tooltip.hidden, false);
+  assert.ok(tooltip.id);
+  assert.equal(button.getAttribute("aria-describedby"), tooltip.id);
+  unhover(button);
+  assert.equal(button.hasAttribute("aria-describedby"), false);
+});
+
+test("an expanded sidebar never describes the button by its hidden tooltip", () => {
+  const { el } = buildSidebar();
+  mountHook(el);
+  const button = document.getElementById("home-link");
+
+  hover(button);
+  button.focus();
+  assert.equal(button.hasAttribute("aria-describedby"), false);
+});
+
 test("menu tooltips never show on the mobile sheet", () => {
   installMatchMedia(true);
   const { el, trigger } = buildSidebar({ state: "collapsed" });
@@ -317,8 +374,16 @@ test("an open menu tooltip survives a patch", () => {
 
   assert.equal(tooltip().hidden, false);
   assert.equal(tooltip().dataset.state, "open");
+  assert.equal(
+    document.getElementById("home-link").getAttribute("aria-describedby"),
+    "home-link-tooltip",
+  );
   unhover(document.getElementById("home-link"));
   assert.equal(tooltip().hidden, true);
+  assert.equal(
+    document.getElementById("home-link").hasAttribute("aria-describedby"),
+    false,
+  );
 });
 
 test("a toggle writes the sidebar_state cookie and fires on-open-change", () => {

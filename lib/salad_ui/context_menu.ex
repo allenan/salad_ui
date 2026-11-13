@@ -148,7 +148,7 @@ defmodule SaladUI.ContextMenu do
     ~H"""
     <.dynamic
       tag={@as}
-      data-slot="context-menu-trigger"
+      data-slot={@rest[:"data-slot"] || "context-menu-trigger"}
       data-part="trigger"
       data-disabled={@disabled}
       class={classes(["[-webkit-touch-callout:none]", @class])}
@@ -167,9 +167,12 @@ defmodule SaladUI.ContextMenu do
   * `:side` - Which side of the pointer the menu opens on (`top`, `right`,
     `bottom`, `left`). Defaults to `"right"`, i.e. below and to the right of the
     pointer; mirrored under `dir="rtl"`. It flips when it would overflow.
+  * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
+    first (and back). Defaults to `false`, as in Radix.
   * `:class` - Additional CSS classes.
   """
   attr :side, :string, values: ~w(top right bottom left), default: "right"
+  attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -183,6 +186,7 @@ defmodule SaladUI.ContextMenu do
         data-slot="context-menu-content"
         data-part="content"
         data-side={@side}
+        data-loop={@loop && "true"}
         data-state="closed"
         role="menu"
         tabindex="-1"
@@ -358,11 +362,14 @@ defmodule SaladUI.ContextMenu do
   * `:side` - `right` or `left` of the sub-trigger. Defaults to `"right"`; mirrored under `dir="rtl"`.
   * `:align` - `start`, `center` or `end`. Defaults to `"start"`.
   * `:side-offset` / `:align-offset` - Offsets in pixels. Default to `0`.
+  * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
+    first (and back). Defaults to `false`, as in Radix.
   """
   attr :side, :string, values: ~w(right left), default: "right"
   attr :align, :string, values: ~w(start center end), default: "start"
   attr :"side-offset", :integer, default: 0
   attr :"align-offset", :integer, default: 0
+  attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true

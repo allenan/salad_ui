@@ -124,7 +124,8 @@ defmodule SaladUI.Pagination do
 
   ## Options
 
-  * `:is-active` - Whether this link represents the current page
+  * `:is-active` - Whether this link represents the current page. Only the
+    active link gets `aria-current="page"` (and `data-active`).
   * `:size` - Link size variant (default, sm, lg, icon)
   """
   attr :"is-active", :boolean, default: false
@@ -146,8 +147,9 @@ defmodule SaladUI.Pagination do
 
     ~H"""
     <.link
+      aria-current={assigns[:"is-active"] && "page"}
       data-slot="pagination-link"
-      aria-current={(assigns[:"is-active"] && "page") || ""}
+      data-active={assigns[:"is-active"] && "true"}
       class={classes([@variation_class, @class])}
       {@rest}
     >
@@ -175,16 +177,9 @@ defmodule SaladUI.Pagination do
       {@rest}
     >
       <span class="hidden sm:block">{@text}</span>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="2"
-        stroke="currentColor"
-        class="size-6 w-3.5 rtl:rotate-180"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-      </svg>
+      <.lucide_icon class="rtl:rotate-180">
+        <path d="m9 18 6-6-6-6" />
+      </.lucide_icon>
     </.pagination_link>
     """
   end
@@ -207,25 +202,20 @@ defmodule SaladUI.Pagination do
       class={classes(["gap-1 px-2.5 sm:ps-2.5", @class])}
       {@rest}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="2"
-        stroke="currentColor"
-        class="size-6 w-3.5 rtl:rotate-180"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-      </svg>
+      <.lucide_icon class="rtl:rotate-180">
+        <path d="m15 18-6-6 6-6" />
+      </.lucide_icon>
       <span class="hidden sm:block">{@text}</span>
     </.pagination_link>
     """
   end
 
   @doc """
-  Renders an ellipsis for page ranges.
+  Renders an ellipsis for page ranges. The icon is hidden from assistive
+  technology; screen readers announce the `text` ("More pages") instead.
   """
   attr :class, :string, default: nil
+  attr :text, :string, default: "More pages", doc: "Screen-reader label"
   attr :rest, :global, include: ~w(href navigate patch)
 
   def pagination_ellipsis(assigns) do
@@ -240,23 +230,38 @@ defmodule SaladUI.Pagination do
       }
       {@rest}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="2"
-        stroke="currentColor"
-        class="size-4"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-        />
-      </svg>
-
-      <span class="sr-only">More pages</span>
+      <.lucide_icon class="size-4">
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+        <circle cx="5" cy="12" r="1" />
+      </.lucide_icon>
+      <span class="sr-only">{@text}</span>
     </span>
+    """
+  end
+
+  # lucide-react's <svg> wrapper (ChevronLeftIcon, ChevronRightIcon,
+  # MoreHorizontalIcon); decorative, so hidden from assistive technology.
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+
+  defp lucide_icon(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      class={@class}
+    >
+      {render_slot(@inner_block)}
+    </svg>
     """
   end
 end

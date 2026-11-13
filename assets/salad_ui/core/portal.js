@@ -9,6 +9,9 @@ import { getDirection } from "./direction.js";
 class Portal {
   // Static storage for element metadata
   static portalRegistry = new WeakMap();
+  // Elements currently moved out, so modal layers can find what was
+  // portaled out of them (see modal-layer.js).
+  static portaled = new Set();
 
   /**
    * Move an element to a portal container
@@ -20,6 +23,12 @@ class Portal {
   static move(element, container = document.body) {
     if (!element) return false;
 
+    // Already portaled: only change containers, keeping the original spot.
+    if (this.isInPortal(element)) {
+      if (element.parentNode !== container) container.appendChild(element);
+      return true;
+    }
+
     // A portaled element leaves the subtree it inherited `dir` from (e.g. a
     // `direction_provider/1`), so carry its direction along as an attribute
     // when the portal container reads the other way.
@@ -27,9 +36,18 @@ class Portal {
     const addedDir =
       !element.hasAttribute("dir") && dir !== getDirection(container);
 
+    // A comment holds the element's place among its siblings, so restore()
+    // puts it back exactly there (not at the end of its parent, which would
+    // reorder the children LiveView patches by position).
+    const parent = element.parentNode;
+    const marker = parent ? document.createComment("salad-ui-portal") : null;
+    if (marker) parent.insertBefore(marker, element);
+
     // Store original information for restoration
     const originalData = {
       parent: element.parentElement,
+      marker,
+      nextSibling: element.nextSibling,
       addedDir,
       styles: {
         position: element.style.position,
@@ -45,6 +63,7 @@ class Portal {
 
     // Store the metadata in our registry
     this.portalRegistry.set(element, originalData);
+    this.portaled.add(element);
 
     // Move the element to the portal container
     container.appendChild(element);
@@ -74,8 +93,18 @@ class Portal {
     }
 
     try {
-      // Move back to original parent
-      originalData.parent.appendChild(element);
+      // Back to its original spot: the marker's, else in front of its old
+      // next sibling, else at the end of its old parent.
+      const { parent, marker, nextSibling } = originalData;
+      if (marker?.parentNode) {
+        marker.parentNode.replaceChild(element, marker);
+      } else if (nextSibling && nextSibling.parentNode === parent) {
+        parent.insertBefore(element, nextSibling);
+      } else {
+        parent.appendChild(element);
+      }
+      originalData.marker = null;
+      originalData.nextSibling = null;
       if (originalData.addedDir) {
         element.removeAttribute("dir");
         originalData.addedDir = false;
@@ -93,6 +122,7 @@ class Portal {
 
       // Update portal state
       originalData.inPortal = false;
+      this.portaled.delete(element);
 
       return true;
     } catch (error) {
@@ -111,6 +141,37 @@ class Portal {
     if (!element) return false;
     const data = this.portalRegistry.get(element);
     return data?.inPortal === true;
+  }
+
+  /**
+   * The parent a portaled element was moved out of, or null when it is not
+   * in a portal.
+   *
+   * @param {HTMLElement} element - Element to look up
+   * @returns {HTMLElement|null} Its original parent
+   */
+  static originalParent(element) {
+    if (!element) return null;
+    const data = this.portalRegistry.get(element);
+    return data?.inPortal ? data.parent : null;
+  }
+
+  /**
+   * Every element currently in a portal and still in the document.
+   *
+   * @returns {HTMLElement[]} Portaled elements
+   */
+  static portaledElements() {
+    const elements = [];
+    for (const element of this.portaled) {
+      // Restored, or removed for good (a destroyed positioned element).
+      if (this.isInPortal(element) && element.isConnected) {
+        elements.push(element);
+      } else {
+        this.portaled.delete(element);
+      }
+    }
+    return elements;
   }
 
   /**

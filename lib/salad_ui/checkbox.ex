@@ -11,7 +11,10 @@ defmodule SaladUI.Checkbox do
         <.label for="terms">Accept terms and conditions</.label>
       </div>
 
-      <.checkbox id="remember_me" name="remember_me" label="Remember me" />
+      <div class="flex items-center gap-2">
+        <.checkbox id="remember_me" name="remember_me" />
+        <.label for="remember_me">Remember me</.label>
+      </div>
 
       <%!-- A group submitting tags[] = ["elixir", ...] --%>
       <.checkbox
@@ -24,7 +27,10 @@ defmodule SaladUI.Checkbox do
       />
 
       <.form for={@form} as={:user} phx-change="validate">
-        <.checkbox field={@form[:accept_terms]} label="I accept the terms and conditions" />
+        <div class="flex items-center gap-2">
+          <.checkbox field={@form[:accept_terms]} />
+          <.label for={@form[:accept_terms].id}>I accept the terms and conditions</.label>
+        </div>
       </.form>
   """
   use SaladUI, :component

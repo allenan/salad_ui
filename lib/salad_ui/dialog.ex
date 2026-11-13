@@ -36,6 +36,36 @@ defmodule SaladUI.Dialog do
   `open` value opens or closes it; changing other options rebuilds it from the
   new markup.
 
+  ## Modal behaviour
+
+  Like Radix Dialog, a dialog is modal by default (`modal={true}`). While it
+  is open:
+
+  * Clicks outside it never reach the page. `<body>` gets
+    `pointer-events: none` and the dialog's content `pointer-events: auto`, so
+    a click outside can only dismiss the dialog (through its overlay).
+  * Everything outside it is hidden from assistive technology: the siblings
+    of the dialog's content and of each of its ancestors get
+    `aria-hidden="true"` (and a `data-aria-hidden` marker). `aria-live`
+    regions are left alone, and elements the page already hid stay hidden
+    after the dialog closes.
+  * Wheel and touch scrolling outside it are cancelled, so the page behind
+    (including a scrollable app layout) cannot scroll through the overlay.
+    Scrollable areas inside the dialog still scroll, without chaining to the
+    page at their ends; pinch-zoom is never blocked.
+  * Page scrolling is locked (see "Scroll lock").
+
+  The page is unblocked as soon as the dialog starts closing; the scroll lock
+  holds until its exit animation ends. Content portaled out of the dialog (a
+  select, popover or combobox inside it with `use-portal`) counts as part of
+  it. Modals stack: a dialog, sheet, drawer or dropdown menu opened from an
+  open dialog blocks the dialog too, until it closes. LiveView re-renders
+  anywhere on the page re-apply all of this.
+
+  Pass `modal={false}` for a non-modal dialog: no overlay, the page stays
+  clickable, readable and scrollable, Tab is not trapped, and a click outside
+  the dialog (other than on its trigger) closes it.
+
   ## Scroll lock
 
   Like Radix Dialog, an open dialog locks page scrolling: `<html>` and
@@ -45,8 +75,19 @@ defmodule SaladUI.Dialog do
   dialog has finished closing. Locks are counted, so a dialog opened from
   another dialog, sheet or drawer keeps the page locked until the last one
   closes. While locked, `<body>` carries `data-scroll-locked` and the
-  `--removed-body-scroll-bar-size` custom property (the padding added), which
-  fixed-position elements can use to avoid shifting:
+  `--removed-body-scroll-bar-size` custom property (the padding added).
+
+  Fixed-position elements at the right edge of the viewport would shift when
+  the scrollbar goes away. As with react-remove-scroll-bar (which Radix
+  uses), they opt in with a class that `salad_ui.css` styles while the page is
+  locked:
+
+  * `right-scroll-bar-position` - for elements pinned with `right: 0` (a
+    floating button): `right` moves in by the scrollbar's width.
+  * `width-before-scroll-bar` - for full-width elements (a fixed header): a
+    right margin of the scrollbar's width.
+
+  Or use the custom property directly:
   `body[data-scroll-locked] .my-header { padding-right: var(--removed-body-scroll-bar-size) }`.
   """
   use SaladUI, :component
@@ -72,25 +113,21 @@ defmodule SaladUI.Dialog do
           <.dialog_header>
             <.dialog_title>Edit profile</.dialog_title>
             <.dialog_description>
-              Make changes to your profile here click save when you're done
+              Make changes to your profile here. Click save when you're done.
             </.dialog_description>
           </.dialog_header>
-          <div class_name="grid gap-4 py-4">
-            <div class_name="grid grid-cols_4 items-center gap-4">
-              <.label for="name" class-name="text-end">
-                name
-              </.label>
-              <input id="name" value="pedro duarte" class-name="col-span-3" />
+          <div class="grid gap-4 py-4">
+            <div class="grid grid-cols-4 items-center gap-4">
+              <.label for="name" class="text-end">Name</.label>
+              <.input id="name" name="name" value="Pedro Duarte" class="col-span-3" />
             </div>
-            <div class="grid grid-cols-4 items_center gap-4">
-              <.label for="username" class="text-end">
-                username
-              </.label>
-              <input id="username" value="@peduarte" class="col-span-3" />
+            <div class="grid grid-cols-4 items-center gap-4">
+              <.label for="username" class="text-end">Username</.label>
+              <.input id="username" name="username" value="@peduarte" class="col-span-3" />
             </div>
           </div>
           <.dialog_footer>
-            <.button type="submit">save changes</.button>
+            <.button type="submit">Save changes</.button>
           </.dialog_footer>
         </.dialog_content>
       </.dialog>
@@ -100,6 +137,10 @@ defmodule SaladUI.Dialog do
   attr :open, :boolean, default: false
   attr :class, :string, default: nil
   attr :"close-on-outside-click", :boolean, default: true
+
+  attr :modal, :boolean,
+    default: true,
+    doc: "block, hide and scroll-lock the page while open; `false` makes a non-modal dialog (see Modal behaviour)"
 
   attr :"on-open", :any,
     default: nil,
@@ -122,6 +163,7 @@ defmodule SaladUI.Dialog do
         options:
           json(%{
             closeOnOutsideClick: assigns[:"close-on-outside-click"],
+            modal: assigns.modal,
             animations: get_animation_config()
           })
       )
@@ -153,7 +195,7 @@ defmodule SaladUI.Dialog do
 
     ~H"""
     <.dynamic
-      data-slot="dialog-trigger"
+      data-slot={@rest[:"data-slot"] || "dialog-trigger"}
       data-part="trigger"
       data-action="open"
       tag={@as}
@@ -325,7 +367,7 @@ defmodule SaladUI.Dialog do
 
     ~H"""
     <.dynamic
-      data-slot="dialog-close"
+      data-slot={@rest[:"data-slot"] || "dialog-close"}
       data-part="close"
       data-action="close"
       tag={@as}

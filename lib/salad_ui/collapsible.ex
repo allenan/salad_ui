@@ -116,7 +116,7 @@ defmodule SaladUI.Collapsible do
 
     ~H"""
     <.dynamic
-      data-slot="collapsible-trigger"
+      data-slot={@rest[:"data-slot"] || "collapsible-trigger"}
       data-part="trigger"
       data-action="toggle"
       tag={@as}

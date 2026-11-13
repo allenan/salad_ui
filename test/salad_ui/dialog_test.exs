@@ -216,4 +216,33 @@ defmodule SaladUI.DialogTest do
       assert html =~ ~r/<button[^>]*data-action="close"[^>]*>\s*Close\s*<\/button>/
     end
   end
+
+  describe "modal" do
+    test "is modal by default" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog id="d">
+          <.dialog_content>Body</.dialog_content>
+        </.dialog>
+        """)
+
+      assert html =~ "modal&quot;:true"
+    end
+
+    test "modal={false} passes through to the client" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog id="d" modal={false}>
+          <.dialog_content>Body</.dialog_content>
+        </.dialog>
+        """)
+
+      assert html =~ "modal&quot;:false"
+      refute html =~ ~s( modal=)
+    end
+  end
 end

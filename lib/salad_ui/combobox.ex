@@ -128,6 +128,18 @@ defmodule SaladUI.Combobox do
   combobox, or by the clear button) it dispatches an `input` event, so the
   server is asked for the unfiltered list again.
 
+  A single combobox shows the selected label in its input, so after a pick
+  (or after closing without one) the server still holds the last query. The
+  list should show every item when it is opened again: handle `on-open`,
+  whose payload carries the query the list opened with (`""` unless typing
+  opened it), and reset the results from it:
+
+      <.combobox id="user" field={@form[:user_id]} filter={false} on-open="search_opened">
+
+      def handle_event("search_opened", %{"query" => query}, socket) do
+        {:noreply, assign(socket, query: query, users: Accounts.search_users(query))}
+      end
+
   ## Forms
 
   With `name` (or `field`) the selected value is submitted through hidden
@@ -143,6 +155,10 @@ defmodule SaladUI.Combobox do
 
   * `ArrowDown` / `ArrowUp` - open the list, then move the highlight (wrapping).
   * `Alt+ArrowDown` / `Alt+ArrowUp` - open the list without highlighting / close it.
+  * `PageDown` / `PageUp` - while the list is open, move the highlight 10
+    items, stopping at the last / first one.
+  * `Home` / `End` - while the list is open, highlight the first / last item.
+    While it is closed (or with `Shift`, to select text) they move the caret.
   * `Enter` - select the highlighted item.
   * `Escape` - close the list.
   * `Backspace` - in an empty chips input, remove the last chip.
@@ -154,11 +170,27 @@ defmodule SaladUI.Combobox do
   The input keeps focus while the list is open and points at the highlighted
   option with `aria-activedescendant`, following the WAI-ARIA combobox pattern.
 
+  The listbox is named after the input's (or the popup trigger's) `<label>`,
+  through `aria-labelledby` when the label has an `id` and its text
+  otherwise, else after the input's `aria-labelledby` / `aria-label`, else its
+  placeholder. An `aria-label` or `aria-labelledby` given to
+  `combobox_list/1` wins.
+
+  ## Portal
+
+  The content is positioned in place by default, so an ancestor with
+  `overflow: hidden` (a card, a scroll area) or a `transform` (a drawer) clips
+  it. Set `use-portal` to move it to the body while it is open (or to the
+  element matching `portal-container`). It is moved back into the combobox
+  before every LiveView patch and out again after it, keeping the open list,
+  the highlight and the focused input.
+
   ## Component events
 
   * `:on-value-changed` - Maps the `value-changed` event, with `%{"value" => value}`
     (a list for a multiple combobox).
-  * `:on-open` - Maps the `open` event. Fired when the list opens.
+  * `:on-open` - Maps the `open` event, with `%{"query" => query}` (`""`
+    unless typing opened the list). Fired when the list opens.
   * `:on-close` - Maps the `close` event. Fired when the list closes.
 
   ## Server commands
@@ -202,6 +234,10 @@ defmodule SaladUI.Combobox do
   * `:filter` - `true` (default) filters on the client; `false` leaves the
     rendered items untouched, for server-side filtering.
   * `:disabled` - Disables the whole combobox.
+  * `:use-portal` - Move the content to the body while it is open, out of
+    `overflow` and `transform` ancestors. Defaults to `false`.
+  * `:portal-container` - CSS selector of the element to move the content to
+    instead of the body. Used only with `use-portal`.
   """
   attr :id, :string, required: true
   attr :name, :any, default: nil
@@ -212,6 +248,8 @@ defmodule SaladUI.Combobox do
   attr :"auto-highlight", :boolean, default: false, doc: "highlight the first match while typing"
   attr :filter, :boolean, default: true, doc: "filter items on the client; false for server filtering"
   attr :disabled, :boolean, default: false
+  attr :"use-portal", :boolean, default: false, doc: "render the content in a portal while open"
+  attr :"portal-container", :string, default: nil, doc: "CSS selector for the portal container"
   attr :"on-value-changed", :any, default: nil, doc: "handler for the value-changed event"
   attr :"on-open", :any, default: nil, doc: "handler for the open event"
   attr :"on-close", :any, default: nil, doc: "handler for the close event"
@@ -240,6 +278,8 @@ defmodule SaladUI.Combobox do
           autoHighlight: assigns[:"auto-highlight"],
           filter: assigns.filter,
           disabled: assigns.disabled,
+          usePortal: assigns[:"use-portal"],
+          portalContainer: assigns[:"portal-container"],
           animations: %{"open_to_closed" => %{duration: 100, target_part: "content"}}
         })
       )

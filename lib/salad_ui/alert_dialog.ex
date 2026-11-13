@@ -66,6 +66,14 @@ defmodule SaladUI.AlertDialog do
   `open` value opens or closes it; changing other options rebuilds it from the
   new markup.
 
+  ## Modal behaviour
+
+  An alert dialog is always modal, as Radix's is (it takes no `modal`
+  option): while it is open, clicks outside it never reach the page (and do
+  not close it either), everything outside it is `aria-hidden`, and wheel and
+  touch scrolling outside it are cancelled. See "Modal behaviour" in
+  `SaladUI.Dialog`.
+
   ## Scroll lock
 
   An open alert dialog locks page scrolling, as Radix's does, and pads
@@ -119,6 +127,7 @@ defmodule SaladUI.AlertDialog do
           animations: get_animation_config(),
           closeOnEscape: false,
           closeOnOutsideClick: false,
+          modal: true,
           role: "alertdialog"
         })
       )
@@ -154,7 +163,7 @@ defmodule SaladUI.AlertDialog do
 
     ~H"""
     <.dynamic
-      data-slot="alert-dialog-trigger"
+      data-slot={@rest[:"data-slot"] || "alert-dialog-trigger"}
       data-part="trigger"
       data-action="open"
       tag={@as}

@@ -400,4 +400,28 @@ defmodule SaladUI.DropdownMenuTest do
       assert html =~ ~s(aria-expanded="false")
     end
   end
+
+  describe "modal" do
+    test "is modal by default and accepts modal={false}" do
+      assigns = %{}
+
+      default =
+        rendered_to_string(~H"""
+        <.dropdown_menu id="m">
+          <.dropdown_menu_trigger>Open</.dropdown_menu_trigger>
+        </.dropdown_menu>
+        """)
+
+      non_modal =
+        rendered_to_string(~H"""
+        <.dropdown_menu id="m" modal={false}>
+          <.dropdown_menu_trigger>Open</.dropdown_menu_trigger>
+        </.dropdown_menu>
+        """)
+
+      assert default =~ "modal&quot;:true"
+      assert non_modal =~ "modal&quot;:false"
+      refute non_modal =~ ~s( modal=)
+    end
+  end
 end

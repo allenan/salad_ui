@@ -1,8 +1,12 @@
 // saladui/components/dropdown_menu.js
-import Component from "../core/component.js";
+import Component, {
+  assignId,
+  clearGeneratedIdsWithin,
+} from "../core/component.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
-import Menu, { assignId, clearGeneratedIds } from "./menu.js";
+import { ModalLayer } from "../core/modal-layer.js";
+import Menu from "./menu.js";
 
 // Open sub-menus and focus, handed from the instance torn down by a LiveView
 // patch to the one rebuilt in its place (keyed by root element).
@@ -48,6 +52,14 @@ class DropdownMenuComponent extends Component {
 
     // Set keyboard navigation defaults
     this.config.preventDefaultKeys = ["Escape", "ArrowDown", " ", "Enter"];
+
+    // Like Radix's DropdownMenu (`modal` defaults to true), an open menu
+    // blocks outside pointer events, hides the rest of the page from
+    // assistive technology and locks scrolling; `modal: false` turns that
+    // off. The layer is the positioner, which may be portaled.
+    this.modalLayer = new ModalLayer(() => [this.positioner], {
+      modal: this.options.modal !== false,
+    });
   }
 
   getComponentConfig() {
@@ -226,7 +238,7 @@ class DropdownMenuComponent extends Component {
     // (afterMount() -> activateOpenState()).
     this.positionedElement?.deactivate();
 
-    clearGeneratedIds(this.el, this.positioner);
+    clearGeneratedIdsWithin(this.el, this.positioner);
   }
 
   setupComponentEvents() {
@@ -312,6 +324,7 @@ class DropdownMenuComponent extends Component {
 
     this.initializePositionedElement();
     this.positionedElement?.activate();
+    this.modalLayer.activate();
 
     // After a LiveView patch: reopen the same sub-menus and refocus the same
     // item; a menu that had only the content focused gets that back.
@@ -361,6 +374,10 @@ class DropdownMenuComponent extends Component {
   // patch in that window (e.g. the reply to an item's on-select) rebuilds the
   // component and the deferred closed-state handler never runs.
   onOpenExit({ restoreFocus = true } = {}) {
+    // Unblock the page first: focus goes back to the trigger, which is
+    // aria-hidden while the menu blocks. The scroll lock holds until the
+    // exit animation ends (onClosedEnter).
+    this.modalLayer.releaseInteraction();
     this.menu?.closeSubmenus();
     this.pushEvent("close");
 
@@ -374,6 +391,8 @@ class DropdownMenuComponent extends Component {
   // After the exit animation.
   onClosedEnter() {
     this.positionedElement?.deactivate();
+    // Runs from the base constructor too, before the layer exists.
+    this.modalLayer?.deactivate();
   }
 
   onItemSelect() {
@@ -382,6 +401,8 @@ class DropdownMenuComponent extends Component {
 
   beforeDestroy() {
     this.el.dataset.state = this.state;
+    // A rebuild that stays open activates a new layer from afterMount().
+    this.modalLayer.deactivate();
 
     // Clean up the positioned element
     if (this.positionedElement) {

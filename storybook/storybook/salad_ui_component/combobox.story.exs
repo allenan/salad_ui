@@ -248,6 +248,29 @@ defmodule Storybook.SaladUIComponents.Combobox do
           </.field>
         </div>
         """
+      },
+      %Variation{
+        id: :portal,
+        description:
+          "Inside a short box with `overflow-hidden`: the list is clipped in place; `use-portal` moves it to the body while open.",
+        template: """
+        <div class="flex flex-wrap gap-4">
+          <div class="h-28 w-64 space-y-2 overflow-hidden rounded-md border p-3">
+            <p class="text-sm text-muted-foreground">In place (clipped)</p>
+            <.combobox id="combobox-clipped">
+              <.combobox_input placeholder="Select a framework" />
+              #{framework_list()}
+            </.combobox>
+          </div>
+          <div class="h-28 w-64 space-y-2 overflow-hidden rounded-md border p-3">
+            <p class="text-sm text-muted-foreground">With use-portal</p>
+            <.combobox id="combobox-portal" use-portal>
+              <.combobox_input placeholder="Select a framework" />
+              #{framework_list()}
+            </.combobox>
+          </div>
+        </div>
+        """
       }
     ]
   end

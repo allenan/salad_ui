@@ -68,15 +68,18 @@ defmodule SaladUI.Badge do
 
   def badge(%{href: href, navigate: navigate, patch: patch} = assigns)
       when not is_nil(href) or not is_nil(navigate) or not is_nil(patch) do
-    assigns = assign(assigns, base_class: @base_class, variant_class: variant(assigns))
+    assigns =
+      assigns
+      |> assign(base_class: @base_class, variant_class: variant(assigns))
+      |> put_own_attrs("data-slot": "badge", "data-variant": assigns.variant)
 
     ~H"""
     <.link
       href={@href}
       navigate={@navigate}
       patch={@patch}
-      data-slot="badge"
-      data-variant={@variant}
+      data-slot={@own_attrs[:"data-slot"]}
+      data-variant={@own_attrs[:"data-variant"]}
       class={classes([@base_class, @variant_class, @class])}
       {@rest}
     >
@@ -86,12 +89,15 @@ defmodule SaladUI.Badge do
   end
 
   def badge(assigns) do
-    assigns = assign(assigns, base_class: @base_class, variant_class: variant(assigns))
+    assigns =
+      assigns
+      |> assign(base_class: @base_class, variant_class: variant(assigns))
+      |> put_own_attrs("data-slot": "badge", "data-variant": assigns.variant)
 
     ~H"""
     <span
-      data-slot="badge"
-      data-variant={@variant}
+      data-slot={@own_attrs[:"data-slot"]}
+      data-variant={@own_attrs[:"data-variant"]}
       class={classes([@base_class, @variant_class, @class])}
       {@rest}
     >
