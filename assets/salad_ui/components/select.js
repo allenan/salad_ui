@@ -376,9 +376,10 @@ class SelectComponent extends Component {
     if (this.disabled) {
       if (synced || !this.trigger.hasAttribute("disabled")) {
         this.trigger.setAttribute("disabled", "");
-        this.trigger.setAttribute("data-disabled", "");
         this.trigger.setAttribute("data-disabled-synced", "");
       }
+      // Also when the server rendered `disabled={select.disabled}`.
+      this.trigger.setAttribute("data-disabled", "");
     } else if (synced) {
       this.trigger.removeAttribute("disabled");
       this.trigger.removeAttribute("data-disabled");
@@ -438,8 +439,9 @@ class SelectComponent extends Component {
     const changed = this.adoptOptions(el, ["value"]);
     this.disabled = this.readDisabled(el);
     // e.g. shadcn's align-item example toggles `position` from the server.
-    if (this.readPlacement() && this.positionedElement) {
-      this.positionedElement.destroy();
+    if (this.readPlacement()) {
+      this.itemAlignedAnchor = null;
+      this.positionedElement?.destroy();
       this.positionedElement = null;
     }
 
@@ -846,21 +848,26 @@ class SelectComponent extends Component {
       item.querySelector("[data-part='item-text']") || item
     ).getBoundingClientRect();
     const rtl = this.isRtl();
+    // The panel is measured as it opens, while its zoom-in-95 animation still
+    // scales it: undo that scale so the item lines up once it settles.
+    const scale =
+      content.offsetWidth > 0 && contentRect.width > 0
+        ? contentRect.width / content.offsetWidth
+        : 1;
 
     return {
       trigger: this.trigger.getBoundingClientRect(),
       value: (this.valueDisplay || this.trigger).getBoundingClientRect(),
-      contentWidth: contentRect.width,
-      contentHeight: contentRect.height,
-      itemTextOffset: rtl
-        ? contentRect.right - textRect.right
-        : textRect.left - contentRect.left,
+      contentWidth: contentRect.width / scale,
+      contentHeight: contentRect.height / scale,
+      itemTextOffset:
+        (rtl
+          ? contentRect.right - textRect.right
+          : textRect.left - contentRect.left) / scale,
       itemMiddle:
-        itemRect.top -
-        viewportRect.top +
-        (viewport?.scrollTop || 0) +
-        itemRect.height / 2,
-      viewportTop: viewport ? viewportRect.top - contentRect.top : 0,
+        (itemRect.top - viewportRect.top + itemRect.height / 2) / scale +
+        (viewport?.scrollTop || 0),
+      viewportTop: viewport ? (viewportRect.top - contentRect.top) / scale : 0,
       scrollHeight: viewport?.scrollHeight || 0,
       clientHeight: viewport?.clientHeight || 0,
       dir: rtl ? "rtl" : "ltr",
@@ -875,6 +882,13 @@ class SelectComponent extends Component {
   computeItemAlignedPosition() {
     const item = this.alignedItemElement();
     if (!this.content || !this.trigger || !item) return null;
+
+    // Like Radix, the item is lined up once, when the list opens. Later
+    // passes (page scroll, resize, a LiveView patch, the panel resizing) only
+    // keep the panel where it is relative to the trigger, so they never undo
+    // the user's own scrolling in the list or jump it back to the selection.
+    const anchor = this.itemAlignedAnchor;
+    if (anchor) return this.followItemAlignedAnchor(anchor);
 
     // Cap at the window rather than at one side of the trigger.
     this.setAvailableHeight(window.innerHeight - 2 * ITEM_ALIGNED_MARGIN);
@@ -899,12 +913,43 @@ class SelectComponent extends Component {
     }
 
     if (!result) {
+      this.itemAlignedAnchor = { fallback: true };
       this.updateAvailableHeight();
       return null;
     }
 
     this.content.style.minWidth = `${result.minWidth}px`;
+    const rtl = this.isRtl();
+    const trigger = this.trigger.getBoundingClientRect();
+    const width = Math.max(result.minWidth, this.content.offsetWidth || 0);
+    this.itemAlignedAnchor = {
+      rtl,
+      // Offsets from the trigger to the panel's top and start edges.
+      top: result.y - trigger.top,
+      start: rtl ? trigger.right - (result.x + width) : result.x - trigger.left,
+      minWidth: result.minWidth,
+    };
     return { x: result.x, y: result.y, placement: "item-aligned" };
+  }
+
+  // Keep an item-aligned panel where it was first placed relative to the
+  // trigger, or in popper placement when it fell back to that.
+  followItemAlignedAnchor(anchor) {
+    if (anchor.fallback) {
+      this.updateAvailableHeight();
+      return null;
+    }
+
+    // A LiveView patch drops these inline styles.
+    this.setAvailableHeight(window.innerHeight - 2 * ITEM_ALIGNED_MARGIN);
+    this.content.style.minWidth = `${anchor.minWidth}px`;
+
+    const trigger = this.trigger.getBoundingClientRect();
+    const width = Math.max(anchor.minWidth, this.content.offsetWidth || 0);
+    const x = anchor.rtl
+      ? trigger.right - anchor.start - width
+      : trigger.left + anchor.start;
+    return { x, y: trigger.top + anchor.top, placement: "item-aligned" };
   }
 
   /**
@@ -970,6 +1015,8 @@ class SelectComponent extends Component {
 
   onOpenEnter() {
     this.triggerTypeahead.reset();
+    // An item-aligned panel lines up with the selection afresh on each open.
+    this.itemAlignedAnchor = null;
 
     // Initialize positioned element
     this.initializePositionedElement();

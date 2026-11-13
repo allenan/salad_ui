@@ -980,6 +980,29 @@ test("a disabled select ignores open and toggle commands", () => {
   component.destroy();
 });
 
+test("a disabled select ignores the trigger's click and open keys", () => {
+  // `disabled` on the root alone: events reach the trigger's listeners even
+  // if something re-enables the button (e.g. before the hook re-syncs it).
+  const { component, trigger, content } = buildSelect({
+    optionsDisabled: true,
+    triggerDisabled: false,
+  });
+  trigger.disabled = false;
+
+  click(trigger);
+  assert.equal(component.state, "closed");
+  for (const key of ["ArrowDown", "ArrowUp", "Enter", " "]) {
+    keydown(trigger, key);
+    assert.equal(component.state, "closed", key);
+  }
+  assert.equal(content.hidden, true);
+  // Nor does typing on the closed trigger pick a value.
+  keydown(trigger, "b");
+  assert.equal(component.selection.getValue(true).length, 0);
+
+  component.destroy();
+});
+
 test("disabled disables the trigger, the hidden inputs and the tracker", () => {
   const { component, form, hiddenInputs, trigger } = buildSelect({
     optionsDisabled: true,
@@ -1226,6 +1249,75 @@ test("item-aligned content opens over the trigger with the selected item in line
   assert.equal(parts.content.hasAttribute("data-side"), false);
 
   parts.component.destroy();
+});
+
+test("item-aligned placement undoes the opening zoom-in-95 scale", () => {
+  const parts = buildSelect({
+    value: "banana",
+    scrollable: true,
+    contentAttrs:
+      'data-position="item-aligned" data-side="bottom" data-align="start"',
+  });
+  layOutItemAligned(parts, 300);
+  // Measured mid-animation: every rect inside the panel is scaled by 0.95
+  // around its top-left corner, while its layout box is still 150px wide.
+  const s = 0.95;
+  setRect(parts.content, {
+    top: 0,
+    left: 0,
+    right: 150 * s,
+    bottom: 120 * s,
+    width: 150 * s,
+    height: 120 * s,
+  });
+  Object.defineProperty(parts.content, "offsetWidth", { value: 150 });
+  setRect(parts.viewport, { top: 1 * s, left: 1 * s });
+  setRect(parts.item("banana"), { top: 37 * s, height: 32 * s, left: 5 * s });
+  setRect(parts.item("banana").querySelector('[data-part="item-text"]'), {
+    left: 33 * s,
+  });
+
+  click(parts.trigger);
+
+  // The same placement as the unscaled layout above.
+  assert.equal(parts.content.style.top, "265px");
+  assert.equal(parts.content.style.left, "79px");
+  assert.equal(parts.content.style.minWidth, "201px");
+
+  parts.component.destroy();
+});
+
+test("item-aligned content follows the trigger without undoing the user's scrolling", () => {
+  const parts = buildSelect({
+    value: "banana",
+    scrollable: true,
+    contentAttrs:
+      'data-position="item-aligned" data-side="bottom" data-align="start"',
+  });
+  const { component, content, viewport } = parts;
+  layOutItemAligned(parts, 300);
+  makeScrollable(viewport, { scrollHeight: 300, clientHeight: 100 });
+  click(parts.trigger);
+  assert.equal(content.style.top, "265px");
+  assert.equal(viewport.scrollTop, 0);
+
+  // The user scrolls the list, then the page scrolls the trigger up 50px.
+  viewport.scrollTop = 120;
+  layOutItemAligned(parts, 250);
+  component.positionedElement.update();
+
+  assert.equal(viewport.scrollTop, 120);
+  assert.equal(content.style.top, "215px");
+  assert.equal(content.style.left, "79px");
+  assert.equal(content.style.minWidth, "201px");
+
+  // Reopening lines the selected item up again.
+  component.transition("close");
+  click(parts.trigger);
+  assert.equal(viewport.scrollTop, 0);
+  assert.equal(content.style.top, "215px");
+
+  component.destroy();
 });
 
 test("item-aligned content falls back to popper placement near the window edge", () => {

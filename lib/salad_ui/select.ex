@@ -105,7 +105,9 @@ defmodule SaladUI.Select do
     sits exactly where the trigger shows its value, scrolling a long list so
     it can. `side` and `align` are ignored; when the panel cannot line up
     without leaving the window (the trigger is close to an edge), it falls
-    back to popper placement.
+    back to popper placement. The item is lined up each time the dropdown
+    opens; while it stays open the panel just follows the trigger, so page
+    scrolls and LiveView patches keep the list where the user scrolled it.
 
       <.select id="fruit" default-value="banana">
         <.select_trigger class="w-[180px]">

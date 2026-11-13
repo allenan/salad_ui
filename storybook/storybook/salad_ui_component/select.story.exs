@@ -205,11 +205,13 @@ defmodule Storybook.SaladUIComponents.Select do
       },
       %Variation{
         id: :disabled,
-        description: "`disabled` on the select, and a disabled item",
+        description:
+          "`disabled` on the select (handed to the trigger through `:let` so the button is disabled before the hook mounts), and a disabled item",
+        let: :select,
         attributes: %{id: "disabled-select", name: "fruit", disabled: true, "use-portal": false},
         slots: [
           """
-            <.select_trigger class="w-full max-w-48">
+            <.select_trigger class="w-full max-w-48" disabled={select.disabled}>
               <.select_value placeholder="Select a fruit" />
             </.select_trigger>
             <.select_content>
