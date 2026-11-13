@@ -8,6 +8,9 @@ const EPSILON = 0.001;
 // server-rendered styles and re-initialises the component) keeps the layout.
 const LAYOUT_KEY = "__saladResizableLayout";
 const EXPAND_KEY = "__saladResizableExpandSizes";
+// The panels' server-rendered `collapsed` values last applied, so a rebuild
+// only follows a value the server changed.
+const SERVER_COLLAPSED_KEY = "__saladResizableServerCollapsed";
 
 const round = (n) => Math.round(n * 1000) / 1000;
 const sum = (list) => list.reduce((acc, n) => acc + n, 0);
@@ -188,6 +191,9 @@ class ResizableComponent extends Component {
       );
       return { min, max: Math.max(min, max), collapsible, collapsedSize };
     });
+    this.defaultSizes = this.panels.map((panel) =>
+      readNumber(panel.dataset.defaultSize, null),
+    );
     // Index of the panel directly before each handle.
     this.pivots = new Map(
       this.handles.map((handle) => [
@@ -204,7 +210,11 @@ class ResizableComponent extends Component {
     this.onHandleKeyDown = this.onHandleKeyDown.bind(this);
 
     this.layout = this.resolveInitialLayout();
+    // The layout and collapsed states last committed: collapse/expand events
+    // and the sizes to expand back to are worked out against it.
+    this.settled = this.snapshot();
     this.signature = this.structureSignature();
+    if (this.followServerCollapsed()) this.persistLayout();
     this.applyLayout();
     this.updateUI();
   }
@@ -250,6 +260,7 @@ class ResizableComponent extends Component {
     }
     if (this.structureSignature() !== this.signature) return false;
 
+    if (this.followServerCollapsed()) this.persistLayout();
     this.applyLayout();
     this.updateUI();
     this.drag?.handle.setAttribute("data-separator", "active");
@@ -301,7 +312,12 @@ class ResizableComponent extends Component {
   resolveInitialLayout() {
     if (!this.panels.length) return [];
 
-    const candidates = [this.el[LAYOUT_KEY], this.loadPersistedLayout()];
+    const persisted = this.loadPersisted();
+    if (!this.el[EXPAND_KEY] && persisted.expandToSizes) {
+      this.el[EXPAND_KEY] = { ...persisted.expandToSizes };
+    }
+
+    const candidates = [this.el[LAYOUT_KEY], persisted.layout];
     for (const candidate of candidates) {
       if (this.isUsableLayout(candidate)) {
         return validateLayout(candidate, this.constraints);
@@ -312,9 +328,7 @@ class ResizableComponent extends Component {
   }
 
   defaultLayout() {
-    const defaults = this.panels.map((panel) =>
-      readNumber(panel.dataset.defaultSize, null),
-    );
+    const defaults = this.defaultSizes;
     const unsized = defaults.filter((size) => size === null).length;
     const leftover = Math.max(
       0,
@@ -340,19 +354,60 @@ class ResizableComponent extends Component {
   applyLayout() {
     this.el[LAYOUT_KEY] = [...this.layout];
     this.panels.forEach((panel, i) => {
-      panel.style.flexGrow = String(this.layout[i]);
-      panel.style.flexShrink = "1";
-      panel.style.flexBasis = "0px";
-      // `clip`, not `hidden`: a hidden panel is still a scroll container, so
-      // focusing an input inside it (iOS Safari, scrollIntoView) can scroll
-      // the panel itself, and nothing lets the user scroll it back.
-      // Browsers without `clip` keep the server-rendered `hidden`.
-      panel.style.overflow = "clip";
+      // A custom property read by the panel's flex class (resizable.ex), not
+      // an inline flex, so app CSS can override the size at a breakpoint.
+      panel.style.setProperty("--panel-size", String(this.layout[i]));
       panel.setAttribute("data-size", String(this.layout[i]));
       if (this.constraints[i].collapsible) {
         panel.toggleAttribute("data-collapsed", this.isCollapsed(i));
+        this.applyInert(i);
       }
     });
+  }
+
+  /**
+   * A panel collapsed to nothing leaves the tab order and the accessibility
+   * tree (`inert`); one with a collapsed size, such as an icon rail, stays
+   * interactive. Focus inside a panel that goes inert moves to its handle.
+   */
+  applyInert(index) {
+    const panel = this.panels[index];
+    const inert =
+      this.isCollapsed(index) &&
+      this.constraints[index].collapsedSize < EPSILON;
+    if (inert && panel.contains(document.activeElement)) {
+      const handle =
+        this.handles.find((h) => this.pivots.get(h) === index) ||
+        this.handles.find((h) => this.pivots.get(h) === index - 1);
+      handle?.focus({ preventScroll: true });
+    }
+    panel.toggleAttribute("inert", inert);
+  }
+
+  /**
+   * Follow the panels' server-rendered `collapsed` attribute
+   * (`data-server-collapsed`): on mount, and when a patch changes it. Other
+   * patches leave the client's state alone, so a panel the user expanded
+   * stays open until the server's value changes. Returns whether the layout
+   * changed. No events: the server already knows.
+   */
+  followServerCollapsed() {
+    const previous = this.el[SERVER_COLLAPSED_KEY] || [];
+    const current = this.panels.map((panel) => {
+      const value = panel.dataset.serverCollapsed;
+      return value === undefined ? null : value === "true";
+    });
+    this.el[SERVER_COLLAPSED_KEY] = current;
+
+    let changed = false;
+    current.forEach((collapsed, i) => {
+      if (collapsed === null || collapsed === previous[i]) return;
+      if (collapsed === this.isCollapsed(i)) return;
+      changed =
+        (collapsed ? this.collapsePanel(i) : this.expandPanel(i)) || changed;
+    });
+    if (changed) this.settle({ notify: false });
+    return changed;
   }
 
   isCollapsed(index) {
@@ -364,30 +419,84 @@ class ResizableComponent extends Component {
   }
 
   commitLayout() {
+    this.settle({ notify: true });
     this.persistLayout();
     this.pushEvent("layout-change", { layout: [...this.layout] });
+  }
+
+  snapshot() {
+    return {
+      layout: [...this.layout],
+      collapsed: this.panels.map((_, i) => this.isCollapsed(i)),
+    };
+  }
+
+  /**
+   * Compare the layout with the last settled one: a panel that collapsed
+   * remembers the size it had (react-resizable-panels' expandToSizes, kept
+   * whether a drag, the keyboard or a command collapsed it), and with
+   * `notify` each change is reported as a collapse/expand event.
+   */
+  settle({ notify }) {
+    const next = this.snapshot();
+    const sizes = this.expandSizes();
+    next.collapsed.forEach((collapsed, i) => {
+      if (collapsed === this.settled.collapsed[i]) return;
+      const before = this.settled.layout[i];
+      if (collapsed && before >= this.constraints[i].min - EPSILON) {
+        sizes[i] = before;
+      }
+      if (notify) {
+        this.pushEvent(collapsed ? "collapse" : "expand", {
+          panel: this.panels[i].id || null,
+          index: i,
+          collapsed,
+          layout: [...this.layout],
+        });
+      }
+    });
+    this.settled = next;
   }
 
   storageKey() {
     return this.autoSaveId ? `${STORAGE_PREFIX}${this.autoSaveId}` : null;
   }
 
-  loadPersistedLayout() {
+  /**
+   * The stored `{layout, expandToSizes}` (an array is a layout stored before
+   * expandToSizes were kept). Empty when nothing usable is stored.
+   */
+  loadPersisted() {
     const key = this.storageKey();
-    if (!key) return null;
+    if (!key) return {};
     try {
       const raw = window.localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
+      const data = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(data)) return { layout: data };
+      if (!data || typeof data !== "object") return {};
+      const expandToSizes =
+        data.expandToSizes && typeof data.expandToSizes === "object"
+          ? data.expandToSizes
+          : null;
+      return { layout: data.layout, expandToSizes };
     } catch {
-      return null;
+      return {};
     }
   }
 
+  // Like react-resizable-panels, the sizes to expand collapsed panels back
+  // to are stored with the layout, so `expand` restores them after a reload.
   persistLayout() {
     const key = this.storageKey();
     if (!key) return;
     try {
-      window.localStorage.setItem(key, JSON.stringify(this.layout));
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({
+          layout: this.layout,
+          expandToSizes: this.expandSizes(),
+        }),
+      );
     } catch {
       // Storage can be unavailable (private mode, quota); persistence is optional.
     }
@@ -608,9 +717,9 @@ class ResizableComponent extends Component {
   }
 
   /**
-   * Collapse a collapsible panel (react-resizable-panels' `collapse()`),
-   * remembering its size for expandPanel(). The space goes to its neighbour
-   * (the one before it for the last panel).
+   * Collapse a collapsible panel (react-resizable-panels' `collapse()`). The
+   * space goes to its neighbour (the one before it for the last panel), and
+   * settle() remembers the panel's size for expandPanel().
    */
   collapsePanel(index) {
     const constraint = this.constraints[index];
@@ -622,23 +731,28 @@ class ResizableComponent extends Component {
     const delta = last
       ? size - constraint.collapsedSize
       : constraint.collapsedSize - size;
-    const sizes = this.expandSizes();
-    sizes[index] = size;
     return this.resizeAtPivot(pivot, delta, this.layout, "imperative-api");
   }
 
   /**
    * Expand a collapsed panel (react-resizable-panels' `expand()`) to the
-   * size it had before collapsePanel(), or to its min size.
+   * size it had before it collapsed (kept with the layout under
+   * `auto-save-id`), else its default size, else its min size.
    */
   expandPanel(index) {
     const constraint = this.constraints[index];
     if (!constraint?.collapsible || !this.isCollapsed(index)) return false;
 
+    const fits = (size) =>
+      typeof size === "number" &&
+      Number.isFinite(size) &&
+      size >= constraint.min - EPSILON;
     const previous = this.expandSizes()[index];
-    const target =
-      typeof previous === "number" && previous >= constraint.min
-        ? previous
+    const fallback = this.defaultSizes[index];
+    const target = fits(previous)
+      ? previous
+      : fits(fallback) && fallback > constraint.collapsedSize + EPSILON
+        ? fallback
         : constraint.min;
     const size = this.layout[index];
     const last = index === this.panels.length - 1;
@@ -669,6 +783,7 @@ class ResizableComponent extends Component {
       const layout = (params.layout || []).map((size) => parseFloat(size));
       if (!this.isUsableLayout(layout)) return false;
       this.setLayout(validateLayout(layout, this.constraints));
+      this.settle({ notify: true });
       this.persistLayout();
       return true;
     }

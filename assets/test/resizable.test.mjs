@@ -12,7 +12,16 @@ before(() => installDom());
 after(() => uninstallDom());
 beforeEach(() => window.localStorage.clear());
 
-function panel({ id, size, min, max, collapsible, collapsedSize } = {}) {
+function panel({
+  id,
+  size,
+  min,
+  max,
+  collapsible,
+  collapsedSize,
+  serverCollapsed,
+  body = "panel",
+} = {}) {
   const attrs = [
     id ? `id="${id}"` : "",
     size !== undefined ? `data-default-size="${size}"` : "",
@@ -20,8 +29,11 @@ function panel({ id, size, min, max, collapsible, collapsedSize } = {}) {
     max !== undefined ? `data-max-size="${max}"` : "",
     collapsible ? 'data-collapsible="true"' : "",
     collapsedSize !== undefined ? `data-collapsed-size="${collapsedSize}"` : "",
+    serverCollapsed !== undefined
+      ? `data-server-collapsed="${serverCollapsed}"`
+      : "",
   ].join(" ");
-  return `<div data-part="panel" ${attrs}>panel</div>`;
+  return `<div data-part="panel" ${attrs}>${body}</div>`;
 }
 
 const handle = (extra = "") =>
@@ -36,7 +48,7 @@ function mount(inner, { id = "group", options = {}, wrap = (s) => s } = {}) {
       data-state="idle"
       phx-hook="SaladUI"
       data-options='${JSON.stringify({ orientation: "horizontal", ...options })}'
-      data-event-mappings='{"layout-change":"layout_changed"}'
+      data-event-mappings='{"layout-change":"layout_changed","collapse":"collapsed","expand":"expanded"}'
     >${inner}</div>
   `);
   return build(document.getElementById(id));
@@ -70,6 +82,11 @@ const panelsOf = (el) => [
 const handlesOf = (el) => [
   ...el.querySelectorAll(':scope > [data-part="handle"]'),
 ];
+const sizeOf = (p) => p.style.getPropertyValue("--panel-size");
+const stored = (id) =>
+  JSON.parse(window.localStorage.getItem(`salad-ui:resizable:${id}`));
+const eventsNamed = (pushed, ...names) =>
+  pushed.filter(({ event }) => names.includes(event));
 
 test("validateLayout clamps to constraints and keeps a 100% total", () => {
   const constraints = [
@@ -111,9 +128,12 @@ test("initial layout uses default sizes and splits the rest evenly", () => {
 
   assert.deepEqual(component.layout, [50, 25, 25]);
   const [a, b] = panelsOf(el);
-  assert.equal(a.style.flexGrow, "50");
-  assert.equal(b.style.flexGrow, "25");
-  assert.equal(a.style.overflow, "clip");
+  // The size is a custom property, not an inline flex, so app CSS can
+  // override the panel's flex.
+  assert.equal(sizeOf(a), "50");
+  assert.equal(sizeOf(b), "25");
+  assert.equal(a.style.flexGrow, "");
+  assert.equal(a.style.overflow, "");
 
   // Only the separators carry aria-orientation (the group has no role).
   assert.equal(el.hasAttribute("aria-orientation"), false);
@@ -264,10 +284,7 @@ test("auto-save-id persists the layout to localStorage and restores it", () => {
   const options = { autoSaveId: "editor" };
   const first = mount(markup, { options });
   key(handlesOf(first.el)[0], "ArrowLeft");
-  assert.equal(
-    window.localStorage.getItem("salad-ui:resizable:editor"),
-    JSON.stringify([40, 60]),
-  );
+  assert.deepEqual(stored("editor"), { layout: [40, 60], expandToSizes: {} });
   first.component.destroy();
 
   const second = mount(markup, { options });
@@ -277,6 +294,11 @@ test("auto-save-id persists the layout to localStorage and restores it", () => {
   window.localStorage.setItem("salad-ui:resizable:editor", "[10,20,70]");
   const third = mount(markup, { options });
   assert.deepEqual(third.component.layout, [50, 50]);
+
+  // A layout stored as a bare array (before expandToSizes) still restores.
+  window.localStorage.setItem("salad-ui:resizable:editor", "[30,70]");
+  const fourth = mount(markup, { options });
+  assert.deepEqual(fourth.component.layout, [30, 70]);
 });
 
 test("layout survives re-initialisation after a LiveView patch", () => {
@@ -287,10 +309,10 @@ test("layout survives re-initialisation after a LiveView patch", () => {
   component.destroy();
 
   // A patch resets the server-rendered styles, then the hook rebuilds.
-  panelsOf(el).forEach((p) => p.setAttribute("style", "flex: 50 1 0px"));
+  panelsOf(el).forEach((p) => p.setAttribute("style", "--panel-size: 50;"));
   const rebuilt = build(el);
   assert.deepEqual(rebuilt.component.layout, [60, 40]);
-  assert.equal(panelsOf(el)[0].style.flexGrow, "60");
+  assert.equal(sizeOf(panelsOf(el)[0]), "60");
 });
 
 test("an unrelated LiveView patch keeps the instance and an active drag", () => {
@@ -307,13 +329,13 @@ test("an unrelated LiveView patch keeps the instance and an active drag", () => 
 
   // The patch restores the server-rendered attributes mid-drag.
   el.setAttribute("data-state", "idle");
-  panelsOf(el).forEach((p) => p.setAttribute("style", "flex: 50 1 0px"));
+  panelsOf(el).forEach((p) => p.setAttribute("style", "--panel-size: 50;"));
   ["aria-valuenow", "aria-orientation", "data-separator"].forEach((a) =>
     h.removeAttribute(a),
   );
 
   assert.equal(component.skipReinitialize(el), true);
-  assert.equal(panelsOf(el)[0].style.flexGrow, "60");
+  assert.equal(sizeOf(panelsOf(el)[0]), "60");
   assert.equal(h.getAttribute("aria-valuenow"), "60");
   assert.equal(h.getAttribute("aria-orientation"), "vertical");
   assert.equal(h.getAttribute("data-separator"), "active");
@@ -449,10 +471,10 @@ test("collapse and expand commands resize a collapsible panel by id", () => {
   assert.deepEqual(component.layout, [100, 0]);
   assert.equal(side.hasAttribute("data-collapsed"), true);
   assert.deepEqual(pushed.at(-1).payload.layout, [100, 0]);
-  assert.equal(
-    window.localStorage.getItem("salad-ui:resizable:collapse-test"),
-    "[100,0]",
-  );
+  assert.deepEqual(stored("collapse-test"), {
+    layout: [100, 0],
+    expandToSizes: { 1: 30 },
+  });
 
   // Expand restores the size it had before collapsing.
   component.handleCommand("expand", { panel: "side" });
@@ -514,4 +536,252 @@ test("dragging a collapsible panel past halfway collapses it", () => {
   pointer(document, "pointermove", { clientX: 8 });
   assert.deepEqual(component.layout, [0, 100]);
   pointer(document, "pointerup", { clientX: 8 });
+});
+
+test("the size to expand back to is stored with the layout and survives a reload", () => {
+  const markup =
+    panel({ id: "main", size: 70 }) +
+    handle() +
+    panel({ id: "side", size: 30, min: 20, collapsible: true });
+  const options = { autoSaveId: "reload" };
+
+  const first = mount(markup, { options });
+  key(handlesOf(first.el)[0], "ArrowLeft");
+  assert.deepEqual(first.component.layout, [60, 40]);
+  first.component.handleCommand("collapse", { panel: "side" });
+  first.component.destroy();
+
+  // A new page: nothing kept on the element, only localStorage.
+  const second = mount(markup, { options });
+  assert.deepEqual(second.component.layout, [100, 0]);
+  second.component.handleCommand("expand", { panel: "side" });
+  assert.deepEqual(second.component.layout, [60, 40]);
+});
+
+test("a drag or a key that collapses a panel remembers its size", () => {
+  const { el, component } = mount(
+    panel({ id: "side", size: 35, min: 20, collapsible: true }) +
+      handle() +
+      panel({ size: 65 }),
+  );
+  const [h] = handlesOf(el);
+  setRect(el, { width: 100, height: 100 });
+  setRect(h, { width: 0 });
+
+  pointer(h, "pointerdown", { clientX: 35 });
+  pointer(document, "pointermove", { clientX: 2 });
+  pointer(document, "pointerup", { clientX: 2 });
+  assert.deepEqual(component.layout, [0, 100]);
+  component.handleCommand("expand", { panel: "side" });
+  assert.deepEqual(component.layout, [35, 65]);
+
+  key(h, "Enter");
+  assert.deepEqual(component.layout, [0, 100]);
+  component.handleCommand("expand", { panel: 0 });
+  assert.deepEqual(component.layout, [35, 65]);
+});
+
+test("expand without a remembered size uses the default size", () => {
+  // A layout stored collapsed with no size to expand back to (as before
+  // expandToSizes were kept): expand opens to default-size, not min-size.
+  window.localStorage.setItem("salad-ui:resizable:legacy", "[100,0]");
+  const { component } = mount(
+    panel({ size: 70 }) +
+      handle() +
+      panel({ id: "side", size: 30, min: 20, collapsible: true }),
+    { options: { autoSaveId: "legacy" } },
+  );
+  assert.deepEqual(component.layout, [100, 0]);
+  component.handleCommand("expand", { panel: "side" });
+  assert.deepEqual(component.layout, [70, 30]);
+});
+
+test("collapse and expand events report each change, with the panel", () => {
+  const { el, component, pushed } = mount(
+    panel({ id: "main", size: 70 }) +
+      handle() +
+      panel({ id: "side", size: 30, min: 20, collapsible: true }),
+  );
+  const [h] = handlesOf(el);
+
+  component.handleCommand("collapse", { panel: "side" });
+  assert.deepEqual(eventsNamed(pushed, "collapsed", "expanded"), [
+    {
+      event: "collapsed",
+      payload: {
+        panel: "side",
+        index: 1,
+        collapsed: true,
+        layout: [100, 0],
+        componentId: "group",
+        component: "resizable",
+      },
+    },
+  ]);
+
+  // The keyboard expands it (ArrowLeft grows the panel after the handle).
+  key(h, "ArrowLeft");
+  const events = eventsNamed(pushed, "collapsed", "expanded");
+  assert.equal(events.length, 2);
+  assert.equal(events[1].event, "expanded");
+  assert.equal(events[1].payload.collapsed, false);
+  assert.deepEqual(events[1].payload.layout, [80, 20]);
+
+  // A resize that does not cross the collapsed state sends no event.
+  key(h, "ArrowLeft");
+  assert.equal(eventsNamed(pushed, "collapsed", "expanded").length, 2);
+
+  // setLayout counts too.
+  component.handleCommand("setLayout", { layout: [100, 0] });
+  assert.equal(
+    eventsNamed(pushed, "collapsed", "expanded").at(-1).event,
+    "collapsed",
+  );
+});
+
+test("a collapsed panel of size 0 is inert, and focus moves to its handle", () => {
+  const { el, component } = mount(
+    panel({ id: "main", size: 70 }) +
+      handle() +
+      panel({
+        id: "side",
+        size: 30,
+        min: 20,
+        collapsible: true,
+        body: '<button id="inside">x</button>',
+      }),
+  );
+  const [, side] = panelsOf(el);
+  const [h] = handlesOf(el);
+  assert.equal(side.hasAttribute("inert"), false);
+
+  document.getElementById("inside").focus();
+  assert.equal(document.activeElement.id, "inside");
+  component.handleCommand("collapse", { panel: "side" });
+  assert.equal(side.hasAttribute("inert"), true);
+  assert.equal(document.activeElement, h, "focus is not lost to <body>");
+
+  component.handleCommand("expand", { panel: "side" });
+  assert.equal(side.hasAttribute("inert"), false);
+
+  // A patch puts back the server's markup; the client state is re-applied.
+  component.handleCommand("collapse", { panel: "side" });
+  side.removeAttribute("inert");
+  side.removeAttribute("data-collapsed");
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(side.hasAttribute("inert"), true);
+  assert.equal(side.hasAttribute("data-collapsed"), true);
+});
+
+test("a panel with a collapsed size (an icon rail) stays interactive", () => {
+  const { el, component } = mount(
+    panel({
+      id: "rail",
+      size: 25,
+      min: 15,
+      collapsible: true,
+      collapsedSize: 4,
+    }) +
+      handle() +
+      panel({ size: 75 }),
+  );
+  const [rail] = panelsOf(el);
+  component.handleCommand("collapse", { panel: "rail" });
+  assert.deepEqual(component.layout, [4, 96]);
+  assert.equal(rail.hasAttribute("data-collapsed"), true);
+  assert.equal(rail.hasAttribute("inert"), false);
+});
+
+test("the server's collapsed state wins on mount, over a stored layout", () => {
+  window.localStorage.setItem(
+    "salad-ui:resizable:server",
+    JSON.stringify({ layout: [60, 40], expandToSizes: {} }),
+  );
+  const { el, component, pushed } = mount(
+    panel({ size: 70 }) +
+      handle() +
+      panel({
+        id: "side",
+        size: 30,
+        min: 20,
+        collapsible: true,
+        serverCollapsed: true,
+      }),
+    { options: { autoSaveId: "server" } },
+  );
+  const [, side] = panelsOf(el);
+
+  assert.deepEqual(component.layout, [100, 0]);
+  assert.equal(side.hasAttribute("inert"), true);
+  assert.deepEqual(
+    eventsNamed(pushed, "collapsed", "expanded"),
+    [],
+    "no event",
+  );
+  // The stored width is what expand returns to.
+  assert.deepEqual(stored("server"), {
+    layout: [100, 0],
+    expandToSizes: { 1: 40 },
+  });
+  component.handleCommand("expand", { panel: "side" });
+  assert.deepEqual(component.layout, [60, 40]);
+
+  // Expanded on the server: a stored collapsed layout is expanded on mount.
+  window.localStorage.setItem(
+    "salad-ui:resizable:server",
+    JSON.stringify({ layout: [100, 0], expandToSizes: { 1: 45 } }),
+  );
+  const open = mount(
+    panel({ size: 70 }) +
+      handle() +
+      panel({
+        size: 30,
+        min: 20,
+        collapsible: true,
+        serverCollapsed: false,
+      }),
+    { id: "open", options: { autoSaveId: "server" } },
+  );
+  assert.deepEqual(open.component.layout, [55, 45]);
+});
+
+test("a patch that changes the server's collapsed state collapses or expands", () => {
+  const { el, component, pushed } = mount(
+    panel({ size: 70 }) +
+      handle() +
+      panel({
+        id: "side",
+        size: 30,
+        min: 20,
+        collapsible: true,
+        serverCollapsed: false,
+      }),
+  );
+  const [, side] = panelsOf(el);
+  const [h] = handlesOf(el);
+
+  side.setAttribute("data-server-collapsed", "true");
+  assert.equal(component.skipReinitialize(el), true);
+  assert.deepEqual(component.layout, [100, 0]);
+  assert.equal(side.hasAttribute("inert"), true);
+
+  side.setAttribute("data-server-collapsed", "false");
+  assert.equal(component.skipReinitialize(el), true);
+  assert.deepEqual(component.layout, [70, 30]);
+  assert.equal(side.hasAttribute("inert"), false);
+  assert.deepEqual(eventsNamed(pushed, "collapsed", "expanded"), []);
+
+  // The user collapses it; an unrelated patch (same server value) keeps it
+  // collapsed, as dialog keeps a client-opened dialog open.
+  key(h, "ArrowRight");
+  key(h, "ArrowRight");
+  assert.deepEqual(component.layout, [100, 0]);
+  assert.equal(eventsNamed(pushed, "collapsed").length, 1);
+  assert.equal(component.skipReinitialize(el), true);
+  assert.deepEqual(component.layout, [100, 0]);
+
+  // A rebuild (e.g. new options) does not re-apply an unchanged value either.
+  component.destroy();
+  const rebuilt = build(el);
+  assert.deepEqual(rebuilt.component.layout, [100, 0]);
 });
