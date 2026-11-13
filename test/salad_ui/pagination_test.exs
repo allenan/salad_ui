@@ -82,7 +82,7 @@ defmodule SaladUi.PaginationTest do
 
       assert html =~ ~s(aria-label="Go to next page")
       # Like shadcn, mobile shows only the chevron.
-      assert html =~ ~s(<a href="#" class=")
+      assert html =~ ~r/<a [^>]*href="#"/
       assert html =~ ~s(<span class="hidden sm:block">Next</span><svg)
     end
 

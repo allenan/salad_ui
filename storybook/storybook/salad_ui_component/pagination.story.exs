@@ -18,7 +18,8 @@ defmodule Storybook.SaladUIComponents.Pagination do
          pagination_previous: 1
        ]},
       {SaladUI.Field, [field: 1, field_label: 1]},
-      {SaladUI.Select, [select: 1, select_trigger: 1, select_content: 1, select_group: 1, select_item: 1, select_value: 1]}
+      {SaladUI.Select,
+       [select: 1, select_trigger: 1, select_content: 1, select_group: 1, select_item: 1, select_value: 1]}
     ]
 
   def variations do
