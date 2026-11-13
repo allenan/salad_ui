@@ -7,6 +7,7 @@ const EPSILON = 0.001;
 // Kept on the root element so a LiveView patch (which resets the panels'
 // server-rendered styles and re-initialises the component) keeps the layout.
 const LAYOUT_KEY = "__saladResizableLayout";
+const EXPAND_KEY = "__saladResizableExpandSizes";
 
 const round = (n) => Math.round(n * 1000) / 1000;
 const sum = (list) => list.reduce((acc, n) => acc + n, 0);
@@ -25,8 +26,29 @@ function byDocumentOrder(a, b) {
 
 /**
  * Pure layout helpers (exported for tests). A layout is an array of panel
- * sizes in percent that sums to 100; constraints are [{min, max}].
+ * sizes in percent that sums to 100; constraints are
+ * [{min, max, collapsible, collapsedSize}].
  */
+
+/**
+ * The size a panel can take closest to `size` (react-resizable-panels'
+ * resizePanel): clamped to [min, max], except that a collapsible panel below
+ * its min snaps to its collapsed size when past halfway there, else to min.
+ */
+export function resizePanel(constraint, size) {
+  const { min, max, collapsible = false, collapsedSize = 0 } = constraint;
+  let next = size;
+  if (next < min - EPSILON) {
+    if (collapsible) {
+      const halfway = collapsedSize + (min - collapsedSize) / 2;
+      next = next < halfway ? collapsedSize : min;
+    } else {
+      next = min;
+    }
+  }
+  return Math.min(max, next);
+}
+
 export function validateLayout(layout, constraints) {
   // Like react-resizable-panels, scale a layout that doesn't total 100 first.
   const total = sum(layout);
@@ -35,19 +57,14 @@ export function validateLayout(layout, constraints) {
       ? layout.map((size) => (size / total) * 100)
       : layout;
 
-  const next = scaled.map((size, i) =>
-    Math.min(constraints[i].max, Math.max(constraints[i].min, size)),
-  );
+  const next = scaled.map((size, i) => resizePanel(constraints[i], size));
 
   // Hand any surplus/deficit to panels that still have room, in order.
   let remaining = 100 - sum(next);
   for (let i = 0; i < next.length && Math.abs(remaining) > EPSILON; i++) {
-    const { min, max } = constraints[i];
-    const room = remaining > 0 ? max - next[i] : min - next[i];
-    const change =
-      remaining > 0 ? Math.min(remaining, room) : Math.max(remaining, room);
-    next[i] += change;
-    remaining -= change;
+    const size = resizePanel(constraints[i], next[i] + remaining);
+    remaining -= size - next[i];
+    next[i] = size;
   }
 
   return next.map(round);
@@ -55,45 +72,97 @@ export function validateLayout(layout, constraints) {
 
 /**
  * Move the handle after panel `pivot` by `delta` percent (positive grows the
- * panels before the handle). Mirrors react-resizable-panels: the panels
- * nearest the handle give/take space first and the change cascades outwards.
+ * panels before the handle), starting from `layout`. A port of
+ * react-resizable-panels' adjustLayoutByDelta: the panels nearest the handle
+ * give/take space first and the change cascades outwards; collapsible panels
+ * snap between collapsed and their min size. With `trigger: "keyboard"` a
+ * collapsed panel expands to its min, and a panel at its min collapses, on a
+ * single step. Returns `prevLayout` (default `layout`) when nothing can move.
  */
-export function adjustLayout(layout, constraints, pivot, delta) {
+export function adjustLayout(
+  layout,
+  constraints,
+  pivot,
+  delta,
+  { trigger = "pointer", prevLayout = layout } = {},
+) {
   const n = layout.length;
-  if (Math.abs(delta) < EPSILON || pivot < 0 || pivot >= n - 1) {
-    return [...layout];
-  }
+  if (pivot < 0 || pivot >= n - 1) return [...prevLayout];
+  if (Math.abs(delta) < EPSILON) return [...layout];
 
-  const before = [];
-  for (let i = pivot; i >= 0; i--) before.push(i);
-  const after = [];
-  for (let i = pivot + 1; i < n; i++) after.push(i);
-
-  const growSide = delta > 0 ? before : after;
-  const shrinkSide = delta > 0 ? after : before;
-
-  const growable = sum(growSide.map((i) => constraints[i].max - layout[i]));
-  const shrinkable = sum(shrinkSide.map((i) => layout[i] - constraints[i].min));
-  const amount = Math.min(Math.abs(delta), growable, shrinkable);
-  if (amount <= EPSILON) return [...layout];
-
+  const first = pivot;
+  const second = pivot + 1;
   const next = [...layout];
-  let remaining = amount;
-  for (const i of shrinkSide) {
-    const take = Math.min(remaining, next[i] - constraints[i].min);
-    next[i] -= take;
-    remaining -= take;
-    if (remaining <= EPSILON) break;
+
+  if (trigger === "keyboard") {
+    // Expand a collapsed panel on the growing side to its min in one step.
+    const grow = delta < 0 ? second : first;
+    const g = constraints[grow];
+    if (g.collapsible && Math.abs(layout[grow] - g.collapsedSize) < EPSILON) {
+      const local = g.min - layout[grow];
+      if (local > Math.abs(delta)) delta = delta < 0 ? -local : local;
+    }
+    // Collapse a panel at its min on the shrinking side in one step.
+    const shrink = delta < 0 ? first : second;
+    const c = constraints[shrink];
+    if (c.collapsible && Math.abs(layout[shrink] - c.min) < EPSILON) {
+      const local = layout[shrink] - c.collapsedSize;
+      if (local > Math.abs(delta)) delta = delta < 0 ? -local : local;
+    }
   }
 
-  remaining = amount;
-  for (const i of growSide) {
-    const give = Math.min(remaining, constraints[i].max - next[i]);
-    next[i] += give;
-    remaining -= give;
-    if (remaining <= EPSILON) break;
+  // How much the growing side can take.
+  {
+    const step = delta < 0 ? 1 : -1;
+    let available = 0;
+    for (let i = delta < 0 ? second : first; i >= 0 && i < n; i += step) {
+      available += resizePanel(constraints[i], 100) - layout[i];
+    }
+    const amount = Math.min(Math.abs(delta), Math.abs(available));
+    delta = delta < 0 ? -amount : amount;
   }
 
+  // Take it from the shrinking side, nearest panel first.
+  let applied = 0;
+  {
+    const step = delta < 0 ? -1 : 1;
+    for (let i = delta < 0 ? first : second; i >= 0 && i < n; i += step) {
+      const remaining = Math.abs(delta) - Math.abs(applied);
+      const size = resizePanel(constraints[i], layout[i] - remaining);
+      if (Math.abs(size - layout[i]) > EPSILON) {
+        applied += layout[i] - size;
+        next[i] = size;
+        if (applied >= Math.abs(delta) - EPSILON) break;
+      }
+    }
+  }
+
+  if (next.every((size, i) => Math.abs(size - prevLayout[i]) < EPSILON)) {
+    return [...prevLayout];
+  }
+
+  // Give it to the growing side: the panel at the handle, then outwards.
+  {
+    const grow = delta < 0 ? second : first;
+    const unsafe = layout[grow] + applied;
+    const size = resizePanel(constraints[grow], unsafe);
+    next[grow] = size;
+    let remaining = unsafe - size;
+    const step = delta > 0 ? -1 : 1;
+    for (
+      let i = grow;
+      i >= 0 && i < n && Math.abs(remaining) > EPSILON;
+      i += step
+    ) {
+      const resized = resizePanel(constraints[i], next[i] + remaining);
+      if (Math.abs(resized - next[i]) > EPSILON) {
+        remaining -= resized - next[i];
+        next[i] = resized;
+      }
+    }
+  }
+
+  if (Math.abs(sum(next) - 100) > EPSILON * 10) return [...prevLayout];
   return next.map(round);
 }
 
@@ -112,7 +181,12 @@ class ResizableComponent extends Component {
     this.constraints = this.panels.map((panel) => {
       const min = Math.max(0, readNumber(panel.dataset.minSize, 0));
       const max = Math.min(100, readNumber(panel.dataset.maxSize, 100));
-      return { min, max: Math.max(min, max) };
+      const collapsible = panel.dataset.collapsible === "true";
+      const collapsedSize = Math.min(
+        min,
+        Math.max(0, readNumber(panel.dataset.collapsedSize, 0)),
+      );
+      return { min, max: Math.max(min, max), collapsible, collapsedSize };
     });
     // Index of the panel directly before each handle.
     this.pivots = new Map(
@@ -143,6 +217,8 @@ class ResizableComponent extends Component {
         panel.id,
         panel.dataset.minSize,
         panel.dataset.maxSize,
+        panel.dataset.collapsible,
+        panel.dataset.collapsedSize,
       ]),
       this.handles.map((handle) => handle.hasAttribute("data-disabled")),
     ]);
@@ -208,7 +284,11 @@ class ResizableComponent extends Component {
             valuenow: (handle) =>
               this.handleValue(handle, (i) => this.layout[i]),
             valuemin: (handle) =>
-              this.handleValue(handle, (i) => this.constraints[i].min),
+              this.handleValue(handle, (i) =>
+                this.constraints[i].collapsible
+                  ? this.constraints[i].collapsedSize
+                  : this.constraints[i].min,
+              ),
             valuemax: (handle) =>
               this.handleValue(handle, (i) => this.constraints[i].max),
             disabled: (handle) =>
@@ -272,7 +352,18 @@ class ResizableComponent extends Component {
       // Browsers without `clip` keep the server-rendered `hidden`.
       panel.style.overflow = "clip";
       panel.setAttribute("data-size", String(this.layout[i]));
+      if (this.constraints[i].collapsible) {
+        panel.toggleAttribute("data-collapsed", this.isCollapsed(i));
+      }
     });
+  }
+
+  isCollapsed(index) {
+    const constraint = this.constraints[index];
+    return (
+      !!constraint?.collapsible &&
+      Math.abs(this.layout[index] - constraint.collapsedSize) < EPSILON
+    );
   }
 
   commitLayout() {
@@ -305,11 +396,17 @@ class ResizableComponent extends Component {
     }
   }
 
-  resizeAt(handle, delta, base = this.layout) {
+  resizeAt(handle, delta, base = this.layout, trigger = "pointer") {
     const pivot = this.pivots.get(handle);
     if (pivot === undefined) return false;
+    return this.resizeAtPivot(pivot, delta, base, trigger);
+  }
 
-    const next = adjustLayout(base, this.constraints, pivot, delta);
+  resizeAtPivot(pivot, delta, base = this.layout, trigger = "pointer") {
+    const next = adjustLayout(base, this.constraints, pivot, delta, {
+      trigger,
+      prevLayout: this.layout,
+    });
     const changed = next.some(
       (size, i) => Math.abs(size - this.layout[i]) > EPSILON,
     );
@@ -470,11 +567,30 @@ class ResizableComponent extends Component {
     deltas.Home = -100;
     deltas.End = 100;
 
+    if (event.key === "Enter") {
+      // As in react-resizable-panels: collapse the panel before the handle,
+      // or expand it to its min size, when it is collapsible.
+      event.preventDefault();
+      const pivot = this.pivots.get(handle);
+      const constraint = this.constraints[pivot];
+      if (!constraint?.collapsible) return;
+      const size = this.layout[pivot];
+      const delta = this.isCollapsed(pivot)
+        ? constraint.min - constraint.collapsedSize
+        : constraint.collapsedSize - size;
+      if (this.resizeAtPivot(pivot, delta, this.layout, "keyboard")) {
+        this.commitLayout();
+      }
+      return;
+    }
+
     const delta = deltas[event.key];
     if (delta === undefined) return;
 
     event.preventDefault();
-    if (this.resizeAt(handle, delta)) this.commitLayout();
+    if (this.resizeAt(handle, delta, this.layout, "keyboard")) {
+      this.commitLayout();
+    }
   }
 
   focusSiblingHandle(handle, direction) {
@@ -486,7 +602,72 @@ class ResizableComponent extends Component {
 
   // --- commands ----------------------------------------------------------
 
+  /** A panel by id, or by index when `ref` is a number. */
+  panelIndex(ref) {
+    if (typeof ref === "number") {
+      return ref >= 0 && ref < this.panels.length ? ref : -1;
+    }
+    return this.panels.findIndex((panel) => panel.id && panel.id === ref);
+  }
+
+  /**
+   * Collapse a collapsible panel (react-resizable-panels' `collapse()`),
+   * remembering its size for expandPanel(). The space goes to its neighbour
+   * (the one before it for the last panel).
+   */
+  collapsePanel(index) {
+    const constraint = this.constraints[index];
+    if (!constraint?.collapsible || this.isCollapsed(index)) return false;
+
+    const size = this.layout[index];
+    const last = index === this.panels.length - 1;
+    const pivot = last ? index - 1 : index;
+    const delta = last
+      ? size - constraint.collapsedSize
+      : constraint.collapsedSize - size;
+    const sizes = this.expandSizes();
+    sizes[index] = size;
+    return this.resizeAtPivot(pivot, delta, this.layout, "imperative-api");
+  }
+
+  /**
+   * Expand a collapsed panel (react-resizable-panels' `expand()`) to the
+   * size it had before collapsePanel(), or to its min size.
+   */
+  expandPanel(index) {
+    const constraint = this.constraints[index];
+    if (!constraint?.collapsible || !this.isCollapsed(index)) return false;
+
+    const previous = this.expandSizes()[index];
+    const target =
+      typeof previous === "number" && previous >= constraint.min
+        ? previous
+        : constraint.min;
+    const size = this.layout[index];
+    const last = index === this.panels.length - 1;
+    const pivot = last ? index - 1 : index;
+    const delta = last ? size - target : target - size;
+    return this.resizeAtPivot(pivot, delta, this.layout, "imperative-api");
+  }
+
+  // Sizes to expand collapsed panels back to; kept on the root like the
+  // layout, so they survive a rebuild after a LiveView patch.
+  expandSizes() {
+    if (!this.el[EXPAND_KEY]) this.el[EXPAND_KEY] = {};
+    return this.el[EXPAND_KEY];
+  }
+
   handleCommand(command, params = {}) {
+    if (command === "collapse" || command === "expand") {
+      const index = this.panelIndex(params.panel ?? params.index);
+      if (index < 0) return false;
+      const changed =
+        command === "collapse"
+          ? this.collapsePanel(index)
+          : this.expandPanel(index);
+      if (changed) this.commitLayout();
+      return changed;
+    }
     if (command === "setLayout") {
       const layout = (params.layout || []).map((size) => parseFloat(size));
       if (!this.isUsableLayout(layout)) return false;

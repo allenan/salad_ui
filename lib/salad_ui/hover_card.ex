@@ -128,6 +128,8 @@ defmodule SaladUI.HoverCard do
     `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
+  * `:collision-padding` - Distance in pixels kept from the viewport edges when
+    the content flips or shifts to stay visible. Defaults to `0`, as in Radix.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
@@ -135,6 +137,7 @@ defmodule SaladUI.HoverCard do
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
+  attr :"collision-padding", :integer, default: 0, doc: "Distance kept from the viewport edges"
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -142,7 +145,8 @@ defmodule SaladUI.HoverCard do
     assigns =
       assign(assigns,
         side_offset: assigns[:"side-offset"],
-        align_offset: assigns[:"align-offset"]
+        align_offset: assigns[:"align-offset"],
+        collision_padding: assigns[:"collision-padding"]
       )
 
     ~H"""
@@ -153,6 +157,7 @@ defmodule SaladUI.HoverCard do
       data-align={@align}
       data-side-offset={@side_offset}
       data-align-offset={@align_offset}
+      data-collision-padding={@collision_padding}
       class="z-50"
       hidden
       {@rest}

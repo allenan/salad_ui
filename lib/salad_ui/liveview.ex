@@ -73,6 +73,21 @@ defmodule SaladUI.LiveView do
   ```
 
   This dispatches a DOM event named `"salad_ui:command"` on the target element.
+
+  ## Commands from plain JavaScript
+
+  Hooks and other scripts can run the same commands with `SaladUI.command/3`
+  from the JS package. It takes the component's root element or a selector,
+  the command and optional params, dispatches the same `"salad_ui:command"`
+  event, and returns `false` when nothing matches:
+
+  ```javascript
+  import SaladUI from "salad_ui";
+
+  SaladUI.command("#emoji-popover", "close");
+  SaladUI.command(document.getElementById("bold"), "toggle");
+  SaladUI.command("#layout", "collapse", { panel: "side-pane" });
+  ```
   """
 
   @doc """

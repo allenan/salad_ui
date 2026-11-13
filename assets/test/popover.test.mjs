@@ -274,3 +274,67 @@ test("a patch that replaces the parts rebuilds the popover in its open state", (
   assert.equal(el.querySelector('[data-part="positioner"]').hidden, false);
   hook.destroyed();
 });
+
+test("a changed server `open` opens and closes the popover", () => {
+  const { el, trigger, positioner } = buildPopover();
+  el.setAttribute("data-open", "false");
+  const hook = createPatchSafeHook(el, new Map());
+  hook.mounted();
+  const component = hook.component;
+
+  hook.beforeUpdate();
+  el.setAttribute("data-open", "true");
+  hook.updated();
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(positioner.hidden, false);
+
+  hook.beforeUpdate();
+  el.setAttribute("data-open", "false");
+  hook.updated();
+  assert.equal(component.state, "closed");
+
+  // The same `open` again leaves the user's state alone.
+  click(trigger);
+  assert.equal(component.state, "open");
+  hook.beforeUpdate();
+  hook.updated();
+  assert.equal(component.state, "open");
+  hook.destroyed();
+});
+
+test("a changed server `open` is followed when the popover is rebuilt", () => {
+  const { el } = buildPopover();
+  el.setAttribute("data-open", "false");
+  const hook = createPatchSafeHook(el, new Map());
+  hook.mounted();
+  const original = hook.component;
+
+  // Changed options rebuild the popover in the same patch as the new `open`.
+  hook.beforeUpdate();
+  el.setAttribute("data-open", "true");
+  el.setAttribute("data-options", JSON.stringify({ usePortal: false }));
+  hook.updated();
+
+  assert.notEqual(hook.component, original);
+  assert.equal(hook.component.state, "open");
+  hook.destroyed();
+});
+
+test("send_command opens, closes and toggles the popover", () => {
+  const { el } = buildPopover();
+  const handlers = {};
+  const hook = {
+    ...createHookInstance(el),
+    handleEvent: (event, handler) => (handlers[event] = handler),
+  };
+  hook.mounted();
+
+  handlers["saladui:command"]({ command: "open", target: "popover-1" });
+  assert.equal(hook.component.state, "open");
+  handlers["saladui:command"]({ command: "toggle", target: "popover-1" });
+  assert.equal(hook.component.state, "closed");
+  handlers["saladui:command"]({ command: "open", target: "other" });
+  assert.equal(hook.component.state, "closed");
+  hook.destroyed();
+});

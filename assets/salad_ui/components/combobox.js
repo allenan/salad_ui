@@ -1317,6 +1317,7 @@ class ComboboxComponent extends Component {
    */
   skipReinitialize(el) {
     if (el !== this.el || this.destroyed) return false;
+    let openFromServer = null;
 
     const optionsRaw = el.getAttribute("data-options");
     if (optionsRaw !== this._optionsRaw) {
@@ -1342,6 +1343,10 @@ class ComboboxComponent extends Component {
       if (JSON.stringify(previous.value) !== JSON.stringify(next.value)) {
         this.values = this.normalizeValue(next.value);
       }
+
+      // A changed `open` from the server opens or closes the list; the same
+      // `open` again leaves the user's state alone.
+      if (!!previous.open !== !!next.open) openFromServer = !!next.open;
     }
 
     const mappingsRaw = el.getAttribute("data-event-mappings");
@@ -1355,7 +1360,14 @@ class ComboboxComponent extends Component {
     }
 
     this.refresh();
+    if (openFromServer === true) this.open();
+    else if (openFromServer === false) this.close();
     return true;
+  }
+
+  /** `open` rendered by the server opens the list on mount. */
+  afterMount() {
+    if (this.options.open === true) this.open();
   }
 
   refresh() {

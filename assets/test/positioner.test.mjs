@@ -195,3 +195,62 @@ test("findScrollableParents(): collects only overflow-scrollable ancestors, plus
   );
   assert.equal(parents[parents.length - 1], window);
 });
+
+test("calculate(): collisionPadding keeps shifted content off the viewport edge", () => {
+  const right = window.innerWidth;
+  setRect(reference, {
+    top: 300,
+    bottom: 330,
+    left: right - 40,
+    right: right - 10,
+    width: 30,
+  });
+  setRect(element, { width: 256, height: 100 });
+
+  const position = Positioner.calculate(element, reference, {
+    placement: "top",
+    alignment: "start",
+    collisionPadding: 8,
+  });
+  assert.equal(position.x, right - 256 - 8);
+
+  // Read from data-collision-padding when no option is given.
+  element.setAttribute("data-collision-padding", "12");
+  const fromAttr = Positioner.calculate(element, reference, {
+    placement: "top",
+    alignment: "start",
+  });
+  assert.equal(fromAttr.x, right - 256 - 12);
+
+  element.setAttribute("data-collision-padding", "0");
+  const none = Positioner.calculate(element, reference, {
+    placement: "top",
+    alignment: "start",
+  });
+  assert.equal(none.x, right - 256, "0 (Radix's default) is flush");
+});
+
+test("calculate(): collisionPadding counts for flipping", () => {
+  setRect(reference, {
+    top: 50,
+    bottom: 70,
+    left: 100,
+    right: 200,
+    width: 100,
+  });
+  setRect(element, { width: 50, height: 40 });
+
+  const options = { placement: "top", alignment: "center", sideOffset: 4 };
+  // 50 - 40 - 4 = 6px of room above: fits without padding.
+  assert.equal(
+    Positioner.calculate(element, reference, options).placement,
+    "top",
+  );
+  assert.equal(
+    Positioner.calculate(element, reference, {
+      ...options,
+      collisionPadding: 10,
+    }).placement,
+    "bottom",
+  );
+});

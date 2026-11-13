@@ -185,3 +185,43 @@ test("destroy() deactivates the trap and clears its references", async () => {
   assert.equal(trap.element, null);
   assert.equal(trap.active, false);
 });
+
+test("deactivate() leaves focus that a close handler moved elsewhere", async () => {
+  document.body.innerHTML = `
+    <button id="outside-trigger">outside</button>
+    <input id="composer" />
+    <div id="trap"><button id="first">first</button></div>
+  `;
+  document.getElementById("outside-trigger").focus();
+
+  const trap = new FocusTrap(document.getElementById("trap"));
+  trap.activate();
+  await wait(INITIAL_FOCUS_DELAY);
+  assert.equal(document.activeElement.id, "first");
+
+  trap.deactivate();
+  // e.g. an emoji picker's close handler hands focus back to the composer.
+  document.getElementById("composer").focus();
+  await wait(10);
+
+  assert.equal(document.activeElement.id, "composer");
+});
+
+test("deactivate() restores focus left on <body>", async () => {
+  document.body.innerHTML = `
+    <button id="outside-trigger">outside</button>
+    <div id="trap"><button id="first">first</button></div>
+  `;
+  document.getElementById("outside-trigger").focus();
+
+  const trap = new FocusTrap(document.getElementById("trap"));
+  trap.activate();
+  await wait(INITIAL_FOCUS_DELAY);
+
+  trap.deactivate();
+  document.activeElement.blur();
+  assert.equal(document.activeElement, document.body);
+  await wait(10);
+
+  assert.equal(document.activeElement.id, "outside-trigger");
+});

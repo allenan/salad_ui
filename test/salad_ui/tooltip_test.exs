@@ -135,4 +135,17 @@ defmodule SaladUI.TooltipTest do
       refute html =~ "variant"
     end
   end
+
+  test "content renders collision-padding for the positioner" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.tooltip id="t">
+        <.tooltip_content collision-padding={6}>x</.tooltip_content>
+      </.tooltip>
+      """)
+
+    assert html =~ ~s(data-collision-padding="6")
+  end
 end

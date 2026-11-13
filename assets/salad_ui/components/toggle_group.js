@@ -31,13 +31,38 @@ class ToggleGroupComponent extends Component {
     // What the server rendered, and what the user has pressed since (see
     // skipReinitialize).
     this._serverState = this.readServerState();
-    this.pressedValues = new Set(
+    this.serverPressed = this.readPressed();
+    this.pressedValues = new Set(this.serverPressed);
+
+    this.initTabStop();
+  }
+
+  /** The values of the items pressed in the DOM right now. */
+  readPressed() {
+    return new Set(
       this.getItems()
         .filter((item) => this.isPressed(item))
         .map((item) => item.getAttribute("data-value")),
     );
+  }
 
-    this.initTabStop();
+  /**
+   * Controlled (the server renders `value` or a form field): the server's
+   * value is the truth, as with Radix's `value` prop. Uncontrolled
+   * (`default-value` only): the pressed items live on the client.
+   */
+  isControlled() {
+    return this.options?.controlled === true;
+  }
+
+  /** Press exactly the items the server rendered pressed. */
+  applyServerPressed() {
+    this.getItems().forEach((item) =>
+      this.setItemPressed(
+        item,
+        this.serverPressed.has(item.getAttribute("data-value")),
+      ),
+    );
   }
 
   /** The pressed state of every item, as currently in the DOM. */
@@ -53,10 +78,13 @@ class ToggleGroupComponent extends Component {
   /**
    * A LiveView patch reverts every item to the pressed state the server
    * rendered (data-state, aria-*, the hidden inputs) and drops the roving
-   * tabindex. When the server still renders what it rendered last time (it
-   * never stored the user's choice, e.g. a static `value` and an unrelated
-   * re-render) and the options are unchanged, keep this instance and
-   * re-apply the user's choice. A new server value rebuilds from the server.
+   * tabindex. With unchanged options, keep this instance:
+   *
+   * - controlled: take what the server rendered, even when it is the value
+   *   it rendered before (e.g. it refused to let a single group be emptied);
+   * - uncontrolled: while the server still renders what it rendered last
+   *   time (an unrelated re-render), re-apply the user's choice. A new server
+   *   value rebuilds from the server.
    */
   skipReinitialize(el) {
     if (el !== this.el) return false;
@@ -64,14 +92,21 @@ class ToggleGroupComponent extends Component {
     if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
       return false;
     }
-    if (this.readServerState() !== this._serverState) return false;
 
-    this.getItems().forEach((item) =>
-      this.setItemPressed(
-        item,
-        this.pressedValues.has(item.getAttribute("data-value")),
-      ),
-    );
+    if (this.isControlled()) {
+      this._serverState = this.readServerState();
+      this.serverPressed = this.readPressed();
+      this.applyServerPressed();
+    } else {
+      if (this.readServerState() !== this._serverState) return false;
+
+      this.getItems().forEach((item) =>
+        this.setItemPressed(
+          item,
+          this.pressedValues.has(item.getAttribute("data-value")),
+        ),
+      );
+    }
 
     const tabStop = this.getItems().find(
       (item) => item === this.tabStopItem && !this.isItemDisabled(item),
@@ -227,7 +262,20 @@ class ToggleGroupComponent extends Component {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    this.pushEvent("value-changed", { value: this.getValue() });
+    // A controlled group whose server answers without changing its value
+    // gets no patch; once the server has handled the event, show its value
+    // again (a patch with a new value has been applied by then).
+    const onReply = this.isControlled()
+      ? () => {
+          if (!this.destroyed) this.applyServerPressed();
+        }
+      : undefined;
+    this.pushEvent(
+      "value-changed",
+      { value: this.getValue() },
+      undefined,
+      onReply,
+    );
   }
 
   setItemPressed(item, pressed) {

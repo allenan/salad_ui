@@ -424,4 +424,17 @@ defmodule SaladUI.DropdownMenuTest do
       refute non_modal =~ ~s( modal=)
     end
   end
+
+  test "content renders collision-padding for the positioner" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.dropdown_menu id="m">
+        <.dropdown_menu_content collision-padding={6}>x</.dropdown_menu_content>
+      </.dropdown_menu>
+      """)
+
+    assert html =~ ~s(data-collision-padding="6")
+  end
 end

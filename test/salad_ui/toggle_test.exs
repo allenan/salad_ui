@@ -70,4 +70,17 @@ defmodule SaladUI.ToggleTest do
       assert classes =~ "aria-invalid:border-destructive"
     end
   end
+
+  describe "controlled" do
+    test "value makes the toggle controlled, default-value does not" do
+      assigns = %{}
+
+      controlled = rendered_to_string(~H|<.toggle id="t1" value={false}>B</.toggle>|)
+      uncontrolled = rendered_to_string(~H|<.toggle id="t2" default-value={true}>B</.toggle>|)
+
+      assert controlled =~ ~s(data-options="{&quot;controlled&quot;:true}")
+      assert uncontrolled =~ ~s(data-options="{&quot;controlled&quot;:false}")
+      assert uncontrolled =~ ~s(data-state="on")
+    end
+  end
 end

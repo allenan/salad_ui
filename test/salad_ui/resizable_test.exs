@@ -136,4 +136,50 @@ defmodule SaladUI.ResizableTest do
       assert html =~ "data-disabled"
     end
   end
+
+  # The opening tag matching "#id" or "[attr=value]", and one attribute of it
+  # ("" for a boolean attribute, nil when absent).
+  defp tag(html, "#" <> id), do: find_tag(html, ~s(id="#{id}"))
+
+  defp tag(html, "[" <> rest) do
+    [name, value] = rest |> String.trim_trailing("]") |> String.split("=")
+    find_tag(html, ~s(#{name}="#{value}"))
+  end
+
+  defp find_tag(html, needle) do
+    ~r/<[a-z]+\s[^>]*>/
+    |> Regex.scan(html)
+    |> List.flatten()
+    |> Enum.find(&String.contains?(&1, " " <> needle))
+  end
+
+  defp attr_of(tag, name) do
+    case Regex.run(~r/\s#{Regex.escape(name)}(?:="([^"]*)")?[\s>]/, tag) do
+      nil -> nil
+      [_] -> ""
+      [_, value] -> value
+    end
+  end
+
+  describe "collapsible panels" do
+    test "collapsible and collapsed-size are rendered for the JS" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.resizable_panel_group id="g">
+          <.resizable_panel default-size={75}>Main</.resizable_panel>
+          <.resizable_handle />
+          <.resizable_panel id="side" default-size={25} min-size={15} collapsible collapsed-size="4%">
+            Side
+          </.resizable_panel>
+        </.resizable_panel_group>
+        """)
+
+      side = tag(html, "#side")
+      assert attr_of(side, "data-collapsible") == "true"
+      assert attr_of(side, "data-collapsed-size") == "4"
+      assert length(Regex.scan(~r/data-collapsible=/, html)) == 1
+    end
+  end
 end

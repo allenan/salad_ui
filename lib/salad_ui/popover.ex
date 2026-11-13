@@ -31,8 +31,16 @@ defmodule SaladUI.Popover do
   * `:on-open` - Maps the `open` event. Fired when the popover enters open state.
   * `:on-close` - Maps the `close` event. Fired when the popover enters closed state.
 
-  Popover is a pure client-side interaction (trigger click/outside click) and does
-  not support `SaladUI.LiveView.send_command/4`.
+  ## Opening from the server
+
+  `open` sets the initial state, and a changed `open` from the server opens or
+  closes the popover (as `SaladUI.Dialog` does). Re-rendering the same `open`
+  leaves the user's state alone.
+
+  ## Server commands
+
+  * `"open"` / `"close"` / `"toggle"` - via `SaladUI.LiveView.send_command/4`,
+    `SaladUI.JS.dispatch_command/3`, or `SaladUI.command/3` from plain JS.
   """
   use SaladUI, :component
 
@@ -42,7 +50,8 @@ defmodule SaladUI.Popover do
   ## Options
 
   * `:id` - Required unique identifier for the popover.
-  * `:open` - Whether the popover is initially open. Defaults to `false`.
+  * `:open` - Whether the popover is open. Defaults to `false`. A changed
+    value from the server opens or closes it.
   * `:use-portal` - Whether to move content outside its root while open. Defaults to `false`.
   * `:portal-container` - CSS selector for portal target. Used only when `:use-portal` is `true`.
     Content portaled to `document.body` is outside your LiveView, so `phx-click`
@@ -59,7 +68,7 @@ defmodule SaladUI.Popover do
   * `:on-close` - Fired when the popover closes.
   """
   attr :id, :string, required: true, doc: "Unique identifier for the popover"
-  attr :open, :boolean, default: false, doc: "Whether the popover is initially open"
+  attr :open, :boolean, default: false, doc: "Whether the popover is open; a changed value opens or closes it"
   attr :"use-portal", :boolean, default: false, doc: "Whether to render the popover in a portal"
 
   attr :"portal-container", :string,
@@ -96,6 +105,7 @@ defmodule SaladUI.Popover do
       class={classes(["relative inline-block", @class])}
       data-component="popover"
       data-state={@initial_state}
+      data-open={to_string(@open)}
       data-event-mappings={@event_map}
       data-options={@options}
       data-part="root"
@@ -166,6 +176,8 @@ defmodule SaladUI.Popover do
     `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`, as in shadcn/ui.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
+  * `:collision-padding` - Distance in pixels kept from the viewport edges when
+    the content flips or shifts to stay visible. Defaults to `0`, as in Radix.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
@@ -173,11 +185,17 @@ defmodule SaladUI.Popover do
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
+  attr :"collision-padding", :integer, default: 0, doc: "Distance kept from the viewport edges"
   attr :rest, :global
   slot :inner_block, required: true
 
   def popover_content(assigns) do
-    assigns = assign(assigns, side_offset: assigns[:"side-offset"], align_offset: assigns[:"align-offset"])
+    assigns =
+      assign(assigns,
+        side_offset: assigns[:"side-offset"],
+        align_offset: assigns[:"align-offset"],
+        collision_padding: assigns[:"collision-padding"]
+      )
 
     ~H"""
     <div
@@ -186,6 +204,7 @@ defmodule SaladUI.Popover do
       data-align={@align}
       data-side-offset={@side_offset}
       data-align-offset={@align_offset}
+      data-collision-padding={@collision_padding}
       class="absolute z-50"
       hidden
     >

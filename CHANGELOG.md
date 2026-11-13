@@ -301,6 +301,27 @@ for status and known gaps. Every new JS-backed component is registered in
 - Sub-menus close when the pointer leaves the sub-trigger away from the sub-menu
   (Radix pointer-direction grace).
 
+**Fixes from downstream use: server state**
+- Tabs: `tabs/1` hands a builder to its slot (`:let={tabs}`); passed to the
+  list, triggers and panels, the server renders the selected tab and its full
+  ARIA, so a URL-driven tab is right before the JS runs. Parts render their
+  roles without it. `default-value` is an alias for `default`. Arrow keys,
+  Home and End click the tab they select, so a trigger's `phx-click` runs.
+- Toggle group and toggle: with `value` (or a `field`) they are controlled and
+  show the server's value on every re-render and after the server answered
+  `on-value-changed`/`on-pressed-changed`, so the server can refuse a change.
+  `default-value` keeps the client state as before.
+- Popover follows a changed `open` from the server; its `send_command`
+  (`open`/`close`/`toggle`) support is documented. Combobox gets an `open` attr.
+- Resizable: `collapsible` and `collapsed-size` panels (react-resizable-panels
+  snapping), `collapse`/`expand` commands by panel id, Enter on a handle.
+- `SaladUI.command(elOrSelector, command, params)` runs a component command
+  from plain JS.
+- `collision-padding` on popover, dropdown menu, hover card, tooltip, select
+  (popper) and context menu content; default 0 as in Radix.
+- The focus trap no longer pulls focus back to the opener when a close handler
+  (or the click that closed it) moved focus elsewhere.
+
 # 0.14.0
 
 **Changes**

@@ -250,11 +250,20 @@ class TabsComponent extends Component {
     });
   }
 
+  /**
+   * Arrow keys, Home and End select the tab they land on (Radix's automatic
+   * activation). They click it rather than select it directly, so the
+   * trigger's own click bindings (e.g. a `phx-click` that patches the URL)
+   * run for the keyboard too; the click lands in handleTriggerClick().
+   */
   navigateTab(direction) {
     const currentItem = this.registry.getItemByValue(this.selection.getValue());
 
     const nextItem = this.registry.getItem(direction, currentItem);
-    if (nextItem) this.selectTab(nextItem.value);
+    if (!nextItem || nextItem === currentItem) return;
+    if (typeof nextItem.instance.click === "function")
+      nextItem.instance.click();
+    else this.selectTab(nextItem.value);
   }
 
   // Cleanup

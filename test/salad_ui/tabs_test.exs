@@ -149,4 +149,127 @@ defmodule SaladUI.TabsTest do
       assert html =~ ~s(hidden)
     end
   end
+
+  # The opening tag matching "#id" or "[attr=value]", and one attribute of it
+  # ("" for a boolean attribute, nil when absent).
+  defp tag(html, "#" <> id), do: find_tag(html, ~s(id="#{id}"))
+
+  defp tag(html, "[" <> rest) do
+    [name, value] = rest |> String.trim_trailing("]") |> String.split("=")
+    find_tag(html, ~s(#{name}="#{value}"))
+  end
+
+  defp find_tag(html, needle) do
+    ~r/<[a-z]+\s[^>]*>/
+    |> Regex.scan(html)
+    |> List.flatten()
+    |> Enum.find(&String.contains?(&1, " " <> needle))
+  end
+
+  defp attr_of(tag, name) do
+    case Regex.run(~r/\s#{Regex.escape(name)}(?:="([^"]*)")?[\s>]/, tag) do
+      nil -> nil
+      [_] -> ""
+      [_, value] -> value
+    end
+  end
+
+  describe "server-rendered state" do
+    test "the builder renders the selected tab with its ARIA" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tabs :let={tabs} id="settings" value="password" orientation="vertical">
+          <.tabs_list builder={tabs}>
+            <.tabs_trigger builder={tabs} value="account">Account</.tabs_trigger>
+            <.tabs_trigger builder={tabs} value="password">Password</.tabs_trigger>
+          </.tabs_list>
+          <.tabs_content builder={tabs} value="account">Account content</.tabs_content>
+          <.tabs_content builder={tabs} value="password">Password content</.tabs_content>
+        </.tabs>
+        """)
+
+      list = tag(html, "[data-slot=tabs-list]")
+      assert attr_of(list, "role") == "tablist"
+      assert attr_of(list, "aria-orientation") == "vertical"
+
+      account = tag(html, "#settings-trigger-account")
+      password = tag(html, "#settings-trigger-password")
+      assert attr_of(password, "role") == "tab"
+      assert attr_of(password, "aria-selected") == "true"
+      assert attr_of(password, "aria-controls") == "settings-content-password"
+      assert attr_of(password, "tabindex") == "0"
+      assert attr_of(password, "data-state") == "active"
+      assert attr_of(account, "aria-selected") == "false"
+      assert attr_of(account, "tabindex") == "-1"
+      assert attr_of(account, "data-state") == "inactive"
+
+      panel = tag(html, "#settings-content-password")
+      assert attr_of(panel, "role") == "tabpanel"
+      assert attr_of(panel, "aria-labelledby") == "settings-trigger-password"
+      assert attr_of(panel, "tabindex") == "0"
+      assert attr_of(panel, "data-state") == "active"
+      assert attr_of(panel, "hidden") == nil
+      assert attr_of(tag(html, "#settings-content-account"), "hidden") == ""
+    end
+
+    test "default-value selects a tab when there is no value" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tabs :let={tabs} id="t" default-value="b">
+          <.tabs_list builder={tabs}>
+            <.tabs_trigger builder={tabs} value="a">A</.tabs_trigger>
+            <.tabs_trigger builder={tabs} value="b">B</.tabs_trigger>
+          </.tabs_list>
+        </.tabs>
+        """)
+
+      assert html =~ ~s(&quot;defaultValue&quot;:&quot;b&quot;)
+      assert attr_of(tag(html, "#t-trigger-b"), "aria-selected") == "true"
+    end
+
+    test "attributes passed by the caller win" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tabs :let={tabs} id="t" value="a">
+          <.tabs_list builder={tabs} role="tablist">
+            <.tabs_trigger builder={tabs} id="custom" role="tab" tabindex="0" value="a">A</.tabs_trigger>
+          </.tabs_list>
+        </.tabs>
+        """)
+
+      trigger = tag(html, "[data-slot=tabs-trigger]")
+      assert attr_of(trigger, "id") == "custom"
+      assert duplicate_attrs(html) == []
+      refute html =~ "t-trigger-a"
+    end
+
+    test "without the builder the parts render their roles, inactive" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tabs id="t" value="a">
+          <.tabs_list>
+            <.tabs_trigger value="a">A</.tabs_trigger>
+          </.tabs_list>
+          <.tabs_content value="a">A</.tabs_content>
+        </.tabs>
+        """)
+
+      assert attr_of(tag(html, "[data-slot=tabs-list]"), "role") == "tablist"
+      trigger = tag(html, "[data-slot=tabs-trigger]")
+      assert attr_of(trigger, "role") == "tab"
+      assert attr_of(trigger, "aria-selected") == "false"
+      assert attr_of(trigger, "tabindex") == nil
+      panel = tag(html, "[data-slot=tabs-content]")
+      assert attr_of(panel, "role") == "tabpanel"
+      assert attr_of(panel, "hidden") == ""
+    end
+  end
 end
