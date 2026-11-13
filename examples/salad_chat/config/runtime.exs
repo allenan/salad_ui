@@ -62,7 +62,12 @@ if config_env() == :prod do
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
       # See the documentation on https://bandit.hexdocs.pm/Bandit.html#t:options/0
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      ip: {0, 0, 0, 0, 0, 0, 0, 0}
+      # PHX_IP=127.0.0.1 keeps it on loopback, e.g. behind `tailscale serve`.
+      ip:
+        case :inet.parse_address(String.to_charlist(System.get_env("PHX_IP", "::"))) do
+          {:ok, ip} -> ip
+          {:error, _} -> raise "PHX_IP is not an IP address: #{System.get_env("PHX_IP")}"
+        end
     ],
     secret_key_base: secret_key_base
 
