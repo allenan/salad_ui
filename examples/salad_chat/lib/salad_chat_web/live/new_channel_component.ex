@@ -75,12 +75,7 @@ defmodule SaladChatWeb.NewChannelComponent do
     ~H"""
     <div>
       <.dialog id="create-channel-dialog" on-close={JS.push("reset", target: @myself)}>
-        <%!-- SALAD-BUG: the combobox list can't be portaled (usePortal: false in
-             assets/salad_ui/components/combobox.js:1016) and is fixed-positioned, so
-             dialog_content's centering translate (lib/salad_ui/dialog.ex:190) makes the
-             dialog its containing block: the list opens offset and is clipped by the
-             dialog's overflow. Center the dialog with inset-0 + m-auto instead. --%>
-        <.dialog_content class="inset-0 m-auto h-fit max-h-[90svh] translate-none! overflow-y-auto sm:max-w-lg">
+        <.dialog_content class="max-h-[90svh] overflow-y-auto sm:max-w-lg">
           <.dialog_header>
             <.dialog_title>Create a channel</.dialog_title>
             <.dialog_description>

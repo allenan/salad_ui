@@ -39,16 +39,12 @@ defmodule SaladChatWeb.MessageComponents do
       |> assign(:author, assigns.ctx.users[assigns.row.message.user_id])
       |> assign(:mine?, assigns.row.message.user_id == assigns.ctx.me)
 
-    # SALAD-BUG: message_scroller_item sets `[content-visibility:auto]`
-    # (lib/salad_ui/message_scroller.ex:307), which implies paint containment:
-    # it clips the hover action bar above the row and traps the row's
-    # fixed-positioned popovers and menus. Reset to `visible` here.
     ~H"""
     <.message_scroller_item
       id={@id}
       message_id={"m-#{@message.id}"}
       data-row
-      class="relative [content-visibility:visible]"
+      class="relative"
     >
       <.marker :if={@row.day} variant="separator" class="px-4 py-3">
         <.marker_content class="rounded-full border bg-background px-3 py-0.5 text-xs font-medium text-foreground">

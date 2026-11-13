@@ -289,8 +289,7 @@ defmodule SaladChatWeb.ChatPanels do
         </.tooltip>
       </div>
       <.message_scroller id={"#{@id}-scroller"} auto_scroll class="min-h-0 flex-1">
-        <%!-- SALAD-BUG: the viewport's containment and fade mask trap row overlays; see chat_live.ex --%>
-        <.message_scroller_viewport aria-label="Thread" class="contain-none! scroll-fade-none!">
+        <.message_scroller_viewport aria-label="Thread">
           <.message_scroller_content class="gap-0 pb-2">
             <.message_row
               id={"#{@id}-parent"}
@@ -598,11 +597,7 @@ defmodule SaladChatWeb.ChatPanels do
 
     ~H"""
     <.dialog id="remind-dialog">
-      <%!-- SALAD-BUG: the date picker's popover is fixed-positioned and not portaled, so
-           dialog_content's centering translate (lib/salad_ui/dialog.ex:190) makes the
-           dialog its containing block and the calendar opens offset. Center the dialog
-           with inset-0 + m-auto instead (as in the create-channel dialog). --%>
-      <.dialog_content class="inset-0 m-auto h-fit translate-none! sm:max-w-md">
+      <.dialog_content class="sm:max-w-md">
         <.dialog_header>
           <.dialog_title>Remind me about this</.dialog_title>
           <.dialog_description>

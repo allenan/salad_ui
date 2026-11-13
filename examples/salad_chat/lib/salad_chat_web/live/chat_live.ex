@@ -887,13 +887,7 @@ defmodule SaladChatWeb.ChatLive do
                 on-scrollable-change="scroll_edges"
                 class="min-h-0 flex-1"
               >
-                <%!-- SALAD-BUG: message_scroller_viewport sets `contain-content` and
-                     `scroll-fade-b` (lib/salad_ui/message_scroller.ex:235). Layout/paint
-                     containment makes the viewport the containing block of the
-                     fixed-positioned, non-portaled popovers, dropdowns and hover cards
-                     in the rows, and the fade's mask hides whatever of them extends
-                     past the viewport. Turn both off. --%>
-                <.message_scroller_viewport class="flex flex-col contain-none! scroll-fade-none!">
+                <.message_scroller_viewport class="flex flex-col">
                   <%!-- Above the stream: pushes short channels to the bottom (mt-auto) --%>
                   <div class="mt-auto shrink-0">
                     <%= if @loaded? do %>
