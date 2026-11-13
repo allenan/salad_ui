@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
 
 import ClickOutsideMonitor from "../salad_ui/core/click-outside.js";
+import Portal from "../salad_ui/core/portal.js";
 import { installDom, uninstallDom } from "./helpers/dom.mjs";
 
 before(() => installDom());
@@ -106,4 +107,28 @@ test("destroy() stops monitoring and clears references", () => {
   assert.equal(calls.length, 0);
   assert.equal(monitor.elements, null);
   assert.equal(monitor.callback, null);
+});
+
+test("content portaled out of a monitored element counts as inside it", () => {
+  inside.insertAdjacentHTML(
+    "beforeend",
+    '<div id="menu"><div id="menu-item">Item</div></div>',
+  );
+  const menu = document.getElementById("menu");
+  Portal.move(menu, document.body);
+  assert.equal(menu.parentElement, document.body);
+
+  const calls = [];
+  const monitor = new ClickOutsideMonitor(inside, () => calls.push(true));
+  monitor.start();
+
+  // Like a menu item picked in a dropdown opened inside a popover.
+  click(document.getElementById("menu-item"));
+  assert.equal(calls.length, 0);
+
+  click(outside);
+  assert.equal(calls.length, 1);
+
+  monitor.destroy();
+  Portal.restore(menu);
 });

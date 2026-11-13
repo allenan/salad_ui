@@ -26,13 +26,41 @@ defmodule SaladUI.ToastTest do
       assert html =~ ~s(phx-hook="SaladUI")
       assert html =~ ~s(data-part="viewport")
       assert html =~ ~s(data-position="bottom-right")
-      assert html =~ ~s(role="region")
-      assert html =~ ~s(aria-label="Notifications")
+      # Sonner's structure: a named <section> is the landmark and the polite
+      # live region; the <ol> carries no role (axe aria-allowed-role).
+      assert html =~ ~r/<section[^>]*id="toaster"/
+      assert html =~ ~s(aria-label="Notifications Alt+T")
+      assert html =~ ~s(aria-live="polite")
+      assert html =~ ~s(aria-relevant="additions text")
+      assert html =~ ~s(aria-atomic="false")
+      refute html =~ "role="
 
       assert html =~ ~s(position&quot;:&quot;bottom-right)
       assert html =~ ~s(visibleToasts&quot;:3)
       assert html =~ ~s(gap&quot;:14)
       assert html =~ ~s(hotkey&quot;:&quot;Alt+T)
+    end
+
+    test "duration, close-button and hotkey are passed to JS" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.toaster id="toaster" duration={8000} close-button hotkey="Shift+N" />
+        """)
+
+      assert html =~ ~s(duration&quot;:8000)
+      assert html =~ ~s(closeButton&quot;:true)
+      assert html =~ ~s(aria-label="Notifications Shift+N")
+
+      html =
+        rendered_to_string(~H"""
+        <.toaster id="toaster" duration={:infinity} hotkey={nil} />
+        """)
+
+      assert html =~ ~s(duration&quot;:&quot;infinity)
+      assert html =~ ~s(closeButton&quot;:false)
+      assert html =~ ~s(aria-label="Notifications")
     end
 
     test "bottom-right viewport anchors to the bottom-right offset vars" do

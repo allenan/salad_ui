@@ -269,11 +269,8 @@ class ResizableComponent extends Component {
         },
       },
       ariaConfig: {
-        root: {
-          all: {
-            orientation: () => this.orientation,
-          },
-        },
+        // No aria-orientation on the group: it has no role that allows one
+        // (react-resizable-panels sets it on the separators only).
         handle: {
           all: {
             role: "separator",

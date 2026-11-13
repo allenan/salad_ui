@@ -75,8 +75,8 @@ const CARD_BASE_CLASSES = [
 ].join(" ");
 
 const CLOSE_TRIGGER_CLASSES =
-  "absolute end-0 top-0 -translate-y-1/2 translate-x-1/2 rtl:-translate-x-1/2 rounded-full p-0.5 flex items-center justify-center text-foreground/50 opacity-0 transition-opacity " +
-  "bg-background border border-border hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 " +
+  "absolute end-0 top-0 -translate-y-1/2 translate-x-1/2 rtl:-translate-x-1/2 rounded-full p-0.5 flex items-center justify-center text-foreground/50 transition-colors " +
+  "bg-background border border-border hover:text-foreground " +
   "focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
 const ACTION_BUTTON_CLASSES =
@@ -130,12 +130,30 @@ class Timer {
 // A loading toast never times out (Sonner skips its timer while
 // `type === "loading"`, whatever `duration` says); it stays up until an
 // update() resolves it to another variant or it is dismissed explicitly.
-function resolveDuration(params, variant) {
+// Without a per-toast duration, the toaster's `duration` applies (Sonner's
+// `toast.duration || durationFromToaster || TOAST_LIFETIME`).
+function resolveDuration(params, variant, toasterDuration) {
   if (variant === "loading") return Infinity;
-  if (params.duration === "infinity" || params.duration === Infinity)
-    return Infinity;
-  if (typeof params.duration === "number") return params.duration;
+  for (const duration of [params.duration, toasterDuration]) {
+    if (duration === "infinity" || duration === Infinity) return Infinity;
+    if (typeof duration === "number") return duration;
+  }
   return DEFAULT_DURATION;
+}
+
+// Sonner's `closeButton`: the per-toast value wins over the toaster's.
+function resolveCloseButton(params, toasterCloseButton) {
+  const own = params.closeButton ?? params.close_button;
+  return typeof own === "boolean" ? own : Boolean(toasterCloseButton);
+}
+
+// Maps a key name from the `hotkey` option ("T", "1", "Escape") to the
+// `KeyboardEvent.code` it is matched against. Matching the code, as Sonner
+// does, keeps Option+T working on macOS, where `event.key` is "†".
+export function hotkeyCode(key) {
+  if (/^[a-z]$/i.test(key)) return `Key${key.toUpperCase()}`;
+  if (/^[0-9]$/.test(key)) return `Digit${key}`;
+  return key;
 }
 
 function lucideIcon(variant) {
@@ -149,9 +167,10 @@ function lucideIcon(variant) {
   );
 }
 
-function resolveImportant(params, variant) {
-  if (typeof params.important === "boolean") return params.important;
-  return variant === "error" || variant === "warning";
+// Toasts are announced through the toaster's polite live region, as in
+// Sonner; `important: true` makes one card its own assertive region.
+function resolveImportant(params) {
+  return params.important === true;
 }
 
 // Payload pushed to the LiveView handling an action/cancel click. `value`
@@ -277,10 +296,9 @@ class ToastComponent extends Component {
 
   getComponentConfig() {
     return {
+      // The landmark and live region is the server-rendered <section>
+      // root; the viewports stay plain lists, as Sonner's <ol>s are.
       stateMachine: { idle: { transitions: {} } },
-      ariaConfig: {
-        viewport: { all: { role: "region", label: "Notifications" } },
-      },
     };
   }
 
@@ -378,12 +396,13 @@ class ToastComponent extends Component {
     viewport.dataset.part = "viewport";
     viewport.dataset.position = position;
     viewport.dataset.expanded = this.options.expand ? "true" : "false";
-    viewport.setAttribute("role", "region");
-    viewport.setAttribute("aria-label", "Notifications");
+    viewport.setAttribute("data-salad-layer-branch", "");
     viewport.className = viewportClasses(position);
     if (this.viewport) viewport.style.cssText = this.viewport.style.cssText;
 
-    document.body.appendChild(viewport);
+    // Inside the root <section>, as all of Sonner's lists are, so every
+    // position is in the "Notifications" landmark and live region.
+    this.el.appendChild(viewport);
     this.viewports.set(position, viewport);
     this.attachViewportInteractions(viewport);
 
@@ -439,7 +458,7 @@ class ToastComponent extends Component {
     const variant = params.variant || "default";
     const position = params.position || this.options.position || "bottom-right";
     const viewport = this.getOrCreateViewport(position);
-    const duration = resolveDuration(params, variant);
+    const duration = resolveDuration(params, variant, this.options.duration);
 
     const card = this.buildCard(id, params, variant, position);
     card.dataset.state = "entering";
@@ -509,7 +528,10 @@ class ToastComponent extends Component {
     record.variant = variant;
     record.dismissible = merged.dismissible !== false;
 
-    record.timer = this.armTimer(id, resolveDuration(merged, variant));
+    record.timer = this.armTimer(
+      id,
+      resolveDuration(merged, variant, this.options.duration),
+    );
 
     this.recomputeStackPositions(this.viewports.get(record.position));
   }
@@ -599,12 +621,9 @@ class ToastComponent extends Component {
       if (index >= visibleToasts) {
         card.style.opacity = "0";
         card.style.pointerEvents = "none";
-        card.setAttribute("aria-live", "off");
       } else {
         card.style.opacity = "";
         card.style.pointerEvents = "";
-        if (card.dataset.live)
-          card.setAttribute("aria-live", card.dataset.live);
       }
 
       if (index === 0) {
@@ -666,7 +685,7 @@ class ToastComponent extends Component {
   // correctly — this only affects external consumers mutating the DOM.
   populateCard(card, id, params, variant, position) {
     const unstyled = !!params.unstyled;
-    const important = resolveImportant(params, variant);
+    const important = resolveImportant(params);
     const dismissible = params.dismissible !== false;
     // Replaces NEUTRAL_CARD_CLASSES wholesale (border + background + text),
     // not just the text color — so a single `color`/`colors` value tints the
@@ -677,10 +696,15 @@ class ToastComponent extends Component {
 
     card.dataset.variant = variant;
     card.dataset.position = position;
-    card.setAttribute("role", important ? "alert" : "status");
-    card.setAttribute("aria-live", important ? "assertive" : "polite");
-    card.setAttribute("aria-atomic", "true");
-    card.dataset.live = important ? "assertive" : "polite";
+    // No role: a list item may not be a status or an alert (axe
+    // aria-allowed-role). The toaster's section announces it.
+    if (important) {
+      card.setAttribute("aria-live", "assertive");
+      card.setAttribute("aria-atomic", "true");
+    } else {
+      card.removeAttribute("aria-live");
+      card.removeAttribute("aria-atomic");
+    }
 
     if (!unstyled) {
       card.className = [
@@ -696,6 +720,14 @@ class ToastComponent extends Component {
     }
 
     card.replaceChildren();
+
+    // Like Sonner, never on a loading toast.
+    if (
+      variant !== "loading" &&
+      resolveCloseButton(params, this.options.closeButton)
+    ) {
+      card.appendChild(this.buildCloseTrigger(id, dismissible));
+    }
 
     const icon = this.buildIcon(params, variant);
     if (icon) card.appendChild(icon);
@@ -778,19 +810,21 @@ class ToastComponent extends Component {
     return wrapper;
   }
 
-  buildCloseTrigger(id) {
+  buildCloseTrigger(id, dismissible = true) {
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.part = "close-trigger";
     button.className = CLOSE_TRIGGER_CLASSES;
-    button.setAttribute("aria-label", "Dismiss notification");
+    button.setAttribute("aria-label", "Close toast");
+    if (!dismissible) button.dataset.disabled = "true";
     button.innerHTML =
       '<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6" viewBox="0 0 24 24" ' +
       'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
-    button.addEventListener("click", () =>
-      this.dismissToast(id, "close-button"),
-    );
+    button.addEventListener("click", () => {
+      if (this.stack.get(id)?.dismissible === false) return;
+      this.dismissToast(id, "close-button");
+    });
 
     return button;
   }
@@ -981,18 +1015,18 @@ class ToastComponent extends Component {
   // -- hotkey -----------------------------------------------------------------
 
   handleHotkey(event) {
-    const hotkey = this.options.hotkey || "Alt+T";
-    const parts = hotkey.split("+").map((part) => part.trim().toLowerCase());
-    const key = parts.at(-1);
-    const needsAlt = parts.includes("alt");
-    const needsShift = parts.includes("shift");
-    const needsCtrl = parts.includes("ctrl") || parts.includes("control");
+    const hotkey = this.options.hotkey ?? "Alt+T";
+    if (!hotkey) return;
+    const parts = hotkey.split("+").map((part) => part.trim());
+    const modifiers = parts.slice(0, -1).map((part) => part.toLowerCase());
+    const has = (...names) => names.some((name) => modifiers.includes(name));
 
     if (
-      event.key.toLowerCase() !== key ||
-      event.altKey !== needsAlt ||
-      event.shiftKey !== needsShift ||
-      event.ctrlKey !== needsCtrl
+      event.code !== hotkeyCode(parts.at(-1)) ||
+      event.altKey !== has("alt", "option") ||
+      event.shiftKey !== has("shift") ||
+      event.ctrlKey !== has("ctrl", "control") ||
+      event.metaKey !== has("meta", "cmd", "command")
     ) {
       return;
     }

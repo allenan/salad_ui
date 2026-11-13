@@ -336,3 +336,100 @@ test("LiveView hook updates honor changed server dialog state", () => {
   assert.equal(el.querySelector('[data-part="content"]').hidden, true);
   hook.destroyed();
 });
+
+test("Escape in a nested dialog closes only the inner one", () => {
+  const options = JSON.stringify({ closeOnEscape: true });
+  document.body.innerHTML = `
+    <div id="outer" data-component="dialog" data-open="false"
+         data-options='${options}' data-part="root">
+      <button data-part="trigger" data-action="open" type="button">Open</button>
+      <div data-part="content" hidden>
+        <div data-part="content-panel">
+          <div id="inner" data-component="dialog" data-open="false"
+               data-options='${options}' data-part="root" phx-hook="SaladUI">
+            <button data-part="trigger" data-action="open" type="button">Inner</button>
+            <div data-part="content" hidden>
+              <div data-part="content-panel">
+                <button id="inner-action" type="button">Action</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const hookContext = { pushEventTo() {}, liveSocket: { execJS() {} } };
+  const outer = registry.create(
+    "dialog",
+    document.getElementById("outer"),
+    hookContext,
+  );
+  const inner = registry.create(
+    "dialog",
+    document.getElementById("inner"),
+    hookContext,
+  );
+  outer.transition("open");
+  inner.transition("open");
+
+  const event = new window.KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  document.getElementById("inner-action").dispatchEvent(event);
+
+  assert.equal(inner.state, "closed");
+  assert.equal(outer.state, "open");
+
+  inner.destroy();
+  outer.destroy();
+});
+
+test("a key a nested component already handled (defaultPrevented) is ignored", () => {
+  const { component, el, trigger } = buildDialog();
+  click(trigger);
+
+  const event = new window.KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  event.preventDefault();
+  el.dispatchEvent(event);
+
+  assert.equal(component.state, "open");
+  component.destroy();
+});
+
+test("a dialog opened with nothing focused returns focus to its trigger", async () => {
+  const { component, trigger, closeTrigger } = buildDialog();
+  document.activeElement?.blur();
+  assert.equal(document.activeElement, document.body);
+
+  // Opened by the server: the user never focused the trigger.
+  component.transition("open");
+  await waitFor(() => document.activeElement === closeTrigger);
+
+  component.transition("close");
+  await waitFor(() => document.activeElement === trigger);
+  component.destroy();
+});
+
+test("the trigger fallback focuses the button inside a <div> trigger", async () => {
+  const { component, el, closeTrigger } = buildDialog();
+  const trigger = el.querySelector('[data-part="trigger"]');
+  const wrapper = document.createElement("div");
+  wrapper.dataset.part = "trigger";
+  trigger.replaceWith(wrapper);
+  trigger.removeAttribute("data-part");
+  wrapper.appendChild(trigger);
+  document.activeElement?.blur();
+
+  component.transition("open");
+  await waitFor(() => document.activeElement === closeTrigger);
+
+  component.transition("close");
+  await waitFor(() => document.activeElement === trigger);
+  component.destroy();
+});

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, afterEach, before, test } from "node:test";
 
-import { toast } from "../salad_ui/components/toast.js";
+import { hotkeyCode, toast } from "../salad_ui/components/toast.js";
 import { registry } from "../salad_ui/core/factory.js";
 import {
   installDom,
@@ -90,26 +90,150 @@ test("add creates a visible card with title/description", async () => {
     card.querySelector('[data-part="description"]').textContent,
     "All good",
   );
-  assert.equal(card.getAttribute("role"), "status");
-  assert.equal(card.getAttribute("aria-live"), "polite");
+  // Sonner's <li>: no role (a list item may not be a status or an alert);
+  // the toaster's <section> is the live region.
+  assert.equal(card.hasAttribute("role"), false);
+  assert.equal(card.hasAttribute("aria-live"), false);
+  assert.equal(viewport.hasAttribute("role"), false);
+  assert.equal(viewport.hasAttribute("aria-label"), false);
 
   component.destroy();
 });
 
-test("error/warning variants default to assertive alerts", async () => {
+test("error toasts are announced politely like the rest; important: true is assertive", async () => {
   const { component, viewport } = buildToaster();
 
-  const id = component.handleCommand("add", {
+  const error = component.handleCommand("add", {
     title: "Broke",
     variant: "error",
   });
+  const urgent = component.handleCommand("add", {
+    title: "Now",
+    important: true,
+  });
   await wait(10);
 
-  const card = cardFor(viewport, id);
-  assert.equal(card.getAttribute("role"), "alert");
-  assert.equal(card.getAttribute("aria-live"), "assertive");
+  assert.equal(cardFor(viewport, error).hasAttribute("role"), false);
+  assert.equal(cardFor(viewport, error).hasAttribute("aria-live"), false);
+  assert.equal(cardFor(viewport, urgent).hasAttribute("role"), false);
+  assert.equal(
+    cardFor(viewport, urgent).getAttribute("aria-live"),
+    "assertive",
+  );
 
   component.destroy();
+});
+
+test("the toaster's duration applies to toasts without their own", async () => {
+  const { component, viewport } = buildToaster({ options: { duration: 20 } });
+
+  const short = component.handleCommand("add", { title: "Short" });
+  const own = component.handleCommand("add", { title: "Own", duration: 5000 });
+  await wait(10);
+  assert.ok(cardFor(viewport, short));
+
+  await wait(600);
+  assert.equal(cardFor(viewport, short), null);
+  assert.ok(cardFor(viewport, own));
+
+  component.destroy();
+});
+
+test("closeButton renders a close button that dismisses; a toast's own value wins", async () => {
+  const { component, viewport, pushedTo } = buildToaster({
+    options: { closeButton: true },
+    eventMappings: { dismiss: "toast_dismissed" },
+  });
+
+  const id = component.handleCommand("add", { title: "Closable" });
+  const without = component.handleCommand("add", {
+    title: "No close",
+    close_button: false,
+  });
+  const loading = component.handleCommand("add", {
+    title: "Busy",
+    variant: "loading",
+  });
+  await wait(10);
+
+  assert.equal(
+    cardFor(viewport, without).querySelector('[data-part="close-trigger"]'),
+    null,
+  );
+  // Like Sonner, never on a loading toast.
+  assert.equal(
+    cardFor(viewport, loading).querySelector('[data-part="close-trigger"]'),
+    null,
+  );
+
+  const close = cardFor(viewport, id).querySelector(
+    '[data-part="close-trigger"]',
+  );
+  assert.ok(close);
+  assert.equal(close.getAttribute("aria-label"), "Close toast");
+  close.click();
+  await wait(550);
+  assert.equal(cardFor(viewport, id), null);
+  const dismissed = eventsNamed(pushedTo, "toast_dismissed");
+  assert.equal(dismissed.length, 1);
+  assert.equal(dismissed[0].payload.reason, "close-button");
+
+  component.destroy();
+});
+
+test("a toast can opt into the close button when the toaster has none", async () => {
+  const { component, viewport } = buildToaster();
+
+  const plain = component.handleCommand("add", { title: "Plain" });
+  const closable = component.handleCommand("add", {
+    title: "Closable",
+    closeButton: true,
+  });
+  await wait(10);
+
+  assert.equal(
+    cardFor(viewport, plain).querySelector('[data-part="close-trigger"]'),
+    null,
+  );
+  assert.ok(
+    cardFor(viewport, closable).querySelector('[data-part="close-trigger"]'),
+  );
+
+  component.destroy();
+});
+
+test("the hotkey matches the physical key, so Option+T works on macOS", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", { title: "Focus me" });
+  await wait(10);
+  const card = cardFor(viewport, id);
+
+  // macOS reports Option+T as key "†"; the code is still KeyT.
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "†",
+      code: "KeyT",
+      altKey: true,
+      bubbles: true,
+    }),
+  );
+  assert.equal(document.activeElement, card);
+
+  card.blur();
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "t", code: "KeyT", bubbles: true }),
+  );
+  assert.notEqual(document.activeElement, card);
+
+  component.destroy();
+});
+
+test("hotkeyCode maps letters and digits to KeyboardEvent.code", () => {
+  assert.equal(hotkeyCode("t"), "KeyT");
+  assert.equal(hotkeyCode("T"), "KeyT");
+  assert.equal(hotkeyCode("1"), "Digit1");
+  assert.equal(hotkeyCode("Escape"), "Escape");
 });
 
 test("explicit id is respected and returned", () => {
@@ -762,6 +886,11 @@ test("per-toast position creates a dedicated viewport", async () => {
   assert.ok(topLeftViewport);
   assert.notEqual(topLeftViewport, el.querySelector('[data-part="viewport"]'));
   assert.ok(topLeftViewport.querySelector(`[data-toast-id="${id}"]`));
+  // In the toaster's landmark, like Sonner's per-position lists, and above
+  // any modal layer like the server-rendered viewport.
+  assert.equal(topLeftViewport.parentElement, el);
+  assert.equal(topLeftViewport.hasAttribute("role"), false);
+  assert.ok(topLeftViewport.hasAttribute("data-salad-layer-branch"));
 
   component.destroy();
 });
@@ -1362,10 +1491,9 @@ test("a loading toast never arms a timeout, even with an explicit duration", asy
   await waitFor(() => card.dataset.state === "visible");
 
   assert.equal(component.stack.get(id).timer, null);
-  // A polite status, announced like Sonner's — not aria-busy, which would
-  // tell screen readers to hold back the "Loading..." message itself.
-  assert.equal(card.getAttribute("role"), "status");
-  assert.equal(card.getAttribute("aria-live"), "polite");
+  // Announced by the toaster's polite region like Sonner's — not aria-busy,
+  // which would tell screen readers to hold back the "Loading..." message.
+  assert.equal(card.hasAttribute("role"), false);
   assert.equal(card.hasAttribute("aria-busy"), false);
 
   // Hover/visibility resume must not start one either.

@@ -9,12 +9,15 @@
  *   and the layer's elements `pointer-events: auto`, so a click outside the
  *   layer can only dismiss it (via its overlay, or a click that lands on
  *   `<html>`), never activate what is underneath.
- * - Everything outside the layer is hidden from assistive technology, as the
- *   `aria-hidden` package's `hideOthers()` does for Radix: the siblings of
- *   the layer and of each of its ancestors up to `<body>` get
- *   `aria-hidden="true"` (and a `data-aria-hidden` marker). `aria-live`
- *   regions and scripts are left alone. Elements that already carried
- *   `aria-hidden` keep it after the layer closes.
+ * - Everything outside the layer is hidden from assistive technology and
+ *   taken out of the tab order, as the `aria-hidden` package's `hideOthers()`
+ *   does for Radix: the siblings of the layer and of each of its ancestors
+ *   up to `<body>` get `aria-hidden="true"` and `inert` (and a
+ *   `data-aria-hidden` marker). `inert` keeps a focusable control in the
+ *   hidden page from being reached (axe `aria-hidden-focus`). The layer and
+ *   its ancestors are never hidden, nor is content portaled out of it.
+ *   `aria-live` regions and scripts are left alone. Elements that already
+ *   carried `aria-hidden` (or `inert`) keep it after the layer closes.
  * - Wheel and touch scrolling outside the layer is cancelled, as
  *   react-remove-scroll does, so the page behind (including an inner scroll
  *   container of the app's layout) cannot scroll through the overlay. Inside
@@ -42,7 +45,7 @@
  * only takes its place in the stack.
  *
  * LiveView patches put the server-rendered attributes back, which drops the
- * `aria-hidden` and inline `pointer-events` written here. While any layer
+ * `aria-hidden`, `inert` and inline `pointer-events` written here. While any layer
  * blocks, a MutationObserver on `<body>` re-applies them after every patch,
  * and recomputes which elements to hide when nodes are added or removed.
  * `refresh()` re-applies synchronously.
@@ -62,7 +65,8 @@ const stack = [];
 let savedBody = null;
 // Layer elements given `pointer-events: auto` -> their own inline value.
 const pointerOwned = new Map();
-// Nodes outside the layer -> { uncontrolled } (aria-hidden before we came).
+// Nodes outside the layer -> { uncontrolled, wasInert } (aria-hidden or
+// inert before we came).
 const hiddenOwned = new Map();
 // Elements interactive while blocking: the topmost modal layer, the layers
 // above it, and whatever was portaled out of them.
@@ -193,8 +197,9 @@ function nodesToHide(body) {
   return hide;
 }
 
-function unhide(node, { uncontrolled }) {
+function unhide(node, { uncontrolled, wasInert }) {
   if (!uncontrolled) node.removeAttribute("aria-hidden");
+  if (!wasInert) node.removeAttribute("inert");
   node.removeAttribute(MARKER);
 }
 
@@ -211,12 +216,16 @@ function applyAriaHidden(body) {
     let state = hiddenOwned.get(node);
     if (!state) {
       const current = node.getAttribute("aria-hidden");
-      state = { uncontrolled: current !== null && current !== "false" };
+      state = {
+        uncontrolled: current !== null && current !== "false",
+        wasInert: node.hasAttribute("inert"),
+      };
       hiddenOwned.set(node, state);
     }
     if (!state.uncontrolled && node.getAttribute("aria-hidden") !== "true") {
       node.setAttribute("aria-hidden", "true");
     }
+    if (!node.hasAttribute("inert")) node.setAttribute("inert", "");
     if (!node.hasAttribute(MARKER)) node.setAttribute(MARKER, "true");
   }
 }
@@ -362,7 +371,7 @@ function startObserving(body) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["aria-hidden", "style"],
+    attributeFilter: ["aria-hidden", "inert", "style"],
   });
   observer = { instance, body };
 }

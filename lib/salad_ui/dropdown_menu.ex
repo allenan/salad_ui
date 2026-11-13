@@ -34,6 +34,12 @@ defmodule SaladUI.DropdownMenu do
         </.dropdown_menu_content>
       </.dropdown_menu>
 
+  An item's click bubbles like any other, so a plain `phx-click` (with
+  `phx-value-*`) works too, from the mouse and from Enter or Space, and can
+  be driven by `render_click/2` in LiveViewTest:
+
+      <.dropdown_menu_item phx-click="delete" phx-value-id={@post.id}>Delete</.dropdown_menu_item>
+
   Icons go straight into an item; they are sized `size-4` and muted unless they
   carry their own `size-*` / `text-*` class:
 

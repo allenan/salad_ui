@@ -261,20 +261,25 @@ class DialogComponent extends Component {
   }
 
   activateOpenState() {
-    // Idempotent: a patch or a reopen mid-exit-animation never stacks a
-    // second layer or scroll lock.
-    this.modalLayer.activate();
-
     // Initialize focus trap if not already created
     this.el.focus();
     if (!this.focusTrap) {
       this.focusTrap = new FocusTrap(this.contentPanel, {
         contain: this.isModal(),
+        // A dialog the server opened was opened with focus on <body>.
+        returnFocus: () =>
+          this.el &&
+          this.queryParts().find((part) => part.dataset.part === "trigger"),
       });
     }
 
-    // Activate focus trap
+    // Activate focus trap: before the modal layer, which makes the opener
+    // inert (and so may blur it) and focus could not be returned to it.
     this.focusTrap.activate();
+
+    // Idempotent: a patch or a reopen mid-exit-animation never stacks a
+    // second layer or scroll lock.
+    this.modalLayer.activate();
 
     // Activate click outside monitor if enabled
     if (this.clickOutsideMonitor) {

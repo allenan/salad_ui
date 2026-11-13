@@ -7,6 +7,11 @@ import StateMachine from "./state-machine.js";
 import { animateTransition, queryDOM } from "./utils.js";
 import { getDirection } from "./direction.js";
 
+// ariaConfig keys written as-is; every other key is an ARIA property and
+// gets the `aria-` prefix (so `tabindex: "0"` is a real tabindex, never the
+// invalid `aria-tabindex`).
+const NON_ARIA_ATTRIBUTES = new Set(["role", "tabindex"]);
+
 // Ids the client generated for ARIA references (see assignId()). LiveView's
 // morphdom keys nodes by id, so an id the server does not render makes the
 // next patch replace that node with a fresh server-rendered copy instead of
@@ -479,6 +484,10 @@ class Component {
 
       // Create a bound handler that will check the current state before executing
       const boundHandler = (event) => {
+        // A nested component (a dialog inside a dialog, a menu inside a
+        // sheet) handled this key first and prevented its default: the key is
+        // spent, so Escape closes only the topmost layer, as in Radix.
+        if (event.defaultPrevented) return;
         if (stateName == "_all" || this.stateMachine.state === stateName) {
           const key = event.key;
           const action = stateEvents.keyMap[key];
@@ -866,7 +875,7 @@ class AriaManager {
     const resolvedValue =
       typeof value === "function" ? value.call(this.component, part) : value;
 
-    const attribute = attr === "role" ? "role" : `aria-${attr}`;
+    const attribute = NON_ARIA_ATTRIBUTES.has(attr) ? attr : `aria-${attr}`;
 
     if (resolvedValue === null || resolvedValue === undefined) {
       part.removeAttribute(attribute);
