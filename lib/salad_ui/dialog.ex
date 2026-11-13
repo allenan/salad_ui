@@ -153,7 +153,7 @@ defmodule SaladUI.Dialog do
 
     ~H"""
     <.dynamic
-      data-slot="dialog-trigger"
+      data-slot={@rest[:"data-slot"] || "dialog-trigger"}
       data-part="trigger"
       data-action="open"
       tag={@as}
@@ -325,7 +325,7 @@ defmodule SaladUI.Dialog do
 
     ~H"""
     <.dynamic
-      data-slot="dialog-close"
+      data-slot={@rest[:"data-slot"] || "dialog-close"}
       data-part="close"
       data-action="close"
       tag={@as}

@@ -185,7 +185,7 @@ defmodule SaladUI.Drawer do
 
     ~H"""
     <.dynamic
-      data-slot="drawer-trigger"
+      data-slot={@rest[:"data-slot"] || "drawer-trigger"}
       data-part="trigger"
       data-action="open"
       tag={@as}
@@ -348,7 +348,7 @@ defmodule SaladUI.Drawer do
 
     ~H"""
     <.dynamic
-      data-slot="drawer-close"
+      data-slot={@rest[:"data-slot"] || "drawer-close"}
       data-part="close"
       data-action="close"
       tag={@as}

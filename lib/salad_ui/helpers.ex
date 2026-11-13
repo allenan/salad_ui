@@ -135,6 +135,26 @@ defmodule SaladUI.Helpers do
   end
 
   @doc """
+  Moves the attributes in `defaults` out of `:rest` into `:own_attrs`, keeping
+  the caller's value when it passed one and the default otherwise.
+
+  For components another component renders through `as`/`as_child` (shadcn's
+  `asChild`): e.g. `dropdown_menu_item as={&button/1}` passes its own
+  `data-slot` and `data-variant`, which must replace the button's, as in shadcn
+  where the wrapper's props are spread last. Render them from `@own_attrs`
+  (`data-slot={@own_attrs[:"data-slot"]}`) instead of a literal next to
+  `{@rest}`, which would render the attribute twice (the browser keeps the
+  first).
+  """
+  def put_own_attrs(assigns, defaults) do
+    {given, rest} = Map.split(assigns[:rest] || %{}, Keyword.keys(defaults))
+
+    assigns
+    |> assign(:rest, rest)
+    |> assign(:own_attrs, Map.merge(Map.new(defaults), given))
+  end
+
+  @doc """
   Builds a map of client event mappings from all assigned `on-*` attributes.
 
   Each `on-*` attribute (e.g. `on-open`, `on-value-changed`) is mapped to its bare

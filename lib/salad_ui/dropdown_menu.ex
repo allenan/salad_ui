@@ -287,7 +287,7 @@ defmodule SaladUI.DropdownMenu do
     </button>
     <.dynamic
       :if={@as != "button"}
-      data-slot="dropdown-menu-trigger"
+      data-slot={@rest[:"data-slot"] || "dropdown-menu-trigger"}
       tag={@as}
       type={@type}
       data-part="trigger"

@@ -42,7 +42,7 @@ defmodule SaladUI.MenuParts do
     ~H"""
     <.dynamic
       tag={@as}
-      data-slot={@slot}
+      data-slot={@rest[:"data-slot"] || @slot}
       data-part="item"
       role="menuitem"
       data-value={@value}

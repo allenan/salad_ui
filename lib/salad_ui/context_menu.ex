@@ -148,7 +148,7 @@ defmodule SaladUI.ContextMenu do
     ~H"""
     <.dynamic
       tag={@as}
-      data-slot="context-menu-trigger"
+      data-slot={@rest[:"data-slot"] || "context-menu-trigger"}
       data-part="trigger"
       data-disabled={@disabled}
       class={classes(["[-webkit-touch-callout:none]", @class])}

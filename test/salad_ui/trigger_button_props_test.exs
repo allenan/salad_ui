@@ -20,9 +20,11 @@ defmodule SaladUI.TriggerButtonPropsTest do
       <.dialog_trigger as={&button/1} variant="secondary">Dialog</.dialog_trigger>
       """)
 
-    assert html =~ ~r/data-variant="outline" data-size="sm"[^>]*data-slot="popover-trigger"/
-    assert html =~ ~r/data-variant="ghost" data-size="icon"[^>]*data-slot="dropdown-menu-trigger"/
-    assert html =~ ~r/data-variant="secondary"[^>]*bg-secondary[^>]*data-slot="dialog-trigger"/
+    assert html =~ ~r/data-slot="popover-trigger" data-variant="outline" data-size="sm"/
+    assert html =~ ~r/data-slot="dropdown-menu-trigger" data-variant="ghost" data-size="icon"/
+    assert html =~ ~r/data-slot="dialog-trigger" data-variant="secondary"[^>]*bg-secondary/
+    refute html =~ ~s(data-slot="button")
+    assert duplicate_attrs(html) == []
     refute html =~ ~r/\svariant=/
     refute html =~ ~r/\ssize=/
   end
