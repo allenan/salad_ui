@@ -61,6 +61,26 @@ export function closeAllHoverPopups() {
   openPopups.forEach((popup) => popup.closeNow());
 }
 
+// When a tooltip last closed, for Radix's skipDelayDuration: right after one
+// tooltip closes (or while one is open), the next opens without its delay.
+let lastTooltipClose = -Infinity;
+
+/**
+ * Whether a tooltip opening now skips its open delay: another tooltip is
+ * open, or one closed less than `skipDelay` ms ago.
+ */
+export function tooltipSkipsDelay(skipDelay) {
+  for (const popup of openPopups) {
+    if (popup.isTooltip) return true;
+  }
+  return skipDelay > 0 && Date.now() - lastTooltipClose < skipDelay;
+}
+
+/** Forget the last tooltip close (for tests). */
+export function resetTooltipSkipDelay() {
+  lastTooltipClose = -Infinity;
+}
+
 /**
  * Mixin-style helper: a component (tooltip, hover card) owns one of these.
  * The component provides `trigger`, `content`, `state`, `closeNow()` and
@@ -75,14 +95,14 @@ export class HoverPopup {
     this.onScroll = this.onScroll.bind(this);
   }
 
-  // Whether an open request from `event` may start the open delay.
-  mayOpen(event) {
+  // Whether an open request from `event` (for `trigger`, the current one by
+  // default) may start the open delay.
+  mayOpen(event, trigger = this.component.trigger) {
     if (event?.type === "focusin" && pointerInteraction) return false;
-    return !this.blocked();
+    return !this.blocked(trigger);
   }
 
-  blocked() {
-    const trigger = this.component.trigger;
+  blocked(trigger = this.component.trigger) {
     if (typeof document === "undefined" || !trigger) return false;
     if (!document.querySelector(OPEN_CLICK_POPUP)) return false;
     return !trigger.closest(OPEN_POPUP_CONTENT);
@@ -108,7 +128,9 @@ export class HoverPopup {
   }
 
   closed() {
-    openPopups.delete(this.component);
+    if (openPopups.delete(this.component) && this.component.isTooltip) {
+      lastTooltipClose = Date.now();
+    }
     if (typeof document === "undefined") return;
     document.removeEventListener("pointermove", this.onPointerMove);
     document.removeEventListener("keydown", this.onKeyDown);
@@ -154,5 +176,48 @@ export class HoverPopup {
     if (target === document || target?.contains?.(trigger)) {
       this.component.closeNow();
     }
+  }
+}
+
+/**
+ * Hover and focus on detached triggers (core/detached-triggers.js) for a
+ * shared tooltip or hover card, through the delegated document listeners:
+ * `subscribe(type, handler)` is listen() bound to the instance (or
+ * listenAttribute() for the tooltip provider). The component provides
+ * `enterTrigger(event, trigger)`, `leaveTrigger(event, trigger)` and
+ * optionally `pressTrigger(event, trigger)`.
+ */
+export class DetachedHoverTriggers {
+  constructor(component, subscribe) {
+    this.component = component;
+    this.subscribe = subscribe;
+    this.unsubscribe = [];
+  }
+
+  start() {
+    this.stop();
+    const component = this.component;
+    // mouseover/mouseout bubble (mouseenter/mouseleave do not); moves
+    // between a trigger's own children are not an enter or a leave.
+    const crossing = (handler) => (event, trigger) => {
+      if (trigger.contains(event.relatedTarget)) return;
+      handler(event, trigger);
+    };
+    const enter = (event, trigger) => component.enterTrigger(event, trigger);
+    const leave = (event, trigger) => component.leaveTrigger(event, trigger);
+    this.unsubscribe = [
+      this.subscribe("mouseover", crossing(enter)),
+      this.subscribe("mouseout", crossing(leave)),
+      this.subscribe("focusin", enter),
+      this.subscribe("focusout", crossing(leave)),
+      this.subscribe("pointerdown", (event, trigger) =>
+        component.pressTrigger?.(event, trigger),
+      ),
+    ];
+  }
+
+  stop() {
+    this.unsubscribe.forEach((off) => off());
+    this.unsubscribe = [];
   }
 }
