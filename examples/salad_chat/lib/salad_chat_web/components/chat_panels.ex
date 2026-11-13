@@ -590,11 +590,18 @@ defmodule SaladChatWeb.ChatPanels do
   end
 
   attr :message, :any, default: nil
+  attr :tz, :string, required: true, doc: "the reader's timezone, for today's date"
 
   def remind_dialog(assigns) do
+    assigns = assign(assigns, :today, TimeFormat.date(DateTime.utc_now(), assigns.tz))
+
     ~H"""
     <.dialog id="remind-dialog">
-      <.dialog_content class="sm:max-w-md">
+      <%!-- SALAD-BUG: the date picker's popover is fixed-positioned and not portaled, so
+           dialog_content's centering translate (lib/salad_ui/dialog.ex:190) makes the
+           dialog its containing block and the calendar opens offset. Center the dialog
+           with inset-0 + m-auto instead (as in the create-channel dialog). --%>
+      <.dialog_content class="inset-0 m-auto h-fit translate-none! sm:max-w-md">
         <.dialog_header>
           <.dialog_title>Remind me about this</.dialog_title>
           <.dialog_description>
@@ -621,9 +628,34 @@ defmodule SaladChatWeb.ChatPanels do
             </.field>
             <.field_separator>or</.field_separator>
             <.field>
-              <.field_label for="remind-at">Pick a date and time</.field_label>
-              <%!-- TODO(salad-pass-2): use date_picker (calendar) instead of the native input --%>
-              <.input id="remind-at" name="at" type="datetime-local" />
+              <.field_label for={"remind-date-#{@message && @message.id}-trigger"}>
+                Pick a date and time
+              </.field_label>
+              <div class="flex gap-2">
+                <%!-- A fresh picker per message; it submits "date" as an ISO date --%>
+                <.date_picker
+                  id={"remind-date-#{@message && @message.id}"}
+                  name="date"
+                  disabled={%{before: @today}}
+                  today={@today}
+                  presets={[
+                    %{label: "Today", value: 0},
+                    %{label: "Tomorrow", value: 1},
+                    %{label: "Next week", value: 7}
+                  ]}
+                  format="%a, %b %-d"
+                  class="min-w-0 flex-1"
+                  trigger-class="w-full"
+                />
+                <.input
+                  id="remind-time"
+                  name="time"
+                  type="time"
+                  value="09:00"
+                  aria-label="Time"
+                  class="w-32"
+                />
+              </div>
             </.field>
           </.field_group>
           <.dialog_footer>

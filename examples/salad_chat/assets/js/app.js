@@ -50,6 +50,7 @@ import "salad_ui/components/command";
 import "salad_ui/components/menu";
 import "salad_ui/components/context_menu";
 import "salad_ui/components/combobox";
+import "salad_ui/components/calendar";
 import "salad_ui/components/message_scroller";
 import {Hooks as ChatHooks, currentTheme, keepOpenOverlays} from "./chat";
 

@@ -455,8 +455,9 @@ defmodule SaladChatWeb.ChatLive do
         %{"in" => minutes} ->
           DateTime.add(DateTime.utc_now(), to_int(minutes) * 60, :second)
 
-        %{"at" => at} when at != "" ->
-          with {:ok, naive} <- NaiveDateTime.from_iso8601(String.slice(at <> ":00", 0, 19)),
+        # The date picker submits an ISO date; the time input "HH:MM"
+        %{"date" => date, "time" => time} when date != "" and time != "" ->
+          with {:ok, naive} <- NaiveDateTime.from_iso8601("#{date}T#{time}:00"),
                {:ok, local} <- DateTime.from_naive(naive, "Etc/UTC") do
             DateTime.add(local, -Timezones.offset(me.timezone) * 60, :second)
           else
@@ -969,7 +970,7 @@ defmodule SaladChatWeb.ChatLive do
           tz={@me.timezone}
         />
         <.delete_dialog message={@deleting} />
-        <.remind_dialog message={@reminding} />
+        <.remind_dialog message={@reminding} tz={@me.timezone} />
         <.live_component module={SaladChatWeb.SettingsComponent} id="settings" me={@me} />
         <.live_component
           module={SaladChatWeb.NewChannelComponent}

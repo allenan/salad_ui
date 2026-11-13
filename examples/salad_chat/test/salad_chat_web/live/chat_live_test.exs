@@ -226,6 +226,52 @@ defmodule SaladChatWeb.ChatLiveTest do
     end
   end
 
+  describe "reminders" do
+    test "a date from the date picker plus a time schedules the reminder", %{conn: conn} do
+      {:ok, message} = Chat.create_message("leo", "random", "remind me")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      render_hook(view, "remind", %{"id" => message.id})
+      picker = "#remind-date-#{message.id}"
+      assert has_element?(view, "#{picker}-trigger", "Pick a date")
+
+      today = SaladChatWeb.TimeFormat.date(DateTime.utc_now(), Chat.get_user("maya").timezone)
+      tomorrow = Date.add(today, 1)
+
+      # past days are disabled
+      assert has_element?(
+               view,
+               "#{picker} button[phx-value-date='#{Date.add(today, -1)}'][disabled]"
+             )
+
+      view |> element("#{picker} button[phx-value-date='#{tomorrow}']") |> render_click()
+      assert has_element?(view, "#{picker} input[name=date][value='#{tomorrow}']")
+      assert has_element?(view, "#{picker}-trigger", Calendar.strftime(tomorrow, "%a, %b %-d"))
+
+      view |> form("#remind-form", %{"time" => "09:30"}) |> render_submit()
+
+      assert_push_event(view, "saladui:command", %{
+        command: "add",
+        params: %{title: "Reminder set", description: description}
+      })
+
+      assert description =~ String.downcase(Calendar.strftime(tomorrow, "%B %-d at 9:30"))
+    end
+
+    test "the date is required for a custom time", %{conn: conn} do
+      {:ok, message} = Chat.create_message("leo", "random", "remind me")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      render_hook(view, "remind", %{"id" => message.id})
+      view |> form("#remind-form") |> render_submit()
+
+      assert_push_event(view, "saladui:command", %{
+        command: "add",
+        params: %{title: "Pick a time for the reminder", variant: "error"}
+      })
+    end
+  end
+
   describe "jump to" do
     test "the header combobox opens a channel or a DM", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/as/maya/c/general")

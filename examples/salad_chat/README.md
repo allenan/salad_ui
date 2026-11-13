@@ -66,6 +66,7 @@ Try:
 | `combobox` (single, and multiple with chips) | "Jump to…" channel/people search in the header, member picker when creating a channel |
 | `alert_dialog` | Delete confirmation |
 | `dialog` | Settings, create channel, "Remind me about this" |
+| `date_picker` (`calendar` in a popover, with presets) | The reminder's date, next to a time input |
 | `field` family, `input`, `native_select`, `select`, `switch`, `radio_group`, `slider`, `checkbox` | Settings and create-channel forms, validated with `to_form/2` of a map |
 | `item` | Landing page people, pinned messages, members |
 | `empty` | Empty channel, no search results, no thread selected, nothing pinned |
@@ -93,9 +94,6 @@ SaladUI is used in library mode: a path dependency on the repo
 and `assets/salad_ui`, and the JS resolved through npm (`"salad_ui":
 "file:../../.."`) so `import "salad_ui/components/dialog"` goes through the
 package's `exports`.
-
-Some pieces wait on components SaladUI doesn't ship yet; look for
-`TODO(salad-pass-2)` (date picker).
 
 ## Tests
 
