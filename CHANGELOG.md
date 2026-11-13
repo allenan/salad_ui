@@ -409,6 +409,36 @@ for status and known gaps. Every new JS-backed component is registered in
 - Toaster takes `label` (Sonner's `containerAriaLabel`, default
   "Notifications") and global attributes.
 
+**Resizable: collapsed panels from downstream use**
+- With `auto-save-id`, the size a collapsed panel expands back to is stored
+  with the layout (react-resizable-panels' `expandToSizes`), so `expand`
+  restores the width the person set after a reload, not `min-size`. A panel
+  collapsed by a drag or the keyboard remembers its size too; with nothing
+  remembered, `expand` opens to `default-size`, then `min-size`. The stored
+  value is now `{layout, expandToSizes}`; a layout stored as a bare array
+  still loads.
+- `resizable_panel` takes `collapsed`: the server's state for a
+  `collapsible` panel. It is rendered collapsed (at `collapsed-size`, with
+  `data-collapsed`) from the first paint, so a panel hidden last time no
+  longer shows for a moment on load, and a change to `collapsed` collapses or
+  expands it, as `dialog` follows `open`. The group's new `on-collapse` /
+  `on-expand` events report changes made by a drag, the keyboard or a command,
+  with the panel's id and index, so the server can keep the state (the
+  moduledoc shows the pattern, or a cookie as react-resizable-panels
+  recommends).
+- A panel collapsed to size 0 is `inert` (out of the tab order and the
+  accessibility tree) until it expands; focus inside it moves to its handle. A
+  panel with a `collapsed-size` above 0, such as an icon rail, stays
+  interactive.
+- Panel sizes are an inline `--panel-size` custom property read by the
+  panel's `flex-[var(--panel-size,1)_1_0px]` class instead of an inline
+  `flex`, so app CSS overrides them without `!important` (e.g. one full-width
+  panel at a time below a breakpoint).
+- Panels are `min-h-0 min-w-0`: with `overflow: clip` (not a scroll
+  container) a panel could not shrink below its content's min-content size,
+  so a collapsed panel with content still showed, and small sizes were wider
+  than their percentage.
+
 # 0.14.0
 
 **Changes**

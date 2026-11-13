@@ -93,6 +93,37 @@ defmodule Storybook.SaladUIComponents.Resizable do
         ]
       },
       %Variation{
+        id: :collapsible,
+        description:
+          "collapsible: drag the handle past halfway, or press Enter on it, to collapse the sidebar (inert while collapsed); collapsed renders it collapsed from the first paint",
+        attributes: %{
+          id: "resizable-collapsible",
+          orientation: "horizontal",
+          class: "min-h-[200px] max-w-md rounded-lg border md:min-w-[450px]"
+        },
+        slots: [
+          """
+          <.resizable_panel
+            id="resizable-collapsible-sidebar"
+            default-size={30}
+            min-size={20}
+            collapsible
+            collapsed
+          >
+            <div class="flex h-full items-center justify-center p-6">
+              <a href="#" class="font-semibold underline">Sidebar link</a>
+            </div>
+          </.resizable_panel>
+          <.resizable_handle with_handle />
+          <.resizable_panel default-size={70}>
+            <div class="flex h-full items-center justify-center p-6">
+              <span class="font-semibold">Content</span>
+            </div>
+          </.resizable_panel>
+          """
+        ]
+      },
+      %Variation{
         id: :rtl,
         description: ~s(Inside dir="rtl" the first panel sits on the right and drags/arrow keys are mirrored),
         attributes: %{
