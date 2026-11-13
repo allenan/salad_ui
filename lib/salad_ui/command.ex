@@ -4,6 +4,10 @@ defmodule SaladUI.Command do
 
   Provides a set of components to build a command palette or searchable menu, similar to those found in modern applications.
 
+  `use SaladUI` does not import this module, because `command/1` collides with
+  the Lucide `command` icon. Add `import SaladUI.Command` to the modules that
+  render a command palette.
+
   ## Example
 
       <.command id="command" class="rounded-lg border border-border shadow-md md:min-w-[450px] w-full lg:max-w-[600px]">
@@ -154,7 +158,10 @@ defmodule SaladUI.Command do
       <.command_input placeholder="Type a command..." />
   """
   attr :class, :any, default: ""
-  attr :rest, :global, default: %{}
+
+  attr :rest, :global,
+    default: %{},
+    include: ~w(placeholder name value autofocus disabled readonly maxlength minlength)
 
   def command_input(assigns) do
     ~H"""

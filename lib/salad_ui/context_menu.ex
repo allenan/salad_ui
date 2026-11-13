@@ -139,10 +139,12 @@ defmodule SaladUI.ContextMenu do
   attr :as, :any, default: "span"
   attr :disabled, :boolean, default: false
   attr :class, :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def context_menu_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       tag={@as}

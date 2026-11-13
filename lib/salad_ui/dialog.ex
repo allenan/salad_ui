@@ -146,9 +146,11 @@ defmodule SaladUI.Dialog do
   attr :class, :string, default: nil
   attr :as, :any, default: "div"
   slot :inner_block, required: true
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
 
   def dialog_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       data-slot="dialog-trigger"
@@ -315,10 +317,12 @@ defmodule SaladUI.Dialog do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def dialog_close(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       data-slot="dialog-close"

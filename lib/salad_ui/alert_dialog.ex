@@ -147,9 +147,11 @@ defmodule SaladUI.AlertDialog do
   attr :class, :string, default: nil
   attr :as, :any, default: "div"
   slot :inner_block, required: true
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
 
   def alert_dialog_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       data-slot="alert-dialog-trigger"

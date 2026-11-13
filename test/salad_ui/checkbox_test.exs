@@ -23,6 +23,40 @@ defmodule SaladUI.CheckboxTest do
     end
   end
 
+  describe "submitted values" do
+    test "checked_value, unchecked_value={nil} and checked build a checkbox group" do
+      assigns = %{tags: ["elixir"]}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox
+          :for={tag <- ~w(elixir gleam)}
+          name="tags[]"
+          checked_value={tag}
+          unchecked_value={nil}
+          checked={tag in @tags}
+        />
+        """)
+
+      refute html =~ ~s(type="hidden")
+      assert html =~ ~r/name="tags\[\]" value="elixir" checked>/
+      assert html =~ ~r/name="tags\[\]" value="gleam">/
+    end
+
+    test "unchecked_value sets the hidden input; checked overrides value" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox name="plan" checked_value="pro" unchecked_value="free" value={true} checked={false} />
+        """)
+
+      assert html =~ ~s(<input type="hidden" name="plan" value="free">)
+      assert html =~ ~r/value="pro">/
+      refute html =~ "checked>"
+    end
+  end
+
   describe "indeterminate" do
     test "a boolean attaches the checkbox hook and renders data-indeterminate" do
       assigns = %{}

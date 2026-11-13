@@ -108,10 +108,12 @@ defmodule SaladUI.Collapsible do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div"
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def collapsible_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       data-slot="collapsible-trigger"

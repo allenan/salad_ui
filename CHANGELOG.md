@@ -210,6 +210,18 @@ for status and known gaps. Every new JS-backed component is registered in
   skip files that already exist instead of aborting.
 
 **Fixes**
+- `mix salad.setup` / `mix salad.install` import `command.js`; a test now checks
+  every registered JS component is imported. (`use SaladUI` still leaves out
+  `SaladUI.Command`, whose `command/1` collides with the Lucide icon; the docs now
+  say to `import SaladUI.Command`.)
+- `command_input` accepts `placeholder`, `name`, `value` and other input attributes
+  without undefined-attribute warnings.
+- Trigger and close parts (`popover_trigger`, `dropdown_menu_trigger`,
+  `dialog_trigger`, `dialog_close`, `alert_dialog_trigger`, `drawer_trigger`,
+  `drawer_close`, `collapsible_trigger`, `context_menu_trigger`) accept `variant` and
+  `size` for `as={&button/1}`; plain tags drop them.
+- `checkbox` gains `checked`, `checked_value` and `unchecked_value` (`nil` omits the
+  hidden input), so checkbox groups can submit `name="tags[]"` values.
 - Outline sidebar menu button ring rendered invalid CSS (`hsl()` around an
   oklch token).
 - Checkbox indicator survives `@tailwindcss/forms` and dark mode.

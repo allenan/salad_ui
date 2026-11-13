@@ -1,5 +1,7 @@
 defmodule Mix.Tasks.Salad.AddTest do
-  use ExUnit.Case, async: true
+  # Not async: Igniter tasks can change the cwd, which breaks test files that are
+  # still loading (seen on Elixir 1.16 CI as "deps/telemetry/test/...: enoent").
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 

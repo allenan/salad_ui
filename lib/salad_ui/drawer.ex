@@ -177,10 +177,12 @@ defmodule SaladUI.Drawer do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def drawer_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       data-slot="drawer-trigger"
@@ -338,10 +340,12 @@ defmodule SaladUI.Drawer do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def drawer_close(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
     <.dynamic
       data-slot="drawer-close"
