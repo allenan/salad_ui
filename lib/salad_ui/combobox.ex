@@ -234,6 +234,10 @@ defmodule SaladUI.Combobox do
   * `:filter` - `true` (default) filters on the client; `false` leaves the
     rendered items untouched, for server-side filtering.
   * `:disabled` - Disables the whole combobox.
+  * `:open` - Whether the list is open. It opens on mount when `true`, and a
+    changed value from the server opens or closes it; re-rendering the same
+    value leaves the user's state alone. The `"open"`, `"close"` and
+    `"toggle"` commands work too (`SaladUI.LiveView.send_command/4`).
   * `:use-portal` - Move the content to the body while it is open, out of
     `overflow` and `transform` ancestors. Defaults to `false`.
   * `:portal-container` - CSS selector of the element to move the content to
@@ -248,6 +252,7 @@ defmodule SaladUI.Combobox do
   attr :"auto-highlight", :boolean, default: false, doc: "highlight the first match while typing"
   attr :filter, :boolean, default: true, doc: "filter items on the client; false for server filtering"
   attr :disabled, :boolean, default: false
+  attr :open, :boolean, default: false, doc: "whether the list is open; a changed value opens or closes it"
   attr :"use-portal", :boolean, default: false, doc: "render the content in a portal while open"
   attr :"portal-container", :string, default: nil, doc: "CSS selector for the portal container"
   attr :"on-value-changed", :any, default: nil, doc: "handler for the value-changed event"
@@ -278,6 +283,7 @@ defmodule SaladUI.Combobox do
           autoHighlight: assigns[:"auto-highlight"],
           filter: assigns.filter,
           disabled: assigns.disabled,
+          open: assigns.open,
           usePortal: assigns[:"use-portal"],
           portalContainer: assigns[:"portal-container"],
           animations: %{"open_to_closed" => %{duration: 100, target_part: "content"}}

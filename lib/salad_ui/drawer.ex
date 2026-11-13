@@ -174,7 +174,7 @@ defmodule SaladUI.Drawer do
     <div
       data-slot="drawer"
       id={@id}
-      class={classes(["relative z-50", @class])}
+      class={classes(["", @class])}
       data-component="drawer"
       data-vaul-drawer-direction={@direction}
       data-options={@options}

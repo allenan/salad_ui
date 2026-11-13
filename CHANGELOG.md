@@ -308,6 +308,52 @@ for status and known gaps. Every new JS-backed component is registered in
 - Sub-menus close when the pointer leaves the sub-trigger away from the sub-menu
   (Radix pointer-direction grace).
 
+**Fixes from downstream use: server state**
+- Tabs: `tabs/1` hands a builder to its slot (`:let={tabs}`); passed to the
+  list, triggers and panels, the server renders the selected tab and its full
+  ARIA, so a URL-driven tab is right before the JS runs. Parts render their
+  roles without it. `default-value` is an alias for `default`. Arrow keys,
+  Home and End click the tab they select, so a trigger's `phx-click` runs.
+- Toggle group and toggle: with `value` (or a `field`) they are controlled and
+  show the server's value on every re-render and after the server answered
+  `on-value-changed`/`on-pressed-changed`, so the server can refuse a change.
+  `default-value` keeps the client state as before.
+- Popover follows a changed `open` from the server; its `send_command`
+  (`open`/`close`/`toggle`) support is documented. Combobox gets an `open` attr.
+- Resizable: `collapsible` and `collapsed-size` panels (react-resizable-panels
+  snapping), `collapse`/`expand` commands by panel id, Enter on a handle.
+- `SaladUI.command(elOrSelector, command, params)` runs a component command
+  from plain JS.
+- `collision-padding` on popover, dropdown menu, hover card, tooltip, select
+  (popper) and context menu content; default 0 as in Radix.
+- The focus trap no longer pulls focus back to the opener when a close handler
+  (or the click that closed it) moved focus elsewhere.
+
+**Fixes from downstream use: accessibility and overlays**
+- `ariaConfig` writes `role` and `tabindex` as-is: tab panels get a real
+  `tabindex="0"`, not the invalid `aria-tabindex`.
+- Resizable: the panel group no longer carries `aria-orientation` (it has no
+  role); only the handles do, as in react-resizable-panels.
+- Toaster follows Sonner's markup: a `<section aria-label="Notifications Alt+T">`
+  landmark that is the polite live region, with role-less `<ol>`/`<li>`. Error
+  toasts are no longer assertive alerts; `important: true` opts a toast in.
+- Toaster: `close-button` (per toast `close_button:`), a toaster-wide
+  `duration`, and the hotkey matches the physical key, so Option+T works on macOS.
+- Alert dialog closes on Escape, as Radix's does. Escape in a nested dialog,
+  menu or select closes only that layer (key handlers skip a key a nested
+  component already handled).
+- A dialog opened by the server returns focus to its trigger on close.
+- Dialog overlay is `z-50`; dialog, alert dialog and drawer roots drop
+  `relative z-50`, so an open dialog no longer paints under a later dialog's trigger.
+- Modal layers also make the hidden page `inert`, so it is out of the tab order.
+- Menu items: a click bubbles again, so `phx-click` on dropdown, context and
+  menubar items fires; Enter and Space click the item, as in Radix. Clicks in
+  content portaled out of a popover or dialog count as inside it.
+- `command_separator` is `role="none"` inside the listbox (overridable with `role`).
+- Attachment: shadcn's 3px focus ring when the card's trigger has keyboard focus.
+- `salad_ui.css`: the scroll area thumb uses `var(--border)`, not `#c2c2c2`.
+- `select.js` no longer contains a comment Tailwind reads as a broken utility.
+
 # 0.14.0
 
 **Changes**

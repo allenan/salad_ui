@@ -161,4 +161,17 @@ defmodule SaladUI.ContextMenuTest do
     assert html =~
              ~s(data-part="sub-positioner" data-side="left" data-align="end" data-side-offset="4" data-align-offset="2")
   end
+
+  test "content renders collision-padding for the positioner" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.context_menu id="c">
+        <.context_menu_content collision-padding={6}>x</.context_menu_content>
+      </.context_menu>
+      """)
+
+    assert html =~ ~s(data-collision-padding="6")
+  end
 end

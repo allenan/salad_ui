@@ -3,6 +3,8 @@ import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
 
+const SERVER_OPEN_KEY = "__saladPopoverServerOpen";
+
 class PopoverComponent extends Component {
   constructor(el, hookContext) {
     super(el, { hookContext });
@@ -18,8 +20,27 @@ class PopoverComponent extends Component {
 
     // Set keyboard navigation defaults
     this.config.preventDefaultKeys = ["Escape"];
+    // The `open` the server rendered last, kept on the root so a rebuilt
+    // instance (changed options) still sees a change made in the same patch.
+    const previousServerOpen = el[SERVER_OPEN_KEY];
+    this.serverOpen = this.readServerOpen(el);
+    el[SERVER_OPEN_KEY] = this.serverOpen;
+    this.followServerOpen =
+      previousServerOpen !== undefined &&
+      this.serverOpen !== null &&
+      this.serverOpen !== previousServerOpen &&
+      this.serverOpen !== (this.state === "open");
 
     this.keepStateAcrossPatches();
+  }
+
+  /**
+   * The `open` the server rendered (`data-open`); null for markup without it.
+   * It is read apart from the root's data-state, which the client owns.
+   */
+  readServerOpen(el) {
+    const open = el.getAttribute("data-open");
+    return open === null ? null : open === "true";
   }
 
   /**
@@ -27,8 +48,8 @@ class PopoverComponent extends Component {
    * touches the popover (e.g. a form's phx-change re-rendering the page, or a
    * calendar inside the content re-rendering) would morph data-state/hidden
    * back to the server-rendered "closed" markup and close it. LiveView >= 1.1
-   * can be told to leave those attributes alone. `open` therefore only sets
-   * the initial state.
+   * can be told to leave those attributes alone. A changed `open` from the
+   * server is applied in skipReinitialize(), as dialog does.
    */
   keepStateAcrossPatches() {
     const js = this.hook?.js?.();
@@ -72,6 +93,17 @@ class PopoverComponent extends Component {
       if (this.state === "open") this.activateOpenState();
     } else if (this.state === "open") {
       this.positionedElement?.update();
+    }
+
+    // A new `open` from the server opens or closes the popover; the same
+    // `open` again leaves the user's state alone.
+    const serverOpen = this.readServerOpen(el);
+    if (serverOpen !== null && serverOpen !== this.serverOpen) {
+      this.serverOpen = serverOpen;
+      el[SERVER_OPEN_KEY] = serverOpen;
+      if (serverOpen !== (this.state === "open")) {
+        this.transition(serverOpen ? "open" : "close");
+      }
     }
     return true;
   }
@@ -184,6 +216,11 @@ class PopoverComponent extends Component {
   }
 
   afterMount() {
+    if (this.followServerOpen) {
+      this.followServerOpen = false;
+      this.transition(this.serverOpen ? "open" : "close");
+      return;
+    }
     if (this.state === "open") {
       this.activateOpenState();
     }

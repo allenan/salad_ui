@@ -399,12 +399,16 @@ defmodule SaladUI.Select do
   * `:align` - Alignment against the trigger in popper mode (`"start"`,
     `"center"` or `"end"`). Defaults to `"center"`, as in shadcn/ui (it only
     matters when the panel is wider than the trigger).
+  * `:collision-padding` - Distance in pixels kept from the viewport edges when
+    the popper panel flips or shifts to stay visible. Defaults to `0`, as in
+    Radix (the item-aligned panel keeps its own margin).
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
   attr :position, :string, values: ~w(popper item-aligned), default: "item-aligned"
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
+  attr :"collision-padding", :integer, default: 0, doc: "Distance kept from the viewport edges"
   slot :inner_block, required: true
 
   attr :rest, :global
@@ -420,7 +424,7 @@ defmodule SaladUI.Select do
         "right" -> "left-full top-0 ml-1"
       end
 
-    assigns = assign(assigns, :position_class, position_class)
+    assigns = assign(assigns, position_class: position_class, collision_padding: assigns[:"collision-padding"])
 
     ~H"""
     <div
@@ -429,6 +433,7 @@ defmodule SaladUI.Select do
       data-position={@position}
       data-side={@side}
       data-align={@align}
+      data-collision-padding={@collision_padding}
       style="min-width: var(--salad-reference-width)"
       hidden
       class={

@@ -172,4 +172,48 @@ defmodule SaladUI.PopoverTest do
       assert html =~ "Set the dimensions for the layer."
     end
   end
+
+  describe "server state and collision padding" do
+    test "the root renders the server's open as data-open" do
+      assigns = %{}
+
+      closed =
+        rendered_to_string(~H"""
+        <.popover id="p1">
+          <.popover_trigger>Open</.popover_trigger><.popover_content>x</.popover_content>
+        </.popover>
+        """)
+
+      open =
+        rendered_to_string(~H"""
+        <.popover id="p2" open>
+          <.popover_trigger>Open</.popover_trigger><.popover_content>x</.popover_content>
+        </.popover>
+        """)
+
+      assert closed =~ ~s(data-open="false")
+      assert open =~ ~s(data-open="true")
+    end
+
+    test "collision-padding is rendered on the positioner, 0 by default" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.popover id="p">
+          <.popover_content collision-padding={8}>x</.popover_content>
+        </.popover>
+        """)
+
+      default =
+        rendered_to_string(~H"""
+        <.popover id="p">
+          <.popover_content>x</.popover_content>
+        </.popover>
+        """)
+
+      assert html =~ ~s(data-collision-padding="8")
+      assert default =~ ~s(data-collision-padding="0")
+    end
+  end
 end

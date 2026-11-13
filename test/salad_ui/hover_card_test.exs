@@ -92,4 +92,17 @@ defmodule SaladUI.HoverCardTest do
       assert html =~ "Hover Card Content"
     end
   end
+
+  test "content renders collision-padding for the positioner" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.hover_card id="h">
+        <.hover_card_content collision-padding={6}>x</.hover_card_content>
+      </.hover_card>
+      """)
+
+    assert html =~ ~s(data-collision-padding="6")
+  end
 end

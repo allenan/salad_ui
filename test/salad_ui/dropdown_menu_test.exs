@@ -133,6 +133,20 @@ defmodule SaladUI.DropdownMenuTest do
         assert html =~ css_class
       end
     end
+
+    test "an item's phx-click is on the item element, where its click bubbles from" do
+      # menu.js lets an item's click bubble (and turns Enter/Space into a
+      # click), so LiveView runs this binding as well as on-select.
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_item phx-click="delete" phx-value-id="7">Delete</.dropdown_menu_item>
+        """)
+
+      assert html =~ ~r/<div[^>]*data-part="item"[^>]*phx-click="delete"/
+      assert html =~ ~s(phx-value-id="7")
+    end
   end
 
   describe "typeahead" do
@@ -423,5 +437,18 @@ defmodule SaladUI.DropdownMenuTest do
       assert non_modal =~ "modal&quot;:false"
       refute non_modal =~ ~s( modal=)
     end
+  end
+
+  test "content renders collision-padding for the positioner" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.dropdown_menu id="m">
+        <.dropdown_menu_content collision-padding={6}>x</.dropdown_menu_content>
+      </.dropdown_menu>
+      """)
+
+    assert html =~ ~s(data-collision-padding="6")
   end
 end

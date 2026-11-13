@@ -282,4 +282,27 @@ defmodule SaladUI.ToggleGroupTest do
       assert item(html, "bold") =~ ~s(data-state="on")
     end
   end
+
+  describe "controlled" do
+    test "value or a field makes the group controlled, default-value does not" do
+      assigns = %{}
+
+      controlled =
+        rendered_to_string(~H"""
+        <.toggle_group :let={b} id="g1" value="a">
+          <.toggle_group_item builder={b} value="a">A</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      uncontrolled =
+        rendered_to_string(~H"""
+        <.toggle_group :let={b} id="g2" default-value="a">
+          <.toggle_group_item builder={b} value="a">A</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      assert controlled =~ ~s(&quot;controlled&quot;:true)
+      assert uncontrolled =~ ~s(&quot;controlled&quot;:false)
+    end
+  end
 end

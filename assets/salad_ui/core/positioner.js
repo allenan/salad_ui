@@ -50,6 +50,21 @@ class Positioner {
       containerRect = container.getBoundingClientRect();
     }
 
+    // Radix's collisionPadding: flip and shift keep this far from the
+    // container's edges. Default 0; the element's data-collision-padding
+    // (rendered by the content components) applies when no option is given.
+    const padding = this.collisionPadding(element, options.collisionPadding);
+    if (padding > 0) {
+      containerRect = {
+        top: containerRect.top + padding,
+        right: containerRect.right - padding,
+        bottom: containerRect.bottom - padding,
+        left: containerRect.left + padding,
+        width: Math.max(0, containerRect.width - padding * 2),
+        height: Math.max(0, containerRect.height - padding * 2),
+      };
+    }
+
     // Calculate initial position
     let { x, y } = this.getBasePosition(
       placement,
@@ -123,6 +138,17 @@ class Positioner {
       y,
       placement: actualPlacement,
     };
+  }
+
+  /**
+   * Collision padding in pixels: the `collisionPadding` option, else the
+   * element's `data-collision-padding`, else 0.
+   */
+  static collisionPadding(element, option) {
+    const raw =
+      option ?? element?.getAttribute?.("data-collision-padding") ?? null;
+    const padding = parseFloat(raw);
+    return Number.isFinite(padding) && padding > 0 ? padding : 0;
   }
 
   /**

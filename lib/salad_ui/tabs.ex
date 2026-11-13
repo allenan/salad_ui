@@ -43,6 +43,37 @@ defmodule SaladUI.Tabs do
         <.tabs_content value="notifications">Notification settings</.tabs_content>
       </.tabs>
 
+  ## Server-rendered state
+
+  `tabs/1` hands a `builder` to its slot (`:let={tabs}`). Pass it to
+  `tabs_list/1`, `tabs_trigger/1` and `tabs_content/1` and the server renders
+  the selected tab with its full ARIA (`role`, `aria-selected`,
+  `aria-controls`, `aria-labelledby`, the roving `tabindex`, `data-state` and
+  `hidden`), so the page is right before the JS runs, e.g. a tab chosen by a
+  URL param:
+
+      <.tabs :let={tabs} id="settings" value={@tab}>
+        <.tabs_list builder={tabs}>
+          <.tabs_trigger builder={tabs} value="account" phx-click={JS.patch(~p"/settings?tab=account")}>
+            Account
+          </.tabs_trigger>
+          <.tabs_trigger builder={tabs} value="password" phx-click={JS.patch(~p"/settings?tab=password")}>
+            Password
+          </.tabs_trigger>
+        </.tabs_list>
+        <.tabs_content builder={tabs} value="account">...</.tabs_content>
+        <.tabs_content builder={tabs} value="password">...</.tabs_content>
+      </.tabs>
+
+  Without the builder the parts still render their roles; the selected state
+  appears when the JS mounts.
+
+  ## Keyboard
+
+  Like Radix (`activationMode="automatic"`), Left/Right (Up/Down when
+  vertical), Home and End select the tab they move to. They do so by clicking
+  it, so a trigger's `phx-click` runs for the keyboard as well as the mouse.
+
   ## Component events
 
   * `:on-tab-changed` - Maps the `tab-changed` event. Fired when a different tab is selected.
@@ -70,6 +101,7 @@ defmodule SaladUI.Tabs do
   """
   attr :id, :string, required: true, doc: "Unique identifier for the tabs component"
   attr :default, :string, default: nil, doc: "Default selected tab value"
+  attr :"default-value", :string, default: nil, doc: "Alias for `default` (Radix's `defaultValue`)"
   attr :value, :string, default: nil, doc: "Currently selected tab value"
 
   attr :orientation, :string,
@@ -85,14 +117,22 @@ defmodule SaladUI.Tabs do
   def tabs(assigns) do
     # Collect event mappings
     event_map = event_mappings(assigns)
+    default = assigns[:"default-value"] || assigns.default
+
+    builder = %{
+      id: assigns.id,
+      value: assigns.value || default,
+      orientation: assigns.orientation
+    }
 
     assigns =
       assigns
       |> assign(:event_map, json(event_map))
+      |> assign(:builder, builder)
       |> assign(
         :options,
         json(%{
-          defaultValue: assigns.default,
+          defaultValue: default,
           value: assigns.value,
           orientation: assigns.orientation
         })
@@ -112,7 +152,7 @@ defmodule SaladUI.Tabs do
       phx-hook="SaladUI"
       {@rest}
     >
-      {render_slot(@inner_block)}
+      {render_slot(@inner_block, @builder)}
     </div>
     """
   end
@@ -125,12 +165,20 @@ defmodule SaladUI.Tabs do
   * `:variant` - `"default"` (muted pill background) or `"line"` (transparent, underlined active tab).
   """
   attr :variant, :string, values: ~w(default line), default: "default", doc: "Visual style of the list"
+  attr :builder, :map, default: nil, doc: "The builder `tabs/1` passes to its slot; renders `aria-orientation`"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
   def tabs_list(assigns) do
-    assigns = assign(assigns, :variant_class, tabs_list_variant(assigns.variant))
+    assigns =
+      assigns
+      |> assign(:variant_class, tabs_list_variant(assigns.variant))
+      # Attributes passed by the caller (e.g. a `role`) win.
+      |> assign(
+        :rest,
+        Map.merge(%{role: "tablist", "aria-orientation": assigns.builder && assigns.builder[:orientation]}, assigns.rest)
+      )
 
     ~H"""
     <div
@@ -155,19 +203,22 @@ defmodule SaladUI.Tabs do
   Individual tab button that activates its corresponding content panel.
   """
   attr :value, :string, required: true, doc: "Unique value that identifies this tab"
+  attr :builder, :map, default: nil, doc: "The builder `tabs/1` passes to its slot; renders the selected state"
   attr :class, :string, default: nil
   attr :disabled, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
 
   def tabs_trigger(assigns) do
+    assigns = assign_tab_state(assigns, :trigger)
+
     ~H"""
     <button
       data-slot="tabs-trigger"
       type="button"
       data-part="trigger"
       data-value={@value}
-      data-state="inactive"
+      data-state={if @active, do: "active", else: "inactive"}
       data-disabled={to_string(@disabled)}
       class={
         classes([
@@ -190,18 +241,20 @@ defmodule SaladUI.Tabs do
   Content panel that corresponds to a tab trigger.
   """
   attr :value, :string, required: true, doc: "Value that matches a tab trigger"
+  attr :builder, :map, default: nil, doc: "The builder `tabs/1` passes to its slot; renders the selected state"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
   def tabs_content(assigns) do
+    assigns = assign_tab_state(assigns, :content)
+
     ~H"""
     <div
       data-slot="tabs-content"
       data-part="content"
       data-value={@value}
-      data-state="inactive"
-      hidden
+      data-state={if @active, do: "active", else: "inactive"}
       class={
         classes([
           "flex-1 outline-none",
@@ -214,6 +267,44 @@ defmodule SaladUI.Tabs do
     </div>
     """
   end
+
+  # The ARIA a trigger or panel renders; attributes passed by the caller win.
+  # With the builder, a trigger and its panel know whether they are selected
+  # and link to each other by id, using the ids the JS would assign
+  # ("<tabs id>-trigger-<value>", "<tabs id>-content-<value>"). Without it
+  # every part renders inactive (and panels hidden) until the JS mounts.
+  defp assign_tab_state(assigns, part) do
+    {active, attrs} = tab_state(assigns[:builder], to_string(assigns.value), part)
+    assign(assigns, active: active, rest: Map.merge(attrs, assigns.rest))
+  end
+
+  defp tab_state(%{id: tabs_id} = builder, value, part) do
+    selected = builder[:value] && to_string(builder[:value])
+    active = value == selected
+    trigger_id = "#{tabs_id}-trigger-#{value}"
+    content_id = "#{tabs_id}-content-#{value}"
+
+    attrs =
+      case part do
+        :trigger ->
+          %{
+            id: trigger_id,
+            role: "tab",
+            "aria-selected": to_string(active),
+            "aria-controls": content_id,
+            # No tab stop is known until a tab is selected; the JS picks one.
+            tabindex: selected && if(active, do: "0", else: "-1")
+          }
+
+        :content ->
+          %{id: content_id, role: "tabpanel", "aria-labelledby": trigger_id, tabindex: "0", hidden: !active}
+      end
+
+    {active, attrs}
+  end
+
+  defp tab_state(_builder, _value, :trigger), do: {false, %{role: "tab", "aria-selected": "false"}}
+  defp tab_state(_builder, _value, :content), do: {false, %{role: "tabpanel", tabindex: "0", hidden: true}}
 
   defp tabs_list_variant("line"), do: "gap-1 bg-transparent"
   defp tabs_list_variant(_variant), do: "bg-muted"

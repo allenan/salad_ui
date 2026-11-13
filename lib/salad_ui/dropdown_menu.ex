@@ -34,6 +34,12 @@ defmodule SaladUI.DropdownMenu do
         </.dropdown_menu_content>
       </.dropdown_menu>
 
+  An item's click bubbles like any other, so a plain `phx-click` (with
+  `phx-value-*`) works too, from the mouse and from Enter or Space, and can
+  be driven by `render_click/2` in LiveViewTest:
+
+      <.dropdown_menu_item phx-click="delete" phx-value-id={@post.id}>Delete</.dropdown_menu_item>
+
   Icons go straight into an item; they are sized `size-4` and muted unless they
   carry their own `size-*` / `text-*` class:
 
@@ -342,6 +348,8 @@ defmodule SaladUI.DropdownMenu do
     `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
+  * `:collision-padding` - Distance in pixels kept from the viewport edges when
+    the content flips or shifts to stay visible. Defaults to `0`, as in Radix.
   * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
     first (and back). Defaults to `false`, as in Radix.
   * `:class` - Additional CSS classes.
@@ -351,6 +359,7 @@ defmodule SaladUI.DropdownMenu do
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
+  attr :"collision-padding", :integer, default: 0, doc: "Distance kept from the viewport edges"
   attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :rest, :global
   slot :inner_block, required: true
@@ -360,7 +369,8 @@ defmodule SaladUI.DropdownMenu do
       assign(assigns, %{
         base: @content_class,
         side_offset: assigns[:"side-offset"],
-        align_offset: assigns[:"align-offset"]
+        align_offset: assigns[:"align-offset"],
+        collision_padding: assigns[:"collision-padding"]
       })
 
     ~H"""
@@ -370,6 +380,7 @@ defmodule SaladUI.DropdownMenu do
       data-align={@align}
       data-side-offset={@side_offset}
       data-align-offset={@align_offset}
+      data-collision-padding={@collision_padding}
       class="absolute z-50"
       style="min-width: var(--salad-reference-width)"
       hidden

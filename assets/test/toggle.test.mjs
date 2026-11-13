@@ -8,12 +8,17 @@ import { installDom, uninstallDom } from "./helpers/dom.mjs";
 before(() => installDom());
 after(() => uninstallDom());
 
-function buildToggle({ pressed = false, disabled = false } = {}) {
+function buildToggle({
+  pressed = false,
+  disabled = false,
+  controlled = false,
+} = {}) {
   document.body.innerHTML = `
     <form>
       <button id="toggle-1" type="button" data-component="toggle" data-part="root"
               data-state="${pressed ? "on" : "off"}" aria-pressed="${pressed}"
               data-event-mappings='${JSON.stringify({ "pressed-changed": "bold_changed" })}'
+              data-options='${JSON.stringify({ controlled })}'
               ${disabled ? "disabled data-disabled" : ""}>
         <input type="hidden" name="bold" value="false">
         <input type="checkbox" class="hidden" name="bold" value="true"${pressed ? " checked" : ""} tabindex="-1">
@@ -25,8 +30,8 @@ function buildToggle({ pressed = false, disabled = false } = {}) {
   const el = document.getElementById("toggle-1");
   const pushed = [];
   const hookContext = {
-    pushEventTo: (target, event, payload) =>
-      pushed.push({ target, event, payload }),
+    pushEventTo: (target, event, payload, onReply) =>
+      pushed.push({ target, event, payload, ...(onReply && { onReply }) }),
     liveSocket: { execJS: () => {} },
   };
 
@@ -129,4 +134,48 @@ test("a patch with a new server state rebuilds the toggle", () => {
   patchFromServer(el, true);
 
   assert.equal(component.skipReinitialize(el), false);
+});
+
+// The server markup again, as a LiveView patch leaves it.
+function patchToggle(el, pressed) {
+  el.setAttribute("data-state", pressed ? "on" : "off");
+  el.setAttribute("aria-pressed", String(pressed));
+  el.querySelector('input[type="checkbox"]').checked = pressed;
+}
+
+test("uncontrolled: a patch with the same server state keeps the click", () => {
+  const { el, component, input } = buildToggle();
+
+  click(el);
+  patchToggle(el, false);
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(el.getAttribute("data-state"), "on");
+  assert.equal(input.checked, true);
+});
+
+test("controlled: a patch with the same server state puts it back", () => {
+  const { el, component, input, pushed } = buildToggle({ controlled: true });
+
+  click(el);
+  patchToggle(el, false);
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(component.state, "off");
+  assert.equal(el.getAttribute("data-state"), "off");
+  assert.equal(el.getAttribute("aria-pressed"), "false");
+  assert.equal(input.checked, false);
+  // Putting the server state back pushes nothing.
+  assert.equal(pushed.length, 1);
+});
+
+test("controlled: the server's reply without a patch puts its state back", () => {
+  const { el, component, pushed } = buildToggle({ controlled: true });
+
+  click(el);
+  assert.equal(el.getAttribute("data-state"), "on");
+  pushed[0].onReply({});
+
+  assert.equal(component.state, "off");
+  assert.equal(el.getAttribute("aria-pressed"), "false");
 });

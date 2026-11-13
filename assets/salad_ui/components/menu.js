@@ -19,6 +19,11 @@ const POINTER_GRACE_MS = 300;
 
 let subMenuCounter = 0;
 
+// Clicks an item already handled. A checkable item binds its click handler
+// once per state, so toggling in the first would run the second too; the
+// click itself must keep bubbling (see notifyActivation).
+const activations = new WeakSet();
+
 function isPointInPolygon({ x, y }, polygon) {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -147,17 +152,32 @@ class MenuItemBase extends Component {
   // notifies the server. Returns whether activation should proceed, so
   // subclasses (e.g. MenuCheckboxItem) can update their own state before
   // closeMenuOnSelect().
+  //
+  // A click is left to bubble, as Radix's item `onClick` does, so LiveView's
+  // own click handling (on the window) runs an item's `phx-click`. Enter and
+  // Space become a click on the item, as in Radix, so `phx-click` fires from
+  // the keyboard too; that click does the activation.
   notifyActivation(event) {
-    const shouldPreserveNativeClick =
-      event?.type === "click" && this.isNativeLinkItem();
-
-    if (event && !shouldPreserveNativeClick) {
+    if (event && event.type !== "click") {
+      // The key is spent here (the panel's typeahead must not see Space).
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      if (!this.disabled) this.el.click();
+      return false;
     }
 
-    if (this.disabled) return false;
+    if (event) {
+      if (activations.has(event)) return false;
+      activations.add(event);
+      if (!this.isNativeLinkItem()) event.preventDefault();
+    }
+
+    if (this.disabled) {
+      // A disabled item does nothing, not even its phx-click.
+      event?.stopPropagation();
+      return false;
+    }
 
     this.pushEvent(
       "select",

@@ -266,4 +266,17 @@ defmodule SaladUI.SelectTest do
       assert html =~ ~s(data-test="sep")
     end
   end
+
+  test "content renders collision-padding for the positioner" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.select id="s" name="s">
+        <.select_content position="popper" collision-padding={6}>x</.select_content>
+      </.select>
+      """)
+
+    assert html =~ ~s(data-collision-padding="6")
+  end
 end

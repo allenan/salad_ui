@@ -20,8 +20,10 @@ defmodule SaladUI.ResizableTest do
       assert html =~ ~s(data-slot="resizable-panel-group")
       assert html =~ ~s(data-component="resizable")
       assert html =~ ~s(phx-hook="SaladUI")
-      assert html =~ ~s(aria-orientation="horizontal")
-      assert html =~ "flex h-full w-full aria-[orientation=vertical]:flex-col rounded-lg border"
+      assert html =~ ~s(data-orientation="horizontal")
+      # The group has no role, so no aria-orientation (axe: aria-allowed-attr).
+      refute html =~ ~s(aria-orientation=)
+      assert html =~ "flex h-full w-full data-[orientation=vertical]:flex-col rounded-lg border"
       assert html =~ ~s(&quot;orientation&quot;:&quot;horizontal&quot;)
       assert html =~ ~s(&quot;keyboardResizeBy&quot;:10)
       refute html =~ "data-disabled"
@@ -44,7 +46,7 @@ defmodule SaladUI.ResizableTest do
         </.resizable_panel_group>
         """)
 
-      assert html =~ ~s(aria-orientation="vertical")
+      refute html =~ ~s(aria-orientation=)
       assert html =~ ~s(data-orientation="vertical")
       assert html =~ ~s(&quot;autoSaveId&quot;:&quot;layout&quot;)
       assert html =~ ~s(&quot;keyboardResizeBy&quot;:5)
@@ -63,7 +65,7 @@ defmodule SaladUI.ResizableTest do
         </.resizable_panel_group>
         """)
 
-      assert html =~ ~s(aria-orientation="vertical")
+      assert html =~ ~s(data-orientation="vertical")
     end
   end
 
@@ -134,6 +136,52 @@ defmodule SaladUI.ResizableTest do
 
       assert html =~ ~s(tabindex="-1")
       assert html =~ "data-disabled"
+    end
+  end
+
+  # The opening tag matching "#id" or "[attr=value]", and one attribute of it
+  # ("" for a boolean attribute, nil when absent).
+  defp tag(html, "#" <> id), do: find_tag(html, ~s(id="#{id}"))
+
+  defp tag(html, "[" <> rest) do
+    [name, value] = rest |> String.trim_trailing("]") |> String.split("=")
+    find_tag(html, ~s(#{name}="#{value}"))
+  end
+
+  defp find_tag(html, needle) do
+    ~r/<[a-z]+\s[^>]*>/
+    |> Regex.scan(html)
+    |> List.flatten()
+    |> Enum.find(&String.contains?(&1, " " <> needle))
+  end
+
+  defp attr_of(tag, name) do
+    case Regex.run(~r/\s#{Regex.escape(name)}(?:="([^"]*)")?[\s>]/, tag) do
+      nil -> nil
+      [_] -> ""
+      [_, value] -> value
+    end
+  end
+
+  describe "collapsible panels" do
+    test "collapsible and collapsed-size are rendered for the JS" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.resizable_panel_group id="g">
+          <.resizable_panel default-size={75}>Main</.resizable_panel>
+          <.resizable_handle />
+          <.resizable_panel id="side" default-size={25} min-size={15} collapsible collapsed-size="4%">
+            Side
+          </.resizable_panel>
+        </.resizable_panel_group>
+        """)
+
+      side = tag(html, "#side")
+      assert attr_of(side, "data-collapsible") == "true"
+      assert attr_of(side, "data-collapsed-size") == "4"
+      assert length(Regex.scan(~r/data-collapsible=/, html)) == 1
     end
   end
 end

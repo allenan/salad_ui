@@ -262,10 +262,25 @@ defmodule SaladUI.CommandTest do
 
       assert html =~ ~s(data-slot="command-separator")
       assert html =~ ~s(data-part="separator")
-      assert html =~ ~s(role="separator")
+      # Decorative: a listbox may not contain a separator (axe
+      # aria-required-children).
+      assert html =~ ~s(role="none")
+      refute html =~ ~s(role="separator")
       assert html =~ "-mx-1 h-px bg-border data-[visible=false]:hidden my-1"
       assert html =~ ~s(data-always-render="true")
       assert length(String.split(html, "data-always-render")) == 2
+    end
+
+    test "command_separator takes a role override without a duplicate attribute" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_separator role="separator" />
+        """)
+
+      assert html =~ ~s(role="separator")
+      assert length(String.split(html, "role=")) == 2
     end
   end
 end
