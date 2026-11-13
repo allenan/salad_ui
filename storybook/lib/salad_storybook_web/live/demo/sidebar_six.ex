@@ -241,7 +241,7 @@ defmodule SaladStorybookWeb.Demo.SidebarSix do
               </.dropdown_menu_shortcut>
             </.dropdown_menu_item>
 
-            <.dropdown_menu_separator></.dropdown_menu_separator>
+            <.dropdown_menu_separator />
             <.dropdown_menu_item class="gap-2 p-2">
               <div class="flex size-6 items-center justify-center rounded-md border border-border bg-background">
                 <.plus class="size-4" />
@@ -324,20 +324,20 @@ defmodule SaladStorybookWeb.Demo.SidebarSix do
             </.dropdown_menu_trigger>
             <.dropdown_menu_content class="w-48 rounded-lg" side="right" align="start">
               <.dropdown_menu_item>
-                <.folder class="text-muted-foreground size-4 mr-2" />
+                <.folder class="text-muted-foreground size-4" />
                 <span>
                   View Project
                 </span>
               </.dropdown_menu_item>
               <.dropdown_menu_item>
-                <.forward class="text-muted-foreground size-4 mr-2" />
+                <.forward class="text-muted-foreground size-4" />
                 <span>
                   Share Project
                 </span>
               </.dropdown_menu_item>
-              <.dropdown_menu_separator></.dropdown_menu_separator>
+              <.dropdown_menu_separator />
               <.dropdown_menu_item>
-                <.trash_2 class="text-muted-foreground size-4 mr-2" />
+                <.trash_2 class="text-muted-foreground size-4" />
                 <span>
                   Delete Project
                 </span>
@@ -409,27 +409,27 @@ defmodule SaladStorybookWeb.Demo.SidebarSix do
                 </div>
               </div>
             </.dropdown_menu_label>
-            <.dropdown_menu_separator></.dropdown_menu_separator>
+            <.dropdown_menu_separator />
             <dropdownmenugroup>
               <.dropdown_menu_item>
-                <.sparkles class="size-4 mr-2" /> Upgrade to Pro
+                <.sparkles class="size-4" /> Upgrade to Pro
               </.dropdown_menu_item>
             </dropdownmenugroup>
-            <.dropdown_menu_separator></.dropdown_menu_separator>
+            <.dropdown_menu_separator />
             <dropdownmenugroup>
               <.dropdown_menu_item>
-                <.badge_check class="size-4 mr-2" /> Account
+                <.badge_check class="size-4" /> Account
               </.dropdown_menu_item>
               <.dropdown_menu_item>
-                <.credit_card class="size-4 mr-2" /> Billing
+                <.credit_card class="size-4" /> Billing
               </.dropdown_menu_item>
               <.dropdown_menu_item>
-                <.bell class="size-4 mr-2" /> Notifications
+                <.bell class="size-4" /> Notifications
               </.dropdown_menu_item>
             </dropdownmenugroup>
-            <.dropdown_menu_separator></.dropdown_menu_separator>
+            <.dropdown_menu_separator />
             <.dropdown_menu_item>
-              <.log_out class="size-4 mr-2" /> Log out
+              <.log_out class="size-4" /> Log out
             </.dropdown_menu_item>
           </.dropdown_menu_content>
         </.dropdown_menu>

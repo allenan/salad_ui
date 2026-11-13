@@ -243,14 +243,14 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               <.dropdown_menu_label>
                 My Account
               </.dropdown_menu_label>
-              <.dropdown_menu_separator></.dropdown_menu_separator>
+              <.dropdown_menu_separator />
               <.dropdown_menu_item>
                 Settings
               </.dropdown_menu_item>
               <.dropdown_menu_item>
                 Support
               </.dropdown_menu_item>
-              <.dropdown_menu_separator></.dropdown_menu_separator>
+              <.dropdown_menu_separator />
               <.dropdown_menu_item>
                 Logout
               </.dropdown_menu_item>
@@ -643,7 +643,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                       <.dropdown_menu_item>
                         Export
                       </.dropdown_menu_item>
-                      <.dropdown_menu_separator></.dropdown_menu_separator>
+                      <.dropdown_menu_separator />
                       <.dropdown_menu_item>
                         Trash
                       </.dropdown_menu_item>
