@@ -108,16 +108,47 @@ defmodule SaladUI.Tooltip do
   The trigger element that activates the tooltip when hovered.
 
   If not provided, the first child of the tooltip will be used as trigger.
+
+  Renders a wrapping `<div>` by default. Set `:as` to a tag or function
+  component to make that element the trigger itself (shadcn's
+  `<TooltipTrigger asChild>`), e.g. so a button inside a `button_group/1`
+  is styled as one of the group's buttons:
+
+      <.tooltip>
+        <.tooltip_trigger as={&button/1} variant="outline" size="icon-sm" aria-label="Details">
+          <.icon name="hero-information-circle" />
+        </.tooltip_trigger>
+        <.tooltip_content>Details</.tooltip_content>
+      </.tooltip>
   """
+  attr :as, :any, default: "div"
   attr :class, :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size type)
   slot :inner_block, required: true
 
   def tooltip_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     ~H"""
-    <div data-slot="tooltip-trigger" data-part="trigger" class={classes(["", @class])} {@rest}>
+    <div
+      :if={@as == "div"}
+      data-slot="tooltip-trigger"
+      data-part="trigger"
+      class={classes(["", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
+    <.dynamic
+      :if={@as != "div"}
+      data-slot={@rest[:"data-slot"] || "tooltip-trigger"}
+      tag={@as}
+      data-part="trigger"
+      class={classes([@class])}
+      {Map.delete(@rest, :"data-slot")}
+    >
+      {render_slot(@inner_block)}
+    </.dynamic>
     """
   end
 

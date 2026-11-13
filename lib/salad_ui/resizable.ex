@@ -177,7 +177,8 @@ defmodule SaladUI.Resizable do
       |> assign(:min_size, parse_size(assigns[:"min-size"]))
       |> assign(:max_size, parse_size(assigns[:"max-size"]))
       # Pre-JS approximation of the layout; the JS component takes over on mount.
-      |> assign(:style, "flex: #{default_size || 1} 1 0px; overflow: hidden;")
+      # `overflow: clip` (not a scroll container) with `hidden` as the fallback.
+      |> assign(:style, "flex: #{default_size || 1} 1 0px; overflow: hidden; overflow: clip;")
 
     ~H"""
     <div

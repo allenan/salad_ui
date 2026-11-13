@@ -322,34 +322,47 @@ defmodule SaladChat.Chat do
   defp do_create(handle, channel, body, attachments, opts) do
     parent_id = opts[:parent_id]
 
-    {message, parent} =
+    result =
       Store.run(fn ->
-        message = %Message{
-          id: Store.next_id(),
-          channel_id: channel.id,
-          user_id: handle,
-          body: body,
-          parent_id: parent_id,
-          attachments: attachments,
-          bot: opts[:bot],
-          inserted_at: DateTime.utc_now()
-        }
+        # Checked inside the store's serialized section: the parent can be
+        # deleted between the caller looking it up and this insert.
+        parent = parent_id && get_message(parent_id)
 
-        :ets.insert(Store.messages(), {message.id, message})
-        {message, if(parent_id, do: bump_parent(parent_id, message))}
+        if parent_id &&
+             (parent == nil or parent.parent_id != nil or parent.channel_id != channel.id) do
+          {:error, :no_parent}
+        else
+          insert_message(channel, handle, body, attachments, parent, opts)
+        end
       end)
 
-    broadcast({:message_created, message})
-    if parent, do: broadcast({:message_updated, parent})
+    with {:ok, message, parent} <- result do
+      broadcast({:message_created, message})
+      if parent, do: broadcast({:message_updated, parent})
 
-    unless opts[:silent], do: SaladChat.Sprout.maybe_reply(message, channel)
+      unless opts[:silent], do: SaladChat.Sprout.maybe_reply(message, channel)
 
-    {:ok, message}
+      {:ok, message}
+    end
   end
 
-  defp bump_parent(parent_id, reply) do
-    parent = get_message(parent_id)
+  defp insert_message(channel, handle, body, attachments, parent, opts) do
+    message = %Message{
+      id: Store.next_id(),
+      channel_id: channel.id,
+      user_id: handle,
+      body: body,
+      parent_id: parent && parent.id,
+      attachments: attachments,
+      bot: opts[:bot],
+      inserted_at: DateTime.utc_now()
+    }
 
+    :ets.insert(Store.messages(), {message.id, message})
+    {:ok, message, if(parent, do: bump_parent(parent, message))}
+  end
+
+  defp bump_parent(parent, reply) do
     parent = %{
       parent
       | reply_count: parent.reply_count + 1,

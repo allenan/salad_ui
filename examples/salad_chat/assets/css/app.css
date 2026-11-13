@@ -229,3 +229,10 @@
   color: var(--primary);
   animation: caret-blink 1s steps(1) infinite;
 }
+
+/* The app is a fixed-height shell (h-dvh): only its inner panes scroll, so
+   don't let the page itself rubber-band or chain scrolling (iPad Safari). */
+html,
+body {
+  overscroll-behavior: none;
+}

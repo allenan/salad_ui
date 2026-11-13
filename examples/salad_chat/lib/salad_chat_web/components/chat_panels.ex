@@ -148,15 +148,14 @@ defmodule SaladChatWeb.ChatPanels do
             </.popover_content>
           </.popover>
           <.tooltip>
-            <.tooltip_trigger>
-              <.button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Conversation details"
-                phx-click={SaladUI.JS.dispatch_command("open", to: "#channel-details")}
-              >
-                <.icon name="hero-information-circle" />
-              </.button>
+            <.tooltip_trigger
+              as={&button/1}
+              variant="outline"
+              size="icon-sm"
+              aria-label="Conversation details"
+              phx-click={SaladUI.JS.dispatch_command("open", to: "#channel-details")}
+            >
+              <.icon name="hero-information-circle" />
             </.tooltip_trigger>
             <.tooltip_content side="bottom">Details</.tooltip_content>
           </.tooltip>
@@ -243,6 +242,7 @@ defmodule SaladChatWeb.ChatPanels do
   attr :ctx, :map, required: true
   attr :form, :any, required: true
   attr :typing, :list, default: []
+  attr :mentions, :list, default: []
   attr :closable, :boolean, default: true
 
   def thread_pane(%{parent: nil} = assigns) do
@@ -324,6 +324,7 @@ defmodule SaladChatWeb.ChatPanels do
         event="send_reply"
         placeholder="Reply…"
         typing={@typing}
+        mentions={@mentions}
         class="pt-1"
       />
     </div>

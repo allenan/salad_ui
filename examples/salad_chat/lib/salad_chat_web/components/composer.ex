@@ -33,12 +33,49 @@ defmodule SaladChatWeb.Composer do
   attr :event, :string, default: "send"
   attr :upload, :any, default: nil, doc: "an upload config (@uploads.name) to enable attachments"
   attr :slash, :list, default: []
+  attr :mentions, :list, default: [], doc: "people matching the `@query` being typed"
   attr :typing, :list, default: []
   attr :class, :string, default: nil
 
   def composer(assigns) do
     ~H"""
     <div class={["relative px-3 pb-1 sm:px-4", @class]}>
+      <%!-- @mention suggestions. The Composer hook drives the highlight from the
+           textarea (↑ ↓ Enter Tab Esc), as an ARIA combobox listbox. --%>
+      <div
+        :if={@mentions != []}
+        id={"#{@id}-mentions"}
+        phx-hook="MentionList"
+        data-input={"#{@id}-input"}
+        role="listbox"
+        aria-label="Mention someone"
+        class="absolute bottom-full left-3 z-20 mb-1 max-h-72 w-[min(20rem,calc(100%-1.5rem))] overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg sm:left-4"
+      >
+        <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Mention</div>
+        <div
+          :for={m <- @mentions}
+          id={"#{@id}-mention-#{m.handle}"}
+          role="option"
+          aria-selected="false"
+          data-handle={m.handle}
+          phx-click={
+            JS.dispatch("salad-chat:mention", to: "##{@id}-input", detail: %{handle: m.handle})
+          }
+          class="flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none hover:bg-accent/60 aria-selected:bg-accent aria-selected:text-accent-foreground"
+        >
+          <%= if m.user do %>
+            <SaladChatWeb.People.user_avatar user={m.user} size="sm" class="size-6 shrink-0" />
+            <span class="truncate font-medium">{m.name}</span>
+            <span class="truncate text-xs text-muted-foreground">@{m.handle}</span>
+          <% else %>
+            <span class="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted">
+              <.icon name="hero-megaphone" class="size-3.5" />
+            </span>
+            <span class="font-medium">@{m.handle}</span>
+            <span class="truncate text-xs text-muted-foreground">{m.name}</span>
+          <% end %>
+        </div>
+      </div>
       <div
         :if={@slash != []}
         class="absolute inset-x-3 bottom-full z-20 mb-1 overflow-hidden rounded-lg border bg-popover shadow-lg sm:inset-x-4"
@@ -75,7 +112,7 @@ defmodule SaladChatWeb.Composer do
         <input type="hidden" name="composer" value={@id} />
         <.input_group
           id={"#{@id}-group"}
-          class="rounded-xl bg-background shadow-xs has-[textarea:focus]:ring-[3px]"
+          class="@container/composer rounded-xl bg-background shadow-xs has-[textarea:focus]:ring-[3px]"
           phx-drop-target={@upload && @upload.ref}
         >
           <.input_group_textarea
@@ -83,6 +120,10 @@ defmodule SaladChatWeb.Composer do
             field={@form[:body]}
             placeholder={@placeholder}
             phx-hook="Composer"
+            data-composer={@id}
+            aria-autocomplete="list"
+            aria-expanded={to_string(@mentions != [])}
+            aria-controls={@mentions != [] && "#{@id}-mentions"}
             phx-debounce="150"
             rows="1"
             autocomplete="off"
@@ -153,19 +194,20 @@ defmodule SaladChatWeb.Composer do
                 <.kbd>/</.kbd>
               </.tooltip_content>
             </.tooltip>
-            <.input_group_text class="ml-auto hidden gap-1 text-xs sm:flex">
+            <%!-- Only when the composer itself has room (not the thread pane) --%>
+            <.input_group_text class="ml-auto hidden gap-1 whitespace-nowrap text-xs @xl/composer:flex">
               <.kbd>Enter</.kbd>
-              to send <span class="mx-0.5">·</span>
+              send <span class="mx-0.5">·</span>
               <.kbd_group>
                 <.kbd>Shift</.kbd><.kbd>Enter</.kbd>
               </.kbd_group>
-              for newline
+              newline
             </.input_group_text>
             <.input_group_button
               type="submit"
               variant="default"
               size="icon-sm"
-              class="ml-auto rounded-full sm:ml-1"
+              class="ml-auto shrink-0 rounded-full @xl/composer:ml-1"
               aria-label="Send"
             >
               <.icon name="hero-paper-airplane-solid" />

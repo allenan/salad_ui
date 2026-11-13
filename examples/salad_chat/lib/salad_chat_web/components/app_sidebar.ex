@@ -37,8 +37,8 @@ defmodule SaladChatWeb.AppSidebar do
                 phx-click={close_mobile() |> open("#quick-switcher_dialog")}
                 class="text-sidebar-foreground/80"
               >
-                <.icon name="hero-magnifying-glass" />
-                <span>Jump to…</span>
+                <.icon name="hero-magnifying-glass" class="size-4" />
+                <span class="truncate">Jump to…</span>
                 <.kbd_group class="ml-auto group-data-[collapsible=icon]:hidden">
                   <.kbd>⌘</.kbd><.kbd>K</.kbd>
                 </.kbd_group>
@@ -64,7 +64,10 @@ defmodule SaladChatWeb.AppSidebar do
               phx-click={navigate(@me.handle, channel.id)}
               data-shortcut={i < 9 && i + 1}
             >
-              <.icon name={if channel.private?, do: "hero-lock-closed", else: "hero-hashtag"} />
+              <.icon
+                name={if channel.private?, do: "hero-lock-closed", else: "hero-hashtag"}
+                class="size-4"
+              />
               <span class={unread?(@unread, channel.id) && "font-semibold text-sidebar-foreground"}>
                 {channel.name}
               </span>
@@ -99,7 +102,7 @@ defmodule SaladChatWeb.AppSidebar do
               class="text-sidebar-foreground/70"
               phx-click={close_mobile() |> open("#quick-switcher_dialog")}
             >
-              <.icon name="hero-pencil-square" />
+              <.icon name="hero-pencil-square" class="size-4" />
               <span>New message</span>
             </.sidebar_menu_button>
           </.sidebar_menu_item>

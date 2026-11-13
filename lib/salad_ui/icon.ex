@@ -7,7 +7,8 @@ defmodule SaladUI.Icon do
   be applied by using the `-solid` and `-mini` suffix.
 
   You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
+  width, height, and background color classes. Icons never shrink in a flex
+  row (`shrink-0`), like the `[&_svg]:shrink-0` shadcn puts on `<svg>` icons.
 
   Icons are extracted from your `assets/vendor/heroicons` directory and bundled
   within your compiled app.css by the icon plugin in your Tailwind config.
@@ -24,7 +25,7 @@ defmodule SaladUI.Icon do
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]}></span>
+    <span class={["shrink-0", @name, @class]}></span>
     """
   end
 end

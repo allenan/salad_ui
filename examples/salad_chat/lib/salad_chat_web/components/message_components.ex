@@ -61,7 +61,7 @@ defmodule SaladChatWeb.MessageComponents do
         <.marker_content class="text-xs font-semibold text-destructive">New messages</.marker_content>
       </.marker>
       <%!-- Right click (or long press) opens the same actions as the ⋮ menu --%>
-      <.context_menu id={"#{@id}-context"}>
+      <.context_menu id={"#{@id}-context"} use-portal>
         <.context_menu_trigger
           as="div"
           disabled={
@@ -432,7 +432,7 @@ defmodule SaladChatWeb.MessageComponents do
 
   def emoji_picker(assigns) do
     ~H"""
-    <.popover id={@id}>
+    <.popover id={@id} use-portal>
       <.popover_trigger
         as={&button/1}
         variant={if @compact, do: "outline", else: "ghost"}
@@ -542,7 +542,7 @@ defmodule SaladChatWeb.MessageComponents do
           </.tooltip_trigger>
           <.tooltip_content>Reply in thread</.tooltip_content>
         </.tooltip>
-        <.dropdown_menu id={"#{@id}-more"}>
+        <.dropdown_menu id={"#{@id}-more"} use-portal>
           <.dropdown_menu_trigger
             as={&button/1}
             variant="ghost"
