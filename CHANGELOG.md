@@ -523,6 +523,11 @@ for status and known gaps. Every new JS-backed component is registered in
     content rendered outside the dialog stays interactive, exposed and
     focusable instead of being blocked by the modal layer's focus guard.
   Storybook: "Shared tooltips" example.
+  A shared tooltip or hover card that moves straight to another trigger
+  fires `on-close` for the previous trigger (with its context) before
+  `on-open` for the new one; `on-close` always carries the context of the
+  trigger it was open for. The example chat app's message rows now use
+  shared menus, hover cards and tooltips (see its README).
 
 # 0.14.0
 

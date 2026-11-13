@@ -157,30 +157,78 @@ defmodule SaladChatWeb.ChatLiveTest do
     end
   end
 
-  describe "message context menu" do
-    test "right click offers the ⋮ menu's actions", %{conn: conn} do
+  describe "message menus" do
+    test "rows are detached triggers of the shared ⋮ and right-click menus", %{conn: conn} do
       {:ok, mine} = Chat.create_message("maya", "random", "mine")
       {:ok, theirs} = Chat.create_message("leo", "random", "theirs")
       {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
 
-      menu = "#msg-#{mine.id}-context"
+      # The row: no menu of its own, triggers naming the shared menus.
+      refute has_element?(view, "#msg-#{mine.id} [data-component]")
+
+      assert has_element?(
+               view,
+               ~s(#msg-#{mine.id} [data-salad-for="msg-context-own-unpinned"]),
+               "mine"
+             )
+
+      assert has_element?(view, ~s(#msg-#{mine.id} [data-salad-for="msg-more-own-unpinned"]))
+      assert has_element?(view, ~s(#msg-#{theirs.id} [data-salad-for="msg-more-other-unpinned"]))
+
+      menu = "#msg-context-own-unpinned"
       assert has_element?(view, "#{menu}[data-component=context-menu]")
-      assert has_element?(view, "#{menu} [data-slot=context-menu-trigger]", "mine")
 
       for label <-
             ["React", "Reply in thread", "Copy text", "Pin to channel"] ++
               ["Remind me about this", "Mark unread", "Edit message", "Delete message"] do
         assert has_element?(view, "#{menu} [data-slot=context-menu-content]", label)
+
+        assert has_element?(
+                 view,
+                 "#msg-more-own-unpinned [data-slot=dropdown-menu-content]",
+                 label
+               )
       end
 
-      # same actions (and events) as the ⋮ menu
-      assert render(element(view, "#{menu} [data-slot=context-menu-content]")) =~ "toggle_pin"
+      refute has_element?(view, "#msg-more-other-unpinned", "Edit message")
+      assert has_element?(view, "#msg-more-other-pinned", "Unpin from channel")
+      # The thread's menus have no "Reply in thread".
+      refute has_element?(view, "#thread-msg-more-own-unpinned", "Reply in thread")
+    end
 
-      refute has_element?(
-               view,
-               "#msg-#{theirs.id}-context [data-slot=context-menu-content]",
-               "Edit message"
-             )
+    test "menu items act on the message in the open menu's context", %{conn: conn} do
+      {:ok, message} = Chat.create_message("leo", "random", "pin me")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      # SaladUI writes the trigger's context as phx-value-id on the items.
+      view
+      |> element("#msg-more-other-unpinned [phx-click=toggle_pin]")
+      |> render_click(%{"id" => "#{message.id}"})
+
+      assert has_element?(view, "#msg-#{message.id}", "Pinned")
+      assert has_element?(view, ~s(#msg-#{message.id} [data-salad-for="msg-more-other-pinned"]))
+
+      view
+      |> element("#msg-more-other-pinned [phx-click=react][phx-value-emoji='🎉']")
+      |> render_click(%{"id" => "#{message.id}"})
+
+      assert has_element?(view, "#msg-#{message.id} [role=group][aria-label=Reactions]", "🎉")
+
+      view
+      |> element("#msg-more-other-pinned [phx-click=open_thread]")
+      |> render_click(%{"id" => "#{message.id}"})
+
+      assert_patch(view, ~p"/as/maya/c/random/t/#{message.id}")
+    end
+
+    test "author names open the author's shared hover card", %{conn: conn} do
+      {:ok, message} = Chat.create_message("leo", "random", "hello")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      assert has_element?(view, ~s(#msg-#{message.id} [data-salad-for="author-card-leo"]))
+      assert has_element?(view, "#author-card-leo[data-component=hover-card]")
+      assert has_element?(view, "#tooltips[data-component=tooltip-provider]")
+      assert has_element?(view, ~s(#msg-#{message.id} [data-salad-tooltip="More actions"]))
     end
   end
 

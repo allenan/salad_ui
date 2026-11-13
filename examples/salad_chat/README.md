@@ -74,11 +74,12 @@ Try:
 | --- | --- |
 | `sidebar` (+ `sidebar_trigger`, `sidebar_rail`, menu parts) | Workspace sidebar, collapsible to icons; a sheet on phones |
 | `collapsible` | Channel and DM sections in the sidebar; Sprout's trace rows |
-| `dropdown_menu` (sub-menus, radio group, link items) | Workspace menu, user menu, message ⋮ menu |
-| `context_menu` | Right click (or long press) on a message: the ⋮ menu's actions at the pointer |
+| `dropdown_menu` (sub-menus, radio group, link items) | Workspace menu, user menu, message ⋮ menu (shared, see below) |
+| `context_menu` | Right click (or long press) on a message: the ⋮ menu's actions at the pointer (shared) |
 | `avatar`, `avatar_badge`, `avatar_group`, `avatar_group_count` | People everywhere, presence dots, channel members, thread participants |
 | `badge` | Unread and mention counts, `APP` tag, source chips |
-| `tooltip`, `kbd`, `kbd_group` | Icon buttons, keyboard hints |
+| `tooltip`, `kbd`, `kbd_group` | Header icon buttons, keyboard hints |
+| `tooltip_provider` (`data-salad-tooltip`) | Text tooltips on the message toolbar and reaction pills ("Maya and Leo reacted"), one tooltip for the page |
 | `button`, `button_group` | Header actions, message hover toolbar, reminder quick picks |
 | `popover` | Pinned messages |
 | `emoji_picker` | One picker for the page: the composer's emoji button (inserts at the cursor) and every message's "Add reaction" (search, categories, recents, skin tone) |
@@ -89,7 +90,7 @@ Try:
 | `message_scroller` | Main message list and thread: follows new messages at the bottom, keeps your place when older history loads, "jump to latest" button |
 | `marker` | Day separators, the "New messages" divider, "Sprout is thinking…" |
 | `toggle` | Reaction pills |
-| `hover_card` | Profile card on author names |
+| `hover_card` | Profile card on author names: one card per person, shared by all their messages |
 | `code_block` | Code snippets in messages and Sprout's tool input/output (Makeup highlighting) |
 | `attachment` (+ `attachment_upload_entry`) | Files and images in messages, upload previews with progress/cancel |
 | `trace` | Sprout's reasoning, `search_messages` tool call and sources |
@@ -106,6 +107,34 @@ Try:
 | `empty` | Empty channel, no search results, no thread selected, nothing pinned |
 | `scroll_area`, `separator` | Popovers, member lists, header dividers |
 | `toaster` / `SaladUI.Toast` | Mentions, DMs, confirmations, errors and flash messages |
+
+### Message rows use shared instances
+
+A message row renders no menu, hover card or tooltip of its own. ChatLive
+renders them once per page and each row carries only their triggers:
+
+- the ⋮ button is a `dropdown_menu_trigger` and the row a
+  `context_menu_trigger`, with `for` (the shared menu's id) and
+  `context={%{id: message.id}}`. While a menu is open for a row, SaladUI
+  writes that context on its items as `phx-value-id`, so the items are plain
+  `phx-click="toggle_pin"` and ChatLive's handlers read `%{"id" => id}`. There
+  is one menu per variant (your own message or not, pinned or not, channel
+  or thread), since their items differ (`MessageComponents.message_menus/1`);
+- the author's name is a `hover_card_trigger` for that person's card
+  (`author_cards/1`: one per person, not per message);
+- toolbar buttons and reaction pills carry `data-salad-tooltip="…"`, shown
+  by the page's one `tooltip_provider`.
+
+With a few hundred messages loaded, a menu, a context menu, a hover card and
+two tooltips in every row made the page several times slower to mount and
+much heavier, since each row carried all of their hidden markup and five
+hooks. With 520 messages in a channel (prod build, headless Chrome, median
+of 3), sharing them took mount from 2.6 s to 0.96 s, the JS heap from
+137 MB to 26 MB, DOM nodes from 60k to 17k, the LiveView join payload from
+25.5 MB to 6.3 MB and the page's hooks from 2333 to 174.
+See "Shared menus" in `SaladUI.DropdownMenu`, "Text tooltips for long lists"
+in `SaladUI.Tooltip` and "Shared hover cards for long lists" in
+`SaladUI.HoverCard`.
 
 ## How it is put together
 

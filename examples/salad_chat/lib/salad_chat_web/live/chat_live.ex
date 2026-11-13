@@ -422,6 +422,19 @@ defmodule SaladChatWeb.ChatLive do
     {:noreply, socket}
   end
 
+  # "Reply in thread" in a message's menu.
+  def handle_event("open_thread", %{"id" => id}, socket) do
+    a = socket.assigns
+
+    case a.channel && Chat.get_message(to_int(id)) do
+      %{channel_id: channel_id} ->
+        {:noreply, push_patch(socket, to: Paths.thread_path(a.me.handle, channel_id, to_int(id)))}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("toggle_pin", %{"id" => id}, socket) do
     case Chat.toggle_pin(to_int(id), socket.assigns.me.handle) do
       {:ok, %{pinned_by: nil}} -> {:noreply, Toast.toast(socket, "Unpinned")}
@@ -993,8 +1006,16 @@ defmodule SaladChatWeb.ChatLive do
         align="start"
       />
 
+      <%!-- The message rows' popups, once per page: rows carry only their
+           triggers (`for` + `context`), so a long history costs no hook and
+           no menu, hover card or tooltip markup per message. --%>
+      <.message_menus />
+      <.message_menus thread? />
+      <.tooltip_provider id="tooltips" />
+
       <%!-- Overlay roots take no space; their panels are fixed-positioned. --%>
       <div class="h-0 overflow-hidden">
+        <.author_cards users={@users} me={@me.handle} online={@online} />
         <.mention_profile users={@users} me={@me} online={@online} />
         <.sheet id="thread-sheet" on-close="close_thread">
           <.sheet_content side="right" class="w-full max-w-full p-0 sm:max-w-md md:hidden">

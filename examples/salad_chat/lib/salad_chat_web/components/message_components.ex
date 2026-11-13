@@ -2,6 +2,16 @@ defmodule SaladChatWeb.MessageComponents do
   @moduledoc """
   Everything inside the message list: rows, bodies, reactions, attachments,
   Sprout's trace, the hover actions and the thread summary.
+
+  Rows render no popup of their own. The ⋮ menu, the right-click menu, the
+  author hover cards and the tooltips are shared instances that ChatLive
+  renders once per page (`message_menus/1`, `author_cards/1`, a
+  `tooltip_provider`). Each row only carries their triggers: `for` names the
+  instance and `context` (`%{id: message.id}`) tells the menu items which
+  message they act on, as `phx-value-id` for their plain `phx-click`. With a
+  few hundred messages loaded, a menu, context menu, hover card and tooltips
+  per row made the page several times slower to mount. See "Shared menus"
+  in `SaladUI.DropdownMenu`.
   """
   use SaladChatWeb, :html
 
@@ -60,110 +70,173 @@ defmodule SaladChatWeb.MessageComponents do
       >
         <.marker_content class="text-xs font-semibold text-destructive">New messages</.marker_content>
       </.marker>
-      <%!-- Right click (or long press) opens the same actions as the ⋮ menu --%>
-      <.context_menu id={"#{@id}-context"} use-portal portal-container="#chat-portal">
-        <.context_menu_trigger
-          as="div"
-          disabled={
-            @message.deleted? or @message.id == @ctx.editing_id or Message.streaming?(@message)
-          }
-          class={
-            Enum.join(
-              [
-                "group/msg relative block px-4 transition-colors hover:bg-muted/50 has-[[data-state=open]]:bg-muted/50 data-[state=open]:bg-muted/50",
-                if(@row.grouped?, do: "py-0.5", else: "pt-2 pb-0.5"),
-                @message.id == @ctx.editing_id && "bg-amber-50 dark:bg-amber-400/5"
-              ]
-              |> Enum.filter(& &1),
-              " "
-            )
-          }
-        >
-          <%= if @message.deleted? do %>
-            <.deleted_message />
-          <% else %>
-            <.message
-              align={if @ctx.bubbles? and @mine?, do: "end", else: "start"}
-              class="gap-3"
-            >
-              <.message_avatar class="w-9 self-start bg-transparent group-has-data-[slot=message-footer]/message:translate-y-0">
-                <%= if @row.grouped? do %>
-                  <span
-                    class="mt-1 hidden w-9 text-center text-[10px] text-muted-foreground tabular-nums group-hover/msg:block"
-                    title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
-                  >
-                    {@message.inserted_at
-                    |> TimeFormat.time(@ctx.tz)
-                    |> String.replace(~r/ [AP]M/, "")}
-                  </span>
-                <% else %>
-                  <.user_avatar user={@author} class="size-9 rounded-lg" />
-                <% end %>
-              </.message_avatar>
-              <.message_content class="min-w-0 gap-1">
-                <.message_header :if={!@row.grouped?} class="gap-2 px-0 text-sm">
-                  <.author_name id={"#{@id}-author"} user={@author} ctx={@ctx} />
-                  <.badge :if={@author.bot?} variant="secondary" class="h-4 px-1 text-[10px]">
-                    APP
-                  </.badge>
-                  <time
-                    class="text-xs font-normal text-muted-foreground"
-                    datetime={DateTime.to_iso8601(@message.inserted_at)}
-                    title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
-                  >
-                    {TimeFormat.time(@message.inserted_at, @ctx.tz)}
-                  </time>
-                  <span
-                    :if={@message.pinned_by}
-                    class="flex items-center gap-0.5 text-xs text-amber-600"
-                  >
-                    <.icon name="hero-bookmark-solid" class="size-3" /> Pinned
-                  </span>
-                </.message_header>
+      <%!-- Right click (or long press) opens the page's shared context menu
+           (the same actions as the ⋮ menu) for this message. --%>
+      <.context_menu_trigger
+        as="div"
+        for={menu_id(:context, @message, @mine?, @ctx)}
+        context={%{id: @message.id}}
+        disabled={@message.deleted? or @message.id == @ctx.editing_id or Message.streaming?(@message)}
+        class={
+          Enum.join(
+            [
+              "group/msg relative block px-4 transition-colors hover:bg-muted/50 has-[[data-state=open]]:bg-muted/50 data-[state=open]:bg-muted/50",
+              if(@row.grouped?, do: "py-0.5", else: "pt-2 pb-0.5"),
+              @message.id == @ctx.editing_id && "bg-amber-50 dark:bg-amber-400/5"
+            ]
+            |> Enum.filter(& &1),
+            " "
+          )
+        }
+      >
+        <%= if @message.deleted? do %>
+          <.deleted_message />
+        <% else %>
+          <.message
+            align={if @ctx.bubbles? and @mine?, do: "end", else: "start"}
+            class="gap-3"
+          >
+            <.message_avatar class="w-9 self-start bg-transparent group-has-data-[slot=message-footer]/message:translate-y-0">
+              <%= if @row.grouped? do %>
+                <span
+                  class="mt-1 hidden w-9 text-center text-[10px] text-muted-foreground tabular-nums group-hover/msg:block"
+                  title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
+                >
+                  {@message.inserted_at
+                  |> TimeFormat.time(@ctx.tz)
+                  |> String.replace(~r/ [AP]M/, "")}
+                </span>
+              <% else %>
+                <.user_avatar user={@author} class="size-9 rounded-lg" />
+              <% end %>
+            </.message_avatar>
+            <.message_content class="min-w-0 gap-1">
+              <.message_header :if={!@row.grouped?} class="gap-2 px-0 text-sm">
+                <.author_name user={@author} />
+                <.badge :if={@author.bot?} variant="secondary" class="h-4 px-1 text-[10px]">
+                  APP
+                </.badge>
+                <time
+                  class="text-xs font-normal text-muted-foreground"
+                  datetime={DateTime.to_iso8601(@message.inserted_at)}
+                  title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
+                >
+                  {TimeFormat.time(@message.inserted_at, @ctx.tz)}
+                </time>
+                <span
+                  :if={@message.pinned_by}
+                  class="flex items-center gap-0.5 text-xs text-amber-600"
+                >
+                  <.icon name="hero-bookmark-solid" class="size-3" /> Pinned
+                </span>
+              </.message_header>
 
-                <%= cond do %>
-                  <% @message.id == @ctx.editing_id -> %>
-                    <.edit_form message={@message} />
-                  <% @message.bot -> %>
-                    <.bot_reply id={@id} message={@message} ctx={@ctx} />
-                  <% true -> %>
-                    <.message_body id={@id} message={@message} ctx={@ctx} mine?={@mine?} />
-                <% end %>
+              <%= cond do %>
+                <% @message.id == @ctx.editing_id -> %>
+                  <.edit_form message={@message} />
+                <% @message.bot -> %>
+                  <.bot_reply id={@id} message={@message} ctx={@ctx} />
+                <% true -> %>
+                  <.message_body id={@id} message={@message} ctx={@ctx} mine?={@mine?} />
+              <% end %>
 
-                <.attachments
-                  :if={@message.attachments != []}
-                  id={@id}
-                  attachments={@message.attachments}
-                />
-                <.reactions
-                  :if={@message.reactions != []}
-                  id={@id}
+              <.attachments
+                :if={@message.attachments != []}
+                id={@id}
+                attachments={@message.attachments}
+              />
+              <.reactions
+                :if={@message.reactions != []}
+                id={@id}
+                message={@message}
+                ctx={@ctx}
+              />
+              <.message_footer
+                :if={(@message.reply_count > 0 and !@ctx.thread?) or @message.edited_at}
+                class="gap-2 px-0"
+              >
+                <.thread_summary
+                  :if={@message.reply_count > 0 and !@ctx.thread?}
                   message={@message}
                   ctx={@ctx}
                 />
-                <.message_footer
-                  :if={(@message.reply_count > 0 and !@ctx.thread?) or @message.edited_at}
-                  class="gap-2 px-0"
-                >
-                  <.thread_summary
-                    :if={@message.reply_count > 0 and !@ctx.thread?}
-                    message={@message}
-                    ctx={@ctx}
-                  />
-                  <span :if={@message.edited_at} class="text-[11px] font-normal">(edited)</span>
-                </.message_footer>
-              </.message_content>
-            </.message>
-            <.message_actions
-              :if={@message.id != @ctx.editing_id and !Message.streaming?(@message)}
-              id={@id}
-              message={@message}
-              mine?={@mine?}
-              ctx={@ctx}
-            />
+                <span :if={@message.edited_at} class="text-[11px] font-normal">(edited)</span>
+              </.message_footer>
+            </.message_content>
+          </.message>
+          <.message_actions
+            :if={@message.id != @ctx.editing_id and !Message.streaming?(@message)}
+            id={@id}
+            message={@message}
+            mine?={@mine?}
+            ctx={@ctx}
+          />
+        <% end %>
+      </.context_menu_trigger>
+    </.message_scroller_item>
+    """
+  end
+
+  @doc """
+  The shared ⋮ and right-click menus of one message list (the channel's, or
+  a thread's), rendered once per page.
+
+  The items differ by message: only your own messages can be edited or
+  deleted, and a pinned one offers "Unpin". So there is one menu per
+  combination (own or not, pinned or not), and each row's triggers name the
+  one that fits (`menu_id/4`). The items act on the open row through its
+  `context`: `phx-value-id` on their `phx-click`.
+  """
+  attr :thread?, :boolean, default: false
+
+  def message_menus(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :variants,
+        for(own? <- [false, true], pinned? <- [false, true], do: {own?, pinned?})
+      )
+
+    ~H"""
+    <%= for {own?, pinned?} <- @variants do %>
+      <.dropdown_menu
+        id={menu_id(:more, own?, pinned?, @thread?)}
+        use-portal
+        portal-container="#chat-portal"
+      >
+        <.dropdown_menu_content align="end" class="w-56">
+          <.dropdown_menu_sub>
+            <.dropdown_menu_sub_trigger>
+              <.icon name="hero-face-smile" /> React
+            </.dropdown_menu_sub_trigger>
+            <.dropdown_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
+              <.dropdown_menu_item
+                :for={e <- Enum.take(emoji(), 8)}
+                phx-click="react"
+                phx-value-emoji={e}
+                class="justify-center text-lg"
+              >
+                {e}
+              </.dropdown_menu_item>
+            </.dropdown_menu_sub_content>
+          </.dropdown_menu_sub>
+          <%= for action <- message_menu_actions(own?, pinned?, @thread?) do %>
+            <.dropdown_menu_separator :if={action.separator?} />
+            <.dropdown_menu_item variant={action.variant} phx-click={action.click}>
+              <.icon name={action.icon} /> {action.label}
+              <.dropdown_menu_shortcut :if={action.shortcut}>
+                {action.shortcut}
+              </.dropdown_menu_shortcut>
+            </.dropdown_menu_item>
           <% end %>
-        </.context_menu_trigger>
-        <.context_menu_content :if={!@message.deleted?} class="w-56">
+        </.dropdown_menu_content>
+      </.dropdown_menu>
+      <.context_menu
+        id={menu_id(:context, own?, pinned?, @thread?)}
+        use-portal
+        portal-container="#chat-portal"
+      >
+        <.context_menu_content class="w-56">
           <.context_menu_sub>
             <.context_menu_sub_trigger>
               <.icon name="hero-face-smile" /> React
@@ -171,16 +244,17 @@ defmodule SaladChatWeb.MessageComponents do
             <.context_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
               <.context_menu_item
                 :for={e <- Enum.take(emoji(), 8)}
-                on-select={JS.push("react", value: %{id: @message.id, emoji: e})}
+                phx-click="react"
+                phx-value-emoji={e}
                 class="justify-center text-lg"
               >
                 {e}
               </.context_menu_item>
             </.context_menu_sub_content>
           </.context_menu_sub>
-          <%= for action <- message_menu_actions(@message, @mine?, @ctx) do %>
+          <%= for action <- message_menu_actions(own?, pinned?, @thread?) do %>
             <.context_menu_separator :if={action.separator?} />
-            <.context_menu_item variant={action.variant} on-select={action.on_select}>
+            <.context_menu_item variant={action.variant} phx-click={action.click}>
               <.icon name={action.icon} /> {action.label}
               <.context_menu_shortcut :if={action.shortcut}>
                 {action.shortcut}
@@ -189,9 +263,50 @@ defmodule SaladChatWeb.MessageComponents do
           <% end %>
         </.context_menu_content>
       </.context_menu>
-    </.message_scroller_item>
+    <% end %>
     """
   end
+
+  @doc "The id of the shared menu (`:more` or `:context`) that fits a message."
+  def menu_id(kind, %Message{} = message, mine?, ctx) do
+    menu_id(kind, mine? and !message.bot, !!message.pinned_by, ctx.thread?)
+  end
+
+  def menu_id(kind, own?, pinned?, thread?) do
+    Enum.join(
+      [
+        if(thread?, do: "thread-msg", else: "msg"),
+        kind,
+        if(own?, do: "own", else: "other"),
+        if(pinned?, do: "pinned", else: "unpinned")
+      ],
+      "-"
+    )
+  end
+
+  @doc """
+  One hover card per person, shared by every message they wrote (their name
+  in each row is a detached trigger, `for={author_card_id(user)}`).
+  """
+  attr :users, :map, required: true
+  attr :me, :string, required: true
+  attr :online, :any, required: true
+
+  def author_cards(assigns) do
+    ~H"""
+    <.hover_card :for={{_handle, user} <- @users} id={author_card_id(user)} open-delay={400}>
+      <.hover_card_content side="top" align="start" class="w-auto">
+        <.profile_card
+          user={user}
+          me={@me}
+          online={user.bot? or MapSet.member?(@online, user.handle)}
+        />
+      </.hover_card_content>
+    </.hover_card>
+    """
+  end
+
+  def author_card_id(user), do: "author-card-#{user.handle}"
 
   defp deleted_message(assigns) do
     ~H"""
@@ -202,26 +317,19 @@ defmodule SaladChatWeb.MessageComponents do
     """
   end
 
-  attr :id, :string, required: true
   attr :user, :any, required: true
-  attr :ctx, :map, required: true
 
+  # The author's name opens their hover card (author_cards/1).
   defp author_name(assigns) do
     ~H"""
-    <.hover_card id={@id} open-delay={400}>
-      <.hover_card_trigger>
-        <button type="button" class="font-semibold text-foreground hover:underline">
-          {@user.name}
-        </button>
-      </.hover_card_trigger>
-      <.hover_card_content side="top" align="start" class="w-auto">
-        <.profile_card
-          user={@user}
-          me={@ctx.me}
-          online={@user.bot? or MapSet.member?(@ctx.online, @user.handle)}
-        />
-      </.hover_card_content>
-    </.hover_card>
+    <.hover_card_trigger
+      as="button"
+      type="button"
+      for={author_card_id(@user)}
+      class="font-semibold text-foreground hover:underline"
+    >
+      {@user.name}
+    </.hover_card_trigger>
     """
   end
 
@@ -235,7 +343,7 @@ defmodule SaladChatWeb.MessageComponents do
     assigns = assign(assigns, :segments, MessageFormat.segments(assigns.message.body))
 
     ~H"""
-    <div class="flex min-w-0 flex-col gap-2">
+    <div class="flex min-w-0 flex-col gap-2" data-message-text>
       <%= for {segment, i} <- Enum.with_index(@segments) do %>
         <%= case segment do %>
           <% {:text, text} -> %>
@@ -386,24 +494,21 @@ defmodule SaladChatWeb.MessageComponents do
   defp reactions(assigns) do
     ~H"""
     <div class="flex flex-wrap items-center gap-1" role="group" aria-label="Reactions">
-      <.tooltip :for={r <- @message.reactions} id={"#{@id}-r-#{emoji_key(r.emoji)}"}>
-        <.tooltip_trigger>
-          <.toggle
-            id={"#{@id}-react-#{emoji_key(r.emoji)}"}
-            size="sm"
-            variant="outline"
-            value={@ctx.me in r.users}
-            phx-click="react"
-            phx-value-id={@message.id}
-            phx-value-emoji={r.emoji}
-            class="h-7 gap-1 rounded-full px-2 text-xs data-[state=on]:border-primary/50 data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
-          >
-            <span class="text-sm leading-none">{r.emoji}</span>
-            <span class="tabular-nums">{length(r.users)}</span>
-          </.toggle>
-        </.tooltip_trigger>
-        <.tooltip_content side="top">{reacted_by(r.users, @ctx)}</.tooltip_content>
-      </.tooltip>
+      <.toggle
+        :for={r <- @message.reactions}
+        id={"#{@id}-react-#{emoji_key(r.emoji)}"}
+        size="sm"
+        variant="outline"
+        value={@ctx.me in r.users}
+        phx-click="react"
+        phx-value-id={@message.id}
+        phx-value-emoji={r.emoji}
+        data-salad-tooltip={reacted_by(r.users, @ctx)}
+        class="h-7 gap-1 rounded-full px-2 text-xs data-[state=on]:border-primary/50 data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+      >
+        <span class="text-sm leading-none">{r.emoji}</span>
+        <span class="tabular-nums">{length(r.users)}</span>
+      </.toggle>
       <.reaction_picker id={"#{@id}-add-reaction"} message_id={@message.id} compact />
     </div>
     """
@@ -443,6 +548,7 @@ defmodule SaladChatWeb.MessageComponents do
       size="icon-sm"
       class={if @compact, do: "size-7 rounded-full text-muted-foreground"}
       aria-label="Add reaction"
+      data-salad-tooltip="Add reaction"
       data-emoji-picker="emoji-picker"
       data-emoji-event="react"
       data-emoji-value-id={@message_id}
@@ -504,6 +610,7 @@ defmodule SaladChatWeb.MessageComponents do
           size="icon-sm"
           class="text-base [@media(hover:none)]:hidden"
           aria-label={"React with #{e}"}
+          data-salad-tooltip={"React with #{e}"}
           phx-click={JS.push("react", value: %{id: @message.id, emoji: e})}
         >
           {e}
@@ -511,105 +618,60 @@ defmodule SaladChatWeb.MessageComponents do
         <span class="contents [@media(hover:none)]:hidden">
           <.reaction_picker id={"#{@id}-react-more"} message_id={@message.id} />
         </span>
-        <.tooltip :if={!@ctx.thread?} id={"#{@id}-reply-tooltip"} class="[@media(hover:none)]:hidden">
-          <.tooltip_trigger>
-            <.button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Reply in thread"
-              phx-click={JS.patch(Paths.thread_path(@ctx.me, @message.channel_id, @message.id))}
-            >
-              <.icon name="hero-chat-bubble-left-ellipsis" />
-            </.button>
-          </.tooltip_trigger>
-          <.tooltip_content>Reply in thread</.tooltip_content>
-        </.tooltip>
-        <.dropdown_menu id={"#{@id}-more"} use-portal portal-container="#chat-portal">
-          <.dropdown_menu_trigger
-            as={&button/1}
-            variant="ghost"
-            size="icon-sm"
-            aria-label="More actions"
-          >
-            <.icon name="hero-ellipsis-vertical" />
-          </.dropdown_menu_trigger>
-          <.dropdown_menu_content align="end" class="w-56">
-            <.dropdown_menu_sub>
-              <.dropdown_menu_sub_trigger>
-                <.icon name="hero-face-smile" /> React
-              </.dropdown_menu_sub_trigger>
-              <.dropdown_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
-                <.dropdown_menu_item
-                  :for={e <- Enum.take(emoji(), 8)}
-                  on-select={JS.push("react", value: %{id: @message.id, emoji: e})}
-                  class="justify-center text-lg"
-                >
-                  {e}
-                </.dropdown_menu_item>
-              </.dropdown_menu_sub_content>
-            </.dropdown_menu_sub>
-            <%= for action <- message_menu_actions(@message, @mine?, @ctx) do %>
-              <.dropdown_menu_separator :if={action.separator?} />
-              <.dropdown_menu_item variant={action.variant} on-select={action.on_select}>
-                <.icon name={action.icon} /> {action.label}
-                <.dropdown_menu_shortcut :if={action.shortcut}>
-                  {action.shortcut}
-                </.dropdown_menu_shortcut>
-              </.dropdown_menu_item>
-            <% end %>
-          </.dropdown_menu_content>
-        </.dropdown_menu>
+        <.button
+          :if={!@ctx.thread?}
+          variant="ghost"
+          size="icon-sm"
+          class="[@media(hover:none)]:hidden"
+          aria-label="Reply in thread"
+          data-salad-tooltip="Reply in thread"
+          phx-click={JS.patch(Paths.thread_path(@ctx.me, @message.channel_id, @message.id))}
+        >
+          <.icon name="hero-chat-bubble-left-ellipsis" />
+        </.button>
+        <.dropdown_menu_trigger
+          for={menu_id(:more, @message, @mine?, @ctx)}
+          context={%{id: @message.id}}
+          as={&button/1}
+          variant="ghost"
+          size="icon-sm"
+          aria-label="More actions"
+          data-salad-tooltip="More actions"
+        >
+          <.icon name="hero-ellipsis-vertical" />
+        </.dropdown_menu_trigger>
       </.button_group>
     </div>
     """
   end
 
-  # The actions shared by the ⋮ menu and the right-click context menu (after
-  # their "React" sub-menu). Each one pushes an existing ChatLive event, except
-  # "Copy text", which is handled in the browser (assets/js/chat.js).
-  defp message_menu_actions(message, mine?, ctx) do
-    thread = Paths.thread_path(ctx.me, message.channel_id, message.id)
-
+  # The actions of the ⋮ menu and the right-click context menu (after their
+  # "React" sub-menu), for one menu variant. Each one is a plain `phx-click`
+  # on an existing ChatLive event that receives the open message's
+  # `%{"id" => id}`, except "Copy text", which is handled in the browser
+  # (assets/js/chat.js reads the message's text by that id).
+  defp message_menu_actions(own?, pinned?, thread?) do
     [
-      !ctx.thread? &&
-        action("hero-chat-bubble-left-ellipsis", "Reply in thread", JS.patch(thread)),
+      !thread? && action("hero-chat-bubble-left-ellipsis", "Reply in thread", "open_thread"),
+      action("hero-clipboard-document", "Copy text", JS.dispatch("salad-chat:copy")),
       action(
-        "hero-clipboard-document",
-        "Copy text",
-        JS.dispatch("salad-chat:copy", detail: %{text: message.body})
+        if(pinned?, do: "hero-bookmark-slash", else: "hero-bookmark"),
+        if(pinned?, do: "Unpin from channel", else: "Pin to channel"),
+        "toggle_pin"
       ),
-      action(
-        if(message.pinned_by, do: "hero-bookmark-slash", else: "hero-bookmark"),
-        if(message.pinned_by, do: "Unpin from channel", else: "Pin to channel"),
-        JS.push("toggle_pin", value: %{id: message.id})
-      ),
-      action(
-        "hero-bell-alert",
-        "Remind me about this",
-        JS.push("remind", value: %{id: message.id})
-      ),
-      action("hero-eye-slash", "Mark unread", JS.push("mark_unread", value: %{id: message.id})),
-      (mine? and !message.bot) &&
-        action("hero-pencil", "Edit message", JS.push("edit", value: %{id: message.id}),
-          separator?: true,
-          shortcut: "E"
-        ),
-      (mine? and !message.bot) &&
-        action(
-          "hero-trash",
-          "Delete message",
-          JS.push("confirm_delete", value: %{id: message.id}),
-          variant: "destructive"
-        )
+      action("hero-bell-alert", "Remind me about this", "remind"),
+      action("hero-eye-slash", "Mark unread", "mark_unread"),
+      own? && action("hero-pencil", "Edit message", "edit", separator?: true, shortcut: "E"),
+      own? && action("hero-trash", "Delete message", "confirm_delete", variant: "destructive")
     ]
     |> Enum.filter(& &1)
   end
 
-  defp action(icon, label, on_select, opts \\ []) do
+  defp action(icon, label, click, opts \\ []) do
     %{
       icon: icon,
       label: label,
-      on_select: on_select,
+      click: click,
       separator?: Keyword.get(opts, :separator?, false),
       shortcut: Keyword.get(opts, :shortcut),
       variant: Keyword.get(opts, :variant, "default")
@@ -714,7 +776,7 @@ defmodule SaladChatWeb.MessageComponents do
         </.marker_content>
       </.marker>
 
-      <.bubble :if={@bot.status in [:answering, :done]} variant="ghost">
+      <.bubble :if={@bot.status in [:answering, :done]} variant="ghost" data-message-text>
         <.bubble_content class={
           if @bot.status == :answering, do: "chat-text stream-caret", else: "chat-text"
         }>

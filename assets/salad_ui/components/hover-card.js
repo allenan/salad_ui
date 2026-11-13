@@ -233,7 +233,9 @@ class HoverCardComponent extends Component {
   openFor(trigger, context = null, pushed = false) {
     if (this.state === "open") {
       if (trigger === this.trigger) return;
-      this.transition("close");
+      // `on-close` for the previous trigger fires now, before `on-open`: the
+      // exit animation this switch cuts short would never fire it.
+      this.transition("close", { switching: true });
     }
 
     const detached = trigger === this.nestedTrigger ? null : trigger;
@@ -349,8 +351,11 @@ class HoverCardComponent extends Component {
     if (!pushed) this.pushEvent("open", { ...this.detached.context });
   }
 
-  onOpenExit() {
+  onOpenExit({ switching = false } = {}) {
     this.hoverPopup.closed();
+    // `on-close` carries the context of the trigger it was open for.
+    this.closingContext = { ...this.detached.context };
+    if (switching) this.pushEvent("close", this.closingContext);
     this.detached.release();
     this.trigger = this.nestedTrigger;
 
@@ -360,9 +365,12 @@ class HoverCardComponent extends Component {
     }
   }
 
-  onClosedEnter() {
-    // Notify the server of the state change
-    this.pushEvent("close");
+  onClosedEnter({ switching = false } = {}) {
+    // Notify the server of the state change (a switch already did, in
+    // onOpenExit()). Runs from the base constructor too.
+    if (switching || !this.detached) return;
+    this.pushEvent("close", this.closingContext || {});
+    this.closingContext = null;
   }
 
   beforeDestroy() {

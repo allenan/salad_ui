@@ -545,3 +545,61 @@ test("a shared card opened from inside a modal dialog stays usable above it", as
   assert.equal(modalLayerCount(), 1);
   dialogLayer.deactivate();
 });
+
+// --- on-close on a switch -----------------------------------------------------
+
+test("switching a shared tooltip fires on-close for the previous trigger first", async () => {
+  // The exit animation (as tooltip/1 configures) is cut short by the switch.
+  const options = JSON.stringify({
+    openDelay: OPEN,
+    closeDelay: CLOSE,
+    animations: { open_to_closed: { duration: 130, target_part: "content" } },
+  });
+  document.body.innerHTML = `
+    <span id="a1" data-salad-for="tip" data-salad-context='{"id":1}'>Ada</span>
+    <span id="a2" data-salad-for="tip" data-salad-context='{"id":2}'>Grace</span>
+    <div id="tip" data-component="tooltip" data-state="closed" data-part="root"
+         data-options='${options}'
+         data-event-mappings='{"open":"tip_open","close":"tip_close"}'>
+      <div data-part="content" hidden>Online</div>
+    </div>`;
+  rect(document.getElementById("a1"), 0);
+  rect(document.getElementById("a2"), 30);
+  const pushed = [];
+  const tip = mount("tooltip", "tip", hookContext(pushed));
+  const events = () => pushed.map(({ event, payload }) => [event, payload.id]);
+
+  hover(document.getElementById("a1"));
+  await waitFor(() => tip.state === "open");
+  hover(document.getElementById("a2"), document.getElementById("a1"));
+  assert.deepEqual(events(), [
+    ["tip_open", 1],
+    ["tip_close", 1],
+    ["tip_open", 2],
+  ]);
+
+  // A normal close afterwards fires once, after the exit animation, with the
+  // trigger's context; the cut-short animation adds nothing.
+  hover(document.body, document.getElementById("a2"));
+  await wait(CLOSE + 250);
+  assert.deepEqual(events(), [
+    ["tip_open", 1],
+    ["tip_close", 1],
+    ["tip_open", 2],
+    ["tip_close", 2],
+  ]);
+});
+
+test("moving a shared hover card fires on-close for the previous trigger first", async () => {
+  const { $, card, pushed } = buildCards();
+  card.eventMappings = { open: { js: true }, close: "card_close" };
+  hover($("#t1"));
+  await waitFor(() => card.state === "open");
+
+  hover($("#t2"), $("#t1"));
+  await waitFor(() => card.positionedElement.reference === $("#t2"));
+
+  const closes = pushed.filter(({ event }) => event === "card_close");
+  assert.equal(closes.length, 1);
+  assert.equal(closes[0].payload.id, 1);
+});
