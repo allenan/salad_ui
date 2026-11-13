@@ -366,6 +366,29 @@ defmodule SaladUI.Helpers do
   def drop_button_props(assigns), do: assigns
 
   @doc """
+  The attributes that bind a trigger to its component.
+
+  With `for: nil` the trigger is nested in its component's root and is the
+  `data-part="trigger"`. With `for: id` it is a *detached* trigger of the
+  shared instance whose root has that id: it renders `data-salad-for`, the
+  `context` map as JSON in `data-salad-context`, and `data-state="closed"`
+  (the instance sets it to `"open"` while it is open from this trigger).
+  Detached triggers carry no hook; the instance listens on the document
+  (`assets/salad_ui/core/detached-triggers.js`).
+  """
+  # Atom keys, like literal attributes: a trigger rendered through another
+  # component (`as={&button/1}`) hands them on as that component's assigns.
+  def trigger_attrs(nil, _context), do: %{"data-part": "trigger"}
+
+  def trigger_attrs(for_id, context) when is_binary(for_id) do
+    %{
+      "data-salad-for": for_id,
+      "data-salad-context": if(context in [nil, %{}], do: nil, else: json(context)),
+      "data-state": "closed"
+    }
+  end
+
+  @doc """
   Returns the assigns when they carry an `:id`, and raises otherwise.
 
   For hooked components that also take a form `field` (which supplies the

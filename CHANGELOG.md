@@ -459,6 +459,26 @@ for status and known gaps. Every new JS-backed component is registered in
   now documented.
 - `sidebar_trigger` takes an `:icon` slot that replaces shadcn's panel icon
   (e.g. an app logo), keeping the trigger's toggle wiring and label.
+- Shared menus for long lists: one `dropdown_menu` / `context_menu` can serve
+  every row. `dropdown_menu_trigger` and `context_menu_trigger` take `for`
+  (the shared menu's id) and `context` (a map, e.g. `%{id: msg.id}`) and then
+  render a detached trigger anywhere outside the menu, with no hook and no
+  menu markup per row. In a 2000-row message list, per-row menus, hover
+  cards and tooltips took 7.2 s to mount against 0.78 s for plain rows; almost
+  all of the difference was the per-row hidden menu markup. The menu listens
+  on the document (one listener per event type for all shared menus), opens at
+  the clicked trigger (the context menu at the pointer), gives that trigger
+  `aria-expanded`, `aria-controls` and `data-state="open"` while open, and
+  returns focus to it on close. While open, the context reaches the items as
+  `phx-value-*` (so plain `phx-click` items get `%{"id" => "42"}`) and is
+  merged into `on-select`, `on-checked-change`, `on-value-changed`, `on-open`
+  and `on-close` payloads. If the trigger leaves the page while open (stream
+  delete or reset, navigation), the menu closes and focus moves to the
+  nearest focusable ancestor. The `open` command takes `anchor` (element or
+  selector) and `context` params, from `SaladUI.LiveView.send_command/4` and
+  `SaladUI.command/3`; the context menu's also takes `x`/`y`. Nested triggers
+  are unchanged. The delegation lives in `core/detached-triggers.js`.
+  Storybook: "Shared menus" example.
 
 # 0.14.0
 

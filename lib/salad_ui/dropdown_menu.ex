@@ -172,9 +172,11 @@ defmodule SaladUI.DropdownMenu do
 
   ## Server commands
 
-  * `"open"` - Opens the dropdown menu.
+  * `"open"` - Opens the dropdown menu. Optional params: `anchor` (an element
+    or CSS selector to open at instead of the trigger) and `context` (see
+    "Shared menus").
   * `"close"` - Closes the dropdown menu.
-  * `"toggle"` - Toggles the dropdown menu.
+  * `"toggle"` - Toggles the dropdown menu (same params as `"open"`).
 
   ## Re-renders
 
@@ -184,6 +186,84 @@ defmodule SaladUI.DropdownMenu do
   and returns focus as soon as the menu starts closing, so a re-render during
   the exit animation (such as the reply to an item's `on-select`) cannot drop
   them.
+
+  ## Shared menus
+
+  In a long list (a chat's messages, a table's rows) a menu per row costs a
+  hook per row and the whole menu's markup per row, rendered and sent even
+  though it is hidden. At a few thousand rows that makes mounting the list
+  several times slower. Render the menu once instead, and give each row only
+  a *detached trigger*: a `dropdown_menu_trigger/1` with `for` (the menu's
+  id) and `context` (what the row stands for), placed anywhere outside the
+  menu:
+
+      <%!-- once per page --%>
+      <.dropdown_menu id="msg-more">
+        <.dropdown_menu_content align="end">
+          <.dropdown_menu_item phx-click="reply">Reply</.dropdown_menu_item>
+          <.dropdown_menu_item on-select="pin">Pin</.dropdown_menu_item>
+        </.dropdown_menu_content>
+      </.dropdown_menu>
+
+      <%!-- per row --%>
+      <div :for={{dom_id, msg} <- @streams.messages} id={dom_id} class="group">
+        {msg.body}
+        <.dropdown_menu_trigger
+          for="msg-more"
+          context={%{id: msg.id}}
+          aria-label="More actions"
+          class="opacity-0 group-hover:opacity-100 group-has-[[data-state=open]]:opacity-100"
+        >
+          ⋮
+        </.dropdown_menu_trigger>
+      </div>
+
+  Detached triggers have no hook: the menu listens on the document (one
+  listener per event type, whatever the number of rows or shared menus).
+  Clicking one, or pressing `Enter`, `Space` or `ArrowDown` on it, opens the
+  menu at that trigger, which then behaves like a nested trigger: it gets
+  `aria-expanded="true"`, `aria-controls` and `data-state="open"` while the
+  menu is open (so the row can keep its hover toolbar visible with
+  `group-has-[[data-state=open]]`), and focus returns to it on close. Opening
+  from another trigger moves the menu there.
+
+  While open, the menu hands the trigger's `context` to its items:
+
+    * each item (and any element with a `phx-click`) gets one `phx-value-*`
+      attribute per key, so `phx-click="reply"` receives
+      `%{"id" => "42"}`, and a `JS.push/2` in `on-select` gets it too. As with
+      every `phx-value-*`, the values arrive as strings (a value that is not a
+      string is JSON-encoded) and the keys lowercased: use lowercase
+      snake_case keys;
+    * a string `on-select` / `on-checked-change` / `on-value-changed`
+      handler, and the menu's own `on-open` / `on-close`, receive the context
+      merged into their payload, with its JSON types (`%{"id" => 42,
+      "value" => ...}`). The event's own keys (`value`, `checked`) win over
+      context keys with the same name.
+
+  The attributes are removed again once the menu has closed.
+
+  If the trigger leaves the page while the menu is open (its row was
+  deleted, the stream reset, a navigation), the menu closes and focus moves
+  to the nearest focusable element that held the trigger (else to the page).
+
+  Open a shared menu from the server or from JS with an `anchor` (an element
+  or a CSS selector) and, optionally, a `context` (otherwise read from the
+  anchor's `context`):
+
+      SaladUI.LiveView.send_command(socket, "msg-more", "open", %{
+        anchor: "#messages-42 [data-salad-for]",
+        context: %{id: 42}
+      })
+
+  ```javascript
+  SaladUI.command("#msg-more", "open", { anchor: button, context: { id: 42 } });
+  ```
+
+  The menu keeps its nested-trigger behaviour: a `dropdown_menu/1` may hold a
+  nested trigger and have detached triggers too. Detached triggers are a
+  SaladUI extension with no Radix equivalent; use them for lists, and the
+  nested trigger everywhere else.
   """
   use SaladUI, :component
 
@@ -284,19 +364,32 @@ defmodule SaladUI.DropdownMenu do
   Renders a native `<button type="button">` by default. Set `:as` to an
   HTML tag or function component to render another trigger root.
 
+  With `for`, it is a detached trigger of the shared `dropdown_menu/1` with
+  that id, rendered anywhere outside it (see "Shared menus" in the module
+  docs).
+
   ## Options
 
   * `:class` - Additional CSS classes.
   * `:as` - The HTML tag or function component to use for the trigger. Defaults to `"button"`.
+  * `:for` - The id of a shared `dropdown_menu/1` this trigger opens. Defaults to `nil` (the trigger
+    is nested in its `dropdown_menu/1`).
+  * `:context` - With `for`: a map handed to the menu's items while the menu is open from this
+    trigger, e.g. `%{id: @message.id}`.
   """
   attr :as, :any, default: "button"
   attr :type, :string, default: nil
+  attr :for, :string, default: nil, doc: "id of the shared dropdown menu this detached trigger opens"
+  attr :context, :map, default: nil, doc: "with `for`: the map the menu's items receive while open from this trigger"
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def dropdown_menu_trigger(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns =
+      assigns
+      |> drop_button_props()
+      |> assign(:trigger_attrs, trigger_attrs(assigns.for, assigns.context))
 
     assigns =
       if is_function(assigns.as, 1) && is_nil(assigns.type) do
@@ -310,10 +403,10 @@ defmodule SaladUI.DropdownMenu do
       :if={@as == "button"}
       data-slot="dropdown-menu-trigger"
       type={@type || "button"}
-      data-part="trigger"
       aria-haspopup="menu"
       aria-expanded="false"
       class={classes(["", @class])}
+      {@trigger_attrs}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -323,11 +416,11 @@ defmodule SaladUI.DropdownMenu do
       data-slot={@rest[:"data-slot"] || "dropdown-menu-trigger"}
       tag={@as}
       type={@type}
-      data-part="trigger"
       aria-haspopup="menu"
       aria-expanded="false"
       tabindex="0"
       class={classes(["", @class])}
+      {@trigger_attrs}
       {@rest}
     >
       {render_slot(@inner_block)}
