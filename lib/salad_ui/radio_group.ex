@@ -60,7 +60,7 @@ defmodule SaladUI.RadioGroup do
   attr :"default-value", :any, default: nil, doc: "The default value of the radio group"
   attr :"on-value-changed", :any, default: nil, doc: "Handler for value changed event"
   attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -110,7 +110,7 @@ defmodule SaladUI.RadioGroup do
   attr :id, :string, required: true
   attr :value, :string, required: true
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def radio_group_item(assigns) do

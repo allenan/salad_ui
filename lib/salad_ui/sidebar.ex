@@ -193,7 +193,7 @@ defmodule SaladUI.Sidebar do
 
   attr :"on-open-change", :any, default: nil, doc: "Handler for the `open-change` event"
   attr :"on-open-mobile-change", :any, default: nil, doc: "Handler for the `open-mobile-change` event"
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :style, :map, default: %{}
   attr(:rest, :global)
   slot(:inner_block, required: true)
@@ -287,7 +287,7 @@ defmodule SaladUI.Sidebar do
     default: "expanded",
     doc: "Server-rendered state before the hook mounts. Pass the provider's `default_open` state to avoid a flash."
 
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :style, :map, default: %{}
   attr(:rest, :global)
   slot(:inner_block, required: true)
@@ -405,7 +405,7 @@ defmodule SaladUI.Sidebar do
   passed through `rest` (`type`, `data-slot`, `data-sidebar`, ...) replace the
   trigger's own instead of rendering twice.
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
 
   attr :target, :string,
     default: nil,
@@ -495,7 +495,7 @@ defmodule SaladUI.Sidebar do
   Attributes passed through `rest` (`aria-label`, `title`, `tabindex`, ...)
   replace the rail's own instead of rendering twice.
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :label, :string, default: "Toggle Sidebar", doc: "the rail's `aria-label` and `title`"
   attr(:rest, :global)
 
@@ -539,7 +539,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot :inner_block, required: true
 
@@ -564,7 +564,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global, include: ~w(placeholder))
 
   def sidebar_input(assigns) do
@@ -586,7 +586,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -611,7 +611,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot :inner_block, required: true
 
@@ -636,7 +636,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
 
   def sidebar_separator(assigns) do
@@ -653,7 +653,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -679,7 +679,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -705,7 +705,7 @@ defmodule SaladUI.Sidebar do
   Render
   TODO: class merge not work well here
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :as, :any, default: "div"
   attr(:rest, :global)
   slot(:inner_block, required: true)
@@ -717,14 +717,11 @@ defmodule SaladUI.Sidebar do
       data-sidebar="group-label"
       tag={@as}
       class={
-        Enum.join(
-          [
-            "duration-200 flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-sidebar-foreground/70 outline-hidden ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 text-xs",
-            "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
-            @class
-          ],
-          " "
-        )
+        classes([
+          "duration-200 flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-sidebar-foreground/70 outline-hidden ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 text-xs",
+          "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+          @class
+        ])
       }
       {@rest}
     >
@@ -740,7 +737,7 @@ defmodule SaladUI.Sidebar do
   render a link instead, or `as` for another tag or function component
   (shadcn's `asChild`).
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :as, :any, default: "button", doc: "the tag or function component to render"
 
   attr(:rest, :global, include: ~w(href navigate patch replace method download target rel type disabled form name value))
@@ -773,7 +770,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -798,7 +795,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -823,7 +820,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -865,7 +862,7 @@ defmodule SaladUI.Sidebar do
   attr :variant, :string, values: ~w(default outline), default: "default"
   attr :size, :string, values: ~w(default sm lg), default: "default"
   attr :is_active, :boolean, default: false
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
 
   attr :is_mobile, :boolean,
     default: false,
@@ -936,7 +933,7 @@ defmodule SaladUI.Sidebar do
   (shadcn's `asChild`). `show_on_hover` hides it until the item is hovered or
   focused.
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :show_on_hover, :boolean, default: false
   attr :as, :any, default: "button", doc: "the tag or function component to render"
 
@@ -978,7 +975,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -1008,7 +1005,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :show_icon, :boolean, default: false
   attr(:rest, :global)
 
@@ -1041,7 +1038,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -1067,7 +1064,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -1092,7 +1089,7 @@ defmodule SaladUI.Sidebar do
   """
   attr :size, :string, values: ~w(sm md), default: "md"
   attr :is_active, :boolean, default: false
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :as, :any, default: "a"
   attr(:rest, :global, include: ~w(href navigate patch target rel method download replace))
   slot(:inner_block, required: true)

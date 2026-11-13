@@ -68,7 +68,7 @@ defmodule SaladUI.Bubble do
   @doc """
   Stacks consecutive bubbles from one sender with a tighter gap.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -116,7 +116,7 @@ defmodule SaladUI.Bubble do
     doc: "the bubble color variant"
 
   attr :align, :string, values: ~w(start end), default: "start", doc: "which side the bubble sits on"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -153,7 +153,7 @@ defmodule SaladUI.Bubble do
   * `:class` - Additional CSS classes.
   """
   attr :as, :string, values: ~w(div button a), default: "div", doc: "the element to render"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href target rel type disabled name value download)
   slot :inner_block, required: true
 
@@ -194,7 +194,7 @@ defmodule SaladUI.Bubble do
   """
   attr :side, :string, values: ~w(top bottom), default: "bottom", doc: "which edge the reactions sit on"
   attr :align, :string, values: ~w(start end), default: "end", doc: "which corner the reactions sit in"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

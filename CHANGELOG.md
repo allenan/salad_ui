@@ -336,7 +336,9 @@ for status and known gaps. Every new JS-backed component is registered in
   `"Toggle Sidebar"`), and attributes passed to them replace their own instead
   of rendering twice.
 - `attachment` renders as a link with `href`/`navigate`/`patch` (or `as`).
-- `icon` takes global attributes and a class list.
+- `icon` takes global attributes.
+- Every component's `class` takes a list as well as a string (`:any`), merged
+  by `classes/1`.
 - **Breaking:** `tooltip` requires `id`, and `toggle`, `toggle_group` and
   `radio_group` raise without an `id` or `field`: they no longer generate a new
   id on every render, which remounted their hooks.

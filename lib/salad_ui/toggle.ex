@@ -69,7 +69,7 @@ defmodule SaladUI.Toggle do
   attr :variant, :string, values: ~w(default outline), default: "default"
   attr :size, :string, values: ~w(default sm lg), default: "default"
   attr :"on-pressed-changed", :any, default: nil, doc: "handler for the pressed-changed event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

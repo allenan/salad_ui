@@ -199,7 +199,7 @@ defmodule SaladUI.Toast do
         "— replaces the card's default border/background/text (icon + title inherit the text color; " <>
         "description keeps its own muted color) for that variant. No variant ships with a predefined color."
 
-  attr :class, :string,
+  attr :class, :any,
     default: nil,
     doc:
       "extra classes merged onto every card — use `!`-prefixed utilities, e.g. " <>

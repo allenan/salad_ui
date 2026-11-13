@@ -110,7 +110,7 @@ defmodule SaladUI.ToggleGroup do
   attr :orientation, :string, values: ~w(horizontal vertical), default: "horizontal"
   attr :loop, :boolean, default: true, doc: "whether arrow-key focus wraps around"
   attr :"on-value-changed", :any, default: nil, doc: "handler for the value-changed event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -236,7 +236,7 @@ defmodule SaladUI.ToggleGroup do
 
   Every other global attribute (e.g. `aria-label`, `aria-invalid`) is rendered on the `<button>`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :disabled, :boolean, default: false
   attr :value, :string, default: nil
   attr :variant, :string, values: [nil, "default", "outline"], default: nil

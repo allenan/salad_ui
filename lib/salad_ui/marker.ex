@@ -62,7 +62,7 @@ defmodule SaladUI.Marker do
   """
   attr :variant, :string, values: ~w(default separator border), default: "default", doc: "the marker style"
   attr :as, :string, values: ~w(div a button), default: "div", doc: "the element to render"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href target rel type disabled download)
   slot :inner_block, required: true
 
@@ -98,7 +98,7 @@ defmodule SaladUI.Marker do
   @doc """
   A decorative icon slot (hidden from assistive tech).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -118,7 +118,7 @@ defmodule SaladUI.Marker do
   @doc """
   The marker text. In the `separator` variant it is centered between the rules.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

@@ -316,6 +316,34 @@ defmodule SaladUI.DownstreamApiTest do
     end
   end
 
+  describe "class takes a list" do
+    test "every component declares `class` as :any" do
+      {:ok, modules} = :application.get_key(:salad_ui, :modules)
+
+      strings =
+        for module <- modules,
+            Code.ensure_loaded?(module),
+            function_exported?(module, :__components__, 0),
+            {name, %{attrs: attrs}} <- module.__components__(),
+            %{name: :class, type: type} <- attrs,
+            type != :any,
+            do: {module, name, type}
+
+      assert strings == []
+    end
+
+    test "a list is merged like a string" do
+      assigns = %{}
+
+      html = rendered_to_string(~H|<.dialog_title class={["text-sm", nil, ["font-normal"]]}>T</.dialog_title>|)
+      assert tag(html, "dialog-title") =~ ~s(class="text-sm font-normal")
+
+      html = rendered_to_string(~H|<.sidebar_group_label class={["text-sm"]}>G</.sidebar_group_label>|)
+      assert tag(html, "sidebar-group-label") =~ "text-sm"
+      refute tag(html, "sidebar-group-label") =~ "text-xs"
+    end
+  end
+
   describe "class merge with the app's theme scales" do
     # config/config.exs (test) adds text: panel, color: star, radius: control
     test "a custom text size no longer removes a text colour" do

@@ -215,7 +215,7 @@ defmodule SaladUI.Select do
 
   attr :placeholder, :string, default: nil, doc: "The placeholder text when no value is selected."
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   slot :inner_block,
     required: true,
@@ -314,7 +314,7 @@ defmodule SaladUI.Select do
     server too.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :size, :string, values: ~w(default sm), default: "default", doc: "the trigger height"
   slot :inner_block, required: true
   attr :rest, :global, include: ~w(disabled form name value)
@@ -365,7 +365,7 @@ defmodule SaladUI.Select do
   end
 
   attr :placeholder, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def select_value(assigns) do
@@ -404,7 +404,7 @@ defmodule SaladUI.Select do
     Radix (the item-aligned panel keeps its own margin).
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :position, :string, values: ~w(popper item-aligned), default: "item-aligned"
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
@@ -470,7 +470,7 @@ defmodule SaladUI.Select do
   Scrolls the list up while hovered. `select_content/1` renders one for you;
   the hook hides it until the viewport is scrolled down.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def select_scroll_up_button(assigns) do
@@ -505,7 +505,7 @@ defmodule SaladUI.Select do
   Scrolls the list down while hovered. `select_content/1` renders one for
   you; the hook shows it while there are items below the visible area.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def select_scroll_down_button(assigns) do
@@ -536,7 +536,7 @@ defmodule SaladUI.Select do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -548,7 +548,7 @@ defmodule SaladUI.Select do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -584,7 +584,7 @@ defmodule SaladUI.Select do
   """
   attr :value, :string, required: true
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -633,7 +633,7 @@ defmodule SaladUI.Select do
   @doc """
   A horizontal rule between items or groups.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def select_separator(assigns) do

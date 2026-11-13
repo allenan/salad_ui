@@ -61,7 +61,7 @@ defmodule SaladUI.Avatar do
       <.avatar size="sm">...</.avatar>
       <.avatar class="size-16">...</.avatar>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :size, :string, values: ~w(default sm lg), default: "default", doc: "the avatar size"
   attr :rest, :global
   slot :inner_block, required: false
@@ -104,7 +104,7 @@ defmodule SaladUI.Avatar do
       <.avatar_image src="/images/profile.jpg" alt="User profile" />
       <.avatar_image src={@user.avatar_url} alt={@user.name} class="border-2" />
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(alt src)
 
   # The image is absolutely positioned over `avatar_fallback/1`: while loading it
@@ -140,7 +140,7 @@ defmodule SaladUI.Avatar do
         <svg><!-- User icon SVG --></svg>
       </.avatar_fallback>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: false
 
@@ -178,7 +178,7 @@ defmodule SaladUI.Avatar do
         <svg>...</svg>
       </.avatar_badge>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: false
 
@@ -213,7 +213,7 @@ defmodule SaladUI.Avatar do
         <.avatar_group_count>+3</.avatar_group_count>
       </.avatar_group>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -242,7 +242,7 @@ defmodule SaladUI.Avatar do
 
       <.avatar_group_count>+3</.avatar_group_count>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

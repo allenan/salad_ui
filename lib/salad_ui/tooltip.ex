@@ -60,7 +60,7 @@ defmodule SaladUI.Tooltip do
   attr :"close-delay", :integer, default: 100, doc: "Delay in milliseconds before closing the tooltip"
   attr :"on-open", :any, default: nil, doc: "Handler for tooltip open event"
   attr :"on-close", :any, default: nil, doc: "Handler for tooltip close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -116,7 +116,7 @@ defmodule SaladUI.Tooltip do
       </.tooltip>
   """
   attr :as, :any, default: "div"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size type)
   slot :inner_block, required: true
 
@@ -166,7 +166,7 @@ defmodule SaladUI.Tooltip do
   If you change the content's background, recolor the arrow to match, e.g.
   `class="bg-primary [&_[data-slot=tooltip-arrow]>span]:bg-primary"`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "top"
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 8, doc: "Distance from the trigger in pixels"

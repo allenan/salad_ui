@@ -93,7 +93,7 @@ defmodule SaladUI.Attachment do
   @doc """
   A horizontally scrolling, snapping row of attachments.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -157,7 +157,7 @@ defmodule SaladUI.Attachment do
     doc: "the layout direction"
 
   attr :as, :any, default: "div", doc: "the tag or function component to render"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch replace method download target rel)
   slot :inner_block, required: true
 
@@ -215,7 +215,7 @@ defmodule SaladUI.Attachment do
   * `:class` - Additional CSS classes.
   """
   attr :variant, :string, values: ~w(icon image), default: "icon", doc: "what the media holds"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -252,7 +252,7 @@ defmodule SaladUI.Attachment do
   @doc """
   Holds the title and description.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -276,7 +276,7 @@ defmodule SaladUI.Attachment do
   @doc """
   The file name. Truncates, and shimmers while uploading or processing.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -300,7 +300,7 @@ defmodule SaladUI.Attachment do
   @doc """
   The meta line: type and size, upload progress, or an error.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -326,7 +326,7 @@ defmodule SaladUI.Attachment do
   Holds `attachment_action/1` buttons. Sits above `attachment_trigger/1`, and
   in the top-right corner of a vertical attachment.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -369,7 +369,7 @@ defmodule SaladUI.Attachment do
     doc: "the button size"
 
   attr :type, :string, default: "button"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
   slot :inner_block, required: true
 
@@ -398,7 +398,7 @@ defmodule SaladUI.Attachment do
   * `:class` - Additional CSS classes.
   """
   attr :as, :string, values: ~w(button a), default: "button", doc: "the element to render"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href target rel type disabled download)
   slot :inner_block
 
@@ -479,7 +479,7 @@ defmodule SaladUI.Attachment do
   attr :preview, :boolean, default: true, doc: "show an image preview for image entries"
   attr :size, :string, values: ~w(default sm xs), default: "default"
   attr :orientation, :string, values: ~w(horizontal vertical), default: "horizontal"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :media
   slot :actions

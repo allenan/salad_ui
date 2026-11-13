@@ -135,7 +135,7 @@ defmodule SaladUI.Dialog do
 
   attr :id, :string, required: true
   attr :open, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :"close-on-outside-click", :boolean, default: true
 
   attr :modal, :boolean,
@@ -194,7 +194,7 @@ defmodule SaladUI.Dialog do
   With `as={&button/1}` (or `as="button"`) it gets `type="button"`, so it
   never submits an enclosing form; pass `type` to override.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :as, :any, default: "div"
   attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   slot :inner_block, required: true
@@ -218,7 +218,7 @@ defmodule SaladUI.Dialog do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :show_close_button, :boolean,
     default: true,
@@ -279,7 +279,7 @@ defmodule SaladUI.Dialog do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -295,7 +295,7 @@ defmodule SaladUI.Dialog do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -312,7 +312,7 @@ defmodule SaladUI.Dialog do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -329,7 +329,7 @@ defmodule SaladUI.Dialog do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :show_close_button, :boolean,
     default: false,
@@ -378,7 +378,7 @@ defmodule SaladUI.Dialog do
 
       <.dialog_close as="button" type="button" class="text-sm underline">Dismiss</.dialog_close>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
   attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   attr :rest, :global, include: ~w(variant size)

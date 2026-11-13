@@ -109,7 +109,7 @@ defmodule SaladUI.AlertDialog do
   attr :open, :boolean, default: false, doc: "Whether the alert dialog is initially open"
   attr :"on-open", :any, default: nil, doc: "Handler for alert dialog open event"
   attr :"on-close", :any, default: nil, doc: "Handler for alert dialog close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -157,7 +157,7 @@ defmodule SaladUI.AlertDialog do
   With `as={&button/1}` (or `as="button"`) it gets `type="button"`, so it
   never submits an enclosing form; pass `type` to override.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :as, :any, default: "div"
   attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   slot :inner_block, required: true
@@ -189,7 +189,7 @@ defmodule SaladUI.AlertDialog do
   * `:size` - `"default"` or `"sm"`. The small size is narrower (`max-w-xs`),
     keeps the header centered and lays the footer buttons out in two columns.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :size, :string, values: ~w(default sm), default: "default", doc: "the alert dialog size"
   attr :"aria-label", :string, default: "Alert dialog"
   slot :inner_block, required: true
@@ -225,7 +225,7 @@ defmodule SaladUI.AlertDialog do
   @doc """
   The header section of the alert dialog.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -249,7 +249,7 @@ defmodule SaladUI.AlertDialog do
   @doc """
   The title of the alert dialog.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -274,7 +274,7 @@ defmodule SaladUI.AlertDialog do
   @doc """
   The description of the alert dialog.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -310,7 +310,7 @@ defmodule SaladUI.AlertDialog do
         <.icon name="hero-trash" class="size-8" />
       </.alert_dialog_media>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -334,7 +334,7 @@ defmodule SaladUI.AlertDialog do
   @doc """
   The footer section of the alert dialog containing action buttons.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -358,7 +358,7 @@ defmodule SaladUI.AlertDialog do
   @doc """
   The cancel button for the alert dialog.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :variant, :string, values: ~w(default secondary destructive outline ghost link), default: "outline"
   attr :size, :string, values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg), default: "default"
   attr :rest, :global
@@ -389,7 +389,7 @@ defmodule SaladUI.AlertDialog do
   @doc """
   The primary action button for the alert dialog.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :variant, :string, values: ~w(default secondary destructive outline ghost link), default: "default"
   attr :size, :string, values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg), default: "default"
   attr :rest, :global

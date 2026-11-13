@@ -98,7 +98,7 @@ defmodule SaladUI.Checkbox do
     default: nil,
     doc: "`true` renders the indeterminate (dash) state; any boolean attaches the hook that syncs it. Requires `id`."
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form required)
 
   def checkbox(assigns) do

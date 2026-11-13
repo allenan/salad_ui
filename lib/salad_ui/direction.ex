@@ -66,7 +66,7 @@ defmodule SaladUI.Direction do
   """
   attr :direction, :string, default: nil, values: [nil, "ltr", "rtl"], doc: "Reading direction"
   attr :dir, :string, default: nil, values: [nil, "ltr", "rtl"], doc: "Alias of `direction`"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

@@ -133,7 +133,7 @@ defmodule SaladUI.Resizable do
   attr :"keyboard-resize-by", :any, default: 10, doc: "Percentage moved per arrow-key press"
   attr :disabled, :boolean, default: false, doc: "Whether resizing is disabled"
   attr :"on-layout-change", :any, default: nil, doc: "Handler for the layout-change event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -195,7 +195,7 @@ defmodule SaladUI.Resizable do
   attr :"max-size", :any, default: nil, doc: "Maximum size in percent"
   attr :collapsible, :boolean, default: false, doc: "Whether the panel can collapse below its min size"
   attr :"collapsed-size", :any, default: nil, doc: "Size in percent when collapsed (default 0)"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -243,7 +243,7 @@ defmodule SaladUI.Resizable do
   """
   attr :with_handle, :boolean, default: false, doc: "Show a visible grip"
   attr :disabled, :boolean, default: false, doc: "Whether this handle is disabled"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def resizable_handle(assigns) do

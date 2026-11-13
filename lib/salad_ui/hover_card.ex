@@ -65,7 +65,7 @@ defmodule SaladUI.HoverCard do
   attr :"close-delay", :integer, default: 200, doc: "Delay in milliseconds before closing the hover card"
   attr :"on-open", :any, default: nil, doc: "Handler for hover card open event"
   attr :"on-close", :any, default: nil, doc: "Handler for hover card close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -106,7 +106,7 @@ defmodule SaladUI.HoverCard do
   @doc """
   The trigger element that activates the hover card when hovered.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -132,7 +132,7 @@ defmodule SaladUI.HoverCard do
     the content flips or shifts to stay visible. Defaults to `0`, as in Radix.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
