@@ -148,4 +148,53 @@ defmodule SaladUI.TooltipTest do
 
     assert html =~ ~s(data-collision-padding="6")
   end
+
+  describe "shared tooltips" do
+    test "tooltip_provider renders one hooked tooltip with a server-rendered content id" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip_provider id="tooltips" scope="#list" side="bottom" open-delay={0} />
+        """)
+
+      assert html =~ ~s(id="tooltips")
+      assert html =~ ~s(data-component="tooltip-provider")
+      assert html =~ ~s(phx-hook="SaladUI")
+      assert html =~ ~s(id="tooltips-content")
+      assert html =~ ~s(data-part="text")
+      assert html =~ ~s(data-side="bottom")
+      assert html =~ ~s(data-slot="tooltip-arrow")
+      assert html =~ "&quot;scope&quot;:&quot;#list&quot;"
+      assert html =~ "&quot;openDelay&quot;:0"
+      assert html =~ "&quot;skipDelay&quot;:300"
+    end
+
+    test "a tooltip trigger with `for` is detached and leaves data-state alone" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip_trigger for="presence" context={%{id: 3}}>Ada</.tooltip_trigger>
+        """)
+
+      assert html =~ ~s(data-salad-for="presence")
+      assert html =~ ~s(data-salad-context="{&quot;id&quot;:3}")
+      refute html =~ ~s(data-part="trigger")
+      refute html =~ "data-state"
+    end
+
+    test "tooltip passes skip-delay to the client" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip id="t" skip-delay={0}>
+          <.tooltip_content>x</.tooltip_content>
+        </.tooltip>
+        """)
+
+      assert html =~ "&quot;skipDelay&quot;:0"
+    end
+  end
 end

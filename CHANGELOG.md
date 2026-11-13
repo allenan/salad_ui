@@ -497,6 +497,32 @@ for status and known gaps. Every new JS-backed component is registered in
   `SaladUI.command/3`; the context menu's also takes `x`/`y`. Nested triggers
   are unchanged. The delegation lives in `core/detached-triggers.js`.
   Storybook: "Shared menus" example.
+- Shared tooltips and hover cards for long lists, on the same detached
+  trigger mechanism:
+  - Text tooltips: `tooltip_provider/1` renders one tooltip per page (or per
+    `scope`) that serves every element with `data-salad-tooltip="Reply"`;
+    `data-salad-tooltip-side` / `-align` override its placement per element.
+    No hook and no tooltip markup per element, and an element can be a menu
+    trigger and a text tooltip at once (the tooltip leaves `data-state`
+    alone).
+  - Rich tooltips: `tooltip_trigger` takes `for` and `context`; `on-open`
+    receives the context.
+  - Hover cards: `hover_card_trigger` takes `for`, `context` and now `as`.
+    One card per entity (e.g. per chat author) serving all its triggers, or
+    one card whose `on-open` server handler gets the context: the card then
+    opens once the reply (and the content it rendered) has arrived, so it
+    never shows the previous trigger's content.
+  - As with Radix's `TooltipProvider`, a shared tooltip opens without its
+    delay while another tooltip is open or within `skip-delay` (300ms) after
+    one closed. Keyboard focus, Escape, scroll, pointer press, the
+    one-at-a-time rule and "a tooltip inside an open hover card keeps it
+    open" work as for nested ones; the trigger gets `aria-describedby` while
+    the tooltip shows, a hover card trigger `aria-expanded`/`data-state`.
+  - A tooltip or hover card that opens while a modal dialog or menu blocks
+    the page (its trigger is inside it) joins the layer stack above it, so
+    content rendered outside the dialog stays interactive, exposed and
+    focusable instead of being blocked by the modal layer's focus guard.
+  Storybook: "Shared tooltips" example.
 
 # 0.14.0
 

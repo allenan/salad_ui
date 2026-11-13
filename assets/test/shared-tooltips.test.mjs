@@ -5,7 +5,11 @@ import "../salad_ui/components/tooltip.js"; // "tooltip" and "tooltip-provider"
 import "../salad_ui/components/hover-card.js";
 import "../salad_ui/components/dropdown_menu.js";
 import { registry } from "../salad_ui/core/factory.js";
-import { resetModalLayers } from "../salad_ui/core/modal-layer.js";
+import {
+  ModalLayer,
+  modalLayerCount,
+  resetModalLayers,
+} from "../salad_ui/core/modal-layer.js";
 import { resetTooltipSkipDelay } from "../salad_ui/core/hover-popups.js";
 import {
   hookFor,
@@ -499,4 +503,45 @@ test("keyboard focus on a detached trigger opens the card, Escape closes it", as
 
   fire("keydown", $("#t1"), { key: "Escape" });
   assert.equal(card.state, "closed");
+});
+
+test("a shared card opened from inside a modal dialog stays usable above it", async () => {
+  const { $, card, content } = buildCards();
+  // A modal dialog holding the trigger; the card lives outside it.
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<div data-component="dialog" data-state="open">
+       <div id="dlg" role="dialog">
+         <button id="in-dialog" type="button" data-salad-for="card-ada">Ada</button>
+       </div>
+     </div>`,
+  );
+  rect($("#in-dialog"), 300);
+  content
+    .querySelector("[data-part='content-wrapper']")
+    .insertAdjacentHTML(
+      "beforeend",
+      '<a id="card-link" href="#profile">Profile</a>',
+    );
+  const dialogLayer = new ModalLayer(() => [$("#dlg")], { modal: true });
+  dialogLayer.activate();
+
+  // A trigger outside the dialog is blocked; the one inside opens the card.
+  hover($("#t1"));
+  await wait(OPEN * 3);
+  assert.equal(card.state, "closed");
+  hover($("#in-dialog"), $("#t1"));
+  await waitFor(() => card.state === "open");
+
+  assert.equal(content.closest("[aria-hidden='true']"), null);
+  assert.equal(content.style.pointerEvents, "auto");
+  $("#card-link").focus();
+  await wait(5);
+  // The modal layer's focus guard leaves focus in the card.
+  assert.equal(document.activeElement, $("#card-link"));
+
+  card.closeNow();
+  await wait(5);
+  assert.equal(modalLayerCount(), 1);
+  dialogLayer.deactivate();
 });

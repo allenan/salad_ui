@@ -105,4 +105,41 @@ defmodule SaladUI.HoverCardTest do
 
     assert html =~ ~s(data-collision-padding="6")
   end
+
+  describe "shared hover cards" do
+    test "a trigger with `for` is detached, with the hover card ARIA" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.hover_card_trigger as="button" type="button" for="user-card-7" context={%{id: 7}}>
+          Ada
+        </.hover_card_trigger>
+        """)
+
+      assert html =~ ~s(<button)
+      assert html =~ ~s(type="button")
+      assert html =~ ~s(data-salad-for="user-card-7")
+      assert html =~ ~s(data-salad-context="{&quot;id&quot;:7}")
+      assert html =~ ~s(aria-haspopup="dialog")
+      assert html =~ ~s(aria-expanded="false")
+      assert html =~ ~s(data-state="closed")
+      assert html =~ ~s(data-slot="hover-card-trigger")
+      refute html =~ ~s(data-part="trigger")
+    end
+
+    test "a nested trigger renders as before" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.hover_card_trigger>Ada</.hover_card_trigger>
+        """)
+
+      assert html =~ ~s(<div)
+      assert html =~ ~s(data-part="trigger")
+      refute html =~ "data-salad-for"
+      refute html =~ "aria-expanded"
+    end
+  end
 end

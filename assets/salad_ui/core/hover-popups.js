@@ -9,7 +9,13 @@
 // - focus that follows a pointer press does not open one; keyboard focus does;
 // - an open one closes on Escape, on a scroll around its trigger, and when the
 //   pointer is seen over something else (a missed mouseleave must not leave it
-//   stuck).
+//   stuck);
+// - one opened while a modal layer blocks the page (its trigger is inside a
+//   dialog or menu) joins the layer stack as a non-modal layer above it, so
+//   its content stays interactive, exposed and focusable even when it lives
+//   outside that layer (a shared hover card or the tooltip provider).
+
+import { ModalLayer, isModalBlocking } from "./modal-layer.js";
 
 const CLICK_POPUPS = [
   "dialog",
@@ -93,6 +99,9 @@ export class HoverPopup {
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onScroll = this.onScroll.bind(this);
+    this.layer = new ModalLayer(() => [this.component.content], {
+      modal: false,
+    });
   }
 
   // Whether an open request from `event` (for `trigger`, the current one by
@@ -116,6 +125,9 @@ export class HoverPopup {
       popup.closeNow();
     });
     openPopups.add(this.component);
+    // Above an open modal layer, as the top layer's own content: the modal
+    // layer's focus guard, pointer blocking and aria-hidden leave it be.
+    if (isModalBlocking()) this.layer.activate();
 
     document.addEventListener("pointermove", this.onPointerMove, {
       passive: true,
@@ -131,6 +143,7 @@ export class HoverPopup {
     if (openPopups.delete(this.component) && this.component.isTooltip) {
       lastTooltipClose = Date.now();
     }
+    this.layer.deactivate();
     if (typeof document === "undefined") return;
     document.removeEventListener("pointermove", this.onPointerMove);
     document.removeEventListener("keydown", this.onKeyDown);
