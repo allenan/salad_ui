@@ -28,6 +28,13 @@ for status and known gaps. Every new JS-backed component is registered in
   `MessageScroller` (turn anchoring, follow output, history prepend, works with
   `phx-update="stream"`), `Questionnaire` (with `SaladUI.Questionnaire.State` for
   server-driven and no-JS flows).
+- Chat extras (not in shadcn; lifted from a downstream app): `EmojiPicker` (one
+  picker for any number of plain opener buttons; search, categories, recents, skin
+  tone, keyboard; its Unicode dataset is a lazily `import()`ed chunk) and
+  `DropZone` (drag files over a region into a `live_file_input`; `attachFiles/2`
+  in JS for pasted files). The installers copy the dataset and add `@source not`
+  for it. Apps with their own `emoji_picker/1` or `drop_zone/1` under `use
+  SaladUI` must rename it (the example app's is now `reaction_picker/1`).
 - `mix salad.add <component...>` copies the named components plus their component,
   helper and JS dependencies. It takes `--prefix`, `--color-scheme` and
   `--overwrite`, and can be re-run.

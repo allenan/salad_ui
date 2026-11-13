@@ -27,6 +27,8 @@ defmodule SaladUI.Patcher.TailwindPatcherTest do
       assert patched_content =~ ~s(@source "../../lib";)
       assert patched_content =~ ~s(@source "../../deps/salad_ui/lib";)
       assert patched_content =~ ~s(@source "../../deps/salad_ui/assets/salad_ui";)
+      assert patched_content =~ ~s(@source not "../../deps/salad_ui/assets/salad_ui/components/emoji_picker";)
+      assert patched_content =~ ~s(@source not "../js/ui/components/emoji_picker";)
       assert patched_content =~ ~s(@plugin "@tailwindcss/typography";)
       assert patched_content =~ ~s(@import "../vendor/tw-animate.css";)
       assert patched_content =~ "@theme inline {"

@@ -16,6 +16,8 @@
 @source "../../deps/salad_ui/lib";
 @source "../../../assets/salad_ui";
 @source "../../deps/salad_ui/assets/salad_ui";
+@source not "../../../assets/salad_ui/components/emoji_picker";
+@source not "../../deps/salad_ui/assets/salad_ui/components/emoji_picker";
 
 /* This file is for your main application CSS */
 :root {

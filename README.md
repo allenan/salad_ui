@@ -187,6 +187,30 @@ styles inside it, and `not-typeset` opts a subtree out. To customise it, copy th
 an edge utility (`scroll-fade-t`, `-b`, `-l`, `-r`, `-s`, `-e`). Size them with
 `scroll-fade-<n>` / `scroll-fade-{t,b,s,e}-<n>` and turn them off with `scroll-fade-none`.
 
+4. Emoji picker dataset
+
+`emoji_picker` (with `drop_zone`, an extra for chat-style apps; shadcn has neither) loads its
+dataset, `components/emoji_picker/data.json` (~53 KB, Unicode License V3, see `DATA_LICENSE.txt`
+beside it), with a dynamic `import()` the first time a picker opens. To keep it out of the main
+bundle, build with code splitting and load `app.js` as a module:
+
+```elixir
+# config/config.exs
+args: ~w(js/app.js --bundle --splitting --format=esm --target=es2022 --outdir=../priv/static/assets/js ...)
+```
+
+```heex
+<script defer phx-track-static type="module" src={~p"/assets/js/app.js"}></script>
+```
+
+Without splitting esbuild inlines the dataset into `app.js`; the picker still works. Keep Tailwind
+from scanning it (emoji names such as "ring" become utilities); the installers add this:
+
+```css
+@source not "../../deps/salad_ui/assets/salad_ui/components/emoji_picker";
+@source not "../js/ui/components/emoji_picker"; /* mix salad.install / salad.add */
+```
+
 
 ## 🛠️ Development
 

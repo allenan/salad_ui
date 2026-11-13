@@ -35,6 +35,8 @@ import "salad_ui/components/message_scroller";
 import "salad_ui/components/toggle";
 import "salad_ui/components/toggle_group";
 import "salad_ui/components/sidebar";
+import "salad_ui/components/emoji_picker";
+import "salad_ui/components/drop_zone";
 
 // import * as Params from "./params";
 // import * as Uploaders from "./uploaders";

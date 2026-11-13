@@ -404,7 +404,7 @@ defmodule SaladChatWeb.MessageComponents do
         </.tooltip_trigger>
         <.tooltip_content side="top">{reacted_by(r.users, @ctx)}</.tooltip_content>
       </.tooltip>
-      <.emoji_picker id={"#{@id}-add-reaction"} message_id={@message.id} compact />
+      <.reaction_picker id={"#{@id}-add-reaction"} message_id={@message.id} compact />
     </div>
     """
   end
@@ -425,12 +425,14 @@ defmodule SaladChatWeb.MessageComponents do
     end
   end
 
+  # Not `emoji_picker/1`: `use SaladUI` imports SaladUI.EmojiPicker's. This
+  # one is a per-message popover with a short, curated grid.
   @doc "An emoji grid in a popover, that reacts to a message."
   attr :id, :string, required: true
   attr :message_id, :integer, required: true
   attr :compact, :boolean, default: false
 
-  def emoji_picker(assigns) do
+  def reaction_picker(assigns) do
     ~H"""
     <.popover id={@id} use-portal portal-container="#chat-portal">
       <.popover_trigger
@@ -532,7 +534,7 @@ defmodule SaladChatWeb.MessageComponents do
           {e}
         </.button>
         <span class="contents [@media(hover:none)]:hidden">
-          <.emoji_picker id={"#{@id}-react-more"} message_id={@message.id} />
+          <.reaction_picker id={"#{@id}-react-more"} message_id={@message.id} />
         </span>
         <.tooltip :if={!@ctx.thread?} id={"#{@id}-reply-tooltip"} class="[@media(hover:none)]:hidden">
           <.tooltip_trigger>
