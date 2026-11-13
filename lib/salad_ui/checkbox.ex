@@ -13,6 +13,16 @@ defmodule SaladUI.Checkbox do
 
       <.checkbox id="remember_me" name="remember_me" label="Remember me" />
 
+      <%!-- A group submitting tags[] = ["elixir", ...] --%>
+      <.checkbox
+        :for={tag <- ~w(elixir erlang gleam)}
+        id={"tag-\#{tag}"}
+        name="tags[]"
+        checked_value={tag}
+        unchecked_value={nil}
+        checked={tag in @tags}
+      />
+
       <.form for={@form} as={:user} phx-change="validate">
         <.checkbox field={@form[:accept_terms]} label="I accept the terms and conditions" />
       </.form>
@@ -26,7 +36,14 @@ defmodule SaladUI.Checkbox do
 
   * `:id` - The id to apply to the checkbox
   * `:name` - The name to apply to the input field
-  * `:value` - The current value of the checkbox
+  * `:value` - Whether the checkbox is checked (normalized like Phoenix's
+    checkbox input: `true`/`"true"` check it). Not the submitted value; see
+    `:checked_value`.
+  * `:checked` - Explicit checked state; overrides `:value`.
+  * `:checked_value` - Value submitted when checked. Defaults to `"true"`.
+  * `:unchecked_value` - Value of the hidden input submitted when unchecked.
+    Defaults to `"false"`; `nil` omits the hidden input, as needed for a
+    checkbox group sharing a `name="tags[]"`.
   * `:default-value` - The default value of the checkbox, either `true`, `false`, "true", "false"
   * `:disabled` - Whether the checkbox is disabled
   * `:field` - A Phoenix form field
@@ -65,6 +82,9 @@ defmodule SaladUI.Checkbox do
   """
   attr :name, :any, default: nil
   attr :value, :any, default: nil
+  attr :checked, :boolean, default: nil
+  attr :checked_value, :any, default: "true"
+  attr :unchecked_value, :any, default: "false"
   attr :"default-value", :any, values: [true, false, "true", "false"], default: false
   attr :field, Phoenix.HTML.FormField
 
@@ -82,7 +102,11 @@ defmodule SaladUI.Checkbox do
       |> put_aria_invalid()
 
     assigns =
-      assign_new(assigns, :checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", assigns.value) end)
+      if is_nil(assigns.checked) do
+        assign(assigns, :checked, Phoenix.HTML.Form.normalize_value("checkbox", assigns.value))
+      else
+        assigns
+      end
 
     # A native input has no children, so shadcn's `checkbox-indicator` (a
     # size-3.5 CheckIcon in `text-primary-foreground`) is drawn as a masked
@@ -97,7 +121,7 @@ defmodule SaladUI.Checkbox do
     #   `focus-visible:` restores shadcn's ring.
     # `appearance-none` gives the same rendering without the plugin.
     ~H"""
-    <input type="hidden" name={@name} value="false" />
+    <input :if={!is_nil(@unchecked_value)} type="hidden" name={@name} value={@unchecked_value} />
     <input
       type="checkbox"
       data-slot="checkbox"
@@ -112,7 +136,7 @@ defmodule SaladUI.Checkbox do
         ])
       }
       name={@name}
-      value="true"
+      value={@checked_value}
       checked={@checked}
       phx-hook={hooked?(@indeterminate) && "SaladUI"}
       data-component={hooked?(@indeterminate) && "checkbox"}
