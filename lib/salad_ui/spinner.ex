@@ -37,7 +37,7 @@ defmodule SaladUI.Spinner do
   * `:rest` - Other HTML attributes. `aria-label` overrides the default `"Loading"`.
   * `inner_block` - Optional custom icon to spin in place of the default.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, doc: "a custom icon to spin instead of the default loader"
 

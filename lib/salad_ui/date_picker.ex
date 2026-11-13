@@ -118,7 +118,7 @@ defmodule SaladUI.DatePicker do
   attr :"weekday-names", :list, default: nil, doc: "7 short weekday names, Sunday first"
   attr :"button-variant", :string, default: "ghost", doc: "Variant of the navigation buttons"
   attr :"on-select", :any, default: nil, doc: "Handler for the select event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   slot :trigger, doc: "Custom trigger content; receives %{label:, value:}"

@@ -42,7 +42,8 @@ defmodule SaladUI.Tooltip do
 
   ## Options
 
-  * `:id` - Unique identifier for the tooltip (optional, auto-generated if not provided).
+  * `:id` - Required. Unique identifier for the tooltip; its hook needs one
+    that stays the same across renders.
   * `:open-delay` - Delay in milliseconds before opening the tooltip. Defaults to `150`.
   * `:close-delay` - Delay in milliseconds before closing the tooltip. Defaults to `100`.
   * `:on-open` - Handler for tooltip open event.
@@ -54,23 +55,16 @@ defmodule SaladUI.Tooltip do
   * `:on-open` - Fired when the tooltip opens.
   * `:on-close` - Fired when the tooltip closes.
   """
-  attr :id, :string, default: nil
+  attr :id, :string, required: true, doc: "Unique identifier for the tooltip (the hook needs a stable id)"
   attr :"open-delay", :integer, default: 150, doc: "Delay in milliseconds before opening the tooltip"
   attr :"close-delay", :integer, default: 100, doc: "Delay in milliseconds before closing the tooltip"
   attr :"on-open", :any, default: nil, doc: "Handler for tooltip open event"
   attr :"on-close", :any, default: nil, doc: "Handler for tooltip close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
   def tooltip(assigns) do
-    assigns =
-      if assigns[:id] do
-        assigns
-      else
-        assign(assigns, :id, "tooltip-#{System.unique_integer([:positive])}")
-      end
-
     # Collect event mappings
     event_map = event_mappings(assigns)
 
@@ -114,7 +108,7 @@ defmodule SaladUI.Tooltip do
   `<TooltipTrigger asChild>`), e.g. so a button inside a `button_group/1`
   is styled as one of the group's buttons:
 
-      <.tooltip>
+      <.tooltip id="details-tooltip">
         <.tooltip_trigger as={&button/1} variant="outline" size="icon-sm" aria-label="Details">
           <.icon name="hero-information-circle" />
         </.tooltip_trigger>
@@ -122,7 +116,7 @@ defmodule SaladUI.Tooltip do
       </.tooltip>
   """
   attr :as, :any, default: "div"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size type)
   slot :inner_block, required: true
 
@@ -172,7 +166,7 @@ defmodule SaladUI.Tooltip do
   If you change the content's background, recolor the arrow to match, e.g.
   `class="bg-primary [&_[data-slot=tooltip-arrow]>span]:bg-primary"`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "top"
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 8, doc: "Distance from the trigger in pixels"

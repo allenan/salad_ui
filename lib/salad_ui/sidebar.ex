@@ -193,7 +193,7 @@ defmodule SaladUI.Sidebar do
 
   attr :"on-open-change", :any, default: nil, doc: "Handler for the `open-change` event"
   attr :"on-open-mobile-change", :any, default: nil, doc: "Handler for the `open-mobile-change` event"
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :style, :map, default: %{}
   attr(:rest, :global)
   slot(:inner_block, required: true)
@@ -287,7 +287,7 @@ defmodule SaladUI.Sidebar do
     default: "expanded",
     doc: "Server-rendered state before the hook mounts. Pass the provider's `default_open` state to avoid a flash."
 
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :style, :map, default: %{}
   attr(:rest, :global)
   slot(:inner_block, required: true)
@@ -400,42 +400,58 @@ defmodule SaladUI.Sidebar do
 
   Outside the provider, pass `target` (the provider's or a sidebar's id), or
   build your own trigger with `phx-click={toggle_sidebar("provider-id")}`.
+
+  `label` is the screen-reader text (default `"Toggle Sidebar"`). Attributes
+  passed through `rest` (`type`, `data-slot`, `data-sidebar`, ...) replace the
+  trigger's own instead of rendering twice.
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
 
   attr :target, :string,
     default: nil,
     doc: "Id of the provider or sidebar to toggle. Only needed outside the provider."
 
   attr :as, :any, default: nil, doc: "Tag or function component to render. Defaults to a ghost icon `button`."
+  attr :label, :string, default: "Toggle Sidebar", doc: "the trigger's screen-reader text"
   attr(:rest, :global)
   slot :inner_block
 
   def sidebar_trigger(%{as: nil} = assigns) do
+    assigns =
+      put_own_attrs(assigns,
+        type: "button",
+        "data-slot": "sidebar-trigger",
+        "data-sidebar": "trigger",
+        "data-variant": "ghost",
+        "data-size": "icon"
+      )
+
     ~H"""
     <button
-      type="button"
-      data-slot="sidebar-trigger"
-      data-sidebar="trigger"
-      data-variant="ghost"
-      data-size="icon"
+      type={@own_attrs[:type]}
+      data-slot={@own_attrs[:"data-slot"]}
+      data-sidebar={@own_attrs[:"data-sidebar"]}
+      data-variant={@own_attrs[:"data-variant"]}
+      data-size={@own_attrs[:"data-size"]}
       data-action={is_nil(@target) && "toggle"}
       phx-click={@target && toggle_sidebar(@target)}
       class={classes([button_variant(%{variant: "ghost", size: "icon"}), "size-7", @class])}
       {@rest}
     >
-      <.sidebar_trigger_icon />
+      <.sidebar_trigger_icon label={@label} />
       {render_slot(@inner_block)}
     </button>
     """
   end
 
   def sidebar_trigger(assigns) do
+    assigns = put_own_attrs(assigns, "data-slot": "sidebar-trigger", "data-sidebar": "trigger")
+
     ~H"""
     <.dynamic
-      data-slot={@rest[:"data-slot"] || "sidebar-trigger"}
+      data-slot={@own_attrs[:"data-slot"]}
       tag={@as}
-      data-sidebar="trigger"
+      data-sidebar={@own_attrs[:"data-sidebar"]}
       data-action={is_nil(@target) && "toggle"}
       phx-click={@target && toggle_sidebar(@target)}
       variant="ghost"
@@ -443,11 +459,13 @@ defmodule SaladUI.Sidebar do
       class={classes(["size-7", @class])}
       {@rest}
     >
-      <.sidebar_trigger_icon />
+      <.sidebar_trigger_icon label={@label} />
       {render_slot(@inner_block)}
     </.dynamic>
     """
   end
+
+  attr :label, :string, required: true
 
   defp sidebar_trigger_icon(assigns) do
     ~H"""
@@ -466,26 +484,41 @@ defmodule SaladUI.Sidebar do
       <rect width="18" height="18" x="3" y="3" rx="2"></rect>
       <path d="M9 3v18"></path>
     </svg>
-    <span class="sr-only">Toggle Sidebar</span>
+    <span class="sr-only">{@label}</span>
     """
   end
 
   @doc """
   A thin hit area on the sidebar's edge that toggles it. Hidden on mobile.
+
+  `label` sets its `aria-label` and `title` (default `"Toggle Sidebar"`).
+  Attributes passed through `rest` (`aria-label`, `title`, `tabindex`, ...)
+  replace the rail's own instead of rendering twice.
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
+  attr :label, :string, default: "Toggle Sidebar", doc: "the rail's `aria-label` and `title`"
   attr(:rest, :global)
 
   def sidebar_rail(assigns) do
+    assigns =
+      put_own_attrs(assigns,
+        type: "button",
+        "data-slot": "sidebar-rail",
+        "data-sidebar": "rail",
+        "aria-label": assigns.label,
+        tabindex: "-1",
+        title: assigns.label
+      )
+
     ~H"""
     <button
-      type="button"
-      data-slot="sidebar-rail"
-      data-sidebar="rail"
+      type={@own_attrs[:type]}
+      data-slot={@own_attrs[:"data-slot"]}
+      data-sidebar={@own_attrs[:"data-sidebar"]}
       data-action="toggle"
-      aria-label="Toggle Sidebar"
-      tabindex={-1}
-      title="Toggle Sidebar"
+      aria-label={@own_attrs[:"aria-label"]}
+      tabindex={@own_attrs[:tabindex]}
+      title={@own_attrs[:title]}
       class={
         classes([
           "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
@@ -506,7 +539,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot :inner_block, required: true
 
@@ -531,7 +564,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global, include: ~w(placeholder))
 
   def sidebar_input(assigns) do
@@ -553,7 +586,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -578,7 +611,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot :inner_block, required: true
 
@@ -603,7 +636,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
 
   def sidebar_separator(assigns) do
@@ -620,7 +653,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -646,7 +679,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -672,7 +705,7 @@ defmodule SaladUI.Sidebar do
   Render
   TODO: class merge not work well here
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :as, :any, default: "div"
   attr(:rest, :global)
   slot(:inner_block, required: true)
@@ -684,14 +717,11 @@ defmodule SaladUI.Sidebar do
       data-sidebar="group-label"
       tag={@as}
       class={
-        Enum.join(
-          [
-            "duration-200 flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-sidebar-foreground/70 outline-hidden ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 text-xs",
-            "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
-            @class
-          ],
-          " "
-        )
+        classes([
+          "duration-200 flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-sidebar-foreground/70 outline-hidden ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0 text-xs",
+          "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+          @class
+        ])
       }
       {@rest}
     >
@@ -701,15 +731,25 @@ defmodule SaladUI.Sidebar do
   end
 
   @doc """
-  Render
+  An action button beside a group's label (e.g. "Add project").
+
+  Renders a `<button type="button">`. Pass `href`, `navigate` or `patch` to
+  render a link instead, or `as` for another tag or function component
+  (shadcn's `asChild`).
   """
-  attr(:class, :string, default: nil)
-  attr(:rest, :global)
+  attr(:class, :any, default: nil)
+  attr :as, :any, default: "button", doc: "the tag or function component to render"
+
+  attr(:rest, :global, include: ~w(href navigate patch replace method download target rel type disabled form name value))
+
   slot(:inner_block, required: true)
 
   def sidebar_group_action(assigns) do
+    assigns = action_tag(assigns)
+
     ~H"""
-    <button
+    <.dynamic
+      tag={@as}
       data-slot="sidebar-group-action"
       data-sidebar="group-action"
       class={
@@ -723,14 +763,14 @@ defmodule SaladUI.Sidebar do
       {@rest}
     >
       {render_slot(@inner_block)}
-    </button>
+    </.dynamic>
     """
   end
 
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -755,7 +795,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -780,7 +820,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -822,7 +862,7 @@ defmodule SaladUI.Sidebar do
   attr :variant, :string, values: ~w(default outline), default: "default"
   attr :size, :string, values: ~w(default sm lg), default: "default"
   attr :is_active, :boolean, default: false
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
 
   attr :is_mobile, :boolean,
     default: false,
@@ -886,18 +926,30 @@ defmodule SaladUI.Sidebar do
   end
 
   @doc """
-  Render
+  An action button inside a `sidebar_menu_item/1`, beside its menu button.
+
+  Renders a `<button type="button">`. Pass `href`, `navigate` or `patch` to
+  render a link instead, or `as` for another tag or function component
+  (shadcn's `asChild`). `show_on_hover` hides it until the item is hovered or
+  focused.
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :show_on_hover, :boolean, default: false
-  attr(:rest, :global)
+  attr :as, :any, default: "button", doc: "the tag or function component to render"
+
+  attr(:rest, :global, include: ~w(href navigate patch replace method download target rel type disabled form name value))
+
   slot(:inner_block, required: true)
 
   def sidebar_menu_action(assigns) do
-    assigns = put_own_attrs(assigns, "data-slot": "sidebar-menu-action", "data-sidebar": "menu-action")
+    assigns =
+      assigns
+      |> action_tag()
+      |> put_own_attrs("data-slot": "sidebar-menu-action", "data-sidebar": "menu-action")
 
     ~H"""
-    <button
+    <.dynamic
+      tag={@as}
       data-slot={@own_attrs[:"data-slot"]}
       data-sidebar={@own_attrs[:"data-sidebar"]}
       class={
@@ -916,14 +968,14 @@ defmodule SaladUI.Sidebar do
       {@rest}
     >
       {render_slot(@inner_block)}
-    </button>
+    </.dynamic>
     """
   end
 
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -953,7 +1005,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :show_icon, :boolean, default: false
   attr(:rest, :global)
 
@@ -986,7 +1038,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -1012,7 +1064,7 @@ defmodule SaladUI.Sidebar do
   @doc """
   Render
   """
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr(:rest, :global)
   slot(:inner_block, required: true)
 
@@ -1037,7 +1089,7 @@ defmodule SaladUI.Sidebar do
   """
   attr :size, :string, values: ~w(sm md), default: "md"
   attr :is_active, :boolean, default: false
-  attr(:class, :string, default: nil)
+  attr(:class, :any, default: nil)
   attr :as, :any, default: "a"
   attr(:rest, :global, include: ~w(href navigate patch target rel method download replace))
   slot(:inner_block, required: true)
@@ -1103,6 +1155,18 @@ defmodule SaladUI.Sidebar do
 
   @doc "Like `toggle_sidebar/2`, but closes the sidebar (the sheet on mobile)."
   def close_sidebar(js \\ %JS{}, id), do: sidebar_command(js, "close", id)
+
+  # Sidebar actions render a `<button type="button">` by default (shadcn's
+  # `asChild` is `as`): a link when given `href`/`navigate`/`patch`.
+  defp action_tag(%{as: "button", rest: rest} = assigns) do
+    if Enum.any?([:href, :navigate, :patch], &rest[&1]) do
+      assign(assigns, :as, &Phoenix.Component.link/1)
+    else
+      assign(assigns, :rest, Map.put_new(rest, :type, "button"))
+    end
+  end
+
+  defp action_tag(assigns), do: assigns
 
   defp sidebar_command(js, command, id) do
     SaladUI.JS.dispatch_command(js, command, to: "#" <> id)

@@ -174,7 +174,7 @@ defmodule SaladUI.ButtonGroup do
       </.button_group>
   """
   attr :orientation, :string, values: ~w(vertical horizontal), default: "vertical", doc: "the separator direction"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def button_group_separator(assigns) do

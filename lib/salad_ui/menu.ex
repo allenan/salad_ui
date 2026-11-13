@@ -38,7 +38,7 @@ defmodule SaladUI.Menu do
       </.menu>
   """
 
-  attr :class, :string, default: "top-0 start-full"
+  attr :class, :any, default: "top-0 start-full"
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -57,7 +57,7 @@ defmodule SaladUI.Menu do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :disabled, :boolean, default: false
   slot :inner_block, required: true
   attr :rest, :global
@@ -81,7 +81,7 @@ defmodule SaladUI.Menu do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :inset, :boolean, default: false
   slot :inner_block, required: true
   attr :rest, :global
@@ -98,7 +98,7 @@ defmodule SaladUI.Menu do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block
 
   def menu_separator(assigns) do
@@ -113,7 +113,7 @@ defmodule SaladUI.Menu do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -129,7 +129,7 @@ defmodule SaladUI.Menu do
     """
   end
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 

@@ -366,6 +366,33 @@ defmodule SaladUI.Helpers do
   def drop_button_props(assigns), do: assigns
 
   @doc """
+  Returns the assigns when they carry an `:id`, and raises otherwise.
+
+  For hooked components that also take a form `field` (which supplies the
+  id): LiveView needs a stable id on every `phx-hook` element, and a generated
+  one would change on every render and remount the hook.
+  """
+  def require_id!(%{id: id} = assigns, _component) when is_binary(id) and id != "", do: assigns
+
+  def require_id!(_assigns, component) do
+    raise ArgumentError,
+          "#{component} needs an `id` (or a `field` to take it from): " <>
+            "its LiveView hook needs a stable id across renders"
+  end
+
+  @doc """
+  Defaults `:type` to `"button"` when a trigger part renders a button: `as` is
+  `"button"` or a function component (e.g. `as={&button/1}`). A trigger is
+  never meant to submit an enclosing form. An explicit `type` wins, and other
+  tags (the default `div`) get none.
+  """
+  def put_button_type(%{type: nil, as: as} = assigns) when is_function(as, 1) or as == "button" do
+    Phoenix.Component.assign(assigns, :type, "button")
+  end
+
+  def put_button_type(assigns), do: assigns
+
+  @doc """
   Mimics the behavior of shadcn/ui's `asChild` attribute.
 
   Passes all attributes given to `as_child` through to the `tag` function

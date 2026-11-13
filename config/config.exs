@@ -16,3 +16,8 @@ config :tailwind,
         ),
     cd: Path.expand("..", __DIR__)
   ]
+
+# Exercises the app theme extension in SaladUI.ClassMerge (see its moduledoc).
+if config_env() == :test do
+  config :salad_ui, :class_merge, theme: [text: ~w(panel), color: ~w(star), radius: ~w(control)]
+end

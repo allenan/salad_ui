@@ -99,7 +99,7 @@ defmodule SaladUI.Sheet do
   """
   attr :id, :string, required: true, doc: "Unique identifier for the sheet"
   attr :open, :boolean, default: false, doc: "Whether the sheet is initially open"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :"close-on-outside-click", :boolean, default: true
 
   attr :modal, :boolean,
@@ -149,7 +149,7 @@ defmodule SaladUI.Sheet do
   @doc """
   The trigger element that opens the sheet.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -189,7 +189,7 @@ defmodule SaladUI.Sheet do
         </.sheet_header>
       </.sheet_content>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "right", doc: "The side from which the sheet appears"
 
   attr :show_close_button, :boolean,
@@ -262,7 +262,7 @@ defmodule SaladUI.Sheet do
   @doc """
   Renders a sheet header section for title and description.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -281,7 +281,7 @@ defmodule SaladUI.Sheet do
   @doc """
   Renders a sheet title within the header section.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -301,7 +301,7 @@ defmodule SaladUI.Sheet do
   @doc """
   Renders a sheet description within the header section.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -321,7 +321,7 @@ defmodule SaladUI.Sheet do
   @doc """
   Renders a footer section for the sheet, typically containing actions.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -340,7 +340,7 @@ defmodule SaladUI.Sheet do
   @doc """
   The close button for the sheet.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

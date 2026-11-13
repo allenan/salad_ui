@@ -19,9 +19,20 @@ defmodule SaladUI.Attachment do
 
   ## Opening an attachment
 
-  `attachment_trigger/1` is a transparent button (or link) stretched over the
-  card, so the whole card opens a preview while `attachment_actions/1` stay
-  clickable above it. To open a `SaladUI.Dialog`, wrap the attachment in the
+  To make the whole card one link, give `attachment/1` an `href`, `navigate`
+  or `patch` (or render it `as` another tag or function component); the card
+  is then the link, so it holds no actions or trigger:
+
+      <.attachment navigate={~p"/files/\#{@file.id}"}>
+        <.attachment_media><.icon name="hero-document-text" /></.attachment_media>
+        <.attachment_content>
+          <.attachment_title>{@file.name}</.attachment_title>
+        </.attachment_content>
+      </.attachment>
+
+  With actions, use `attachment_trigger/1` instead: a transparent button (or
+  link) stretched over the card, so the whole card opens a preview while
+  `attachment_actions/1` stay clickable above it. To open a `SaladUI.Dialog`, wrap the attachment in the
   dialog and use the dialog trigger with the same classes:
 
       <.dialog id="preview">
@@ -82,7 +93,7 @@ defmodule SaladUI.Attachment do
   @doc """
   A horizontally scrolling, snapping row of attachments.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -127,6 +138,10 @@ defmodule SaladUI.Attachment do
   * `:size` - `"default"`, `"sm"` or `"xs"`.
   * `:orientation` - `"horizontal"` (default; media beside the text) or
     `"vertical"` (a square tile with the text below).
+  * `:href`, `:navigate`, `:patch` - Render the card as a link
+    (`Phoenix.Component.link/1`), so the whole card is one link.
+  * `:as` - The tag or function component to render instead of the `div`
+    (shadcn's `asChild`).
   * `:class` - Additional CSS classes.
   """
   attr :state, :string,
@@ -141,35 +156,52 @@ defmodule SaladUI.Attachment do
     default: "horizontal",
     doc: "the layout direction"
 
-  attr :class, :string, default: nil
-  attr :rest, :global
+  attr :as, :any, default: "div", doc: "the tag or function component to render"
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(href navigate patch replace method download target rel)
   slot :inner_block, required: true
 
   def attachment(assigns) do
+    link? = Enum.any?([:href, :navigate, :patch], &assigns.rest[&1])
+
     assigns =
       assign(assigns,
-        size_class: @sizes[assigns.size],
-        orientation_class: @orientations[assigns.orientation]
+        as: if(link? and assigns.as == "div", do: &Phoenix.Component.link/1, else: assigns.as),
+        root_class:
+          classes([
+            "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-[color,background-color,border-color,box-shadow] outline-none has-focus-visible:border-ring has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
+            # the card itself is the link (`href`/`navigate`/`patch`)
+            link? && "outline-none hover:bg-muted/50",
+            @sizes[assigns.size],
+            @orientations[assigns.orientation],
+            assigns.class
+          ])
       )
 
     ~H"""
     <div
+      :if={@as == "div"}
       data-slot="attachment"
       data-state={@state}
       data-size={@size}
       data-orientation={@orientation}
-      class={
-        classes([
-          "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-[color,background-color,border-color,box-shadow] has-focus-visible:border-ring has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
-          @size_class,
-          @orientation_class,
-          @class
-        ])
-      }
+      class={@root_class}
       {@rest}
     >
       {render_slot(@inner_block)}
     </div>
+    <.dynamic
+      :if={@as != "div"}
+      tag={@as}
+      data-slot="attachment"
+      data-state={@state}
+      data-size={@size}
+      data-orientation={@orientation}
+      class={@root_class}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.dynamic>
     """
   end
 
@@ -183,7 +215,7 @@ defmodule SaladUI.Attachment do
   * `:class` - Additional CSS classes.
   """
   attr :variant, :string, values: ~w(icon image), default: "icon", doc: "what the media holds"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -220,7 +252,7 @@ defmodule SaladUI.Attachment do
   @doc """
   Holds the title and description.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -244,7 +276,7 @@ defmodule SaladUI.Attachment do
   @doc """
   The file name. Truncates, and shimmers while uploading or processing.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -268,7 +300,7 @@ defmodule SaladUI.Attachment do
   @doc """
   The meta line: type and size, upload progress, or an error.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -294,7 +326,7 @@ defmodule SaladUI.Attachment do
   Holds `attachment_action/1` buttons. Sits above `attachment_trigger/1`, and
   in the top-right corner of a vertical attachment.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -337,7 +369,7 @@ defmodule SaladUI.Attachment do
     doc: "the button size"
 
   attr :type, :string, default: "button"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
   slot :inner_block, required: true
 
@@ -366,7 +398,7 @@ defmodule SaladUI.Attachment do
   * `:class` - Additional CSS classes.
   """
   attr :as, :string, values: ~w(button a), default: "button", doc: "the element to render"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href target rel type disabled download)
   slot :inner_block
 
@@ -447,7 +479,7 @@ defmodule SaladUI.Attachment do
   attr :preview, :boolean, default: true, doc: "show an image preview for image entries"
   attr :size, :string, values: ~w(default sm xs), default: "default"
   attr :orientation, :string, values: ~w(horizontal vertical), default: "horizontal"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :media
   slot :actions

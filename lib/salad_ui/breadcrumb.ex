@@ -68,7 +68,7 @@ defmodule SaladUI.Breadcrumb do
 
   * `:class` - Additional CSS classes to apply to the breadcrumb container
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -99,7 +99,7 @@ defmodule SaladUI.Breadcrumb do
 
   * `:class` - Additional CSS classes to apply to the list
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -129,7 +129,7 @@ defmodule SaladUI.Breadcrumb do
 
   * `:class` - Additional CSS classes to apply to the item
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -160,7 +160,7 @@ defmodule SaladUI.Breadcrumb do
   * `:class` - Additional CSS classes to apply to the link
   * Standard HTML link attributes (href, target, etc.) are supported
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(download href hreflang ping referrerpolicy rel target type)
   slot :inner_block, required: true
 
@@ -191,7 +191,7 @@ defmodule SaladUI.Breadcrumb do
 
   * `:class` - Additional CSS classes to apply to the current page element
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -234,7 +234,7 @@ defmodule SaladUI.Breadcrumb do
         <Lucideicons.dot />
       </.breadcrumb_separator>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, doc: "custom separator content; defaults to a chevron"
 
@@ -277,7 +277,7 @@ defmodule SaladUI.Breadcrumb do
 
   * `:class` - Additional CSS classes to apply to the ellipsis
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def breadcrumb_ellipsis(assigns) do

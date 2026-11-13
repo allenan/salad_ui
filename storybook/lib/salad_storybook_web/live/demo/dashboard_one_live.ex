@@ -46,7 +46,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
             <Lucideicons.package class="size-4 transition-all group-hover:scale-110" />
             <span class="sr-only">Acme Inc</span>
           </.link>
-          <.tooltip>
+          <.tooltip id="dashboard-one-nav-tooltip-1">
             <.link
               href="#"
               class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
@@ -56,7 +56,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
             </.link>
             <.tooltip_content side="right">Dashboard</.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-one-nav-tooltip-2">
             <.link
               href="#"
               class="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:size-8"
@@ -66,7 +66,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
             </.link>
             <.tooltip_content side="right">Orders</.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-one-nav-tooltip-3">
             <.link
               href="#"
               class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
@@ -76,7 +76,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
             </.link>
             <.tooltip_content side="right">Products</.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-one-nav-tooltip-4">
             <.link
               href="#"
               class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
@@ -86,7 +86,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
             </.link>
             <.tooltip_content side="right">Customers</.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-one-nav-tooltip-5">
             <.link
               href="#"
               class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
@@ -98,7 +98,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           </.tooltip>
         </nav>
         <nav class="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-          <.tooltip>
+          <.tooltip id="dashboard-one-nav-tooltip-6">
             <.link
               href="#"
               class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"

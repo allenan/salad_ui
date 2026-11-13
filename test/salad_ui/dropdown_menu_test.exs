@@ -144,8 +144,7 @@ defmodule SaladUI.DropdownMenuTest do
         <.dropdown_menu_item phx-click="delete" phx-value-id="7">Delete</.dropdown_menu_item>
         """)
 
-      assert html =~ ~r/<div[^>]*data-part="item"[^>]*phx-click="delete"/
-      assert html =~ ~s(phx-value-id="7")
+      assert_tag(html, "div", [{"data-part", "item"}, {"phx-click", "delete"}, {"phx-value-id", "7"}])
     end
   end
 

@@ -50,6 +50,7 @@ defmodule SaladUI.Command do
 
     * `:id` (required) - The unique id for the command palette.
     * `:class` - Additional classes to apply.
+    * All global attributes are passed to the root `<div>`.
 
   ## Slots
 
@@ -63,6 +64,7 @@ defmodule SaladUI.Command do
   """
   attr :id, :string, required: true
   attr :class, :any, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   def command(assigns) do
@@ -80,6 +82,7 @@ defmodule SaladUI.Command do
           @class
         ])
       }
+      {@rest}
     >
       {render_slot(@inner_block)}
     </div>
@@ -210,9 +213,14 @@ defmodule SaladUI.Command do
   @doc """
   Renders the list container for command items and groups.
 
+  The list is a `role="listbox"`; like cmdk's `Command.List`, it is named by
+  `label` (`aria-label`, default `"Suggestions"`).
+
   ## Attributes
 
+    * `:label` - The list's accessible name. Defaults to `"Suggestions"`.
     * `:class` - Additional classes to apply.
+    * All global attributes are passed to the list `<div>`.
 
   ## Slots
 
@@ -226,17 +234,23 @@ defmodule SaladUI.Command do
         </.command_group>
       </.command_list>
   """
+  attr :label, :string, default: "Suggestions", doc: "the listbox's accessible name (`aria-label`)"
   attr :class, :any, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   def command_list(assigns) do
+    assigns = put_own_attrs(assigns, "aria-label": assigns.label)
+
     ~H"""
     <div
       data-slot="command-list"
       data-part="list"
       tabindex="-1"
       role="listbox"
+      aria-label={@own_attrs[:"aria-label"]}
       class={classes(["max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
     </div>
@@ -261,6 +275,7 @@ defmodule SaladUI.Command do
       </.command_empty>
   """
   attr :class, :any, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   def command_empty(assigns) do
@@ -270,6 +285,7 @@ defmodule SaladUI.Command do
       data-visible="false"
       data-part="empty"
       class={classes(["py-6 text-center text-sm data-[visible=false]:hidden", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
     </div>
@@ -277,11 +293,12 @@ defmodule SaladUI.Command do
   end
 
   @doc """
-  Renders a group of command items with a heading.
+  Renders a group of command items, with an optional heading.
 
   ## Attributes
 
-    * `:heading` (required) - The group heading (`data-slot="command-group-heading"`).
+    * `:heading` - The group heading (`data-slot="command-group-heading"`).
+      Omit it for a group without one, as cmdk allows.
     * `:class` - Additional classes to apply.
 
   ## Slots
@@ -294,8 +311,9 @@ defmodule SaladUI.Command do
         <.command_item>Profile</.command_item>
       </.command_group>
   """
-  attr :heading, :string, required: true
+  attr :heading, :string, default: nil
   attr :class, :any, default: nil
+  attr :rest, :global
   slot :inner_block, required: true
 
   def command_group(assigns) do
@@ -305,8 +323,10 @@ defmodule SaladUI.Command do
       role="presentation"
       data-part="group"
       class={classes(["overflow-hidden p-1 text-foreground data-[visible=false]:hidden", @class])}
+      {@rest}
     >
       <div
+        :if={@heading}
         data-slot="command-group-heading"
         aria-hidden="true"
         class="px-2 py-1.5 text-xs font-medium text-muted-foreground"
@@ -361,7 +381,8 @@ defmodule SaladUI.Command do
   end
 
   @doc """
-  Renders a single command item (button).
+  Renders a single command item, a `<button type="button">`: cmdk items are
+  options, not submit buttons, so an item inside a form never submits it.
 
   ## Attributes
 
@@ -390,6 +411,7 @@ defmodule SaladUI.Command do
   def command_item(assigns) do
     ~H"""
     <button
+      type="button"
       data-slot="command-item"
       tabindex="-1"
       role="option"
@@ -430,6 +452,7 @@ defmodule SaladUI.Command do
       <.command_shortcut>⌘P</.command_shortcut>
   """
   attr :class, :any, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   def command_shortcut(assigns) do
@@ -438,6 +461,7 @@ defmodule SaladUI.Command do
       data-slot="command-shortcut"
       data-part="shortcut"
       class={classes(["ms-auto text-xs tracking-widest text-muted-foreground", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
     </span>

@@ -60,7 +60,7 @@ defmodule SaladUI.Form do
         <.form_message field={@form[:email]} />
       </.form_item>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -84,7 +84,7 @@ defmodule SaladUI.Form do
       <.form_label>Email</.form_label>
       <.form_label field={@form[:email]}>Email</.form_label>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :field, FormField,
     default: nil,
@@ -144,7 +144,7 @@ defmodule SaladUI.Form do
         We'll only use your email for account-related purposes.
       </.form_description>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -179,7 +179,7 @@ defmodule SaladUI.Form do
     default: [],
     doc: "a list of error messages to display"
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: false
   attr :rest, :global
 

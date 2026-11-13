@@ -32,12 +32,17 @@ defmodule SaladUI.ToggleTest do
       assert html =~ ~s(<input type="hidden" name="bold" value="false">)
     end
 
-    test "generates an id for the hook when none is given" do
+    test "needs an id (or a field) for its hook" do
       assigns = %{}
 
-      html = rendered_to_string(~H|<.toggle>B</.toggle>|)
+      assert_raise ArgumentError, ~r/toggle\/1 needs an `id`/, fn ->
+        rendered_to_string(~H|<.toggle>B</.toggle>|)
+      end
 
-      assert html =~ ~r/<button id="toggle-\d+"/
+      form = Phoenix.Component.to_form(%{"bold" => "true"}, as: :style)
+      assigns = %{form: form}
+
+      assert rendered_to_string(~H|<.toggle field={@form[:bold]}>B</.toggle>|) =~ ~s(<button id="style_bold")
     end
 
     test "renders variant and size classes" do

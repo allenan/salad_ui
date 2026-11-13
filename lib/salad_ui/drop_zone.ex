@@ -37,7 +37,7 @@ defmodule SaladUI.DropZone do
   attr :input, :string, default: nil, doc: "selector of the live_file_input that receives the files"
   attr :label, :string, default: "Drop files to upload"
   attr :description, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :icon, doc: "replaces the upload icon"
 

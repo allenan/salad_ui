@@ -39,7 +39,7 @@ defmodule SaladUI.Switch do
   """
   attr :id, :string, default: nil
   attr :name, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :value, :any, default: nil
   attr :"default-value", :any, values: [true, false, "true", "false"], default: false
   attr :checked, :boolean

@@ -75,7 +75,7 @@ defmodule SaladUI.Popover do
     default: nil,
     doc: "Portal container selector when use-portal is enabled"
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :"on-open", :any, default: nil, doc: "Handler for popover open event"
   attr :"on-close", :any, default: nil, doc: "Handler for popover close event"
   attr :rest, :global
@@ -125,7 +125,7 @@ defmodule SaladUI.Popover do
   """
   attr :as, :any, default: "button"
   attr :type, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
@@ -180,7 +180,7 @@ defmodule SaladUI.Popover do
     the content flips or shifts to stay visible. Defaults to `0`, as in Radix.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
@@ -232,7 +232,7 @@ defmodule SaladUI.Popover do
 
   Wraps its inner block in a `div`; at most one anchor per popover is used.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -247,7 +247,7 @@ defmodule SaladUI.Popover do
   @doc """
   Groups a `popover_title/1` and `popover_description/1` at the top of the content.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -262,7 +262,7 @@ defmodule SaladUI.Popover do
   @doc """
   The popover heading.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -277,7 +277,7 @@ defmodule SaladUI.Popover do
   @doc """
   Supporting text below the popover title.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

@@ -109,7 +109,7 @@ defmodule SaladUI.Tabs do
     default: "horizontal",
     doc: "Layout and arrow-key axis: horizontal (Left/Right) or vertical (Up/Down)"
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :"on-tab-changed", :any, default: nil, doc: "Handler for tab change events"
   attr :rest, :global
   slot :inner_block, required: true
@@ -166,7 +166,7 @@ defmodule SaladUI.Tabs do
   """
   attr :variant, :string, values: ~w(default line), default: "default", doc: "Visual style of the list"
   attr :builder, :map, default: nil, doc: "The builder `tabs/1` passes to its slot; renders `aria-orientation`"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -204,7 +204,7 @@ defmodule SaladUI.Tabs do
   """
   attr :value, :string, required: true, doc: "Unique value that identifies this tab"
   attr :builder, :map, default: nil, doc: "The builder `tabs/1` passes to its slot; renders the selected state"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :disabled, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
@@ -242,7 +242,7 @@ defmodule SaladUI.Tabs do
   """
   attr :value, :string, required: true, doc: "Value that matches a tab trigger"
   attr :builder, :map, default: nil, doc: "The builder `tabs/1` passes to its slot; renders the selected state"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

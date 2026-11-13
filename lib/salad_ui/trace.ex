@@ -90,7 +90,7 @@ defmodule SaladUI.Trace do
   (a direct child, or a grandchild such as a `dialog_trigger` inside a
   `dialog` root).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -124,7 +124,7 @@ defmodule SaladUI.Trace do
   * `:class` - Additional CSS classes.
   """
   attr :status, :string, values: [nil, "running", "error", "pending"], default: nil, doc: "the state of the work"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -150,7 +150,7 @@ defmodule SaladUI.Trace do
   A decorative icon slot, hidden from assistive tech. Before the title it
   names the action; after it, it is the indicator (chevron, external link).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -176,7 +176,7 @@ defmodule SaladUI.Trace do
   One sentence on one line. It truncates, and shimmers while the line is
   running.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -196,7 +196,7 @@ defmodule SaladUI.Trace do
   Secondary text after the title, such as a diff stat, a duration or a count.
   It does not truncate.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -227,7 +227,7 @@ defmodule SaladUI.Trace do
   attr :open, :boolean, default: false, doc: "whether the row is open"
   attr :"on-open", :any, default: nil, doc: "handler for the open event"
   attr :"on-close", :any, default: nil, doc: "handler for the close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -260,7 +260,7 @@ defmodule SaladUI.Trace do
   The button that opens and closes the row. Put a `trace_line/1` inside; a
   chevron is added after it and turns when the row is open.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -303,7 +303,7 @@ defmodule SaladUI.Trace do
   text is muted; give a block with a muted background `text-foreground` to
   keep its contrast. `class` applies to the inner, indented container.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

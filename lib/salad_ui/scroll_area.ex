@@ -40,7 +40,7 @@ defmodule SaladUI.ScrollArea do
     or `"both"`. The other axis is clipped.
   * `:class` - Additional CSS classes to apply to the scroll area container
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :orientation, :string,
     values: ~w(vertical horizontal both),

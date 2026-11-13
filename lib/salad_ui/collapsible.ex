@@ -65,7 +65,7 @@ defmodule SaladUI.Collapsible do
   attr :open, :boolean, default: false, doc: "Whether the collapsible is initially open"
   attr :"on-open", :any, default: nil, doc: "Handler for collapsible open event"
   attr :"on-close", :any, default: nil, doc: "Handler for collapsible close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -106,7 +106,7 @@ defmodule SaladUI.Collapsible do
   @doc """
   The trigger element that toggles the collapsible content.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :as, :any, default: "div"
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
@@ -133,7 +133,7 @@ defmodule SaladUI.Collapsible do
   @doc """
   The collapsible content that appears when triggered.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

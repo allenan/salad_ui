@@ -99,7 +99,7 @@ defmodule SaladUI.EmojiPicker do
   attr :side, :string, values: ~w(top right bottom left), default: "top"
   attr :align, :string, values: ~w(start center end), default: "end"
   attr :"on-select", :any, default: nil, doc: "event name or JS command run on a pick"
-  attr :class, :string, default: nil, doc: "classes for the popover content"
+  attr :class, :any, default: nil, doc: "classes for the popover content"
   attr :rest, :global
 
   def emoji_picker(assigns) do

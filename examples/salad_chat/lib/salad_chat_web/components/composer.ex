@@ -158,7 +158,7 @@ defmodule SaladChatWeb.Composer do
             </.attachment_group>
           </.input_group_addon>
           <.input_group_addon align="block-end" class="gap-1">
-            <.tooltip :if={@upload}>
+            <.tooltip :if={@upload} id={"#{@id}-attach-tooltip"}>
               <.tooltip_trigger>
                 <label
                   for={@upload.ref}
@@ -191,7 +191,7 @@ defmodule SaladChatWeb.Composer do
                 } />
               </.popover_content>
             </.popover>
-            <.tooltip>
+            <.tooltip id={"#{@id}-commands-tooltip"}>
               <.tooltip_trigger>
                 <.input_group_button
                   size="icon-sm"

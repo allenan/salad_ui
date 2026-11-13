@@ -354,6 +354,35 @@ for status and known gaps. Every new JS-backed component is registered in
 - `salad_ui.css`: the scroll area thumb uses `var(--border)`, not `#c2c2c2`.
 - `select.js` no longer contains a comment Tailwind reads as a broken utility.
 
+**API fixes from downstream use**
+- `command`, `command_list`, `command_group`, `command_empty`,
+  `command_shortcut` and every `dialog` part take global attributes;
+  `command_list` is named like cmdk's (`label`, default `"Suggestions"`), and
+  `command_group`'s `heading` is optional.
+- `command_item` renders `type="button"`. `dialog_trigger`, `dialog_close`,
+  `alert_dialog_trigger`, `drawer_trigger` and `drawer_close` take `type` and
+  default it to `"button"` when `as` renders a button.
+- `sidebar_group_action` and `sidebar_menu_action` take `as` and render a link
+  for `href`/`navigate`/`patch`, otherwise a `type="button"` button.
+  `sidebar_trigger` and `sidebar_rail` take `label` (default
+  `"Toggle Sidebar"`), and attributes passed to them replace their own instead
+  of rendering twice.
+- `attachment` renders as a link with `href`/`navigate`/`patch` (or `as`).
+- `icon` takes global attributes.
+- Every component's `class` takes a list as well as a string (`:any`), merged
+  by `classes/1`.
+- **Breaking:** `tooltip` requires `id`, and `toggle`, `toggle_group` and
+  `radio_group` raise without an `id` or `field`: they no longer generate a new
+  id on every render, which remounted their hooks.
+- The class merge learns an app's theme scales:
+  `config :salad_ui, :class_merge, theme: [text: ~w(panel), radius: ~w(card)]`
+  (see `SaladUI.ClassMerge`).
+- `use SaladUI, only: [...]` / `except: [...]` take modules, `name: arity` pairs
+  and function names, to avoid clashes with an app's own `sidebar/1`,
+  `json/1`, ...
+- `igniter` and `sourceror` are optional dependencies. The installer tasks ask
+  for `{:igniter, "~> 0.6", only: [:dev, :test]}` when it is missing.
+
 # 0.14.0
 
 **Changes**
