@@ -5,7 +5,7 @@
 Compared against shadcn/ui `dd41d19e2f80ff6891951f7ced74c2c9a650b065`
 (`apps/v4/registry/new-york-v4/ui` and `apps/v4/content/docs/components/radix`).
 Every item below is on `parity/integration`. `parity-audit.sh` reports no bad
-squashes as of `2a53f7b`. The two earlier bad squashes (9b34b26 and 856a69d) were
+squashes as of `3870238`. The two earlier bad squashes (9b34b26 and 856a69d) were
 repaired by `c01934d` and `029e138`.
 
 | Item | Status | Commit (feat / review fix) | What landed |
@@ -44,6 +44,12 @@ repaired by `c01934d` and `029e138`.
 | `legacy-class-sync` | pushed | `75f0d54` | new-york-v4 classes for accordion, alert, label, progress, separator (`decorative`), sheet (`show_close_button`), table (container), command dialog (title), tooltip arrow |
 | `select-deltas` | pushed, reviewed | `b7ae065` / `d5642f1` | `disabled` on `select/1`, `position="item-aligned"`, `align`, left/right sides, `:let` invalid/disabled, empty multiple submits `""` |
 | `sidebar-behaviour` | pushed, reviewed | `bd34ccd` / `2a53f7b` | Sidebar JS hook: mobile offcanvas sheet, Cmd/Ctrl+B, `sidebar_state` cookie, controlled `open`, collapsed tooltips that follow client toggles |
+| `modal-scroll-lock` | pushed, reviewed | `ba6757c` / `225aeb3` | Shared ref-counted `core/scroll-lock.js`; dialog, sheet, alert dialog, drawer and the mobile sidebar sheet lock page scroll |
+| `select-item-classes` | pushed | `737e992` | v4 select item/label/separator classes (indicator on the end side), trigger `role="combobox"`, skeleton `bg-accent`, pagination text `hidden sm:block` |
+| `legacy-docs-stories` | pushed | `ddb2471` | shadcn docs examples for 12 pre-parity stories; `breadcrumb_separator` content, `type="search"` on inputs |
+| `scroll-fade-typeset` | pushed | `0c68d8a` | Full `scroll-fade` utility set, `no-scrollbar`, opt-in `typeset.css`, code-block fades and streaming/markdown stories, `css-utilities.sh` CI check |
+| `dropdown-menu-v4-sync` | pushed, reviewed | `af51dfe` / `3870238` | v4 dropdown classes (`inset`, `variant`), height cap, checkbox/radio items close the menu, content focus on pointer open, `aria-labelledby`, `use-portal` patch survival, pointer-leave unhighlight, Tab swallowed |
+| `tw-merge-v4` | pushed | `897a565` | `SaladUI.ClassMerge`: caller `class` overrides resolve Tailwind v4 syntax (`(--var)`, `=` variants, `outline-hidden`, v4-only groups) |
 
 ### Not covered (by item)
 
@@ -102,24 +108,44 @@ Deliberate omissions and limits the implementers recorded. React-only concepts
 - **sidebar-behaviour**: the server can't read `isMobile`/`openMobile` except
   through events; string tooltips only; the menu skeleton uses a fixed 70% width;
   a `default_open={false}` sidebar also needs `state="collapsed"` to avoid a flash.
+- **modal-scroll-lock**: no Elixir `modal` attr (the JS honours `modal: false`
+  only); fixed-position elements are not shifted for the scrollbar padding
+  (`body[data-scroll-locked]` and `--removed-body-scroll-bar-size` are there for
+  CSS).
+- **select-item-classes**: no pagination RTL story; inactive `pagination_link`
+  still renders `aria-current=""`; pagination chevrons are not lucide's; no
+  `aria-hidden` on `pagination_ellipsis`.
+- **legacy-docs-stories**: no per-component RTL stories; checkbox-table selection
+  is static; breadcrumb links use plain `href`; collapsible `as_child` triggers
+  carry two `data-slot` attributes, so `[data-slot=collapsible-trigger]` never
+  matches.
+- **scroll-fade-typeset**: the `/typeset` builder page is not ported; the
+  markdown story uses a small parser, not Streamdown; streaming re-highlights the
+  whole partial block on each update.
+- **dropdown-menu-v4-sync**: no Radix `modal` prop (outside pointer blocking,
+  `aria-hidden` on the rest of the page); no dropdown-menu-dialog story.
+- **tw-merge-v4**: no upstream PR to `bluzky/tw_merge` (needs the user's OK to
+  post publicly); tailwind-merge v3's `mask-*`, v4 `bg-size`/`bg-position`,
+  `text-*/leading` postfix and v3-vs-v4 group cross-conflicts are not added.
 
 ### Remaining review issues
 
 Issues reviewers found but didn't fix. None blocks a merge.
 
-- **Menus**: radio and checkbox items keep the menu open when picked, unlike
-  Radix; radio indicators render only on the client; a pointer-opened dropdown
-  focuses (and highlights) its first item where Radix focuses the content; the
-  dropdown content has no `aria-labelledby` to its trigger and no portal restore
-  across patches for `use-portal`. `menu.js` keeps its own copy of
-  `assignId()`/`clearGeneratedIds()`.
-- **Modals**: no body scroll lock in dialog, sheet, alert dialog, drawer or the
-  mobile sidebar sheet (Radix and vaul lock it). With two sidebars in one provider,
-  the mobile focus trap covers only the first.
+- **Menus**: keyboard navigation loops (Radix defaults to `loop=false`);
+  `Portal.restore` re-appends portaled content at the end of its parent, so a
+  dropdown root with siblings after the content is patched out of order;
+  context menu and menubar radio indicators still render only on the client.
+  `menu.js` keeps its own copy of `assignId()`/`clearGeneratedIds()`. A
+  sub-menu opened by hover can carry its typeahead search over for up to 1s.
+- **Modals**: no outside pointer blocking or wheel/touch blocking (Radix's
+  `disableOutsidePointerEvents`, react-remove-scroll); scroll lock is
+  overflow-only. With two sidebars in one provider, the mobile focus trap covers
+  only the first.
 - **Carousel**: no autoplay pause button and no `aria-controls` on previous/next
   (shadcn has neither).
 - **Code block**: "Copy"/"Copied" labels are hard-coded; hunk headers go through
-  the language lexer; `scroll-fade-y` is not ported.
+  the language lexer.
 - **Drawer**: the overlay doesn't follow `fadeFromIndex` with snap points; snap
   offsets are not recalculated on resize.
 - **Input OTP**: `<.form_label field={...}>` points at the hook root, not the
@@ -154,9 +180,14 @@ Issues reviewers found but didn't fix. None blocks a merge.
 - **Sidebar**: `mix salad.add`'s moduledoc still names `tooltip` as a sidebar
   dependency; controlled `open` can't be pulled back by re-rendering the same
   value (use `send_command`); menu tooltips set no `aria-describedby`.
-- **Tooling**: 10 leftover `h-4 w-4` in `test/salad_ui/dropdown_menu_test.exs`;
-  the project `CLAUDE.md` still says color schemes live in
-  `assets/tailwind.colors.json`.
+- **Tooling**: storybook `mix format --check-formatted` flags
+  `storybook/storybook/salad_ui_component/pagination.story.exs` (from `737e992`);
+  `test/salad_ui/pagination_test.exs:84` asserts attribute order and fails with
+  some seeds (e.g. `--seed 982493`); `storybook/.../demo/sidebar_six.ex` still puts
+  `mr-2` on dropdown item icons, doubling the new `gap-2`; the project `CLAUDE.md`
+  still says color schemes live in `assets/tailwind.colors.json`. None of the
+  parity work has been checked end to end in a real browser for every component;
+  jsdom and LiveViewTest are the main evidence.
 - **Attribution**: every parity commit leaves out the harness's Co-Authored-By
   trailer, following the user's CLAUDE.md.
 
@@ -170,10 +201,11 @@ part maps to a function except React-only ones. Every item it raised has landed:
 
 ### Completeness critic, round 2
 
-Re-checked on `2a53f7b`: exported parts (327 shadcn functions, all mapped except
+Re-checked on `2a53f7b`; all six gaps below have since landed (see the table
+above). Exported parts (327 shadcn functions, all mapped except
 Portal/Overlay/Provider and React-only helpers), `data-slot` names, class strings
 in every ui file, and every `ComponentPreview` in the radix docs pages against the
-storybook. Remaining gaps, as work items:
+storybook. The gaps it raised, as work items:
 
 | Id | Kind | Gap |
 |---|---|---|

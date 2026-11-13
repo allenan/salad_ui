@@ -80,8 +80,19 @@ for status and known gaps. Every new JS-backed component is registered in
 - Sidebar: `dir` attr.
 - `SaladUI.getDirection(el)` in JS; positioned content, tabs, radio group, slider,
   menus, carousel, resizable, calendar and navigation menu follow `dir="rtl"`.
-- `salad_ui.css`: shimmer, `scroll-fade-x`/`scroll-fade-b` and `scrollbar-none`
-  utilities from shadcn.
+- `salad_ui.css`: shimmer, `scrollbar-none`/`no-scrollbar` and shadcn's full
+  `scroll-fade` utility set (`scroll-fade`, `-x`, `-y`, `-t`, `-b`, `-l`, `-r`,
+  `-s`, `-e`, `-none` and size modifiers, RTL-aware).
+- `priv/static/assets/typeset.css`: shadcn's typeset prose styles as an opt-in
+  stylesheet (see README and `docs/manual_install.md`).
+- Dropdown menu (new-york-v4): items take `inset` and `variant` (`destructive`);
+  any item takes `close-on-select={false}`; `dropdown_menu_radio_item` takes
+  `checked` for the first server render. The content caps its height to the room
+  beside the trigger and scrolls.
+- `breadcrumb_separator` takes content to replace the chevron; `input` and
+  `input_group_input` accept `type="search"`.
+- `SaladUI.ClassMerge`: a Tailwind v4-aware wrapper around `tw_merge` used by
+  every component's `class` merge (and copied by `mix salad.add`).
 - Toggle group (new-york-v4): `type` (single/multiple), `spacing` (0 = connected
   items), `orientation`, `loop`, `on-value-changed`; roving tab stop with arrow
   keys that follow orientation and RTL, Home/End. Toggle: `on-pressed-changed` and
@@ -146,6 +157,22 @@ for status and known gaps. Every new JS-backed component is registered in
   changed server `open`/`value` is still applied.
 - Dropdown menu fires `on-close` and returns focus as soon as closing starts, not
   after the exit animation.
+- **Menus**: picking a checkbox or radio item now closes the dropdown, context
+  menu or menubar menu, as in Radix. Pass `close-on-select={false}` on the item to
+  keep the old behaviour.
+- Dropdown menu: a pointer open focuses the content with no item highlighted
+  (Enter, Space or ArrowDown on the trigger still focus the first item); the
+  pointer leaving an item clears its highlight; Tab inside open content is
+  swallowed; the content is `aria-labelledby` its trigger; items, labels and
+  sub-menus use v4 classes (`gap-2`, `font-medium` labels), so icons that carried
+  their own `mr-2` now get double spacing.
+- A caller's `class` now overrides component defaults written in Tailwind v4
+  syntax (`w-(--x)`, `data-[orientation=vertical]:h-auto`, `outline-hidden`,
+  text-shadow, inset-ring and other v4-only groups). Classes that used to ship
+  side by side may now replace each other; for example `button_group_separator`
+  no longer collapses to 0px because its `h-auto` override now wins.
+- Code block content fades its scrolling edges (`scroll-fade-x`, and
+  `scroll-fade-y` when lines wrap).
 - Dialog, sheet, alert dialog, drawer and the sidebar's mobile sheet lock page
   scrolling while open, as Radix and vaul do: `<html>`/`<body>` get
   `overflow: hidden` and `<body>` is padded by the scrollbar width (exposed as
@@ -200,6 +227,12 @@ for status and known gaps. Every new JS-backed component is registered in
   resume them after a hover.
 - Sidebar menu buttons with a tooltip keep the `sidebar_menu_action`/`_badge`
   styles, and an outer trigger passed through `as_child` works again.
+- Dropdown menu with `use-portal`: the content survives LiveView patches, and
+  Escape inside portaled content closes the menu.
+- Component class merging no longer crashes on `not-*` classes (`not-typeset`,
+  `not-prose`) or `no-scrollbar`.
+- Sub-menus close when the pointer leaves the sub-trigger away from the sub-menu
+  (Radix pointer-direction grace).
 
 # 0.14.0
 
