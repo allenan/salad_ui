@@ -394,6 +394,31 @@ defmodule SaladUI.SidebarTest do
       assert html =~ ~s(data-sidebar="menu-tooltip")
     end
 
+    test "the tooltip has a server-rendered id; the button is not described by it until it shows" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.sidebar_menu_button id="home" tooltip="Home">Home</.sidebar_menu_button>
+        """)
+
+      assert html =~ ~r/<div[^>]*id="home-tooltip"[^>]*data-sidebar="menu-tooltip"/
+      # sidebar.js adds aria-describedby only while the (collapsed) tooltip shows.
+      refute html =~ "aria-describedby"
+    end
+
+    test "without a button id, the tooltip renders no id (the hook generates one while it shows)" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.sidebar_menu_button tooltip="Home">Home</.sidebar_menu_button>
+        <.sidebar_menu_button tooltip="Home">Home</.sidebar_menu_button>
+        """)
+
+      refute html =~ ~r/\sid="/
+    end
+
     test "is_mobile on the menu button skips the tooltip" do
       assigns = %{}
 
