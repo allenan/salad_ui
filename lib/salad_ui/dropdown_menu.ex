@@ -138,6 +138,23 @@ defmodule SaladUI.DropdownMenu do
   trigger (`max-h-(--dropdown-menu-content-available-height)`), so a long menu
   near the viewport edge scrolls.
 
+  ## Modal behaviour
+
+  As with Radix's DropdownMenu, a menu is modal by default (`modal={true}`).
+  While it is open, clicks outside it never reach the page: `<body>` gets
+  `pointer-events: none` and the menu `pointer-events: auto`, so the first
+  click outside only closes the menu (a second one then activates what is
+  underneath). Everything outside the menu is `aria-hidden`, wheel and touch
+  scrolling outside it are cancelled, and page scrolling is locked (the
+  scrollbar is hidden and `<body>` padded by its width; see "Scroll lock" in
+  `SaladUI.Dialog`). The page is unblocked as soon as the menu starts
+  closing. A menu opened inside a dialog takes over from the dialog until it
+  closes.
+
+  Pass `modal={false}` to leave the page interactive, readable and scrollable
+  while the menu is open; a click outside then closes the menu and also
+  reaches what was clicked.
+
   ## Component events
 
   * `:on-open` - Maps the `open` event. Fired when the dropdown menu enters open state.
@@ -182,6 +199,7 @@ defmodule SaladUI.DropdownMenu do
   * `:open` - Whether the dropdown is initially open. Defaults to `false`.
   * `:use-portal` - Whether to render the dropdown in a portal. Defaults to `false`.
   * `:portal-container` - CSS selector for the portal container. Defaults to `nil`.
+  * `:modal` - Whether the open menu blocks, hides and scroll-locks the page. Defaults to `true`.
   * `:on-open` - Handler for dropdown menu open event.
   * `:on-close` - Handler for dropdown menu close event.
   * `:class` - Additional CSS classes.
@@ -201,6 +219,11 @@ defmodule SaladUI.DropdownMenu do
   attr :open, :boolean, default: false, doc: "Whether the dropdown menu is initially open"
   attr :"use-portal", :boolean, default: false, doc: "Whether to render the content in a portal"
   attr :"portal-container", :string, default: nil, doc: "CSS selector for the portal container"
+
+  attr :modal, :boolean,
+    default: true,
+    doc: "block, hide and scroll-lock the page while open; `false` leaves the page interactive"
+
   attr :"on-open", :any, default: nil, doc: "Handler for dropdown menu open event"
   attr :"on-close", :any, default: nil, doc: "Handler for dropdown menu close event"
   attr :class, :string, default: nil
@@ -223,6 +246,7 @@ defmodule SaladUI.DropdownMenu do
         json(%{
           usePortal: assigns[:"use-portal"],
           portalContainer: assigns[:"portal-container"],
+          modal: assigns.modal,
           animations: get_animation_config()
         })
       )

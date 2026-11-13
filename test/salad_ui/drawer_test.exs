@@ -164,4 +164,23 @@ defmodule SaladUI.DrawerTest do
       assert html =~ "pt-2"
     end
   end
+
+  describe "modal" do
+    test "is modal by default and accepts modal={false}" do
+      assigns = %{}
+
+      default =
+        rendered_to_string(~H"""
+        <.drawer id="d"><span>Body</span></.drawer>
+        """)
+
+      non_modal =
+        rendered_to_string(~H"""
+        <.drawer id="d" modal={false}><span>Body</span></.drawer>
+        """)
+
+      assert options(default)["modal"] == true
+      assert options(non_modal)["modal"] == false
+    end
+  end
 end

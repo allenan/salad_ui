@@ -2,9 +2,10 @@
 //
 // A vaul-style drawer: a modal dialog that slides in from an edge of the
 // viewport and can be dragged back out to dismiss it, optionally resting at
-// intermediate snap points. Open/close, focus trap, Escape and overlay click
-// come from DialogComponent; this class adds direction, dragging and snap
-// points.
+// intermediate snap points. Open/close, focus trap, Escape, overlay click and
+// the modal layer (outside blocking, aria-hidden, scroll lock; `modal: false`
+// turns them off, as vaul's `modal` prop does) come from DialogComponent;
+// this class adds direction, dragging and snap points.
 import DialogComponent from "./dialog.js";
 import SaladUI from "../index.js";
 
@@ -118,6 +119,8 @@ class DrawerComponent extends DialogComponent {
     this.stampDirection();
     this.updateUI();
     this.updatePartsVisibility();
+    // Put back the outside blocking the patch dropped (see DialogComponent).
+    this.modalLayer.refresh();
     if (this.state === "open") {
       this.applyOffset(this.currentOffset || 0, false);
       if (this.drag?.active) this.markDragging();

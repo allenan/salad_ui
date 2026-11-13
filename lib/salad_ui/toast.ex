@@ -134,6 +134,12 @@ defmodule SaladUI.Toast do
   notification system:
 
       <.toaster id="toaster" flash={@flash} />
+
+  ## Modals
+
+  Toasts stay clickable and announced while a modal dialog, sheet, drawer or
+  dropdown menu blocks the rest of the page: the viewport is marked
+  `data-salad-layer-branch`, which the modal layer always leaves interactive.
   """
   use SaladUI, :component
 
@@ -230,6 +236,7 @@ defmodule SaladUI.Toast do
     >
       <ol
         data-part="viewport"
+        data-salad-layer-branch
         data-position={@position}
         role="region"
         aria-label="Notifications"

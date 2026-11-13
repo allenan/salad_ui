@@ -38,6 +38,36 @@
     width: 100%;
 }
 
+/* Scroll lock (dialog, sheet, alert dialog, drawer, dropdown menu), as
+   react-remove-scroll-bar styles it for Radix. While a modal is open, <body>
+   carries `data-scroll-locked` and `--removed-body-scroll-bar-size` (the
+   scrollbar width it was padded by). Fixed-position elements opt in so they
+   do not shift when the scrollbar goes away:
+   - `right-scroll-bar-position`: for elements pinned with `right: 0`
+     (a floating button); `right` moves in by the scrollbar width.
+   - `width-before-scroll-bar`: for full-width elements (a fixed header);
+     gets a right margin of the scrollbar width.
+   Nested elements with the same class are not offset twice. */
+body[data-scroll-locked] {
+    overscroll-behavior: contain;
+}
+
+body[data-scroll-locked] .right-scroll-bar-position {
+    right: var(--removed-body-scroll-bar-size, 0px) !important;
+}
+
+body[data-scroll-locked] .width-before-scroll-bar {
+    margin-right: var(--removed-body-scroll-bar-size, 0px) !important;
+}
+
+body[data-scroll-locked] .right-scroll-bar-position .right-scroll-bar-position {
+    right: 0 !important;
+}
+
+body[data-scroll-locked] .width-before-scroll-bar .width-before-scroll-bar {
+    margin-right: 0 !important;
+}
+
 
 /* Chat kit utilities (Attachment, Marker, Trace, MessageScroller, CodeBlock),
    ported verbatim from shadcn's `shadcn/tailwind.css`: `scrollbar-none` (and

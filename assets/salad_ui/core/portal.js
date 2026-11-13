@@ -9,6 +9,9 @@ import { getDirection } from "./direction.js";
 class Portal {
   // Static storage for element metadata
   static portalRegistry = new WeakMap();
+  // Elements currently moved out, so modal layers can find what was
+  // portaled out of them (see modal-layer.js).
+  static portaled = new Set();
 
   /**
    * Move an element to a portal container
@@ -45,6 +48,7 @@ class Portal {
 
     // Store the metadata in our registry
     this.portalRegistry.set(element, originalData);
+    this.portaled.add(element);
 
     // Move the element to the portal container
     container.appendChild(element);
@@ -93,6 +97,7 @@ class Portal {
 
       // Update portal state
       originalData.inPortal = false;
+      this.portaled.delete(element);
 
       return true;
     } catch (error) {
@@ -111,6 +116,37 @@ class Portal {
     if (!element) return false;
     const data = this.portalRegistry.get(element);
     return data?.inPortal === true;
+  }
+
+  /**
+   * The parent a portaled element was moved out of, or null when it is not
+   * in a portal.
+   *
+   * @param {HTMLElement} element - Element to look up
+   * @returns {HTMLElement|null} Its original parent
+   */
+  static originalParent(element) {
+    if (!element) return null;
+    const data = this.portalRegistry.get(element);
+    return data?.inPortal ? data.parent : null;
+  }
+
+  /**
+   * Every element currently in a portal and still in the document.
+   *
+   * @returns {HTMLElement[]} Portaled elements
+   */
+  static portaledElements() {
+    const elements = [];
+    for (const element of this.portaled) {
+      // Restored, or removed for good (a destroyed positioned element).
+      if (this.isInPortal(element) && element.isConnected) {
+        elements.push(element);
+      } else {
+        this.portaled.delete(element);
+      }
+    }
+    return elements;
   }
 
   /**

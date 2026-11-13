@@ -233,4 +233,28 @@ defmodule SaladUI.SheetTest do
       assert html =~ "Close"
     end
   end
+
+  describe "modal" do
+    test "is modal by default and accepts modal={false}" do
+      assigns = %{}
+
+      default =
+        rendered_to_string(~H"""
+        <.sheet id="s">
+          <div>Content</div>
+        </.sheet>
+        """)
+
+      non_modal =
+        rendered_to_string(~H"""
+        <.sheet id="s" modal={false}>
+          <div>Content</div>
+        </.sheet>
+        """)
+
+      assert default =~ "modal&quot;:true"
+      assert non_modal =~ "modal&quot;:false"
+      refute non_modal =~ ~s( modal=)
+    end
+  end
 end
