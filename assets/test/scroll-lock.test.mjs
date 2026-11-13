@@ -159,6 +159,33 @@ test("no padding without a scrollbar or with scrollbar-gutter: stable", () => {
   assert.equal(html().style.getPropertyValue("scrollbar-gutter"), "stable");
 });
 
+// Changing an inherited custom property on <body> restyles the whole page.
+test("without a scrollbar the gap property is not written", () => {
+  const release = lockScroll();
+  assert.equal(body().getAttribute("data-scroll-locked"), "1");
+  assert.equal(
+    body().style.getPropertyValue("--removed-body-scroll-bar-size"),
+    "",
+  );
+  release();
+  assert.equal(body().getAttribute("style"), null);
+});
+
+test("a gap property the page set is overwritten while locked and put back", () => {
+  body().style.setProperty("--removed-body-scroll-bar-size", "12px");
+
+  const release = lockScroll();
+  assert.equal(
+    body().style.getPropertyValue("--removed-body-scroll-bar-size"),
+    "0px",
+  );
+  release();
+  assert.equal(
+    body().style.getPropertyValue("--removed-body-scroll-bar-size"),
+    "12px",
+  );
+});
+
 test("locks are ref counted and a release is idempotent", () => {
   const first = lockScroll();
   const second = lockScroll();

@@ -287,34 +287,105 @@ test("everything outside an open dialog is aria-hidden, and restored on close", 
   assert.equal($("#pre-hidden").hasAttribute("data-aria-hidden"), false);
 });
 
-test("everything hidden outside an open dialog is also inert, and restored on close", () => {
+test("the hidden page is not made inert, and the app's own inert is left alone", () => {
   const dialog = buildDialog();
   $("#pre-hidden").setAttribute("inert", "");
 
   dialog.transition("open");
 
-  // inert takes the hidden page out of the tab order (axe aria-hidden-focus).
+  // aria-hidden only, as Radix: inert would restyle the whole hidden page.
   for (const id of ["#header", "#sibling", "#dialog-trigger"]) {
-    assert.ok($(id).hasAttribute("inert"), id);
-  }
-  // Never the layer, its ancestors or a live region.
-  for (const id of [
-    "#main",
-    "#dialog",
-    "#dialog-content",
-    "#dialog-panel",
-    "#live",
-  ]) {
+    assert.ok(hidden(id), id);
     assert.equal($(id).hasAttribute("inert"), false, id);
   }
 
   dialog.transition("close");
 
-  for (const id of ["#header", "#sibling", "#dialog-trigger"]) {
-    assert.equal($(id).hasAttribute("inert"), false, id);
-  }
-  // The app's own inert is left alone.
   assert.ok($("#pre-hidden").hasAttribute("inert"));
+});
+
+// --- focus -------------------------------------------------------------------
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test("focus that lands outside an open dialog goes back to where it was inside", async () => {
+  const dialog = buildDialog();
+  $("#page-button").focus();
+
+  dialog.transition("open");
+  await waitFor(() => $("#dialog-panel").contains(document.activeElement));
+  $("#dialog-action").focus();
+
+  // Tab from <body>, or a script's focus(), reaches the hidden page.
+  $("#page-button").focus();
+  await settle();
+  assert.equal(document.activeElement, $("#dialog-action"));
+
+  $("#dialog-trigger").focus();
+  await settle();
+  assert.equal(document.activeElement, $("#dialog-action"));
+
+  // Once closed, the page takes focus again.
+  dialog.transition("close");
+  await settle();
+  $("#page-button").focus();
+  await settle();
+  assert.equal(document.activeElement, $("#page-button"));
+});
+
+test("focus that lands outside an open modal menu goes back to the menu", async () => {
+  const menu = buildDropdown();
+  const content = $('#menu [data-part="content"]');
+
+  menu.transition("open");
+  assert.equal(document.activeElement, content);
+
+  $("#page-button").focus();
+  await settle();
+  assert.equal(document.activeElement, content);
+});
+
+test("with nothing focused inside yet, outside focus goes to the layer's first focusable", async () => {
+  const dialog = buildDialog();
+  dialog.transition("open");
+
+  // Before the focus trap's deferred initial focus.
+  $("#page-button").focus();
+  await settle();
+  assert.ok($("#dialog-content").contains(document.activeElement));
+});
+
+test("a non-modal menu does not hold focus", async () => {
+  const menu = buildDropdown({ modal: false });
+  menu.transition("open");
+  // The menu re-focuses its content one frame after opening.
+  await settle();
+
+  $("#page-button").focus();
+  await settle();
+  assert.equal(document.activeElement, $("#page-button"));
+});
+
+test("a dialog opened from another one keeps the focus it moves in", async () => {
+  buildPage(dialogMarkup("first") + dialogMarkup("second"));
+  const first = mount("dialog", $("#first"));
+  const second = mount("dialog", $("#second"));
+
+  first.transition("open");
+  await waitFor(() => $("#first-panel").contains(document.activeElement));
+  second.transition("open");
+  await waitFor(() => $("#second-panel").contains(document.activeElement));
+
+  // The first dialog is now outside the blocking layer.
+  $("#first-action").focus();
+  await settle();
+  assert.ok($("#second-panel").contains(document.activeElement));
+
+  second.transition("close");
+  await settle();
+  $("#first-action").focus();
+  await settle();
+  assert.equal(document.activeElement, $("#first-action"));
 });
 
 test("stacked dialogs: the inner one hides and blocks the outer until it closes", () => {
