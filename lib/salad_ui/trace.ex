@@ -161,7 +161,7 @@ defmodule SaladUI.Trace do
       aria-hidden="true"
       class={
         classes([
-          "flex size-4 shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [[data-slot=trace-title]~&]:-ms-1",
+          "flex size-4 shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&>span:not([class*='size-'])]:size-4 [[data-slot=trace-title]~&]:-ms-1",
           @class
         ])
       }

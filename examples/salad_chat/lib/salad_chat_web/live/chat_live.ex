@@ -59,6 +59,8 @@ defmodule SaladChatWeb.ChatLive do
            reminding: nil,
            slash: [],
            thread_slash: [],
+           mentions: [],
+           thread_mentions: [],
            main_form: blank_form(),
            thread_form: blank_form(),
            loaded?: false,
@@ -149,7 +151,7 @@ defmodule SaladChatWeb.ChatLive do
   defp load_thread(socket, nil) do
     if socket.assigns.thread do
       socket
-      |> assign(thread: nil, thread_replies: [], thread_slash: [])
+      |> assign(thread: nil, thread_replies: [], thread_slash: [], thread_mentions: [])
       |> Salad.send_command("chat-panels", "setLayout", %{layout: [100, 0]})
       |> Salad.send_command("thread-sheet", "close")
     else
@@ -166,7 +168,12 @@ defmodule SaladChatWeb.ChatLive do
 
         socket =
           socket
-          |> assign(thread: parent, thread_form: blank_form(), thread_slash: [])
+          |> assign(
+            thread: parent,
+            thread_form: blank_form(),
+            thread_slash: [],
+            thread_mentions: []
+          )
           |> assign_replies()
 
         if opened? and connected?(socket) do
@@ -282,7 +289,20 @@ defmodule SaladChatWeb.ChatLive do
 
   ## Composer events
 
+  # The Composer hook reports the `@query` before the caret (nil once the
+  # caret leaves it); the matches render as a list above that composer.
   @impl true
+  def handle_event("mention_query", %{"composer" => composer} = params, socket) do
+    matches =
+      case params["query"] do
+        query when is_binary(query) -> mention_matches(socket.assigns, query)
+        _ -> []
+      end
+
+    key = if composer == "main", do: :mentions, else: :thread_mentions
+    {:noreply, assign(socket, key, matches)}
+  end
+
   def handle_event("composer_change", %{"composer" => composer} = params, socket) do
     body = params["body"] || ""
     socket = maybe_broadcast_typing(socket, body, composer)
@@ -304,7 +324,7 @@ defmodule SaladChatWeb.ChatLive do
       {:handled, socket} ->
         {:noreply,
          socket
-         |> assign(main_form: blank_form(), slash: [])
+         |> assign(main_form: blank_form(), slash: [], mentions: [])
          |> push_event("composer:clear", %{id: "main-input"})}
 
       {:fill, text, socket} ->
@@ -322,7 +342,7 @@ defmodule SaladChatWeb.ChatLive do
           {:ok, _} ->
             {:noreply,
              socket
-             |> assign(main_form: blank_form(), slash: [], last_typing_at: nil)
+             |> assign(main_form: blank_form(), slash: [], mentions: [], last_typing_at: nil)
              |> push_event("composer:clear", %{id: "main-input"})
              |> SaladUI.LiveView.send_command("message-scroller", "scroll_to_end")}
 
@@ -359,7 +379,12 @@ defmodule SaladChatWeb.ChatLive do
       _ ->
         {:noreply,
          socket
-         |> assign(thread_form: blank_form(), thread_slash: [], last_typing_at: nil)
+         |> assign(
+           thread_form: blank_form(),
+           thread_slash: [],
+           thread_mentions: [],
+           last_typing_at: nil
+         )
          |> push_event("composer:clear", %{id: "thread-desktop-composer-input"})
          |> push_event("composer:clear", %{id: "thread-mobile-composer-input"})}
     end
@@ -627,6 +652,7 @@ defmodule SaladChatWeb.ChatLive do
 
   defp error_text(:too_long), do: "Messages are limited to 4000 characters."
   defp error_text(:forbidden), do: "You're not a member of this conversation."
+  defp error_text(:no_parent), do: "That thread no longer exists."
   defp error_text(_), do: "Please try again."
 
   ## Typing
@@ -832,7 +858,8 @@ defmodule SaladChatWeb.ChatLive do
     ~H"""
     <Layouts.app flash={@flash}>
       <.sidebar_provider
-        class="h-svh overflow-hidden"
+        class="h-dvh overflow-clip"
+        data-no-scroll
         style={%{"--chat-font-size": "#{@me.prefs.font_size}px"}}
       >
         <.app_sidebar
@@ -847,7 +874,7 @@ defmodule SaladChatWeb.ChatLive do
           theme={@theme}
         />
 
-        <.sidebar_inset :if={@channel} class="h-svh min-h-0 min-w-0 overflow-hidden">
+        <.sidebar_inset :if={@channel} class="h-dvh min-h-0 min-w-0 overflow-clip" data-no-scroll>
           <.channel_header
             channel={@channel}
             me={@me}
@@ -858,7 +885,7 @@ defmodule SaladChatWeb.ChatLive do
             theme={@theme}
             channels={@channels}
           />
-          <.resizable_panel_group id="chat-panels" class="min-h-0 flex-1">
+          <.resizable_panel_group id="chat-panels" class="min-h-0 flex-1 overflow-clip" data-no-scroll>
             <.resizable_panel
               id="main-panel"
               default-size={if @thread, do: 62, else: 100}
@@ -911,6 +938,7 @@ defmodule SaladChatWeb.ChatLive do
                 form={@main_form}
                 upload={@uploads.attachments}
                 slash={@slash}
+                mentions={@mentions}
                 typing={typing_names(@typing, @users, nil)}
                 placeholder={"Message " <> composer_target(@channel, @me)}
               />
@@ -931,6 +959,7 @@ defmodule SaladChatWeb.ChatLive do
                 ctx={@ctx}
                 form={@thread_form}
                 typing={typing_names(@typing, @users, @thread && @thread.id)}
+                mentions={@thread_mentions}
               />
             </.resizable_panel>
           </.resizable_panel_group>
@@ -951,6 +980,7 @@ defmodule SaladChatWeb.ChatLive do
               form={@thread_form}
               closable={false}
               typing={typing_names(@typing, @users, @thread && @thread.id)}
+              mentions={@thread_mentions}
             />
           </.sheet_content>
         </.sheet>
@@ -976,6 +1006,51 @@ defmodule SaladChatWeb.ChatLive do
       </div>
     </Layouts.app>
     """
+  end
+
+  @mention_limit 8
+
+  @doc false
+  # People (and @here/@channel outside DMs) whose handle or any part of their
+  # name starts with `query`: members of the conversation first, then whoever
+  # is online, then by name.
+  def mention_matches(%{users: users, me: me, channel: channel, online: online}, query) do
+    query = String.downcase(query)
+    members = if channel, do: MapSet.new(channel.members), else: MapSet.new()
+
+    people =
+      users
+      |> Map.values()
+      |> Enum.reject(&(&1.handle == me.handle))
+      |> Enum.filter(&mention_match?(&1, query))
+      |> Enum.sort_by(fn u ->
+        {not MapSet.member?(members, u.handle), not (u.bot? or MapSet.member?(online, u.handle)),
+         String.downcase(u.name)}
+      end)
+      |> Enum.map(&%{handle: &1.handle, name: &1.name, user: &1})
+
+    specials =
+      if channel && not Channel.dm?(channel) do
+        [
+          %{handle: "here", name: "Notify everyone online", user: nil},
+          %{handle: "channel", name: "Notify everyone in ##{channel.name}", user: nil}
+        ]
+        |> Enum.filter(&String.starts_with?(&1.handle, query))
+      else
+        []
+      end
+
+    Enum.take(people ++ specials, @mention_limit)
+  end
+
+  defp mention_match?(_user, ""), do: true
+
+  defp mention_match?(user, query) do
+    String.starts_with?(user.handle, query) or
+      user.name
+      |> String.downcase()
+      |> String.split()
+      |> Enum.any?(&String.starts_with?(&1, query))
   end
 
   defp composer_target(channel, me) do

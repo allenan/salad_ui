@@ -129,6 +129,12 @@ for status and known gaps. Every new JS-backed component is registered in
   `align="center"` (pass `position="popper"` for the old placement);
   `dropdown_menu_content` aligns `center`; popover and hover card use a 4px
   `side-offset`; hover card opens on the `bottom` side.
+- `tooltip_trigger` takes `as` (shadcn's `asChild`): `as={&button/1}` makes the
+  button the trigger, so it groups correctly inside `button_group`.
+- `icon` never shrinks in a flex row (`shrink-0`); `trace_icon` sizes heroicon
+  spans like `<svg>` icons (16px, centred on the title).
+- Resizable panels use `overflow: clip` (with `hidden` as the fallback), so
+  focusing an input inside one can't scroll the panel out of place (iOS Safari).
 - Menus no longer wrap with the arrow keys by default (Radix `loop={false}`);
   set `loop` on the content to wrap. Menubar trigger navigation still loops.
 - Class merging follows tailwind-merge v3 exactly, e.g. `outline outline-2`

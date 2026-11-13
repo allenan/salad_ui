@@ -266,7 +266,11 @@ class ResizableComponent extends Component {
       panel.style.flexGrow = String(this.layout[i]);
       panel.style.flexShrink = "1";
       panel.style.flexBasis = "0px";
-      panel.style.overflow = "hidden";
+      // `clip`, not `hidden`: a hidden panel is still a scroll container, so
+      // focusing an input inside it (iOS Safari, scrollIntoView) can scroll
+      // the panel itself, and nothing lets the user scroll it back.
+      // Browsers without `clip` keep the server-rendered `hidden`.
+      panel.style.overflow = "clip";
       panel.setAttribute("data-size", String(this.layout[i]));
     });
   }

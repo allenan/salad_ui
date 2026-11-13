@@ -110,7 +110,7 @@ test("initial layout uses default sizes and splits the rest evenly", () => {
   const [a, b] = panelsOf(el);
   assert.equal(a.style.flexGrow, "50");
   assert.equal(b.style.flexGrow, "25");
-  assert.equal(a.style.overflow, "hidden");
+  assert.equal(a.style.overflow, "clip");
 
   assert.equal(el.getAttribute("aria-orientation"), "horizontal");
   const [first, second] = handlesOf(el);

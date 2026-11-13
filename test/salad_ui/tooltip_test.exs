@@ -103,4 +103,36 @@ defmodule SaladUI.TooltipTest do
       assert html =~ "group-data-[side=right]/tooltip:right-full"
     end
   end
+
+  describe "tooltip_trigger as" do
+    import SaladUI.Button
+
+    test "renders the given component as the trigger itself" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip_trigger as={&button/1} variant="outline" size="icon-sm" aria-label="Details">
+          i
+        </.tooltip_trigger>
+        """)
+
+      assert_tag(html, "button", [{"data-slot", "tooltip-trigger"}, {"data-part", "trigger"}, {"data-variant", "outline"}])
+
+      refute html =~ "<div"
+      assert duplicate_attrs(html) == []
+    end
+
+    test "a plain tag drops button props" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip_trigger as="span" variant="outline">i</.tooltip_trigger>
+        """)
+
+      assert_tag(html, "span", [{"data-part", "trigger"}])
+      refute html =~ "variant"
+    end
+  end
 end

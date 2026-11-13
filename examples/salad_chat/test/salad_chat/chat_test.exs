@@ -79,6 +79,23 @@ defmodule SaladChat.ChatTest do
       assert [%Message{body: "love it"}] = Chat.list_replies(parent.id)
       assert_receive {:message_updated, %Message{id: id, reply_count: 1}} when id == parent.id
     end
+
+    test "a reply to a missing, nested or other-channel parent is rejected, not a crash" do
+      {:ok, parent} = Chat.create_message("maya", "design", "thoughts?")
+      {:ok, reply} = Chat.create_message("leo", "design", "yes", parent_id: parent.id)
+
+      assert {:error, :no_parent} =
+               Chat.create_message("leo", "design", "hi", parent_id: 999_999_999)
+
+      assert {:error, :no_parent} =
+               Chat.create_message("leo", "design", "hi", parent_id: reply.id)
+
+      assert {:error, :no_parent} =
+               Chat.create_message("leo", "random", "hi", parent_id: parent.id)
+
+      # The store survived.
+      assert Chat.get_message(parent.id).reply_count == 1
+    end
   end
 
   test "toggle_reaction/3 adds and removes a reaction" do

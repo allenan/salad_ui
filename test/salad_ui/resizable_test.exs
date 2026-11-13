@@ -81,7 +81,7 @@ defmodule SaladUI.ResizableTest do
       assert html =~ ~s(data-default-size="25")
       assert html =~ ~s(data-min-size="10")
       assert html =~ ~s(data-max-size="40.5")
-      assert html =~ ~s(style="flex: 25 1 0px; overflow: hidden;")
+      assert html =~ ~s(style="flex: 25 1 0px; overflow: hidden; overflow: clip;")
     end
 
     test "omits constraints that are not given" do
@@ -91,7 +91,7 @@ defmodule SaladUI.ResizableTest do
 
       refute html =~ "data-default-size"
       refute html =~ "data-min-size"
-      assert html =~ ~s(style="flex: 1 1 0px; overflow: hidden;")
+      assert html =~ ~s(style="flex: 1 1 0px; overflow: hidden; overflow: clip;")
     end
 
     test "rejects non-percentage sizes" do

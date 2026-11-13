@@ -345,6 +345,44 @@ defmodule SaladChatWeb.ChatLiveTest do
     end
   end
 
+  describe "@mentions" do
+    test "typing @ lists people to mention; nil closes the list", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general")
+      refute has_element?(view, "#main-mentions")
+
+      render_hook(view, "mention_query", %{"composer" => "main", "query" => "ma"})
+      assert has_element?(view, "#main-mention-maya[role=option]")
+      refute has_element?(view, "#main-mention-kai"), "never suggests yourself"
+      assert has_element?(view, "#main-input[aria-expanded=true][aria-controls=main-mentions]")
+
+      render_hook(view, "mention_query", %{"composer" => "main", "query" => nil})
+      refute has_element?(view, "#main-mentions")
+    end
+
+    test "matches any word of the name, and @here/@channel outside DMs", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general")
+
+      render_hook(view, "mention_query", %{"composer" => "main", "query" => "okaf"})
+      assert has_element?(view, "#main-mention-maya")
+
+      render_hook(view, "mention_query", %{"composer" => "main", "query" => "h"})
+      assert has_element?(view, "#main-mention-here")
+    end
+
+    test "the thread composer has its own list", %{conn: conn} do
+      {:ok, parent} = Chat.create_message("leo", "general", "Thread me")
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general/t/#{parent.id}")
+
+      render_hook(view, "mention_query", %{
+        "composer" => "thread-desktop-composer",
+        "query" => "s"
+      })
+
+      assert has_element?(view, "#thread-desktop-composer-mention-sam")
+      refute has_element?(view, "#main-mentions")
+    end
+  end
+
   defp eventually(fun, check, tries \\ 100) do
     result = fun.()
 
