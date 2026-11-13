@@ -10,7 +10,8 @@
 //   node assets/bench-run.mjs [baseUrl] [reps] > results.json
 //
 // Env: NS=100,500 VARIANTS=hooks,plain MEM=1 (also measureUserAgentSpecificMemory
-// on the first rep; ~20 s per page) TIMEOUT_S=300.
+// on the first rep; ~20 s per page) TIMEOUT_S=300 EXTRA="&modal=0" (appended to
+// every URL).
 
 const base = process.argv[2] || "http://localhost:4107"
 const reps = Number(process.argv[3] || 3)
@@ -58,7 +59,7 @@ for (let r = 0; r < reps; r++) {
   for (const n of ns) {
     for (const variant of variants) {
       const mem = process.env.MEM === "1" && r === 0 ? "&mem=1" : ""
-      const url = `${base}/bench?variant=${variant}&n=${n}${mem}`
+      const url = `${base}/bench?variant=${variant}&n=${n}${mem}${process.env.EXTRA || ""}`
       const tab = await openTab()
       const t0 = Date.now()
       await send("Page.navigate", {url})

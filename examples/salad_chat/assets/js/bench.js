@@ -9,6 +9,11 @@
 // timers): open /bench, run benchRun({reps: 3}) in the console, then
 // benchSummary().
 
+import SaladUI from "salad_ui"
+// Not public: B instantiates a component on a cloned element the way the hook
+// does. A library change would expose this (e.g. SaladUI.mount(el, hook)).
+import {registry} from "salad_ui/core/factory.js"
+
 const params = new URLSearchParams(location.search)
 export const isBench = location.pathname === "/bench"
 const variant = params.get("variant") || "hooks"
@@ -27,6 +32,7 @@ const B = (window.__bench = {
   hookDestroys: 0,
   longtasks: [],
   lvReplies: [],
+  errors: [],
 })
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -48,6 +54,8 @@ const median = (xs) => {
 const r1 = (x) => (x == null ? null : Math.round(x * 10) / 10)
 
 if (isBench) {
+  window.addEventListener("error", (e) => B.errors.push(String(e.message)))
+  window.addEventListener("unhandledrejection", (e) => B.errors.push(String(e.reason)))
   try {
     new PerformanceObserver((list) => {
       for (const e of list.getEntries()) B.longtasks.push({start: e.startTime, dur: e.duration})
@@ -97,6 +105,7 @@ export function benchSaladHook(base) {
       B.hookMounts++
       B.hookMountMs += e - s
       B.lastHookAt = e
+      this.el.__benchMounted = true
     },
     beforeUpdate() {
       if (!inert) base.beforeUpdate.call(this)
@@ -125,16 +134,28 @@ const visible = (el) => !!el && el.checkVisibility()
 const waitFor = (cond, timeout = 3000) =>
   new Promise((resolve) => {
     if (cond()) return resolve(performance.now())
+    let poll
     const obs = new MutationObserver(() => {
       if (cond()) {
         obs.disconnect()
         clearTimeout(t)
+        clearInterval(poll)
         resolve(performance.now())
       }
     })
     obs.observe(document.body, {attributes: true, childList: true, subtree: true})
+    // Focus moves without a DOM mutation: poll too.
+    poll = setInterval(() => {
+      if (cond()) {
+        obs.disconnect()
+        clearTimeout(t)
+        clearInterval(poll)
+        resolve(performance.now())
+      }
+    }, 4)
     const t = setTimeout(() => {
       obs.disconnect()
+      clearInterval(poll)
       resolve(null)
     }, timeout)
   })
@@ -209,9 +230,11 @@ const BenchDone = {
     }
     const prepend = await this.timedPush("prepend", {}, () => document.getElementById("rows--1"))
     await sleep(300)
-    const interaction = await this.interact(mid)
+    const strategies = ["hooks", "shared", "template", "server"].includes(variant)
+    const interaction = strategies ? await this.interactMenus(mid) : await this.interact(mid)
+    const correctness = strategies ? await this.correctness(mid) : null
 
-    const result = {variant, n, mount, memory, prepend, updates, update: median(updates.map((u) => u.total)), interaction}
+    const result = {variant, n, mount, memory, prepend, updates, update: median(updates.map((u) => u.total)), interaction, correctness, errors: B.errors}
     window.__benchResult = result
     this.status("done")
 
@@ -254,6 +277,75 @@ const BenchDone = {
       hookUpdateMs: r1(B.hookUpdateMs - before.uMs),
       longtasks: longtasksIn(t0, t1),
     }
+  },
+
+  // A, B, C and the hooks baseline: time from the click (or right click)
+  // until a menu is visible and holds focus, then Escape.
+  async interactMenus(mid) {
+    const out = {}
+    const timeOpen = async (kind, id) => {
+      const t0 = performance.now()
+      openMenu(kind, id)
+      const ok = await waitFor(menuFocused, 5000)
+      const t = ok ? r1((await painted()) - t0) : null
+      pressEscape()
+      await sleep(500)
+      return t
+    }
+    out.dropdown = await timeOpen("dropdown", mid)
+    out.context = await timeOpen("context", mid + 1)
+    if (variant === "server") {
+      // LiveView's latency simulator delays each push by this many ms.
+      window.liveSocket.enableLatencySim(100)
+      window.liveSocket.disableDebug()
+      out.dropdownLat100 = await timeOpen("dropdown", mid + 2)
+      out.contextLat100 = await timeOpen("context", mid + 3)
+      window.liveSocket.disableLatencySim()
+    }
+    return out
+  },
+
+  // Escape, focus return, the row deleted / the stream reset while open.
+  async correctness(mid) {
+    const out = {}
+    const snapshot = () => ({
+      menuVisible: menuVisible(),
+      bodyBlocked: document.body.style.pointerEvents === "none",
+      ariaHidden: document.querySelectorAll("[data-aria-hidden]").length,
+      focus: describe(document.activeElement),
+    })
+    const push = (event, payload = {}) => new Promise((r) => this.pushEvent(event, payload, r))
+
+    for (const kind of ["dropdown", "context"]) {
+      const id = mid + 4
+      openMenu(kind, id)
+      await waitFor(menuFocused, 5000)
+      pressEscape()
+      await sleep(600)
+      out[`${kind}Escape`] = {
+        ...snapshot(),
+        focusInRow: !!document.getElementById(`rows-${id}`)?.contains(document.activeElement),
+      }
+    }
+
+    for (const [name, event] of [["delete", "delete_row"], ["reset", "reset_rows"]]) {
+      const id = name === "delete" ? mid + 6 : mid + 8
+      openMenu("dropdown", id)
+      const opened = !!(await waitFor(menuFocused, 5000))
+      await push(event, {id})
+      await sleep(600)
+      const during = snapshot()
+      pressEscape()
+      await sleep(600)
+      out[`${name}WhileOpen`] = {opened, during, afterEscape: snapshot()}
+      if (menuVisible()) {
+        // Leave a clean page for the next check.
+        for (const root of document.querySelectorAll('[data-component$="menu"][data-state="open"]'))
+          SaladUI.command(root, "close", {restoreFocus: false})
+        await sleep(400)
+      }
+    }
+    return out
   },
 
   // Synthetic hover / click on row `mid`: time until the popup is visible
@@ -320,6 +412,198 @@ const BenchDone = {
       await sleep(400)
     }
     return out
+  },
+}
+
+// --- Menu strategies (A shared, B template, C server) ----------------------
+
+const menuVisible = () =>
+  [...document.querySelectorAll('[role="menu"]')].some((m) => m.checkVisibility())
+const menuFocused = () => {
+  const m = document.activeElement?.closest?.('[role="menu"]')
+  return !!m && m.checkVisibility()
+}
+const describe = (el) =>
+  !el || el === document.body
+    ? "body"
+    : `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${el.getAttribute("aria-label") ? `[${el.getAttribute("aria-label")}]` : ""}`
+const pressEscape = () =>
+  (document.activeElement || document.body).dispatchEvent(
+    new KeyboardEvent("keydown", {key: "Escape", bubbles: true, cancelable: true}),
+  )
+const rightClick = (target, x, y) =>
+  target.dispatchEvent(
+    new PointerEvent("contextmenu", {bubbles: true, cancelable: true, clientX: x, clientY: y, button: 2, pointerType: "mouse"}),
+  )
+
+// A user's click on row `id`'s ⋮ (focusing it, as a real click does), or a
+// right click on the row.
+function openMenu(kind, id) {
+  const row = document.getElementById(`rows-${id}`)
+  if (!row) return
+  if (kind === "dropdown") {
+    const btn =
+      variant === "hooks"
+        ? row.querySelector('[id$="-more"] [data-part="trigger"]')
+        : row.querySelector("[data-menu-open]")
+    btn.focus()
+    btn.click()
+  } else {
+    const target =
+      variant === "hooks" ? row.querySelector('[id$="-context"] [data-part="trigger"]') : row.firstElementChild
+    const r = target.getBoundingClientRect()
+    rightClick(target, r.left + 40, r.top + 10)
+  }
+}
+
+// Moves a menu's hidden proxy trigger over the element it should anchor to.
+const placeProxy = (trigger, rect) =>
+  Object.assign(trigger.style, {
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+  })
+
+// Waits (a few ms at most) for LiveView to have mounted the hook on `el`.
+const whenMounted = async (el) => {
+  for (let i = 0; i < 50 && el && !el.__benchMounted; i++) await sleep(2)
+  return el
+}
+
+// The page-level tooltip of A, B and C, driven by `data-tooltip`.
+function delegateTooltip(tip) {
+  let timer = null
+  let current = null
+  const over = (e) => {
+    const t = e.target.closest?.("[data-tooltip]")
+    if (!t || t === current) return
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      current = t
+      tip.textContent = t.dataset.tooltip
+      tip.hidden = false
+      const r = t.getBoundingClientRect()
+      tip.style.left = `${r.left + r.width / 2 - tip.offsetWidth / 2}px`
+      tip.style.top = `${r.top - tip.offsetHeight - 8}px`
+    }, 150)
+  }
+  const out = (e) => {
+    const t = e.target.closest?.("[data-tooltip]")
+    if (!t || (e.relatedTarget && t.contains(e.relatedTarget))) return
+    clearTimeout(timer)
+    current = null
+    tip.hidden = true
+  }
+  document.addEventListener("mouseover", over)
+  document.addEventListener("mouseout", out)
+  return () => {
+    document.removeEventListener("mouseover", over)
+    document.removeEventListener("mouseout", out)
+  }
+}
+
+const BenchMenus = {
+  mounted() {
+    this.variant = this.el.dataset.variant
+    this.untip = delegateTooltip(this.el.querySelector("[data-shared-tooltip]"))
+    this.onClick = (e) => {
+      const btn = e.target.closest?.("[data-menu-open]")
+      if (btn) this.openDropdown(btn)
+    }
+    this.onContext = (e) => {
+      const row = e.target.closest?.("[data-menu-row]")
+      // C: once rendered, the row's own context menu handles it.
+      if (!row || e.target.closest('[data-component="context-menu"]')) return
+      e.preventDefault()
+      // An open shared menu's document listener would close it again.
+      e.stopImmediatePropagation()
+      this.openContext(row, e.clientX, e.clientY)
+    }
+    // A: items dispatch this; the row id is on the open menu's root.
+    this.onAction = (e) => {
+      const root = e.target.closest?.("[data-row-id]")
+      this.pushEvent("menu_action", {id: root?.dataset.rowId, ...e.detail})
+    }
+    document.addEventListener("click", this.onClick)
+    document.addEventListener("contextmenu", this.onContext)
+    document.addEventListener("bench:menu-action", this.onAction)
+  },
+
+  destroyed() {
+    this.untip()
+    document.removeEventListener("click", this.onClick)
+    document.removeEventListener("contextmenu", this.onContext)
+    document.removeEventListener("bench:menu-action", this.onAction)
+    this.removeTemplate(this.tpl)
+  },
+
+  openDropdown(btn) {
+    const id = btn.dataset.menuOpen
+    if (this.variant === "shared") {
+      const root = document.getElementById("shared-more")
+      if (root.dataset.state === "open") SaladUI.command(root, "close", {restoreFocus: false})
+      root.dataset.rowId = id
+      placeProxy(root.querySelector('[data-part="trigger"]'), btn.getBoundingClientRect())
+      SaladUI.command(root, "open")
+    } else if (this.variant === "template") {
+      const root = this.cloneTemplate("tpl-more", id)
+      placeProxy(root.querySelector('[data-part="trigger"]'), btn.getBoundingClientRect())
+      SaladUI.command(root, "open")
+    } else if (this.variant === "server") {
+      this.pushEvent("open_menu", {id: Number(id), kind: "dropdown"}, async () => {
+        const root = await whenMounted(document.getElementById(`rows-${id}-more`))
+        if (root) SaladUI.command(root, "open")
+      })
+    }
+  },
+
+  openContext(row, x, y) {
+    const id = row.dataset.menuRow
+    if (this.variant === "shared") {
+      const root = document.getElementById("shared-context")
+      root.dataset.rowId = id
+      rightClick(root.querySelector('[data-part="trigger"]'), x, y)
+    } else if (this.variant === "template") {
+      const root = this.cloneTemplate("tpl-context", id)
+      rightClick(root.querySelector('[data-part="trigger"]'), x, y)
+    } else if (this.variant === "server") {
+      this.pushEvent("open_menu", {id: Number(id), kind: "context"}, async () => {
+        const root = await whenMounted(document.getElementById(`rows-${id}-context`))
+        if (root) rightClick(root.querySelector('[data-part="trigger"]'), x, y)
+      })
+    }
+  },
+
+  // B: clone the menu's template into a portal outside the stream (LiveView
+  // ignores it), put the row id in, and build the component as the hook would.
+  // Destroyed and removed once it has closed.
+  cloneTemplate(templateId, id) {
+    this.removeTemplate(this.tpl)
+    const portal = document.getElementById("bench-tpl-portal")
+    portal.insertAdjacentHTML(
+      "beforeend",
+      document.getElementById(templateId).innerHTML.replaceAll("__ID__", id),
+    )
+    const root = portal.lastElementChild
+    root.removeAttribute("phx-hook")
+    const tpl = {root, component: registry.create(root.dataset.component, root, this)}
+    this.tpl = tpl
+    tpl.observer = new MutationObserver(() => {
+      if (root.dataset.state === "closed") setTimeout(() => this.removeTemplate(tpl), 300)
+    })
+    tpl.observer.observe(root, {attributes: true, attributeFilter: ["data-state"]})
+    return root
+  },
+
+  removeTemplate(tpl) {
+    if (!tpl || tpl.removed) return
+    tpl.removed = true
+    tpl.observer.disconnect()
+    if (tpl.root.dataset.state === "open") tpl.component.transition("close", {restoreFocus: false})
+    tpl.component.destroy()
+    tpl.root.remove()
+    if (this.tpl === tpl) this.tpl = null
   },
 }
 
@@ -404,7 +688,7 @@ const BenchShared = {
   },
 }
 
-export const BenchHooks = {BenchDone, BenchShared}
+export const BenchHooks = {BenchDone, BenchShared, BenchMenus}
 
 const planUrl = (p) => `/bench?variant=${p.variant}&n=${p.n}&auto=1${p.mem ? "&mem=1" : ""}`
 

@@ -16,12 +16,24 @@ defmodule SaladChatWeb.BenchLive do
                     ONE page-level tooltip + menu driven by document event
                     delegation (a prototype of the proposed redesign).
 
+  Three ways to keep menu markup out of the rows. Rows carry only the
+  triggers; tooltips use the page-level `data-tooltip` delegation in all
+  three, so only the menu strategy differs:
+
+    * `shared`    - (A) ONE real SaladUI dropdown_menu and context_menu on the
+                    page, outside the stream, opened at the clicked row.
+    * `template`  - (B) one `<template>` per menu; on open the client clones
+                    it into a portal, substitutes the row id and instantiates
+                    the SaladUI component on it; on close it is destroyed.
+    * `server`    - (C) click -> pushEvent; the server stream_inserts the row
+                    with its menu rendered, then the client opens it.
+
   The client side lives in assets/js/bench.js; `&auto=1` runs a plan stored
   in localStorage and collects the numbers there.
   """
   use SaladChatWeb, :live_view
 
-  @variants ~w(hooks inert plain delegated)
+  @variants ~w(hooks inert plain delegated shared template server)
   @emoji ~w(👍 👎 ✅ 🎉 😂 😍 🙏 🔥)
   @users [
     %{name: "Ada Lovelace", initials: "AL", color: "bg-rose-500"},
@@ -52,7 +64,8 @@ defmodule SaladChatWeb.BenchLive do
 
     {:ok,
      socket
-     |> assign(variant: variant, n: n, oldest: 0, page_title: "Bench #{variant} #{n}")
+     |> assign(variant: variant, n: n, oldest: 0, open_menu: nil, modal: params["modal"] != "0")
+     |> assign(page_title: "Bench #{variant} #{n}")
      |> stream(:rows, rows)}
   end
 
@@ -82,6 +95,42 @@ defmodule SaladChatWeb.BenchLive do
 
   def handle_event("menu_action", _params, socket), do: {:noreply, socket}
 
+  # C: render the row's menu, then the client opens it.
+  def handle_event("open_menu", %{"id" => id, "kind" => kind}, socket)
+      when kind in ~w(dropdown context) do
+    socket =
+      case socket.assigns.open_menu do
+        {old, _} when old != id -> stream_insert(socket, :rows, row(old))
+        _ -> socket
+      end
+
+    {:reply, %{},
+     socket
+     |> assign(open_menu: {id, String.to_existing_atom(kind)})
+     |> stream_insert(:rows, row(id))}
+  end
+
+  def handle_event("close_menu", %{"id" => id}, socket) do
+    case socket.assigns.open_menu do
+      {^id, _} ->
+        {:noreply, socket |> assign(open_menu: nil) |> stream_insert(:rows, row(id))}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # Correctness checks: the row goes away, or the stream is reset, while its
+  # menu is open.
+  def handle_event("delete_row", %{"id" => id}, socket) do
+    {:reply, %{}, stream_delete_by_dom_id(socket, :rows, "rows-#{id}")}
+  end
+
+  def handle_event("reset_rows", _params, socket) do
+    rows = Enum.map(1..socket.assigns.n//1, &row/1)
+    {:reply, %{}, socket |> assign(oldest: 0) |> stream(:rows, rows, reset: true)}
+  end
+
   @impl true
   def render(assigns) do
     assigns = assign(assigns, :emoji, @emoji)
@@ -104,12 +153,25 @@ defmodule SaladChatWeb.BenchLive do
               row={row}
               delegated={@variant == "delegated"}
             />
+            <.menu_row
+              :if={@variant in ~w(shared template server)}
+              id={dom_id}
+              row={row}
+              emoji={@emoji}
+              open={open_kind(@open_menu, row.id)}
+            />
           <% end %>
         </div>
       </div>
       <div id="bench-done" phx-hook="BenchDone" data-variant={@variant} data-n={@n}></div>
       <div id="bench-portal" phx-update="ignore"></div>
       <.shared_popups :if={@variant == "delegated"} emoji={@emoji} />
+      <.menu_strategies
+        :if={@variant in ~w(shared template server)}
+        variant={@variant}
+        emoji={@emoji}
+        modal={@modal}
+      />
     </div>
     """
   end
@@ -311,6 +373,250 @@ defmodule SaladChatWeb.BenchLive do
         </div>
       </div>
     </div>
+    """
+  end
+
+  defp open_kind({id, kind}, id), do: kind
+  defp open_kind(_, _), do: nil
+
+  attr :id, :string, required: true
+  attr :row, :map, required: true
+  attr :emoji, :list, required: true
+
+  attr :open, :atom,
+    default: nil,
+    doc: "C only: the menu the server rendered (:dropdown, :context)"
+
+  # A, B and C: the row carries only the triggers.
+  defp menu_row(assigns) do
+    ~H"""
+    <div id={@id} class="relative" data-row={@row.id} data-menu-row={@row.id}>
+      <%= if @open == :context do %>
+        <.context_menu
+          id={"#{@id}-context"}
+          use-portal
+          portal-container="#bench-portal"
+          on-close={JS.push("close_menu", value: %{id: @row.id})}
+        >
+          <.context_menu_trigger as="div" class="block">
+            <.menu_row_body id={@id} row={@row} open={@open} emoji={@emoji} />
+          </.context_menu_trigger>
+          <.context_menu_content class="w-56">
+            <.context_items emoji={@emoji} cmd={&server_cmd(@row.id, &1)} />
+          </.context_menu_content>
+        </.context_menu>
+      <% else %>
+        <.menu_row_body id={@id} row={@row} open={@open} emoji={@emoji} />
+      <% end %>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :row, :map, required: true
+  attr :emoji, :list, required: true
+  attr :open, :atom, default: nil
+
+  defp menu_row_body(assigns) do
+    ~H"""
+    <div class="group/msg relative block px-4 pt-2 pb-0.5 transition-colors hover:bg-muted/50 has-[[data-state=open]]:bg-muted/50">
+      <div class="flex gap-3">
+        <.avatar class="size-9 rounded-lg">
+          <.avatar_fallback class={"#{@row.user.color} font-medium text-white"}>
+            {@row.user.initials}
+          </.avatar_fallback>
+        </.avatar>
+        <div class="flex min-w-0 flex-col gap-1">
+          <div class="flex items-center gap-2 text-sm">
+            <button
+              type="button"
+              class="font-semibold text-foreground hover:underline"
+              data-tooltip={"#{@row.user.name} · Online"}
+            >
+              {@row.user.name}
+            </button>
+            <time class="text-xs text-muted-foreground">{@row.time}</time>
+          </div>
+          <p class="text-sm">{@row.body}</p>
+        </div>
+      </div>
+      <div class={toolbar_class()}>
+        <.button_group aria-label="Message actions">
+          <.button
+            :for={e <- ~w(👍 👎 ✅)}
+            variant="ghost"
+            size="icon-sm"
+            aria-label={"React with #{e}"}
+          >
+            {e}
+          </.button>
+          <.button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Add reaction"
+            data-tooltip="Add reaction"
+          >
+            <.icon name="hero-face-smile" />
+          </.button>
+          <.button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Reply in thread"
+            data-tooltip="Reply in thread"
+          >
+            <.icon name="hero-chat-bubble-left-ellipsis" />
+          </.button>
+          <%= if @open == :dropdown do %>
+            <.dropdown_menu
+              id={"#{@id}-more"}
+              use-portal
+              portal-container="#bench-portal"
+              on-close={JS.push("close_menu", value: %{id: @row.id})}
+            >
+              <.dropdown_menu_trigger
+                as={&button/1}
+                variant="ghost"
+                size="icon-sm"
+                aria-label="More actions"
+              >
+                <.icon name="hero-ellipsis-vertical" />
+              </.dropdown_menu_trigger>
+              <.dropdown_menu_content align="end" class="w-56">
+                <.dropdown_items emoji={@emoji} cmd={&server_cmd(@row.id, &1)} />
+              </.dropdown_menu_content>
+            </.dropdown_menu>
+          <% else %>
+            <.button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="More actions"
+              aria-haspopup="menu"
+              data-menu-open={@row.id}
+            >
+              <.icon name="hero-ellipsis-vertical" />
+            </.button>
+          <% end %>
+        </.button_group>
+      </div>
+    </div>
+    """
+  end
+
+  attr :variant, :string, required: true
+  attr :modal, :boolean, default: true, doc: "`&modal=0`: open A without the modal layer"
+  attr :emoji, :list, required: true
+
+  # A: the one shared dropdown/context menu. B: their templates. Each menu's
+  # own trigger is a hidden proxy that the client moves over the clicked row
+  # button (the components anchor to their trigger).
+  defp menu_strategies(assigns) do
+    ~H"""
+    <div id="bench-menus" phx-hook="BenchMenus" data-variant={@variant}>
+      <%= if @variant == "shared" do %>
+        <.dropdown_menu id="shared-more" use-portal portal-container="#bench-portal" modal={@modal}>
+          <.dropdown_menu_trigger class={proxy_class()} tabindex="-1" aria-label="More actions">
+            <span class="sr-only">More actions</span>
+          </.dropdown_menu_trigger>
+          <.dropdown_menu_content align="end" class="w-56">
+            <.dropdown_items emoji={@emoji} cmd={&shared_cmd/1} />
+          </.dropdown_menu_content>
+        </.dropdown_menu>
+        <.context_menu id="shared-context" use-portal portal-container="#bench-portal" modal={@modal}>
+          <.context_menu_trigger as="div" class={proxy_class()}><span></span></.context_menu_trigger>
+          <.context_menu_content class="w-56">
+            <.context_items emoji={@emoji} cmd={&shared_cmd/1} />
+          </.context_menu_content>
+        </.context_menu>
+      <% end %>
+      <%= if @variant == "template" do %>
+        <template id="tpl-more">
+          <.dropdown_menu id="tpl-more-__ID__">
+            <.dropdown_menu_trigger class={proxy_class()} tabindex="-1" aria-label="More actions">
+              <span class="sr-only">More actions</span>
+            </.dropdown_menu_trigger>
+            <.dropdown_menu_content align="end" class="w-56">
+              <.dropdown_items emoji={@emoji} cmd={&template_cmd/1} />
+            </.dropdown_menu_content>
+          </.dropdown_menu>
+        </template>
+        <template id="tpl-context">
+          <.context_menu id="tpl-context-__ID__">
+            <.context_menu_trigger as="div" class={proxy_class()}>
+              <span></span>
+            </.context_menu_trigger>
+            <.context_menu_content class="w-56">
+              <.context_items emoji={@emoji} cmd={&template_cmd/1} />
+            </.context_menu_content>
+          </.context_menu>
+        </template>
+        <div id="bench-tpl-portal" phx-update="ignore"></div>
+      <% end %>
+      <div
+        data-shared-tooltip
+        role="tooltip"
+        hidden
+        class="pointer-events-none fixed z-50 rounded-md bg-foreground px-3 py-1.5 text-xs text-background"
+      >
+      </div>
+    </div>
+    """
+  end
+
+  defp proxy_class, do: "pointer-events-none fixed top-0 left-0 size-px opacity-0"
+
+  # What a menu item does: C knows the row; A reads it from the open menu
+  # (bench.js); B gets it substituted into the cloned template.
+  defp server_cmd(id, extra), do: JS.push("menu_action", value: Map.put(extra, :id, id))
+  defp shared_cmd(extra), do: JS.dispatch("bench:menu-action", detail: extra)
+  defp template_cmd(extra), do: JS.push("menu_action", value: Map.put(extra, :id, "__ID__"))
+
+  attr :emoji, :list, required: true
+  attr :cmd, :any, required: true
+
+  defp dropdown_items(assigns) do
+    ~H"""
+    <.dropdown_menu_sub>
+      <.dropdown_menu_sub_trigger>
+        <.icon name="hero-face-smile" /> React
+      </.dropdown_menu_sub_trigger>
+      <.dropdown_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
+        <.dropdown_menu_item
+          :for={e <- @emoji}
+          on-select={@cmd.(%{emoji: e})}
+          class="justify-center text-lg"
+        >
+          {e}
+        </.dropdown_menu_item>
+      </.dropdown_menu_sub_content>
+    </.dropdown_menu_sub>
+    <.dropdown_menu_item :for={{icon, label} <- actions()} on-select={@cmd.(%{action: label})}>
+      <.icon name={icon} /> {label}
+    </.dropdown_menu_item>
+    """
+  end
+
+  attr :emoji, :list, required: true
+  attr :cmd, :any, required: true
+
+  defp context_items(assigns) do
+    ~H"""
+    <.context_menu_sub>
+      <.context_menu_sub_trigger>
+        <.icon name="hero-face-smile" /> React
+      </.context_menu_sub_trigger>
+      <.context_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
+        <.context_menu_item
+          :for={e <- @emoji}
+          on-select={@cmd.(%{emoji: e})}
+          class="justify-center text-lg"
+        >
+          {e}
+        </.context_menu_item>
+      </.context_menu_sub_content>
+    </.context_menu_sub>
+    <.context_menu_item :for={{icon, label} <- actions()} on-select={@cmd.(%{action: label})}>
+      <.icon name={icon} /> {label}
+    </.context_menu_item>
     """
   end
 
