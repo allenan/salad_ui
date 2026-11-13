@@ -230,6 +230,7 @@ defmodule SaladUI.MenuParts do
         data-slot={@slot}
         data-part="sub-content"
         data-side={@side}
+        data-loop={@loop && "true"}
         data-state="closed"
         role="menu"
         tabindex="-1"

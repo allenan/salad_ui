@@ -315,6 +315,8 @@ defmodule SaladUI.DropdownMenu do
     `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
+  * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
+    first (and back). Defaults to `false`, as in Radix.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
@@ -322,6 +324,7 @@ defmodule SaladUI.DropdownMenu do
   attr :align, :string, values: ~w(start center end), default: "start"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
+  attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -349,6 +352,7 @@ defmodule SaladUI.DropdownMenu do
         data-part="content"
         data-side={@side}
         data-align={@align}
+        data-loop={@loop && "true"}
         role="menu"
         tabindex="-1"
         class={classes([@base, @class])}
@@ -629,12 +633,15 @@ defmodule SaladUI.DropdownMenu do
   * `:align` - Alignment along the sub-trigger (start, center, end). Defaults to `"start"`.
   * `:side-offset` - Distance from the sub-trigger in pixels. Defaults to `0`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
+  * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
+    first (and back). Defaults to `false`, as in Radix.
   * `:class` - Additional CSS classes.
   """
   attr :side, :string, values: ~w(right left), default: "right"
   attr :align, :string, values: ~w(start center end), default: "start"
   attr :"side-offset", :integer, default: 0, doc: "Distance from the sub-trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
+  attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true

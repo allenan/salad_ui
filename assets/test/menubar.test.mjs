@@ -279,6 +279,39 @@ test("loop=false stops at the ends; disabled triggers are skipped", () => {
   component.destroy();
 });
 
+test("items stop at the ends of a menu unless its content sets data-loop; triggers still wrap", () => {
+  for (const loop of [false, true]) {
+    const { component, edit, file, item } = build();
+    if (loop) edit.content.setAttribute("data-loop", "true");
+
+    edit.trigger.focus();
+    keydown(edit.trigger, "ArrowDown");
+    assert.equal(document.activeElement, item("undo"));
+    keydown(item("undo"), "ArrowDown");
+    keydown(item("redo"), "ArrowDown");
+    assert.equal(
+      document.activeElement,
+      loop ? item("undo") : item("redo"),
+      `content loop=${loop}`,
+    );
+    keydown(document.activeElement, "Home");
+    keydown(item("undo"), "ArrowUp");
+    assert.equal(
+      document.activeElement,
+      loop ? item("redo") : item("undo"),
+      `content loop=${loop}`,
+    );
+
+    // The menubar root's own loop (default true) still wraps the triggers.
+    component.handleCommand("close");
+    file.trigger.focus();
+    keydown(file.trigger, "ArrowLeft");
+    assert.equal(document.activeElement.textContent, "View");
+
+    component.destroy();
+  }
+});
+
 test("ArrowDown, Enter and Space open a menu at its first item; ArrowUp at its last", () => {
   const { component, file, item } = build();
 

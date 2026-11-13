@@ -24,6 +24,7 @@ function buildDropdown({
   // The exit animation dropdown_menu/1 configures.
   animated = false,
   usePortal = false,
+  loop = null,
 } = {}) {
   const options = JSON.stringify({
     usePortal,
@@ -41,7 +42,8 @@ function buildDropdown({
       <button type="button" data-part="trigger" tabindex="0">Open</button>
       <div data-part="positioner" data-side="bottom" data-align="start"
            data-side-offset="4" data-align-offset="0" hidden>
-        <div data-part="content" data-side="bottom" data-align="start" tabindex="-1">
+        <div data-part="content" data-side="bottom" data-align="start" tabindex="-1"
+             ${loop === null ? "" : `data-loop="${loop}"`}>
           <div data-part="item" data-value="profile" tabindex="0"
                data-event-mappings='{"select":"selected"}'>Profile</div>
           <div data-part="item" data-value="settings" tabindex="0"
@@ -245,6 +247,40 @@ test("arrow keys navigate and prevent page scroll when open trigger keeps focus"
   assert.equal(document.activeElement, profile);
   keydown(trigger, "ArrowDown");
   assert.equal(document.activeElement, settings);
+
+  component.destroy();
+});
+
+for (const loop of [null, "false"]) {
+  test(`without loop (data-loop=${loop}), ArrowDown/ArrowUp stop at the ends`, () => {
+    const { component, checkbox, profile, trigger } = buildDropdown({ loop });
+
+    click(trigger);
+    keydown(trigger, "ArrowDown");
+    keydown(profile, "End");
+    assert.equal(document.activeElement, checkbox);
+    keydown(checkbox, "ArrowDown");
+    assert.equal(document.activeElement, checkbox, "stays on the last item");
+    keydown(checkbox, "Home");
+    keydown(profile, "ArrowUp");
+    assert.equal(document.activeElement, profile, "stays on the first item");
+
+    component.destroy();
+  });
+}
+
+test("with loop, ArrowDown/ArrowUp wrap around", () => {
+  const { component, checkbox, profile, trigger } = buildDropdown({
+    loop: "true",
+  });
+
+  click(trigger);
+  keydown(trigger, "ArrowDown");
+  keydown(profile, "End");
+  keydown(checkbox, "ArrowDown");
+  assert.equal(document.activeElement, profile, "wraps to the first item");
+  keydown(profile, "ArrowUp");
+  assert.equal(document.activeElement, checkbox, "wraps to the last item");
 
   component.destroy();
 });

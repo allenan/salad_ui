@@ -149,6 +149,7 @@ defmodule SaladUi.PaginationTest do
       # lucide MoreHorizontalIcon, hidden; the sr-only label names it
       assert html =~
                ~r/<svg[^>]*aria-hidden="true"[^>]*class="size-4"><circle cx="12" cy="12" r="1"><\/circle><circle cx="19" cy="12" r="1"><\/circle><circle cx="5" cy="12" r="1"><\/circle><\/svg>/
+
       assert html =~ ~s(<span class="sr-only">More pages</span>)
       refute html =~ ~r/<span[^>]*data-slot="pagination-ellipsis"[^>]*aria-hidden/
     end
