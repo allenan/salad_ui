@@ -154,7 +154,10 @@ defmodule SaladUI.Command do
       <.command_input placeholder="Type a command..." />
   """
   attr :class, :any, default: ""
-  attr :rest, :global, default: %{}
+
+  attr :rest, :global,
+    default: %{},
+    include: ~w(placeholder name value autofocus disabled readonly maxlength minlength)
 
   def command_input(assigns) do
     ~H"""
