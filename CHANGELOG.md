@@ -383,6 +383,17 @@ for status and known gaps. Every new JS-backed component is registered in
 - `igniter` and `sourceror` are optional dependencies. The installer tasks ask
   for `{:igniter, "~> 0.6", only: [:dev, :test]}` when it is missing.
 
+**Tooltips no longer pile up**
+- One tooltip at a time: opening one closes any other (Radix's provider).
+- Leaving the trigger before the open delay ends cancels it (a tooltip used to
+  open after the pointer left and stay stuck).
+- Pressing the trigger, Escape, and scrolling a container around the trigger
+  close it, as in Radix; a pointer seen elsewhere closes one whose mouseout
+  was missed.
+- No tooltip opens while a menu, popover, dialog, select, combobox or hover
+  card is open, except for triggers inside that popup.
+- Focus that follows a click does not open a tooltip; keyboard focus does.
+
 **More fixes from downstream use**
 - Dialog, alert dialog, sheet and drawer take `return-focus`, a selector for
   the element that gets focus on close (Radix's `onCloseAutoFocus`).
