@@ -7,6 +7,36 @@ defmodule SaladUI.Helpers do
   alias Phoenix.HTML.FormField
 
   @doc """
+  Merges Tailwind classes with `TwMerge`, later classes winning conflicts.
+
+  TwMerge 0.1 crashes on a `not-*` class it has no group for, such as typeset's
+  `not-typeset` or typography's `not-prose` (it walks into the `not-` variant
+  tree and finds no validators). Those classes are kept as-is, after the merged
+  ones, instead of failing the render.
+  """
+  def tw_merge(classes) when is_list(classes) do
+    TwMerge.merge(classes)
+  rescue
+    Protocol.UndefinedError ->
+      {unparsable, mergeable} =
+        classes
+        |> Enum.filter(&is_binary/1)
+        |> Enum.flat_map(&String.split/1)
+        |> Enum.split_with(&unparsable_class?/1)
+
+      [TwMerge.merge(mergeable) | unparsable]
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.join(" ")
+  end
+
+  defp unparsable_class?(class) do
+    TwMerge.merge([class])
+    false
+  rescue
+    Protocol.UndefinedError -> true
+  end
+
+  @doc """
   Prepares form-related assigns for use in an input component.
 
   When a `:field` (a `%Phoenix.HTML.FormField{}`) is given, `:id`, `:name`, `:value`,

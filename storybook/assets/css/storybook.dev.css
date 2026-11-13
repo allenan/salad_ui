@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @import "../../../assets/css/tailwind.theme.css";
 @import "../../../priv/static/assets/salad_ui.css";
+@import "../../../priv/static/assets/typeset.css";
 @import "./color.css";
 
 @plugin "@tailwindcss/forms";

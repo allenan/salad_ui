@@ -193,7 +193,7 @@ defmodule SaladUI do
       alias Phoenix.LiveView.JS
 
       defp classes(input) do
-        TwMerge.merge(List.flatten(input))
+        tw_merge(List.flatten(input))
       end
     end
   end

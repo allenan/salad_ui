@@ -52,6 +52,17 @@ directives. Keep anything Phoenix generated that isn't listed here.
 `deps/salad_ui/assets/salad_ui` is scanned because some components (toast)
 build their classes in JavaScript.
 
+SaladUI's utilities (`scroll-fade`, `shimmer`, `scrollbar-none`, used by code
+block, message scroller, attachment and others) live in `salad_ui.css`. Import
+it after Tailwind. `typeset.css` is optional: it styles rendered markdown and
+chat content inside a `typeset` container.
+
+```css
+@import "../../deps/salad_ui/priv/static/assets/salad_ui.css";
+/* Optional: shadcn/typeset for rendered markdown */
+@import "../../deps/salad_ui/priv/static/assets/typeset.css";
+```
+
 If Phoenix generated `@import "tailwindcss" source(none);` keep that line
 instead of the plain import, and replace its `@custom-variant dark ...` line
 with the one above rather than adding a second.

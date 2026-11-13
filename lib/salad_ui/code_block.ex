@@ -77,6 +77,38 @@ defmodule SaladUI.CodeBlock do
   Token colors follow GitHub's light and dark themes and switch with the
   `dark` variant.
 
+  ## Height, Show More and scroll fade
+
+  `code_block_content/1` fades its edges with the `scroll-fade` utilities from
+  `salad_ui.css` as it scrolls: left and right by default, top and bottom when
+  it wraps. Add `scroll-fade-y` to a capped block that does not wrap. For Show
+  More, cap the content while collapsed and toggle the cap from a footer button:
+
+      <.code_block_content id="chat-code" code={@code} class="max-h-64 scroll-fade-y overflow-y-hidden" />
+      <.code_block_footer class="justify-center">
+        <.button
+          variant="ghost"
+          size="xs"
+          aria-expanded="false"
+          aria-controls="chat-code"
+          phx-click={
+            JS.toggle_class("max-h-64 scroll-fade-y overflow-y-hidden", to: "#chat-code")
+            |> JS.toggle_attribute({"aria-expanded", "true", "false"})
+          }
+        >
+          Show more
+        </.button>
+      </.code_block_footer>
+
+  ## Typeset, streaming and markdown
+
+  Inside a `typeset` container (the opt-in `priv/static/assets/typeset.css`) a
+  code block keeps its own styles and gets the same space above as a
+  paragraph. To stream code, re-render `code_block_content/1` with the longer
+  string as lines arrive and pass `disabled` to the copy button until the block
+  is complete; for markdown, render each fenced block as a `code_block/1` and
+  its language as the title.
+
   ## Accessibility
 
   - `code_block_content/1` is a `pre` with a `code` element, always `dir="ltr"`,
@@ -351,7 +383,8 @@ defmodule SaladUI.CodeBlock do
     `\\ No newline at end of file` notes are kept whole.
   * `:tabindex` - `0` by default so the content can be scrolled by keyboard;
     pass `-1` to remove the tab stop.
-  * `:class` - Additional CSS classes, such as `max-h-72` to cap the height.
+  * `:class` - Additional CSS classes, such as `max-h-72` to cap the height
+    (add `scroll-fade-y` to fade the top and bottom edges of a capped block).
 
   ## Examples
 
@@ -394,7 +427,7 @@ defmodule SaladUI.CodeBlock do
       style={@counter_style}
       class={
         classes([
-          "min-h-0 min-w-0 overflow-auto px-4 py-4 text-start font-mono leading-relaxed outline-none [scrollbar-width:thin] data-wrap:wrap-break-word data-wrap:whitespace-pre-wrap group-has-data-[slot=code-block-header]/code-block:pt-2 group-has-data-[slot=code-block-footer]/code-block:pb-2 group-data-[size=sm]/code-block:px-3 group-data-[size=sm]/code-block:py-3 group-data-[size=sm]/code-block:group-has-data-[slot=code-block-header]/code-block:pt-1.5",
+          "min-h-0 min-w-0 scroll-fade-x overflow-auto px-4 py-4 text-start font-mono leading-relaxed outline-none [scrollbar-width:thin] data-wrap:scroll-fade-y data-wrap:wrap-break-word data-wrap:whitespace-pre-wrap group-has-data-[slot=code-block-header]/code-block:pt-2 group-has-data-[slot=code-block-footer]/code-block:pb-2 group-data-[size=sm]/code-block:px-3 group-data-[size=sm]/code-block:py-3 group-data-[size=sm]/code-block:group-has-data-[slot=code-block-header]/code-block:pt-1.5",
           @class
         ])
       }

@@ -117,6 +117,23 @@ defmodule SaladUI.HelperTest do
   def translate_error({"error 1", _}), do: "translated error 1"
   def translate_error({"error 2", _}), do: "translated error 2"
 
+  describe "tw_merge/1" do
+    test "merges conflicting Tailwind classes, later wins" do
+      assert Helpers.tw_merge(["px-2 py-1", nil, "px-4"]) == "py-1 px-4"
+    end
+
+    test "keeps not-* opt-out classes TwMerge cannot parse instead of crashing" do
+      assert Helpers.tw_merge(["flex px-2", "not-typeset px-4", nil]) == "flex px-4 not-typeset"
+      assert Helpers.tw_merge(["not-prose"]) == "not-prose"
+      assert Helpers.tw_merge(["not-italic"]) == "not-italic"
+    end
+
+    test "keeps the scroll-fade utilities side by side" do
+      assert Helpers.tw_merge(["scroll-fade-x data-wrap:scroll-fade-y", "scroll-fade-y scroll-fade-8"]) ==
+               "scroll-fade-x data-wrap:scroll-fade-y scroll-fade-y scroll-fade-8"
+    end
+  end
+
   describe "style/1" do
     test "merges maps and appends a single trailing semicolon" do
       assert Helpers.style([%{color: "red"}, %{"font-size": "16px"}]) == "color: red; font-size: 16px;"

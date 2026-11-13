@@ -151,6 +151,32 @@ Run `mix salad.add` with no arguments to list the components, and pass
 config :salad_ui, :error_translator_function, {MyAppWeb.CoreComponents, :translate_error}
 ```
 
+2. Typeset for rendered markdown and chat content (opt-in)
+
+SaladUI ships shadcn's [typeset](https://ui.shadcn.com/docs/typeset) stylesheet. Import it after
+Tailwind and SaladUI's CSS, then wrap rendered markdown in a `typeset` container:
+
+```css
+/* assets/css/app.css */
+@import "../../deps/salad_ui/priv/static/assets/typeset.css";
+```
+
+```heex
+<div class="typeset">{raw(@html)}</div>
+```
+
+Tune it with `--typeset-size`, `--typeset-leading` and `--typeset-flow` (for example
+`class="typeset [--typeset-flow:1em]"`). Components such as `code_block` keep their own
+styles inside it, and `not-typeset` opts a subtree out. To customise it, copy the file next to
+`app.css` instead.
+
+3. Scroll fade utilities
+
+`salad_ui.css` (copied by the installers) includes shadcn's `scroll-fade` utilities: add
+`scroll-fade` / `scroll-fade-y` to a vertical scroller, `scroll-fade-x` to a horizontal one, or
+an edge utility (`scroll-fade-t`, `-b`, `-l`, `-r`, `-s`, `-e`). Size them with
+`scroll-fade-<n>` / `scroll-fade-{t,b,s,e}-<n>` and turn them off with `scroll-fade-none`.
+
 
 ## 🛠️ Development
 

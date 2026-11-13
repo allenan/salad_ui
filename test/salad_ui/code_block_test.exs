@@ -95,6 +95,27 @@ defmodule SaladUI.CodeBlockTest do
       assert html =~ "max-h-64"
     end
 
+    test "fades the inline edges, the block edges when wrapped, and keeps an added scroll-fade-y" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.code_block_content code="x" class="max-h-64 scroll-fade-y overflow-y-hidden" />
+        """)
+
+      [class] = Regex.run(~r/<pre[^>]*class="([^"]*)"/, html, capture: :all_but_first)
+      classes = String.split(class)
+
+      for c <- ~w(scroll-fade-x data-wrap:scroll-fade-y scroll-fade-y max-h-64 overflow-y-hidden),
+          do: assert(c in classes)
+    end
+
+    test "a not-typeset class opts a block out of typeset without crashing the class merge" do
+      assigns = %{}
+      html = rendered_to_string(~H|<.code_block class="not-typeset"><.code_block_content code="x" /></.code_block>|)
+      assert html =~ "not-typeset"
+    end
+
     test "line numbers split the string and start at start_line" do
       assigns = %{code: "a\n\nb\n"}
 

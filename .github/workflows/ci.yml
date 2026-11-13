@@ -114,6 +114,8 @@ jobs:
           npm ci --prefix assets
           mix assets.setup
           mix assets.build
+      # salad_ui.css utilities (scroll-fade, shimmer, ...) and typeset.css build under the pinned Tailwind.
+      - run: ../.github/scripts/css-utilities.sh
 
   # mix salad.setup / salad.install / salad.add against a freshly generated Phoenix app.
   installer:

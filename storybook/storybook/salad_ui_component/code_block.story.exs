@@ -394,7 +394,8 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
       },
       %Variation{
         id: :height,
-        description: "Cap the height with a `max-h-*` class; the content scrolls inside the block.",
+        description:
+          "Cap the height with a `max-h-*` class; the content scrolls inside the block and `scroll-fade-y` fades its top and bottom edges.",
         attributes: %{class: "w-full max-w-md"},
         slots: [
           """
@@ -404,13 +405,14 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
               <.code_block_copy_button id="height-copy" value={#{inspect(@logs)}} />
             </.code_block_actions>
           </.code_block_header>
-          <.code_block_content code={#{inspect(@logs)}} class="max-h-48" />
+          <.code_block_content code={#{inspect(@logs)}} class="max-h-48 scroll-fade-y" />
           """
         ]
       },
       %Variation{
         id: :show_more,
-        description: "Cap the content while collapsed and toggle the cap from a footer button.",
+        description:
+          "Cap the content while collapsed (`max-h-64 scroll-fade-y overflow-y-hidden`) and toggle the cap from a footer button.",
         attributes: %{class: "w-full max-w-md"},
         slots: [
           """
@@ -425,7 +427,7 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
             code={#{inspect(@chat_live)}}
             language="elixir"
             line_numbers
-            class="max-h-64 overflow-y-hidden"
+            class="max-h-64 scroll-fade-y overflow-y-hidden"
           />
           <.code_block_footer class="justify-center">
             <.button
@@ -433,7 +435,7 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
               size="xs"
               aria-expanded="false"
               aria-controls="show-more-content"
-              phx-click={JS.toggle_class("max-h-64 overflow-y-hidden", to: "#show-more-content") |> JS.toggle_attribute({"aria-expanded", "true", "false"})}
+              phx-click={JS.toggle_class("max-h-64 scroll-fade-y overflow-y-hidden", to: "#show-more-content") |> JS.toggle_attribute({"aria-expanded", "true", "false"})}
             >
               <Lucideicons.chevron_down class="transition-transform in-aria-expanded:rotate-180" />
               <span class="in-aria-expanded:hidden">Show more</span>
@@ -445,7 +447,8 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
       },
       %Variation{
         id: :show_more_max_height,
-        description: "Raise the cap instead of removing it, so a long block still scrolls when expanded.",
+        description:
+          "Raise the cap instead of removing it, so a long block still scrolls (and fades with `scroll-fade-y`) when expanded.",
         attributes: %{class: "w-full max-w-md"},
         slots: [
           """
@@ -460,7 +463,7 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
             code={#{inspect(@chat_live)}}
             language="elixir"
             line_numbers
-            class="max-h-64 overflow-y-hidden"
+            class="max-h-64 scroll-fade-y overflow-y-hidden"
           />
           <.code_block_footer class="justify-center">
             <.button
@@ -612,6 +615,36 @@ defmodule Storybook.SaladUIComponents.CodeBlock do
             </.code_block>
             <p>Then create the <code>ChatLive</code> module.</p>
           </div>
+        </div>
+        """,
+        slots: []
+      },
+      %Variation{
+        id: :typeset,
+        description:
+          "Inside a `typeset` container (the opt-in `typeset.css`), the block keeps its own styles and gets the same space above as a paragraph.",
+        template: """
+        <div class="typeset w-full max-w-md">
+          <h3>Stream a response</h3>
+          <p>
+            Add a <code>live</code> route, then stream the reply into the LiveView with
+            <code>stream_insert/3</code>.
+          </p>
+          <.code_block>
+            <.code_block_header>
+              <.code_block_title>
+                <Lucideicons.file_code /> lib/my_app_web/router.ex
+              </.code_block_title>
+              <.code_block_actions>
+                <.code_block_copy_button id="typeset-copy" value={#{inspect(@router)}} />
+              </.code_block_actions>
+            </.code_block_header>
+            <.code_block_content code={#{inspect(@router)}} language="elixir" line_numbers />
+          </.code_block>
+          <p>
+            The <code>ChatLive</code> module renders each message as it arrives, so the
+            answer shows while it is written.
+          </p>
         </div>
         """,
         slots: []
