@@ -7,7 +7,6 @@ defmodule SaladStorybookWeb.Blocks.Sidebar07 do
 
   import SaladUI.Avatar
   import SaladUI.Breadcrumb
-  import SaladUI.Button
   import SaladUI.Collapsible
   import SaladUI.DropdownMenu
   import SaladUI.Helpers, only: [as_child: 1, dynamic: 1]
@@ -96,7 +95,7 @@ defmodule SaladStorybookWeb.Blocks.Sidebar07 do
       <.sidebar_inset>
         <header class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div class="flex items-center gap-2 px-4">
-            <.sidebar_trigger as={&button/1} target="app-sidebar" class="-ml-1" />
+            <.sidebar_trigger class="-ml-1" />
             <.separator orientation="vertical" class="mr-2 h-4" />
             <.breadcrumb>
               <.breadcrumb_list>

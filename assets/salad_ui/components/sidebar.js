@@ -1,0 +1,474 @@
+// saladui/components/sidebar.js
+//
+// Client-side port of shadcn/ui's SidebarProvider. The hook lives on
+// `sidebar_provider` and drives every `sidebar` inside it:
+//
+//   * desktop open state (`expanded` / `collapsed`), mirrored onto each
+//     sidebar's `data-state` / `data-collapsible` so the shadcn Tailwind
+//     classes (`group-data-[collapsible=icon]:...`) keep working;
+//   * a mobile offcanvas sheet below 768px (matchMedia, like useIsMobile),
+//     with overlay, Escape / outside click to close and a focus trap;
+//   * the Cmd/Ctrl+B shortcut (SIDEBAR_KEYBOARD_SHORTCUT);
+//   * the `sidebar_state` cookie, so the server can render the last state;
+//   * `on-open-change` and the open/close/toggle commands.
+import Component from "../core/component.js";
+import SaladUI from "../index.js";
+import FocusTrap from "../core/focus-trap.js";
+
+export const SIDEBAR_COOKIE_NAME = "sidebar_state";
+export const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+export const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+export const MOBILE_BREAKPOINT = 768;
+
+const SIDEBAR_SELECTOR = '[data-slot="sidebar"][data-collapsible-mode]';
+const TRIGGER_SELECTOR = '[data-sidebar="trigger"]';
+
+class SidebarComponent extends Component {
+  constructor(el, hookContext) {
+    super(el, { hookContext, initialState: "expanded", ignoreItems: false });
+
+    this.openMobile = this.el.dataset.openMobile === "true";
+    this.lastServerOpen = this.el.dataset.open;
+    this.commandTargets = new Set();
+
+    this.onSidebarCommand = this.onSidebarCommand.bind(this);
+    this.onKeyDown = this.onKeyDown.bind(this);
+    this.onMediaChange = this.onMediaChange.bind(this);
+
+    const breakpoint = this.options.mobileBreakpoint || MOBILE_BREAKPOINT;
+    this.mediaQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
+        : null;
+
+    this.collectElements();
+    this.isMobile = this.detectMobile();
+    if (!this.isMobile) this.openMobile = false;
+  }
+
+  parseOptions() {
+    super.parseOptions();
+
+    // A controlled provider (`open` set) wins over the rendered data-state.
+    const open = this.el.dataset.open;
+    if (open === "true" || open === "false") {
+      this.initialState = open === "true" ? "expanded" : "collapsed";
+    }
+    if (!["expanded", "collapsed"].includes(this.initialState)) {
+      this.initialState = "expanded";
+    }
+  }
+
+  // The provider has no parts of its own; nested components own theirs.
+  queryParts() {
+    return [this.el];
+  }
+
+  getComponentConfig() {
+    return {
+      stateMachine: {
+        expanded: { transitions: { collapse: "collapsed" } },
+        collapsed: { transitions: { expand: "expanded" } },
+      },
+    };
+  }
+
+  /**
+   * Sidebars and triggers that belong to this provider (not to a nested one).
+   * Re-run after a LiveView patch, which may have replaced them.
+   */
+  collectElements() {
+    const owned = (node) =>
+      node.closest('[data-component="sidebar"]') === this.el;
+
+    this.sidebars = Array.from(
+      this.el.querySelectorAll(SIDEBAR_SELECTOR),
+    ).filter(owned);
+    this.triggers = Array.from(
+      this.el.querySelectorAll(TRIGGER_SELECTOR),
+    ).filter(owned);
+  }
+
+  detectMobile() {
+    if (typeof this.options.isMobile === "boolean")
+      return this.options.isMobile;
+
+    const forced = this.sidebars.find((sidebar) => sidebar.dataset.isMobile);
+    if (forced) return forced.dataset.isMobile === "true";
+
+    return !!this.mediaQuery?.matches;
+  }
+
+  get open() {
+    return this.state === "expanded";
+  }
+
+  setupComponentEvents() {
+    super.setupComponentEvents();
+
+    document.addEventListener("keydown", this.onKeyDown);
+    if (this.mediaQuery?.addEventListener) {
+      this.mediaQuery.addEventListener("change", this.onMediaChange);
+    } else {
+      this.mediaQuery?.addListener?.(this.onMediaChange);
+    }
+    this.bindCommandTargets();
+  }
+
+  teardownComponentEvents() {
+    super.teardownComponentEvents();
+
+    document.removeEventListener("keydown", this.onKeyDown);
+    if (this.mediaQuery?.removeEventListener) {
+      this.mediaQuery.removeEventListener("change", this.onMediaChange);
+    } else {
+      this.mediaQuery?.removeListener?.(this.onMediaChange);
+    }
+    this.commandTargets.forEach((target) =>
+      target.removeEventListener("salad_ui:command", this.onSidebarCommand),
+    );
+    this.commandTargets.clear();
+  }
+
+  /**
+   * `dispatch_command(..., to: "#<sidebar id>")` targets a sidebar rather
+   * than the provider, so each sidebar forwards its commands here.
+   */
+  bindCommandTargets() {
+    const current = new Set(this.sidebars);
+    this.commandTargets.forEach((target) => {
+      if (!current.has(target)) {
+        target.removeEventListener("salad_ui:command", this.onSidebarCommand);
+        this.commandTargets.delete(target);
+      }
+    });
+    current.forEach((target) => {
+      if (this.commandTargets.has(target)) return;
+      target.addEventListener("salad_ui:command", this.onSidebarCommand);
+      this.commandTargets.add(target);
+    });
+  }
+
+  onSidebarCommand(event) {
+    const { command, params = {} } = event.detail || {};
+    if (!command) return;
+
+    event.stopPropagation();
+    this.handleCommand(command, params ?? {});
+  }
+
+  afterMount() {
+    this.protectAttributes();
+    this.withoutTransitions(() => this.syncSidebars());
+    if (this.isMobile && this.openMobile) this.activateMobileSheet();
+  }
+
+  /**
+   * LiveView would otherwise morph the client-owned attributes back to the
+   * server-rendered markup on every patch, re-opening a sidebar the user
+   * collapsed. `default_open` therefore only sets the initial state; use
+   * `open` (controlled) to drive it from the server.
+   */
+  protectAttributes() {
+    let js = null;
+    try {
+      js = this.hook?.js?.();
+    } catch {
+      js = null;
+    }
+    if (typeof js?.ignoreAttributes !== "function") return;
+
+    js.ignoreAttributes(this.el, [
+      "data-state",
+      "data-mobile",
+      "data-open-mobile",
+    ]);
+    this.sidebars.forEach((sidebar) => {
+      js.ignoreAttributes(sidebar, [
+        "data-state",
+        "data-collapsible",
+        "data-variant",
+        "data-mobile",
+      ]);
+      const container = this.containerOf(sidebar);
+      if (container) {
+        js.ignoreAttributes(container, [
+          "inert",
+          "role",
+          "aria-modal",
+          "aria-label",
+        ]);
+      }
+    });
+    this.triggers.forEach((trigger) =>
+      js.ignoreAttributes(trigger, ["aria-expanded"]),
+    );
+  }
+
+  /**
+   * Keep this instance across a patch: re-find the sidebars (they may have
+   * been re-rendered), re-apply the client state and follow a changed
+   * controlled `open`. Only changed options or event mappings rebuild it.
+   */
+  skipReinitialize(el) {
+    if (el !== this.el) return false;
+    if (
+      el.getAttribute("data-options") !== this._optionsRaw ||
+      el.getAttribute("data-event-mappings") !== this._eventMappingsRaw
+    ) {
+      return false;
+    }
+
+    const previousContainer = this.mobileContainer;
+    this.collectElements();
+    this.bindCommandTargets();
+    this.protectAttributes();
+
+    const serverOpen = el.dataset.open;
+    if (serverOpen !== this.lastServerOpen) {
+      this.lastServerOpen = serverOpen;
+      if (serverOpen === "true" || serverOpen === "false") {
+        this.setOpen(serverOpen === "true", { notify: false, persist: false });
+      }
+    }
+
+    this.updateUI();
+
+    if (this.isMobile && this.openMobile) {
+      const container = this.containerOf(this.sidebars[0]);
+      if (container !== previousContainer) this.activateMobileSheet();
+    }
+    return true;
+  }
+
+  // updateUI() writes the provider's data-state; mirror it onto the sidebars.
+  updateUI() {
+    super.updateUI();
+    if (this.sidebars) this.syncSidebars();
+  }
+
+  containerOf(sidebar) {
+    return sidebar?.querySelector('[data-slot="sidebar-container"]') || null;
+  }
+
+  /**
+   * Write the effective state onto every sidebar.
+   *
+   * Desktop: data-state is expanded/collapsed and data-collapsible carries
+   * the collapsible mode while collapsed (empty while expanded), as shadcn.
+   *
+   * Mobile: shadcn renders a Sheet instead, whose content has data-state
+   * open/closed and no data-variant/data-collapsible. The same markup is
+   * restyled here: data-mobile="true", data-state open/closed, and a closed
+   * sheet reuses the offcanvas position (data-collapsible="offcanvas").
+   */
+  syncSidebars() {
+    const mobile = this.isMobile;
+    const open = mobile ? this.openMobile : this.open;
+
+    this.el.setAttribute("data-mobile", String(mobile));
+    this.el.setAttribute("data-open-mobile", String(mobile && this.openMobile));
+
+    this.sidebars.forEach((sidebar) => {
+      const container = this.containerOf(sidebar);
+
+      if (mobile) {
+        sidebar.setAttribute("data-mobile", "true");
+        sidebar.setAttribute("data-state", open ? "open" : "closed");
+        sidebar.setAttribute("data-collapsible", open ? "" : "offcanvas");
+        sidebar.removeAttribute("data-variant");
+      } else {
+        sidebar.removeAttribute("data-mobile");
+        sidebar.setAttribute("data-state", this.state);
+        sidebar.setAttribute(
+          "data-collapsible",
+          this.open ? "" : sidebar.dataset.collapsibleMode || "offcanvas",
+        );
+        sidebar.setAttribute(
+          "data-variant",
+          sidebar.dataset.sidebarVariant || "sidebar",
+        );
+      }
+
+      if (!container) return;
+      if (mobile && open) {
+        container.removeAttribute("inert");
+        container.setAttribute("role", "dialog");
+        container.setAttribute("aria-modal", "true");
+        container.setAttribute("aria-label", "Sidebar");
+      } else {
+        container.removeAttribute("role");
+        container.removeAttribute("aria-modal");
+        container.removeAttribute("aria-label");
+        if (mobile) {
+          container.setAttribute("inert", "");
+        } else {
+          container.removeAttribute("inert");
+        }
+      }
+    });
+
+    this.triggers.forEach((trigger) =>
+      trigger.setAttribute("aria-expanded", String(open)),
+    );
+  }
+
+  /**
+   * Apply a state change with the sidebar's width/position transitions off,
+   * e.g. the first sync after mount or a switch between mobile and desktop,
+   * which should snap rather than slide.
+   */
+  withoutTransitions(callback) {
+    const nodes = [];
+    this.sidebars.forEach((sidebar) => {
+      nodes.push(sidebar);
+      sidebar
+        .querySelectorAll(
+          '[data-slot="sidebar-gap"], [data-slot="sidebar-container"], [data-slot="sidebar-overlay"]',
+        )
+        .forEach((node) => nodes.push(node));
+    });
+
+    nodes.forEach((node) => (node.style.transition = "none"));
+    callback();
+    // Force a style flush so the snapped values are committed before the
+    // transitions come back.
+    nodes.forEach((node) => node.offsetWidth);
+    requestAnimationFrame(() => {
+      nodes.forEach((node) => {
+        node.style.transition = "";
+        if (node.getAttribute("style") === "") node.removeAttribute("style");
+      });
+    });
+  }
+
+  // Commands and data-action clicks: open/close/toggle act on whichever
+  // sidebar is showing (the mobile sheet or the desktop sidebar), as
+  // shadcn's toggleSidebar does; expand/collapse always target desktop.
+  transition(event, _params = {}) {
+    if (this.destroyed) return false;
+
+    switch (event) {
+      case "toggle":
+        return this.toggleSidebar();
+      case "open":
+        return this.isMobile ? this.setOpenMobile(true) : this.setOpen(true);
+      case "close":
+        return this.isMobile ? this.setOpenMobile(false) : this.setOpen(false);
+      case "expand":
+        return this.setOpen(true);
+      case "collapse":
+        return this.setOpen(false);
+      default:
+        return false;
+    }
+  }
+
+  toggleSidebar() {
+    return this.isMobile
+      ? this.setOpenMobile(!this.openMobile)
+      : this.setOpen(!this.open);
+  }
+
+  /**
+   * Desktop open state. Writes the cookie and fires `on-open-change` unless
+   * the change came from the server (a controlled `open`).
+   */
+  setOpen(open, { notify = true, persist = true } = {}) {
+    if (this.open === open) return false;
+
+    super.transition(open ? "expand" : "collapse");
+
+    if (persist) this.writeCookie(open);
+    if (notify) this.pushEvent("open-change", { open });
+    return true;
+  }
+
+  setOpenMobile(open) {
+    if (this.openMobile === open) return false;
+
+    this.openMobile = open;
+    this.syncSidebars();
+
+    if (open) {
+      this.activateMobileSheet();
+    } else {
+      this.deactivateMobileSheet();
+    }
+
+    this.pushEvent("open-mobile-change", { open });
+    return true;
+  }
+
+  activateMobileSheet() {
+    const container = this.containerOf(this.sidebars[0]);
+    if (!container) return;
+
+    if (this.mobileContainer !== container) {
+      this.focusTrap?.destroy?.();
+      this.focusTrap = new FocusTrap(container);
+      this.mobileContainer = container;
+    }
+    this.focusTrap.activate();
+  }
+
+  deactivateMobileSheet() {
+    this.focusTrap?.deactivate();
+  }
+
+  writeCookie(open) {
+    // An explicit null (`cookie={nil}`) turns the cookie off.
+    const name =
+      "cookieName" in this.options
+        ? this.options.cookieName
+        : SIDEBAR_COOKIE_NAME;
+    if (!name || typeof document === "undefined") return;
+
+    document.cookie = `${name}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  }
+
+  onKeyDown(event) {
+    if (
+      this.options.keyboardShortcut !== false &&
+      event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
+      (event.metaKey || event.ctrlKey)
+    ) {
+      event.preventDefault();
+      this.toggleSidebar();
+      return;
+    }
+
+    if (
+      event.key === "Escape" &&
+      !event.defaultPrevented &&
+      this.isMobile &&
+      this.openMobile
+    ) {
+      event.preventDefault();
+      this.setOpenMobile(false);
+    }
+  }
+
+  onMediaChange() {
+    const mobile = this.detectMobile();
+    if (mobile === this.isMobile) return;
+
+    // Leaving mobile closes the sheet; its open state is mobile-only.
+    if (!mobile && this.openMobile) {
+      this.openMobile = false;
+      this.deactivateMobileSheet();
+    }
+    this.isMobile = mobile;
+    this.withoutTransitions(() => this.syncSidebars());
+  }
+
+  beforeDestroy() {
+    this.focusTrap?.destroy?.();
+    this.focusTrap = null;
+    this.mobileContainer = null;
+  }
+}
+
+SaladUI.register("sidebar", SidebarComponent);
+
+export default SidebarComponent;

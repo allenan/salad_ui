@@ -117,6 +117,7 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/message_scroller.js";
     import "./ui/components/toggle.js";
     import "./ui/components/toggle_group.js";
+    import "./ui/components/sidebar.js";
     """
 
     js_hooks = "SaladUI: SaladUI.SaladUIHook"

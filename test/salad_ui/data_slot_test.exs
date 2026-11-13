@@ -641,7 +641,7 @@ defmodule SaladUI.DataSlotTest do
                  <.sidebar_footer>F</.sidebar_footer>
                  <.sidebar_rail />
                </.sidebar>
-               <.sidebar_inset><.sidebar_trigger target="sb" /></.sidebar_inset>
+               <.sidebar_inset><.sidebar_trigger /></.sidebar_inset>
              </.sidebar_provider>
              <.sidebar id="sb-static" collapsible="none">S</.sidebar>
              <.sidebar id="sb-mobile" is_mobile>M</.sidebar>
@@ -652,7 +652,7 @@ defmodule SaladUI.DataSlotTest do
                 sidebar-menu-button tooltip tooltip-trigger tooltip-content sidebar-menu-action
                 sidebar-menu-badge sidebar-menu-sub sidebar-menu-sub-item sidebar-menu-sub-button
                 sidebar-menu-skeleton skeleton sidebar-footer sidebar-rail sidebar-inset
-                sidebar-trigger sidebar sidebar sheet)
+                sidebar-trigger sidebar sidebar sidebar-overlay)
            ) == {[], []}
   end
 

@@ -53,7 +53,7 @@ defmodule SaladStorybookWeb.BlocksTest do
       assert html =~ ~s(id="app-sidebar")
       assert html =~ "Playground"
       assert html =~ "Design Engineering"
-      assert view |> element("#app-sidebar") |> render() =~ ~s(data-collapsible="none")
+      assert view |> element("#app-sidebar") |> render() =~ ~s(data-collapsible-mode="icon")
 
       assert view |> element("#team-switcher [data-part=trigger]") |> render() =~ "Enterprise"
       view |> element("#team-switcher [phx-value-index='2']") |> render_click()

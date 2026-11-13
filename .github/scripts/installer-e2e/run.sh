@@ -20,7 +20,7 @@ step() { echo; echo "==> $*"; }
 # in menu.js; the rest of the library must stay out).
 ADD_COMPONENTS=(button badge card avatar dialog tabs select dropdown-menu tooltip)
 # then a second run without --prefix (it is reused) whose components pull in
-# other modules: sidebar -> sheet/tooltip/input/separator/skeleton,
+# other modules: sidebar -> tooltip/input/separator/skeleton (+ sidebar.js),
 # date_picker -> calendar/popover/button.
 ADD_MORE=(sidebar date_picker)
 
@@ -102,13 +102,14 @@ fi
 if [ "$MODE" = add ]; then
   step "mix salad.add ${ADD_MORE[*]} (prefix reused)"
   mix salad.add --yes "${ADD_MORE[@]}"
-  for f in sidebar.ex sheet.ex skeleton.ex date_picker.ex calendar.ex popover.ex; do
+  for f in sidebar.ex skeleton.ex separator.ex input.ex date_picker.ex calendar.ex popover.ex; do
     [ -f "lib/demo_web/ui/$f" ] || fail "missing lib/demo_web/ui/$f"
   done
   [ ! -e lib/demo_ui ] || fail "second add ignored the existing DemoWeb.UI prefix"
   grep -q 'import DemoWeb.UI.Sidebar' lib/demo_web/ui.ex || fail "ui.ex missing the new import"
   grep -q 'import DemoWeb.UI.DropdownMenu' lib/demo_web/ui.ex || fail "ui.ex lost an earlier import"
   grep -q 'import "./ui/components/calendar.js";' assets/js/app.js || fail "calendar.js not imported"
+  grep -q 'import "./ui/components/sidebar.js";' assets/js/app.js || fail "sidebar.js not imported"
   [ "$(grep -c 'SaladUI.SaladUIHook' assets/js/app.js)" = 1 ] || fail "hook registered twice"
 fi
 

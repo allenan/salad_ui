@@ -44,7 +44,7 @@ defmodule Mix.Tasks.Salad.AddTest do
     test "copies the component, its dependencies and helpers under the prefix", %{registry: registry} do
       igniter = add(project(), registry, ["dropdown-menu", "sidebar"], prefix: "DemoWeb.UI")
 
-      for file <- ~w(dropdown_menu sidebar sheet tooltip input separator skeleton helpers) do
+      for file <- ~w(dropdown_menu sidebar tooltip input separator skeleton helpers) do
         assert_creates(igniter, "#{@web_ui}/#{file}.ex")
       end
 
@@ -55,7 +55,7 @@ defmodule Mix.Tasks.Salad.AddTest do
       sidebar = content(igniter, "#{@web_ui}/sidebar.ex")
       assert sidebar =~ "defmodule DemoWeb.UI.Sidebar do"
       assert sidebar =~ "use DemoWeb.UI, :component"
-      assert sidebar =~ "import DemoWeb.UI.Sheet"
+      assert sidebar =~ "import DemoWeb.UI.Tooltip"
       refute sidebar =~ "SaladUI."
     end
 

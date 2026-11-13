@@ -33,7 +33,7 @@ defmodule Mix.Tasks.Salad.Add do
   1. Runs the same base setup as `mix salad.install` (TwMerge cache, color
      scheme, `salad_ui.css`, Tailwind directives, tw-animate). Safe to repeat.
   2. Resolves dependencies: every `SaladUI.*` module a component uses (e.g.
-     `sidebar` pulls in `sheet`, `tooltip`, `input`, `separator`,
+     `sidebar` pulls in `tooltip`, `input`, `separator`,
      `skeleton`), always including `helpers`.
   3. Copies those modules into `lib/`, rewriting `SaladUI` to the prefix.
      Like `mix salad.install`, files land where Igniter keeps each module

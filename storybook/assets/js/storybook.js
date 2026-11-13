@@ -34,6 +34,7 @@ import "salad_ui/components/questionnaire";
 import "salad_ui/components/message_scroller";
 import "salad_ui/components/toggle";
 import "salad_ui/components/toggle_group";
+import "salad_ui/components/sidebar";
 
 // import * as Params from "./params";
 // import * as Uploaders from "./uploaders";

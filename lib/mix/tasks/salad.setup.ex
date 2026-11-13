@@ -209,6 +209,7 @@ defmodule Mix.Tasks.Salad.Setup do
   import "salad_ui/components/message_scroller";
   import "salad_ui/components/toggle";
   import "salad_ui/components/toggle_group";
+  import "salad_ui/components/sidebar";
   """
   @js_hooks "SaladUI: SaladUI.SaladUIHook"
   defp patch_app_js(igniter) do

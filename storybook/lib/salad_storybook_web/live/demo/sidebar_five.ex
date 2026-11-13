@@ -149,7 +149,7 @@ defmodule SaladStorybookWeb.Demo.SidebarFive do
       <.sidebar_main data={@data}></.sidebar_main>
       <.sidebar_inset>
         <header class="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4">
-          <.sidebar_trigger target="main-sidebar" class="-ml-1" />
+          <.sidebar_trigger class="-ml-1" />
           <.separator orientation="vertical" class="mr-2 h-4" />
           <.breadcrumb>
             <.breadcrumb_list>

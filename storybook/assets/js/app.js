@@ -43,6 +43,7 @@ import "salad_ui/components/input_group";
 import "salad_ui/components/message_scroller";
 import "salad_ui/components/toggle";
 import "salad_ui/components/toggle_group";
+import "salad_ui/components/sidebar";
 
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
