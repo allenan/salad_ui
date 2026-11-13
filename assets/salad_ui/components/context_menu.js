@@ -1,11 +1,14 @@
 // saladui/components/context_menu.js
-import Component from "../core/component.js";
+import Component, {
+  assignId,
+  clearGeneratedIdsWithin,
+} from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import Positioner from "../core/positioner.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
 import Portal from "../core/portal.js";
-import Menu, { assignId, clearGeneratedIds } from "./menu.js";
+import Menu from "./menu.js";
 
 // Touch/pen hold time before the menu opens, as in Radix.
 const LONG_PRESS_DELAY = 700;
@@ -381,7 +384,7 @@ class ContextMenuComponent extends Component {
       });
     }
 
-    clearGeneratedIds(this.el, this.positioner);
+    clearGeneratedIdsWithin(this.el, this.positioner);
   }
 
   handleCommand(command, params = {}) {

@@ -66,16 +66,16 @@ defmodule SaladUI.Button do
 
   def button(%{href: href, navigate: navigate, patch: patch} = assigns)
       when not is_nil(href) or not is_nil(navigate) or not is_nil(patch) do
-    assigns = assign(assigns, :variant_class, button_variant(assigns))
+    assigns = assigns |> assign(:variant_class, button_variant(assigns)) |> put_button_attrs()
 
     ~H"""
     <.link
       href={@href}
       navigate={@navigate}
       patch={@patch}
-      data-slot="button"
-      data-variant={@variant}
-      data-size={@size}
+      data-slot={@own_attrs[:"data-slot"]}
+      data-variant={@own_attrs[:"data-variant"]}
+      data-size={@own_attrs[:"data-size"]}
       class={classes([@variant_class, @class])}
       {@rest}
     >
@@ -85,14 +85,14 @@ defmodule SaladUI.Button do
   end
 
   def button(assigns) do
-    assigns = assign(assigns, :variant_class, button_variant(assigns))
+    assigns = assigns |> assign(:variant_class, button_variant(assigns)) |> put_button_attrs()
 
     ~H"""
     <button
       type={@type}
-      data-slot="button"
-      data-variant={@variant}
-      data-size={@size}
+      data-slot={@own_attrs[:"data-slot"]}
+      data-variant={@own_attrs[:"data-variant"]}
+      data-size={@own_attrs[:"data-size"]}
       class={
         classes([
           "phx-submit-loading:opacity-75",
@@ -105,5 +105,11 @@ defmodule SaladUI.Button do
       {render_slot(@inner_block)}
     </button>
     """
+  end
+
+  # A component rendering the button via `as` (e.g. `dropdown_menu_item
+  # as={&button/1}`) re-labels these instead of doubling them.
+  defp put_button_attrs(assigns) do
+    put_own_attrs(assigns, "data-slot": "button", "data-variant": assigns.variant, "data-size": assigns.size)
   end
 end

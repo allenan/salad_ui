@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import Component, { assignId } from "../salad_ui/core/component.js";
+import Component, {
+  assignId,
+  clearGeneratedIdsWithin,
+} from "../salad_ui/core/component.js";
 import { installDom, uninstallDom, wait } from "./helpers/dom.mjs";
 
 before(() => installDom());
@@ -474,6 +477,26 @@ test("clearGeneratedIds() drops the component's own generated ids, not a nested 
     "nested-part",
     "nested component untouched",
   );
+  assert.equal(elements.trigger.id, "server-trigger", "server ids kept");
+  assert.equal(el.id, "test-1");
+});
+
+test("clearGeneratedIdsWithin() drops every generated id under the given roots, keeping server ids", () => {
+  const { el, elements } = buildComponent();
+  const outside = document.createElement("div");
+  const portaled = document.createElement("span");
+  outside.appendChild(portaled);
+  document.body.appendChild(outside);
+  assignId(elements.content, "test-1-content");
+  assignId(elements.innerPart, "nested-part");
+  assignId(portaled, "portaled");
+  elements.trigger.id = "server-trigger";
+
+  clearGeneratedIdsWithin(el, outside);
+
+  assert.equal(elements.content.hasAttribute("id"), false);
+  assert.equal(elements.innerPart.hasAttribute("id"), false, "nested too");
+  assert.equal(portaled.hasAttribute("id"), false, "outside the root too");
   assert.equal(elements.trigger.id, "server-trigger", "server ids kept");
   assert.equal(el.id, "test-1");
 });

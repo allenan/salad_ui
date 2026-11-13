@@ -22,6 +22,8 @@ function build({
   bookmarksStayOpen = false,
   // The exit animation context_menu/1 configures.
   animated = false,
+  // context_menu_content's `loop`.
+  loop = false,
 } = {}) {
   const options = JSON.stringify({
     usePortal,
@@ -40,7 +42,8 @@ function build({
           Right click here <button id="inner" type="button">inner</button>
         </span>
         <div data-part="positioner" data-side="${side}" hidden>
-          <div data-part="content" role="menu" tabindex="-1">
+          <div data-part="content" role="menu" tabindex="-1"
+               ${loop ? 'data-loop="true"' : ""}>
             <div data-part="item" data-value="back" tabindex="-1"
                  data-event-mappings='{"select":"back"}'>Back</div>
             <div data-part="item" data-value="forward" data-disabled tabindex="-1">Forward</div>
@@ -178,6 +181,31 @@ test("ArrowDown from the focused panel moves to the first enabled item", () => {
   assert.equal(document.activeElement, reload, "skips the disabled item");
 
   component.destroy();
+});
+
+test("ArrowDown on the last item stays put unless loop is set", () => {
+  for (const loop of [false, true]) {
+    const { back, bookmarks, component, content, trigger } = build({ loop });
+
+    contextmenu(trigger, 200, 150);
+    keydown(content, "End");
+    assert.equal(document.activeElement, bookmarks);
+    keydown(bookmarks, "ArrowDown");
+    assert.equal(
+      document.activeElement,
+      loop ? back : bookmarks,
+      `loop=${loop}`,
+    );
+    keydown(document.activeElement, "Home");
+    keydown(back, "ArrowUp");
+    assert.equal(
+      document.activeElement,
+      loop ? bookmarks : back,
+      `loop=${loop}`,
+    );
+
+    component.destroy();
+  }
 });
 
 test("a keyboard-invoked context menu anchors at the trigger and focuses the first item", () => {

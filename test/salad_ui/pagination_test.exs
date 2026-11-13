@@ -62,12 +62,29 @@ defmodule SaladUi.PaginationTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ ~r/<a[^>]*aria-current=""[^>]*>3<\/a>/
+      assert html =~ ~r/<a[^>]*>3<\/a>/
+      refute html =~ "aria-current"
+      refute html =~ "data-active"
 
       for css_class <-
             ~w(inline-flex rounded-md transition-all whitespace-nowrap items-center justify-center font-medium text-sm size-9 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground) do
         assert html =~ css_class
       end
+    end
+
+    test "only the active pagination_link is the current page" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.pagination_link href="#" is-active>1</.pagination_link>
+        <.pagination_link href="#" is-active={false}>2</.pagination_link>
+        """)
+
+      assert html =~ ~r/<a[^>]*aria-current="page"[^>]*>\s*1\s*<\/a>/
+      assert html =~ ~r/<a[^>]*data-active="true"[^>]*>\s*1\s*<\/a>/
+      assert count_substring(html, "aria-current") == 1
+      assert count_substring(html, "data-active") == 1
     end
 
     test "it renders pagination_next correctly" do
@@ -84,6 +101,8 @@ defmodule SaladUi.PaginationTest do
       # Like shadcn, mobile shows only the chevron.
       assert html =~ ~r/<a [^>]*href="#"/
       assert html =~ ~s(<span class="hidden sm:block">Next</span><svg)
+      # lucide ChevronRightIcon, decorative
+      assert html =~ ~r/<svg[^>]*aria-hidden="true"[^>]*class="rtl:rotate-180"><path d="m9 18 6-6-6-6"><\/path><\/svg>/
     end
 
     test "pagination_next and pagination_previous take a translated text" do
@@ -111,8 +130,9 @@ defmodule SaladUi.PaginationTest do
         |> rendered_to_string()
         |> clean_string()
 
+      # lucide ChevronLeftIcon, decorative
       assert html =~
-               ~s(<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg><span class="hidden sm:block">Previous</span></a>)
+               ~r/<svg[^>]*aria-hidden="true"[^>]*><path d="m15 18-6-6 6-6"><\/path><\/svg><span class="hidden sm:block">Previous<\/span><\/a>/
     end
 
     test "It renders pagination_ellipsis correctly" do
@@ -125,7 +145,13 @@ defmodule SaladUi.PaginationTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ ""
+      assert html =~ ~s(data-slot="pagination-ellipsis")
+      # lucide MoreHorizontalIcon, hidden; the sr-only label names it
+      assert html =~
+               ~r/<svg[^>]*aria-hidden="true"[^>]*class="size-4"><circle cx="12" cy="12" r="1"><\/circle><circle cx="19" cy="12" r="1"><\/circle><circle cx="5" cy="12" r="1"><\/circle><\/svg>/
+
+      assert html =~ ~s(<span class="sr-only">More pages</span>)
+      refute html =~ ~r/<span[^>]*data-slot="pagination-ellipsis"[^>]*aria-hidden/
     end
   end
 end

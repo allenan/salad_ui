@@ -5,22 +5,22 @@ defmodule SaladUI.Select do
   ## Examples:
 
       <form>
-         <.select default="banana" id="fruit-select">
-            <.select_trigger class="w-[180px]">
-              <.select_value placeholder=".select a fruit"/>
-            </.select_trigger>
-            <.select_content>
-              <.select_group>
-                <.select_label>Fruits</.select_label>
-                <.select_item value="apple">Apple</.select_item>
-                <.select_item value="banana">Banana</.select_item>
-                <.select_item value="blueberry">Blueberry</.select_item>
-                <.select_separator />
-                <.select_item disabled value="grapes">Grapes</.select_item>
-                <.select_item value="pineapple">Pineapple</.select_item>
-              </.select_group>
-        </.select_content>
-          </.select>
+        <.select id="fruit-select" name="fruit" default-value="banana">
+          <.select_trigger class="w-[180px]">
+            <.select_value placeholder="Select a fruit" />
+          </.select_trigger>
+          <.select_content>
+            <.select_group>
+              <.select_label>Fruits</.select_label>
+              <.select_item value="apple">Apple</.select_item>
+              <.select_item value="banana">Banana</.select_item>
+              <.select_item value="blueberry">Blueberry</.select_item>
+              <.select_separator />
+              <.select_item disabled value="grapes">Grapes</.select_item>
+              <.select_item value="pineapple">Pineapple</.select_item>
+            </.select_group>
+          </.select_content>
+        </.select>
 
         <.button type="submit">Submit</.button>
       </form>
