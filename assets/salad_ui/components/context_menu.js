@@ -283,6 +283,8 @@ class ContextMenuComponent extends Component {
       alignment: "start",
       sideOffset: 2,
       flip: true,
+      // Hangs the other way from the pointer below instead of shifting.
+      shift: false,
     });
 
     const width = this.positioner.offsetWidth;

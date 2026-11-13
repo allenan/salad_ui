@@ -210,6 +210,17 @@ for status and known gaps. Every new JS-backed component is registered in
   skip files that already exist instead of aborting.
 
 **Fixes**
+- Dialog and alert dialog content is centered with `inset-0 m-auto h-fit`
+  instead of a translate, so a combobox or date picker opened inside a dialog
+  is positioned correctly.
+- Popovers, dropdowns, hover cards and other positioned content shift along
+  their side to stay in the viewport (Radix's collision avoidance), without
+  leaving the trigger. Context menus keep hanging the other way from the
+  pointer instead.
+- `message_scroller`: no default `contain-content`, `scroll-fade-b` or item
+  `content-visibility: auto`; they clipped and offset popovers, menus and hover
+  cards in rows. The moduledoc shows how to opt back in, and how to load history
+  with `on-scrollable-change` instead of `phx-viewport-top`.
 - `mix salad.setup` / `mix salad.install` import `command.js`; a test now checks
   every registered JS component is imported. (`use SaladUI` still leaves out
   `SaladUI.Command`, whose `command/1` collides with the Lucide icon; the docs now

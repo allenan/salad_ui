@@ -83,6 +83,29 @@ defmodule SaladUI.MessageScroller do
   there is a row to preserve. Set `preserve_scroll_on_prepend={false}` on the
   viewport to opt out.
 
+  To load history when the reader reaches the top, use `on-scrollable-change`
+  and load when `start` is `false`:
+
+      <.message_scroller id="chat" on-scrollable-change="scroll_edges">
+
+      def handle_event("scroll_edges", %{"start" => false}, socket), do: load_older(socket)
+      def handle_event("scroll_edges", _, socket), do: {:noreply, socket}
+
+  Avoid `phx-viewport-top` on the stream container: its push locks the
+  container until the reply, and LiveView (1.2.13) merges the locked copy back
+  with the `at: 0` rows appended at the end.
+
+  ## Overlays in rows
+
+  Unlike shadcn, the viewport has no `contain-content` or `scroll-fade-b` and
+  items have no `content-visibility: auto`. SaladUI popovers, dropdown menus
+  and hover cards render inside the row (shadcn portals them), and
+  containment or a mask on an ancestor would clip them and offset their
+  fixed positioning. Add the classes back when rows hold no such overlays:
+
+      <.message_scroller_viewport class="contain-content scroll-fade-b">
+      <.message_scroller_item class="[contain-intrinsic-size:auto_10rem] [content-visibility:auto]">
+
   ## Commands
 
   Send with `SaladUI.LiveView.send_command/4` from the server, or
@@ -232,7 +255,7 @@ defmodule SaladUI.MessageScroller do
       tabindex={@tabindex}
       class={
         classes([
-          "size-full min-h-0 min-w-0 scroll-fade-b scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-none data-pending-scroll:invisible group-data-pending-scroll/message-scroller:invisible",
+          "size-full min-h-0 min-w-0 scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain data-autoscrolling:scrollbar-none data-pending-scroll:invisible group-data-pending-scroll/message-scroller:invisible",
           @class
         ])
       }
@@ -304,7 +327,7 @@ defmodule SaladUI.MessageScroller do
       data-scroll-anchor={to_string(@scroll_anchor)}
       class={
         classes([
-          "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
+          "min-w-0 shrink-0",
           @class
         ])
       }
