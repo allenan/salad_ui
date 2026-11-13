@@ -45,11 +45,15 @@ defmodule SaladChatWeb.BenchLive do
   def mount(params, _session, socket) do
     variant = if params["variant"] in @variants, do: params["variant"], else: "hooks"
     n = params |> Map.get("n", "500") |> String.to_integer() |> min(5000)
+    # Like ChatLive, rows only come with the connected mount: the dead render
+    # of a hooked row is ~48 KB of HTML, which at N=500+ stalls the page for
+    # seconds before the LiveView even connects.
+    rows = if connected?(socket), do: Enum.map(1..n//1, &row/1), else: []
 
     {:ok,
      socket
      |> assign(variant: variant, n: n, oldest: 0, page_title: "Bench #{variant} #{n}")
-     |> stream(:rows, Enum.map(1..n//1, &row/1))}
+     |> stream(:rows, rows)}
   end
 
   defp row(i, rev \\ 0) do

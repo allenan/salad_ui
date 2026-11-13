@@ -3,8 +3,11 @@
 // menu of the `delegated` variant, and an auto-runner that loads every
 // variant/N in a plan and stores the numbers in localStorage.
 //
-// Run all:   open /bench, then in the console: benchRun({reps: 3})
-// Results:   JSON.parse(localStorage["bench:results"])
+// Each page leaves its numbers in window.__benchResult. Full runs: use
+// assets/bench-run.mjs (headless Chrome). In-browser alternative, only
+// reliable while the window stays in front (an occluded window throttles
+// timers): open /bench, run benchRun({reps: 3}) in the console, then
+// benchSummary().
 
 const params = new URLSearchParams(location.search)
 export const isBench = location.pathname === "/bench"
@@ -27,14 +30,16 @@ const B = (window.__bench = {
 })
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-// Resolves after the next frame has been produced (rAF, then a task).
+// Resolves after the pending DOM work, with style and layout forced. Not
+// requestAnimationFrame: Chrome stops producing frames for an occluded
+// window, which would stall the measurement for minutes.
 const painted = () =>
   new Promise((r) =>
-    requestAnimationFrame(() => {
-      const ch = new MessageChannel()
-      ch.port1.onmessage = () => r(performance.now())
-      ch.port2.postMessage(0)
-    }),
+    setTimeout(() => {
+      document.documentElement.getBoundingClientRect()
+      void document.body.offsetHeight
+      r(performance.now())
+    }, 0),
   )
 const median = (xs) => {
   const s = xs.filter((x) => x != null).sort((a, b) => a - b)
@@ -66,8 +71,16 @@ if (isBench) {
 }
 
 export const markConnect = (liveSocket) => {
-  // LiveView's debug logging (persisted per tab) would skew the timings.
-  if (isBench) liveSocket.disableDebug()
+  if (isBench) {
+    // LiveView's debug logging (persisted per tab) would skew the timings.
+    liveSocket.disableDebug()
+    // A slow page would fall back to long polling (and remember that for the
+    // tab), which the timings below don't see. Stay on the WebSocket.
+    liveSocket.socket.longPollFallbackMs = null
+    try {
+      sessionStorage.removeItem("phx:fallback:LongPoll")
+    } catch (_e) {}
+  }
   B.connectAt = performance.now()
 }
 
@@ -126,8 +139,11 @@ const waitFor = (cond, timeout = 3000) =>
     }, timeout)
   })
 
+// usedJSHeapSize is only precise (and after a forced GC) with Chrome's
+// --enable-precise-memory-info --js-flags=--expose-gc; otherwise it is coarse.
 async function heap() {
-  const out = {usedJSHeapMB: r1(performance.memory?.usedJSHeapSize / 1048576)}
+  window.gc?.()
+  const out = {usedJSHeapMB: r1(performance.memory?.usedJSHeapSize / 1048576), gc: !!window.gc}
   if (mem && window.crossOriginIsolated && performance.measureUserAgentSpecificMemory) {
     const m = await Promise.race([performance.measureUserAgentSpecificMemory(), sleep(30000)])
     if (m) {
@@ -159,7 +175,19 @@ const BenchDone = {
     this.status("measuring…")
     await sleep(1200) // let long-task entries arrive
     const join = B.lvReplies[0]
+    const nav = performance.getEntriesByType("navigation")[0]
     const mount = {
+      htmlKB: nav ? r1(nav.decodedBodySize / 1024) : null,
+      // dead render: response bytes done -> DOMContentLoaded
+      parseMs: nav ? r1(nav.domContentLoadedEventEnd - nav.responseEnd) : null,
+      // navigation start -> rows mounted and laid out (what the reader waits)
+      fromNavMs: r1(B.mountPaintedAt),
+      nav: nav && {
+        responseStart: r1(nav.responseStart),
+        responseEnd: r1(nav.responseEnd),
+        dcl: r1(nav.domContentLoadedEventEnd),
+        connectAt: r1(B.connectAt),
+      },
       total: r1(B.mountPaintedAt - B.connectAt),
       client: join ? r1(B.mountPaintedAt - join.at) : null,
       joinKB: join ? r1(join.bytes / 1024) : null,
@@ -204,7 +232,7 @@ const BenchDone = {
     }
   },
 
-  // pushEvent -> reply -> next painted frame. `client` starts when the
+  // pushEvent -> reply -> DOM patched and laid out. `client` starts when the
   // reply's bytes arrive (excludes the round trip and server time).
   async timedPush(event, payload, applied) {
     const r0 = B.lvReplies.length
@@ -229,7 +257,7 @@ const BenchDone = {
   },
 
   // Synthetic hover / click on row `mid`: time until the popup is visible
-  // and painted, minus the configured open delay for tooltips.
+  // and laid out, minus the configured open delay for tooltips.
   async interact(mid) {
     const row = document.getElementById(`rows-${mid}`)
     if (!row || !(variant === "hooks" || variant === "delegated")) return null
