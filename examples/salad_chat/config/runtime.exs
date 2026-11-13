@@ -20,6 +20,10 @@ if System.get_env("PHX_SERVER") do
   config :salad_chat, SaladChatWeb.Endpoint, server: true
 end
 
+if System.get_env("SALAD_CHAT_ACTIVITY") in ~w(off false 0) do
+  config :salad_chat, SaladChat.Activity, enabled: false
+end
+
 config :salad_chat, SaladChatWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

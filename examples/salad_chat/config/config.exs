@@ -10,6 +10,17 @@ import Config
 config :salad_chat,
   generators: [timestamp_type: :utc_datetime]
 
+# Simulated activity: seeded people post, react, reply and DM on their own.
+# Disable at runtime with SALAD_CHAT_ACTIVITY=off (see runtime.exs).
+config :salad_chat, SaladChat.Activity,
+  enabled: true,
+  # random pause between actions, and how long "typing…" shows first
+  interval_ms: {6_000, 20_000},
+  typing_ms: {1_500, 3_000},
+  weights: [post: 50, react: 25, reply: 18, dm: 7],
+  # simulated messages kept per conversation before the oldest are deleted
+  max_per_channel: 200
+
 # Configure the endpoint
 config :salad_chat, SaladChatWeb.Endpoint,
   url: [host: "localhost"],
