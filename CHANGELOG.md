@@ -383,7 +383,7 @@ for status and known gaps. Every new JS-backed component is registered in
 - `igniter` and `sourceror` are optional dependencies. The installer tasks ask
   for `{:igniter, "~> 0.6", only: [:dev, :test]}` when it is missing.
 
-**Tooltips no longer pile up**
+**Tooltips and hover cards no longer pile up**
 - One tooltip at a time: opening one closes any other (Radix's provider).
 - Leaving the trigger before the open delay ends cancels it (a tooltip used to
   open after the pointer left and stay stuck).
@@ -393,6 +393,13 @@ for status and known gaps. Every new JS-backed component is registered in
 - No tooltip opens while a menu, popover, dialog, select, combobox or hover
   card is open, except for triggers inside that popup.
 - Focus that follows a click does not open a tooltip; keyboard focus does.
+- Hover cards follow the same rules (shared `core/hover-popups.js`): one
+  tooltip or hover card at a time (a tooltip inside a hover card keeps it
+  open), leaving during the open delay cancels it, and Escape, scrolling or the
+  pointer moving elsewhere close it.
+- Root cause: `mouseMap` handlers only ran in the state that declared them, so
+  a "leave" during a pending delayed open was never heard. `mouseMap` now
+  supports `_all`, as `keyMap` does.
 
 **More fixes from downstream use**
 - Dialog, alert dialog, sheet and drawer take `return-focus`, a selector for

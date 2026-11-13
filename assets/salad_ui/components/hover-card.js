@@ -2,6 +2,7 @@
 import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
+import { HoverPopup } from "../core/hover-popups.js";
 
 // Define constants at the module level outside the class
 const DEFAULT_POSITION_CONFIG = {
@@ -33,6 +34,8 @@ class HoverCardComponent extends Component {
     // Track timer IDs for delayed open/close
     this.openTimer = null;
     this.closeTimer = null;
+
+    this.hoverPopup = new HoverPopup(this);
   }
 
   /**
@@ -85,17 +88,14 @@ class HoverCardComponent extends Component {
         },
       },
       events: {
-        closed: {
+        // Enter and leave are heard in every state: leaving during the open
+        // delay must cancel it, or the card opens after the pointer left and
+        // nothing closes it.
+        _all: {
           mouseMap: {
             trigger: {
               mouseenter: "delayOpen",
               focusin: "delayOpen",
-            },
-          },
-        },
-        open: {
-          mouseMap: {
-            trigger: {
               mouseleave: "delayClose",
               focusout: "delayClose",
             },
@@ -136,18 +136,42 @@ class HoverCardComponent extends Component {
   }
 
   // Generic methods for delayed state transitions
-  delayOpen() {
+  delayOpen(event) {
+    if (this.state === "open") {
+      this.clearTimers();
+      return;
+    }
+    if (!this.hoverPopup.mayOpen(event)) return;
+
     this.clearTimers();
     this.openTimer = setTimeout(() => {
+      this.openTimer = null;
+      if (this.hoverPopup.blocked()) return;
       this.transition("open");
     }, this.config.openDelay);
   }
 
-  delayClose() {
+  delayClose(event) {
+    // Focus moving within the trigger or into the card keeps it open.
+    if (
+      event?.type === "focusout" &&
+      (this.trigger?.contains(event.relatedTarget) ||
+        this.content?.contains(event.relatedTarget))
+    ) {
+      return;
+    }
+
     this.clearTimers();
+    if (this.state !== "open") return;
     this.closeTimer = setTimeout(() => {
+      this.closeTimer = null;
       this.transition("close");
     }, this.config.closeDelay);
+  }
+
+  closeNow() {
+    this.clearTimers();
+    if (this.state === "open") this.transition("close");
   }
 
   clearTimers() {
@@ -197,6 +221,8 @@ class HoverCardComponent extends Component {
 
   // State machine handlers
   onOpenEnter() {
+    this.hoverPopup.opened();
+
     // Initialize positioned element if needed
     this.initializePositionedElement();
 
@@ -210,6 +236,8 @@ class HoverCardComponent extends Component {
   }
 
   onOpenExit() {
+    this.hoverPopup.closed();
+
     // Deactivate positioned element
     if (this.positionedElement) {
       this.positionedElement.deactivate();
@@ -223,6 +251,7 @@ class HoverCardComponent extends Component {
 
   beforeDestroy() {
     this.clearTimers();
+    this.hoverPopup.closed();
 
     if (this.positionedElement) {
       this.positionedElement.destroy();
