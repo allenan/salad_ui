@@ -22,6 +22,7 @@ class Positioner {
       alignment = "center",
       container = document.body,
       flip = true,
+      shift = true,
       alignOffset = 0,
       sideOffset = 8,
     } = options;
@@ -82,6 +83,38 @@ class Positioner {
         );
         x = flippedPosition.x;
         y = flippedPosition.y;
+      }
+    }
+
+    // Shift along the side to stay inside the container, as Radix's
+    // avoidCollisions does, but never past the trigger (floating-ui's
+    // limitShift): the content keeps touching it.
+    if (shift) {
+      const clamp = (value, min, max) =>
+        max < min ? min : Math.min(Math.max(value, min), max);
+      const side = actualPlacement.split("-")[0];
+      if (side === "top" || side === "bottom") {
+        x = clamp(
+          x,
+          containerRect.left,
+          containerRect.right - elementRect.width,
+        );
+        x = clamp(
+          x,
+          referenceRect.left - elementRect.width,
+          referenceRect.right,
+        );
+      } else {
+        y = clamp(
+          y,
+          containerRect.top,
+          containerRect.bottom - elementRect.height,
+        );
+        y = clamp(
+          y,
+          referenceRect.top - elementRect.height,
+          referenceRect.bottom,
+        );
       }
     }
 

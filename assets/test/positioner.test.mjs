@@ -108,6 +108,64 @@ test("calculate(): flip: false keeps the requested placement even when it overfl
   assert.equal(position.y, -23);
 });
 
+test("calculate(): shifts start-aligned content back inside the viewport", () => {
+  const right = window.innerWidth;
+  setRect(reference, {
+    top: 300,
+    bottom: 330,
+    left: right - 40,
+    right: right - 10,
+    width: 30,
+  });
+  setRect(element, { width: 256, height: 100 });
+
+  const position = Positioner.calculate(element, reference, {
+    placement: "top",
+    alignment: "start",
+  });
+
+  assert.equal(position.x, right - 256, "flush with the right edge");
+  assert.equal(position.y, 192);
+});
+
+test("calculate(): shift never detaches content from the trigger", () => {
+  setRect(reference, {
+    top: 300,
+    bottom: 330,
+    left: -100,
+    right: -60,
+    width: 40,
+  });
+  setRect(element, { width: 50, height: 20 });
+
+  const position = Positioner.calculate(element, reference, {
+    placement: "bottom",
+    alignment: "start",
+  });
+
+  assert.equal(position.x, -60, "stops at the trigger's far edge");
+});
+
+test("calculate(): shift: false keeps the aligned position", () => {
+  const right = window.innerWidth;
+  setRect(reference, {
+    top: 300,
+    bottom: 330,
+    left: right - 40,
+    right: right - 10,
+    width: 30,
+  });
+  setRect(element, { width: 256, height: 100 });
+
+  const position = Positioner.calculate(element, reference, {
+    placement: "top",
+    alignment: "start",
+    shift: false,
+  });
+
+  assert.equal(position.x, right - 40);
+});
+
 test("applyPosition(): sets fixed positioning at the given coordinates", () => {
   Positioner.applyPosition(element, 12, 34);
 

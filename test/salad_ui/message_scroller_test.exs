@@ -101,7 +101,7 @@ defmodule SaladUI.MessageScrollerTest do
       assert html =~ ~s(data-preserve-scroll-on-prepend="true")
 
       assert html =~
-               "size-full min-h-0 min-w-0 scroll-fade-b scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-none data-pending-scroll:invisible group-data-pending-scroll/message-scroller:invisible"
+               "size-full min-h-0 min-w-0 scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain data-autoscrolling:scrollbar-none data-pending-scroll:invisible group-data-pending-scroll/message-scroller:invisible"
 
       assert html =~ ~r/<div data-part="spacer" data-message-scroller-spacer aria-hidden="true" hidden><\/div>/
     end
@@ -139,7 +139,8 @@ defmodule SaladUI.MessageScrollerTest do
       assert html =~ ~s(data-scroll-anchor="true")
       assert html =~ ~s(data-message-id="m2")
       assert html =~ ~s(data-scroll-anchor="false")
-      assert html =~ "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]"
+      assert html =~ ~s(class="min-w-0 shrink-0")
+      refute html =~ "content-visibility"
     end
 
     test "omits data-message-id without a message_id" do

@@ -7,6 +7,22 @@ defmodule SaladUI.DialogTest do
   import SaladUI.Label
 
   describe "Test Dialog" do
+    test "content is centered without a transform" do
+      # A transform would make the panel the containing block of fixed-position
+      # popovers inside it (combobox, date picker), offsetting them.
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog id="d">
+          <.dialog_content>Body</.dialog_content>
+        </.dialog>
+        """)
+
+      assert html =~ ~r/data-slot="dialog-content"[^>]*class="[^"]*fixed inset-0 z-50 m-auto grid h-fit/
+      refute html =~ "translate-x-[-50%]"
+    end
+
     test "It renders dialog header correctly" do
       assigns = %{}
 
