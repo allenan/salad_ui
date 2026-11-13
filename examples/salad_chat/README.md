@@ -127,7 +127,11 @@ renders them once per page and each row carries only their triggers:
 
 With a few hundred messages loaded, a menu, a context menu, a hover card and
 two tooltips in every row made the page several times slower to mount and
-much heavier (each row carried all of their hidden markup and five hooks).
+much heavier, since each row carried all of their hidden markup and five
+hooks. With 520 messages in a channel (prod build, headless Chrome, median
+of 3), sharing them took mount from 2.6 s to 0.96 s, the JS heap from
+137 MB to 26 MB, DOM nodes from 60k to 17k, the LiveView join payload from
+25.5 MB to 6.3 MB and the page's hooks from 2333 to 174.
 See "Shared menus" in `SaladUI.DropdownMenu`, "Text tooltips for long lists"
 in `SaladUI.Tooltip` and "Shared hover cards for long lists" in
 `SaladUI.HoverCard`.
