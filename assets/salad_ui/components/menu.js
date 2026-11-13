@@ -108,6 +108,7 @@ class MenuItemBase extends Component {
               click: "handleActivation",
               mouseenter: "handleMouseEnter",
               mousemove: "handleMouseEnter",
+              mouseleave: "handleMouseLeave",
             },
           },
           keyMap: {
@@ -198,10 +199,19 @@ class MenuItemBase extends Component {
 
   // Pointer moves focus to the hovered item (mousemove too, so an item
   // skipped during a sub-menu's pointer grace is focused once it ends).
+  // Hovering a disabled item un-highlights the menu, as leaving one does.
   handleMouseEnter(event) {
-    if (this.disabled || this.parent.isPointerMovingToSubmenu(event)) return;
+    if (this.disabled) {
+      this.parent.handleItemLeave(event);
+      return;
+    }
+    if (this.parent.isPointerMovingToSubmenu(event)) return;
 
     this.parent.handleItemFocus(this);
+  }
+
+  handleMouseLeave(event) {
+    this.parent.handleItemLeave(event);
   }
 }
 
@@ -224,6 +234,7 @@ function checkableConfig(component, part, role) {
         click: "handleActivation",
         mouseenter: "handleMouseEnter",
         mousemove: "handleMouseEnter",
+        mouseleave: "handleMouseLeave",
       },
     },
     keyMap: {
@@ -499,7 +510,12 @@ class MenuSubTrigger extends MenuItemBase {
   }
 
   handleMouseEnter(event) {
-    if (this.disabled || this.parent.isPointerMovingToSubmenu(event)) return;
+    this.lastPointerX = event?.clientX;
+    if (this.disabled) {
+      this.parent.handleItemLeave(event);
+      return;
+    }
+    if (this.parent.isPointerMovingToSubmenu(event)) return;
 
     this.parent.handleItemFocus(this);
     // Coming back from the sub-menu, the parent's roving focus already points
@@ -510,24 +526,34 @@ class MenuSubTrigger extends MenuItemBase {
 
   // Leaving toward the open sub-menu: give the pointer a grace area (the
   // polygon between the exit point and the sub-menu's near edge) in which
-  // sibling items don't steal focus and close it.
+  // sibling items don't steal focus and close it. Leaving while moving away
+  // from it (Radix tracks the pointer direction too) un-highlights it like
+  // any item, which closes the sub-menu.
   handleMouseLeave(event) {
-    if (this.state !== "open" || !this.content) return;
+    const rect =
+      this.state === "open" ? this.content?.getBoundingClientRect() : null;
+    const toRight = rect && rect.left + rect.width / 2 > event.clientX;
+    const lastX = this.lastPointerX;
+    const movingAway =
+      lastX !== undefined &&
+      (toRight ? event.clientX < lastX : event.clientX > lastX);
 
-    const rect = this.content.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (rect?.width && rect?.height && !movingAway) {
+      const near = toRight ? rect.left : rect.right;
+      const far = toRight ? rect.right : rect.left;
 
-    const toRight = rect.left + rect.width / 2 > event.clientX;
-    const near = toRight ? rect.left : rect.right;
-    const far = toRight ? rect.right : rect.left;
+      this.parent.setPointerGrace([
+        { x: event.clientX + (toRight ? -5 : 5), y: event.clientY },
+        { x: near, y: rect.top },
+        { x: far, y: rect.top },
+        { x: far, y: rect.bottom },
+        { x: near, y: rect.bottom },
+      ]);
+    } else {
+      this.parent.pointerGrace = null;
+    }
 
-    this.parent.setPointerGrace([
-      { x: event.clientX + (toRight ? -5 : 5), y: event.clientY },
-      { x: near, y: rect.top },
-      { x: far, y: rect.top },
-      { x: far, y: rect.bottom },
-      { x: near, y: rect.bottom },
-    ]);
+    super.handleMouseLeave(event);
   }
 
   open({ focusFirst = false } = {}) {
@@ -883,6 +909,23 @@ class Menu extends Component {
     if (!collectionItem) return;
 
     this.rovingFocus.focus(collectionItem);
+  }
+
+  // The pointer leaving an item (or resting on a disabled one) takes the
+  // highlight off it: focus moves to the panel itself, as in Radix, and an
+  // open sub-menu closes. Not while the pointer is heading into that
+  // sub-menu, nor when focus is elsewhere (a keyboard user's highlight in a
+  // nested sub-menu, or outside the menu).
+  handleItemLeave(event) {
+    if (!this.rovingFocus || this.isPointerMovingToSubmenu(event)) return;
+
+    const focused = this.rovingFocus.focusedItem;
+    if (!focused || document.activeElement !== focused.instance.el) return;
+
+    focused.focused = false;
+    focused.instance.handleEvent?.("blur");
+    this.rovingFocus.reset();
+    this.el.focus({ preventScroll: true });
   }
 
   handleNavigationKey(event, direction) {

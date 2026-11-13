@@ -330,6 +330,66 @@ for (const key of ["Enter", " ", "ArrowDown"]) {
   });
 }
 
+test("the pointer leaving an item takes the highlight back to the content", () => {
+  const { component, content, profile, settings, trigger } = buildDropdown();
+  const pointer = (type, el) =>
+    el.dispatchEvent(new window.MouseEvent(type, { clientX: 50, clientY: 50 }));
+
+  click(trigger);
+  pointer("mouseenter", profile);
+  assert.equal(document.activeElement, profile);
+
+  pointer("mouseleave", profile);
+  assert.equal(document.activeElement, content);
+  assert.equal(component.menu.rovingFocus.focusedItem, null);
+  assert.equal(component.state, "open");
+
+  // ArrowDown starts from the top again.
+  keydown(content, "ArrowDown");
+  assert.equal(document.activeElement, profile);
+
+  // Resting on a disabled item un-highlights too.
+  settings.setAttribute("data-disabled", "");
+  component.menu.menuItems[1].disabled = true;
+  pointer("mouseenter", settings);
+  assert.equal(document.activeElement, content);
+
+  component.destroy();
+});
+
+test("Tab inside the open content is swallowed", () => {
+  const { component, profile, trigger } = buildDropdown({ usePortal: true });
+
+  keydown(trigger, "Enter");
+  assert.equal(document.activeElement, profile);
+  const event = keydown(profile, "Tab");
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(component.state, "open");
+  assert.equal(document.activeElement, profile);
+
+  component.destroy();
+});
+
+test("the content's data-side follows a flip", () => {
+  const { component, content, positioner, trigger } = buildDropdown();
+  window.innerHeight = 600;
+  // 20px below the trigger: the 80px panel flips above it.
+  setRect(trigger, {
+    top: 550,
+    bottom: 580,
+    left: 10,
+    right: 110,
+    width: 100,
+    height: 30,
+  });
+
+  click(trigger);
+  assert.equal(positioner.getAttribute("data-placement"), "top");
+  assert.equal(content.getAttribute("data-side"), "top");
+
+  component.destroy();
+});
+
 test("a server open command focuses the content", () => {
   const { component, content } = buildDropdown();
 

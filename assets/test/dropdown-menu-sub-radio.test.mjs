@@ -658,6 +658,15 @@ test("moving the pointer from an open sub-trigger toward its sub-menu does not c
   pointer("mouseenter", team, 20, 30);
   assert.equal(invite.getAttribute("data-state"), "closed");
 
+  // Leaving it away from the sub-menu, onto no item, closes it and moves
+  // focus to the panel itself.
+  pointer("mouseenter", invite, 100, 50);
+  assert.equal(invite.getAttribute("data-state"), "open");
+  pointer("mouseleave", invite, 5, 50);
+  assert.equal(invite.getAttribute("data-state"), "closed");
+  assert.equal(document.activeElement, component.content);
+  assert.equal(component.menu.rovingFocus.focusedItem, null);
+
   component.destroy();
 });
 

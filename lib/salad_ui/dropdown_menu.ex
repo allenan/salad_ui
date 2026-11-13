@@ -110,8 +110,9 @@ defmodule SaladUI.DropdownMenu do
 
   Opening with the pointer focuses the menu panel itself, so no item is
   highlighted until the pointer hovers one or `ArrowDown`/typeahead picks one.
-  Opening from the keyboard (`Enter`, `Space` or `ArrowDown` on the trigger)
-  focuses the first item. The panel is labelled by its trigger
+  The pointer leaving an item (or resting on a disabled one) moves focus back
+  to the panel. Opening from the keyboard (`Enter`, `Space` or `ArrowDown` on
+  the trigger) focuses the first item. The panel is labelled by its trigger
   (`aria-labelledby`).
 
   ## Keyboard
@@ -119,6 +120,7 @@ defmodule SaladUI.DropdownMenu do
   Follows the WAI-ARIA menu pattern: `ArrowUp`/`ArrowDown`/`Home`/`End` move
   between items, `Enter`/`Space` activate, `ArrowRight` opens a sub-menu and
   `ArrowLeft` closes it (mirrored under `dir="rtl"`), `Escape` closes the menu.
+  `Tab` does nothing while the menu is open, so focus stays in it (as in Radix).
 
   Typeahead: typing moves focus to the next enabled item whose text starts
   with what was typed (the search clears after 1s; typing one letter

@@ -157,6 +157,10 @@ class DropdownMenuComponent extends Component {
           trapFocus: false,
           onOutsideClick: () =>
             this.transition("close", { restoreFocus: false }),
+          // The side the content actually opened on, after a flip, so the
+          // slide-in animation comes from the trigger.
+          onPosition: ({ placement }) =>
+            this.content?.setAttribute("data-side", placement),
           // Not a custom placement (returns null): it caps the content
           // height before every position pass (open, scroll, resize).
           computePosition: () => {
@@ -239,10 +243,18 @@ class DropdownMenuComponent extends Component {
     this.positioner?.removeEventListener("keydown", this.handleContentKeydown);
   }
 
-  // Escape inside the content closes the menu. Handled on the positioner,
-  // since with `use-portal` keys pressed in the content never reach the root.
+  // Escape inside the content closes the menu; Tab does nothing, so focus
+  // stays in the menu (Radix, like context_menu.js and menubar.js). Handled
+  // on the positioner, since with `use-portal` keys pressed in the content
+  // never reach the root.
   handleContentKeydown = (event) => {
-    if (event.key !== "Escape" || this.state !== "open") return;
+    if (this.state !== "open") return;
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      return;
+    }
+    if (event.key !== "Escape") return;
 
     event.preventDefault();
     event.stopPropagation();
