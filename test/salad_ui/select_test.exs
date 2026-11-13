@@ -45,7 +45,7 @@ defmodule SaladUI.SelectTest do
         </.select>
         """)
 
-      assert html =~ ~r/<div[^>]*data-slot="select"[^>]*data-disabled="true"/
+      assert_tag(html, "div", [{"data-slot", "select"}, {"data-disabled", "true"}])
       assert html =~ ~s(&quot;disabled&quot;:true)
       assert html =~ ~r/<input[^>]*disabled[^>]*data-salad-ui-select-tracker/
       # The trigger picks up the disabled styling from the root.
