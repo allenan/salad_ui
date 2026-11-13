@@ -327,6 +327,18 @@ defmodule SaladUI.ClassMergeTest do
     end
   end
 
+  describe "cache" do
+    test "is flushed when full instead of growing without bound" do
+      table = TwMerge.Cache.default_table_name()
+      max = ClassMerge.max_cache_entries()
+
+      for i <- 1..(max + 5), do: ClassMerge.merge("w-[#{i}px] w-full")
+
+      assert :ets.info(table, :size) <= max
+      assert ClassMerge.merge("w-[1px] w-full") == "w-full"
+    end
+  end
+
   describe "differences from tailwind-merge" do
     test "the Tailwind v3 bg-gradient-to-* is a background image, not a color" do
       # tailwind-merge 3.7.0 gives "bg-gradient-to-b" (it reads it as a color)

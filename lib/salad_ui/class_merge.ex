@@ -533,6 +533,22 @@ defmodule SaladUI.ClassMerge do
   @postfix_lookup_groups Config.postfix_lookup_groups()
   @order_sensitive_modifiers Config.order_sensitive_modifiers()
 
+  # Class strings built at runtime (`w-[#{x}px]`) would otherwise grow the
+  # cache forever. tailwind-merge keeps a 500-entry LRU; flushing a full table
+  # is a cheap bound with the same effect on memory.
+  @max_cache_entries 10_000
+
+  @doc false
+  def max_cache_entries, do: @max_cache_entries
+
+  defp bound_cache do
+    table = TwMerge.Cache.default_table_name()
+
+    if :ets.info(table, :size) >= @max_cache_entries do
+      TwMerge.Cache.purge(table)
+    end
+  end
+
   @doc """
   Joins `input` (a string, or a nested list of strings and `nil`s) and merges
   conflicting Tailwind classes, the later class winning.
@@ -545,6 +561,7 @@ defmodule SaladUI.ClassMerge do
     case TwMerge.Cache.retrieve(key) do
       nil ->
         merged = do_merge(classes)
+        bound_cache()
         TwMerge.Cache.insert(key, merged)
         merged
 
