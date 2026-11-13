@@ -255,7 +255,7 @@ defmodule SaladChatWeb.ChatLiveTest do
         params: %{title: "Reminder set", description: description}
       })
 
-      assert description =~ String.downcase(Calendar.strftime(tomorrow, "%B %-d at 9:30"))
+      assert description =~ "tomorrow at 9:30 AM"
     end
 
     test "the date is required for a custom time", %{conn: conn} do

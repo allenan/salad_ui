@@ -483,8 +483,7 @@ defmodule SaladChatWeb.ChatLive do
          |> assign(reminding: nil)
          |> Salad.send_command("remind-dialog", "close")
          |> Toast.toast_success("Reminder set",
-           description:
-             "Sprout will DM you #{String.downcase(TimeFormat.full(due, me.timezone))}."
+           description: "Sprout will DM you #{TimeFormat.phrase(due, me.timezone)}."
          )}
     end
   end

@@ -17,7 +17,7 @@ defmodule SaladChatWeb.TimeFormat do
   @doc "The local calendar date of `dt`."
   def date(%DateTime{} = dt, tz), do: dt |> Timezones.local(tz) |> NaiveDateTime.to_date()
 
-  @doc "\"Today\", \"Yesterday\" or \"Monday, November 3\"."
+  @doc "\"Today\", \"Yesterday\", \"Tomorrow\" or \"Monday, November 3\"."
   def day_label(%Date{} = date, tz) do
     today = date(DateTime.utc_now(), tz)
 
@@ -28,6 +28,9 @@ defmodule SaladChatWeb.TimeFormat do
       1 ->
         "Yesterday"
 
+      -1 ->
+        "Tomorrow"
+
       _ ->
         "#{Enum.at(@days, Date.day_of_week(date) - 1)}, #{Enum.at(@months, date.month - 1)} #{date.day}"
     end
@@ -35,6 +38,16 @@ defmodule SaladChatWeb.TimeFormat do
 
   @doc "\"Today at 9:41 AM\", for tooltips."
   def full(%DateTime{} = dt, tz), do: "#{day_label(date(dt, tz), tz)} at #{time(dt, tz)}"
+
+  @doc "For mid-sentence use: \"tomorrow at 9:00 AM\", \"on Saturday, November 14 at 9:00 AM\"."
+  def phrase(%DateTime{} = dt, tz) do
+    label = day_label(date(dt, tz), tz)
+
+    day =
+      if label in ~w(Today Yesterday Tomorrow), do: String.downcase(label), else: "on #{label}"
+
+    "#{day} at #{time(dt, tz)}"
+  end
 
   @doc "\"just now\", \"5 min ago\", \"3 hours ago\", \"2 days ago\"."
   def relative(nil), do: ""

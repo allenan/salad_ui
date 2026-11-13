@@ -48,7 +48,7 @@ defmodule SaladChatWeb.NewChannelComponent do
          |> assign_form(@empty, [])
          |> SaladUI.LiveView.send_command("create-channel-dialog", "close")
          |> SaladUI.Toast.toast_success("##{channel.name} is ready",
-           description: "#{length(channel.members) - 1} members, including Sprout."
+           description: "#{length(channel.members)} members, including you and Sprout."
          )
          |> push_patch(to: Paths.channel_path(me.handle, channel.id))}
 
