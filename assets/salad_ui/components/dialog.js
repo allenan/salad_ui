@@ -3,7 +3,7 @@ import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import FocusTrap from "../core/focus-trap.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
-import { lockScroll } from "../core/scroll-lock.js";
+import { ModalLayer } from "../core/modal-layer.js";
 
 class DialogComponent extends Component {
   constructor(el, hookContext) {
@@ -18,6 +18,22 @@ class DialogComponent extends Component {
     this.contentPanel = this.getPart("content-panel");
     this.config.preventDefaultKeys = ["Escape"];
     this.serverOpen = this.readServerOpen(el);
+
+    // Outside blocking, aria-hidden, wheel/touch blocking and the scroll
+    // lock while open (see core/modal-layer.js). The content part holds both
+    // the overlay and the panel.
+    this.modalLayer = new ModalLayer(() => [this.content], {
+      modal: this.isModal(),
+    });
+  }
+
+  /**
+   * Modal unless the options say `modal: false` (Radix's `modal` prop). A
+   * non-modal dialog has no overlay, leaves the page interactive, readable
+   * and scrollable, does not loop Tab, and closes on any outside click.
+   */
+  isModal() {
+    return this.options.modal !== false;
   }
 
   /**
@@ -46,6 +62,9 @@ class DialogComponent extends Component {
     // Read before reapplyState() overwrites the root's data-state.
     const serverOpen = this.readServerOpen(el);
     this.reapplyState();
+    // The patch dropped the inline pointer-events (and any aria-hidden on
+    // the page around the dialog); put them back before the next paint.
+    this.modalLayer.refresh();
 
     if (serverOpen !== this.serverOpen) {
       this.serverOpen = serverOpen;
@@ -112,11 +131,14 @@ class DialogComponent extends Component {
         },
       },
       hiddenConfig: {
+        // Radix renders no overlay for a non-modal dialog.
         closed: {
           content: true,
+          ...(this.isModal() ? {} : { overlay: true }),
         },
         open: {
           content: false,
+          ...(this.isModal() ? {} : { overlay: true }),
         },
       },
       ariaConfig: {
@@ -133,7 +155,7 @@ class DialogComponent extends Component {
             role: this.options.role || "dialog",
           },
           open: {
-            modal: "true",
+            modal: this.isModal() ? "true" : null,
             labelledby: () => this.getPartId("title"),
             describedby: () => this.getPartId("description"),
           },
@@ -167,13 +189,24 @@ class DialogComponent extends Component {
     this.clickOutsideMonitor = new ClickOutsideMonitor(
       [this.contentPanel],
       (event) => {
-        // Only close if click was directly on the content container (overlay area)
-        if (
-          event.target === this.content ||
-          event.target.dataset.part === "overlay"
-        ) {
-          this.transition("close");
+        if (this.isModal()) {
+          // The page is blocked, so an outside click can only land on the
+          // overlay (or the content container around it).
+          if (
+            event.target === this.content ||
+            event.target.dataset?.part === "overlay"
+          ) {
+            this.transition("close");
+          }
+          return;
         }
+
+        // Non-modal: any click outside closes, except on a trigger, which
+        // toggles the dialog itself.
+        const onTrigger = this.getAllParts("trigger").some((trigger) =>
+          trigger.contains(event.target),
+        );
+        if (!onTrigger) this.transition("close");
       },
     );
   }
@@ -188,34 +221,20 @@ class DialogComponent extends Component {
 
   // State machine handlers
   onClosedEnter() {
-    // Content hides after its exit animation completes; the scroll lock is
+    // Content hides after its exit animation completes; the modal layer is
     // released then too (see updatePartsVisibility).
   }
 
   /**
    * Runs once the parts reach a state's visibility: straight away, or after
-   * the exit animation. Like Radix, the page stays locked until the closing
-   * dialog is gone, so the scrollbar does not come back mid-animation.
+   * the exit animation. Like Radix, the page stays scroll-locked until the
+   * closing dialog is gone, so the scrollbar does not come back
+   * mid-animation. (Also runs from the base constructor, before the layer
+   * exists.)
    */
   updatePartsVisibility() {
     super.updatePartsVisibility();
-    if (this.state === "closed") this.releaseScrollLock();
-  }
-
-  /**
-   * Lock page scrolling while open, as Radix Dialog does. Idempotent, so a
-   * re-activation (a patch, a reopen mid-exit-animation) never stacks a
-   * second lock. A non-modal dialog (`modal: false` in the options) does
-   * not lock.
-   */
-  acquireScrollLock() {
-    if (this.releaseScroll || this.options.modal === false) return;
-    this.releaseScroll = lockScroll();
-  }
-
-  releaseScrollLock() {
-    this.releaseScroll?.();
-    this.releaseScroll = null;
+    if (this.state === "closed") this.modalLayer?.deactivate();
   }
 
   onClosedExit() {
@@ -230,6 +249,10 @@ class DialogComponent extends Component {
   }
 
   onOpenExit() {
+    // Unblock the page as soon as the dialog starts closing (before focus
+    // goes back to the trigger, which is aria-hidden until then); the
+    // scroll lock holds through the exit animation.
+    this.modalLayer.releaseInteraction();
     this.focusTrap?.deactivate();
     this.clickOutsideMonitor?.stop();
 
@@ -238,12 +261,16 @@ class DialogComponent extends Component {
   }
 
   activateOpenState() {
-    this.acquireScrollLock();
+    // Idempotent: a patch or a reopen mid-exit-animation never stacks a
+    // second layer or scroll lock.
+    this.modalLayer.activate();
 
     // Initialize focus trap if not already created
     this.el.focus();
     if (!this.focusTrap) {
-      this.focusTrap = new FocusTrap(this.contentPanel);
+      this.focusTrap = new FocusTrap(this.contentPanel, {
+        contain: this.isModal(),
+      });
     }
 
     // Activate focus trap
@@ -262,8 +289,8 @@ class DialogComponent extends Component {
     this.focusTrap?.destroy();
     this.focusTrap = null;
     // Destroyed while open (or mid-exit-animation): a rebuild that is still
-    // open locks again from afterMount().
-    this.releaseScrollLock();
+    // open activates a new layer from afterMount().
+    this.modalLayer.deactivate();
   }
 }
 

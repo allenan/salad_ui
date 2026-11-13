@@ -460,4 +460,19 @@ defmodule SaladUI.AlertDialogTest do
       assert html =~ "h-6 gap-1"
     end
   end
+
+  describe "modal" do
+    test "is always modal" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.alert_dialog id="a">
+          <div>Content</div>
+        </.alert_dialog>
+        """)
+
+      assert html =~ "modal&quot;:true"
+    end
+  end
 end

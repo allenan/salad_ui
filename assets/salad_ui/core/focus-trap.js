@@ -15,6 +15,10 @@ class FocusTrap {
     this.options = {
       focusableSelector:
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      // Loop Tab/Shift+Tab inside the element. Off for non-modal surfaces,
+      // which only move focus in on open and back out on close (Radix's
+      // FocusScope with `trapped={false}`).
+      contain: true,
       ...options,
     };
 
@@ -101,7 +105,7 @@ class FocusTrap {
    */
   handleKeyDown(event) {
     // Handle Tab key for focus trapping
-    if (event.key === "Tab") {
+    if (event.key === "Tab" && this.options.contain !== false) {
       const focusableElements = this.getFocusableElements();
 
       if (focusableElements.length === 0) return;

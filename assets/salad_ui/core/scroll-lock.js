@@ -23,6 +23,16 @@
  *   body[data-scroll-locked] .fixed-header {
  *     padding-right: var(--removed-body-scroll-bar-size);
  *   }
+ *
+ * salad_ui.css ships react-remove-scroll-bar's opt-in classes on top of
+ * that: `right-scroll-bar-position` (a fixed element pinned with `right: 0`
+ * moves in by the scrollbar width) and `width-before-scroll-bar` (a
+ * full-width fixed element gets that much right margin).
+ *
+ * This only hides the page's overflow. Modal components lock through
+ * modal-layer.js, which also cancels wheel/touch scrolling outside the
+ * modal (an inner scroll container of the page would otherwise still scroll
+ * through the overlay).
  */
 
 let count = 0;
