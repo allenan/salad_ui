@@ -63,7 +63,8 @@ function build({ dir = null, loop = true, disabledLast = false } = {}) {
         <div data-part="radio-item" data-value="andy" tabindex="-1">
           <span data-part="item-indicator" hidden>•</span>Andy
         </div>
-        <div data-part="radio-item" data-value="benoit" tabindex="-1">
+        <div data-part="radio-item" data-value="benoit" tabindex="-1"
+             data-close-on-select="false">
           <span data-part="item-indicator" hidden>•</span>Benoit
         </div>
       </div>
@@ -452,14 +453,18 @@ test("selecting an item closes the menu and returns focus to its trigger", () =>
   component.destroy();
 });
 
-test("checkbox and radio items update in place and keep the menu open", () => {
+test("checkbox and radio items update in place; picking closes unless close-on-select is false", () => {
   const { component, item, pushed, view } = build();
 
   pointer(view.trigger, "pointerdown");
   click(item("urls"));
   assert.equal(item("urls").getAttribute("aria-checked"), "true");
   assert.equal(item("andy").getAttribute("aria-checked"), "true");
+  assert.equal(component.state, "closed", "a checkbox item closes the menu");
 
+  pointer(view.trigger, "pointerdown");
+  assert.equal(component.state, "open");
+  // Benoit has data-close-on-select="false".
   click(item("benoit"));
   assert.equal(item("benoit").getAttribute("aria-checked"), "true");
   assert.equal(item("andy").getAttribute("aria-checked"), "false");

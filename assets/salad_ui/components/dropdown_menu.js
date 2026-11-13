@@ -8,6 +8,11 @@ import Menu, { assignId, clearGeneratedIds } from "./menu.js";
 // patch to the one rebuilt in its place (keyed by root element).
 const pendingRestores = new WeakMap();
 
+// Caps the content (`max-h-(--dropdown-menu-content-available-height)`), like
+// Radix's --radix-dropdown-menu-content-available-height, so a long menu near
+// the viewport edge scrolls instead of running off-screen.
+const AVAILABLE_HEIGHT_VAR = "--dropdown-menu-content-available-height";
+
 /**
  * DropdownMenuComponent class for SaladUI framework
  * Manages a dropdown menu with support for keyboard navigation and accessibility
@@ -23,10 +28,15 @@ class DropdownMenuComponent extends Component {
     this.handleTriggerClick = this.handleTriggerClick.bind(this);
     this.handleTriggerKeydown = this.handleTriggerKeydown.bind(this);
 
-    if (this.content && !this.content.id) {
-      assignId(this.content, `${this.el.id}-content`);
-      this.updateUI();
+    // The content is labelled by the trigger (aria-labelledby), as in Radix.
+    // Generated ids are stripped again in beforeUpdate().
+    assignId(this.trigger, `${this.el.id}-trigger`);
+    assignId(this.content, `${this.el.id}-content`);
+    // Pointer opens focus the content itself.
+    if (this.content && !this.content.hasAttribute("tabindex")) {
+      this.content.setAttribute("tabindex", "-1");
     }
+    this.updateUI();
 
     this.menu = this.content
       ? new Menu(this.content, {
@@ -97,6 +107,7 @@ class DropdownMenuComponent extends Component {
         content: {
           all: {
             role: "menu",
+            labelledby: () => this.trigger?.id || null,
           },
         },
       },
@@ -146,9 +157,45 @@ class DropdownMenuComponent extends Component {
           trapFocus: false,
           onOutsideClick: () =>
             this.transition("close", { restoreFocus: false }),
+          // Not a custom placement (returns null): it caps the content
+          // height before every position pass (open, scroll, resize).
+          computePosition: () => {
+            this.updateAvailableHeight(side, align, sideOffset);
+            return null;
+          },
         },
       );
     }
+  }
+
+  /**
+   * Sets --dropdown-menu-content-available-height to the room the viewport
+   * leaves beside the trigger. Above or below it, that is the larger of the
+   * two sides, so the cap cannot flip the placement back and forth (the
+   * content flips to the larger side when it does not fit). Beside it (left
+   * or right), the room in the direction the content grows from its `align`.
+   */
+  updateAvailableHeight(side, align, sideOffset) {
+    if (!this.content || !this.trigger) return;
+
+    const rect = this.trigger.getBoundingClientRect();
+    const height = window.innerHeight;
+    let room;
+    if (side === "left" || side === "right") {
+      const middle = rect.top + rect.height / 2;
+      room = {
+        start: height - rect.top,
+        end: rect.bottom,
+        center: 2 * Math.min(middle, height - middle),
+      }[align];
+    } else {
+      room = Math.max(rect.top, height - rect.bottom) - sideOffset;
+    }
+
+    this.content.style.setProperty(
+      AVAILABLE_HEIGHT_VAR,
+      `${Math.max(0, Math.floor(room ?? height))}px`,
+    );
   }
 
   afterMount() {
@@ -170,6 +217,11 @@ class DropdownMenuComponent extends Component {
       });
     }
 
+    // With `use-portal` the content lives outside the root; LiveView can
+    // only patch it back inside. The rebuilt instance portals it again
+    // (afterMount() -> activateOpenState()).
+    this.positionedElement?.deactivate();
+
     clearGeneratedIds(this.el, this.positioner);
   }
 
@@ -177,13 +229,25 @@ class DropdownMenuComponent extends Component {
     super.setupComponentEvents();
     this.trigger?.addEventListener("click", this.handleTriggerClick);
     this.trigger?.addEventListener("keydown", this.handleTriggerKeydown);
+    this.positioner?.addEventListener("keydown", this.handleContentKeydown);
   }
 
   teardownComponentEvents() {
     super.teardownComponentEvents();
     this.trigger?.removeEventListener("click", this.handleTriggerClick);
     this.trigger?.removeEventListener("keydown", this.handleTriggerKeydown);
+    this.positioner?.removeEventListener("keydown", this.handleContentKeydown);
   }
+
+  // Escape inside the content closes the menu. Handled on the positioner,
+  // since with `use-portal` keys pressed in the content never reach the root.
+  handleContentKeydown = (event) => {
+    if (event.key !== "Escape" || this.state !== "open") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.transition("close");
+  };
 
   handleTriggerClick() {
     if (this.state === "open") {
@@ -213,7 +277,13 @@ class DropdownMenuComponent extends Component {
     action();
   }
 
-  activateOpenState(pushEvent = true, restore = null) {
+  /**
+   * Shows and positions the content and moves focus into it. As in Radix, a
+   * keyboard open (`focusFirst`) focuses the first item; any other open
+   * (pointer, server command, initial `open`) focuses the content itself, so
+   * no item is highlighted until the pointer or ArrowDown/typeahead picks one.
+   */
+  activateOpenState(pushEvent = true, restore = null, focusFirst = false) {
     const activeElement = document.activeElement;
     const restoredFocusEl = restore?.previousFocusEl?.isConnected
       ? restore.previousFocusEl
@@ -230,11 +300,17 @@ class DropdownMenuComponent extends Component {
 
     this.initializePositionedElement();
     this.positionedElement?.activate();
-    if (restore?.menu) {
-      this.menu?.restore(restore.menu);
+
+    // After a LiveView patch: reopen the same sub-menus and refocus the same
+    // item; a menu that had only the content focused gets that back.
+    const saved = restore?.menu;
+    const savedItem = saved?.focused && saved.focused !== this.content;
+    if (saved && (savedItem || saved.openSubTriggers.length > 0)) {
+      this.menu?.restore(saved);
     } else {
-      this.menu?.activate();
+      this.focusContent(focusFirst);
     }
+
     window.requestAnimationFrame(() => {
       if (this.destroyed || typeof document === "undefined") return;
 
@@ -242,7 +318,7 @@ class DropdownMenuComponent extends Component {
         this.state === "open" &&
         !this.content?.contains(document.activeElement)
       ) {
-        this.menu?.activate();
+        this.focusContent(focusFirst);
       }
     });
 
@@ -251,8 +327,21 @@ class DropdownMenuComponent extends Component {
     }
   }
 
-  onOpenEnter() {
-    this.activateOpenState();
+  focusContent(focusFirst) {
+    if (focusFirst) {
+      this.menu?.activate();
+    } else {
+      // Forget any highlighted item (and typeahead search) so ArrowDown and
+      // typing start from the top.
+      this.menu?.reset();
+      this.content?.focus({ preventScroll: true });
+    }
+  }
+
+  // Enter, Space or ArrowDown on the trigger (the closed-state keyMap) pass
+  // the keydown as `originalEvent`; a click or a server command does not.
+  onOpenEnter({ originalEvent } = {}) {
+    this.activateOpenState(true, null, originalEvent?.type === "keydown");
   }
 
   // Runs as soon as the menu starts closing, before the exit animation: the

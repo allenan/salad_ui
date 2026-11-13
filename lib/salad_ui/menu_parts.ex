@@ -9,6 +9,10 @@ defmodule SaladUI.MenuParts do
   # `SaladUI.DropdownMenu`'s.
   use SaladUI, :component
 
+  # `close-on-select={false}` on an item keeps the menu open when it is
+  # picked (menu.js reads `data-close-on-select`). Only `false` is rendered.
+  defp close_on_select(assigns), do: if(assigns[:"close-on-select"] == false, do: "false")
+
   def group(assigns) do
     ~H"""
     <div data-slot={@slot} data-part="group" role="group" class={classes([@class])} {@rest}>
@@ -32,7 +36,8 @@ defmodule SaladUI.MenuParts do
   end
 
   def item(assigns) do
-    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
+    assigns =
+      assign(assigns, event_map: json(event_mappings(assigns)), close_on_select: close_on_select(assigns))
 
     ~H"""
     <.dynamic
@@ -45,6 +50,7 @@ defmodule SaladUI.MenuParts do
       data-variant={@variant}
       data-disabled={@disabled}
       aria-disabled={@disabled && "true"}
+      data-close-on-select={@close_on_select}
       data-event-mappings={@event_map}
       class={classes([@base, @class])}
       tabindex="-1"
@@ -56,7 +62,8 @@ defmodule SaladUI.MenuParts do
   end
 
   def checkbox_item(assigns) do
-    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
+    assigns =
+      assign(assigns, event_map: json(event_mappings(assigns)), close_on_select: close_on_select(assigns))
 
     ~H"""
     <div
@@ -69,6 +76,7 @@ defmodule SaladUI.MenuParts do
       aria-disabled={@disabled && "true"}
       data-checked={to_string(@checked)}
       data-state={(@checked && "checked") || "unchecked"}
+      data-close-on-select={@close_on_select}
       data-event-mappings={@event_map}
       class={classes([@base, @class])}
       tabindex="-1"
@@ -115,24 +123,34 @@ defmodule SaladUI.MenuParts do
     """
   end
 
+  # `:checked` (optional) only seeds the dead render; once mounted, menu.js
+  # checks the item whose value matches its group's `value`.
   def radio_item(assigns) do
-    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
+    assigns =
+      assign(assigns,
+        event_map: json(event_mappings(assigns)),
+        close_on_select: close_on_select(assigns),
+        checked: assigns[:checked] == true
+      )
 
     ~H"""
     <div
       data-slot={@slot}
       data-part="radio-item"
       role="menuitemradio"
+      aria-checked={to_string(@checked)}
       data-value={@value}
       data-disabled={@disabled}
       aria-disabled={@disabled && "true"}
+      data-state={@checked && "checked"}
+      data-close-on-select={@close_on_select}
       data-event-mappings={@event_map}
       class={classes([@base, @class])}
       tabindex="-1"
       {@rest}
     >
       <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
-        <span data-part="item-indicator" hidden>
+        <span data-part="item-indicator" hidden={!@checked}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"

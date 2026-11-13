@@ -179,7 +179,7 @@ test("ArrowRight opens the sub-menu and focuses its first item; ArrowLeft closes
     trigger,
   } = build();
 
-  click(trigger);
+  keydown(trigger, "Enter");
   assert.equal(document.activeElement, team);
 
   keydown(team, "ArrowDown");
@@ -375,7 +375,7 @@ test("radio items derive checked state from the group value", () => {
   component.destroy();
 });
 
-test("picking a radio item moves the check, fires value-changed and keeps the menu open", () => {
+test("picking a radio item moves the check, fires value-changed and closes the menu", () => {
   const { bottom, component, group, pushed, top, trigger } = build();
 
   click(trigger);
@@ -389,17 +389,31 @@ test("picking a radio item moves the check, fires value-changed and keeps the me
     true,
   );
   assert.equal(group.getAttribute("data-value"), "top");
-  assert.equal(component.state, "open");
+  assert.equal(component.state, "closed");
+  assert.equal(document.activeElement, trigger);
 
   assert.deepEqual(
-    pushed.slice(-2).map(({ event }) => event),
-    ["selected", "position_changed"],
+    pushed.slice(-3).map(({ event }) => event),
+    ["selected", "position_changed", "close"],
   );
-  assert.deepEqual(pushed.at(-1).payload, {
+  assert.deepEqual(pushed.at(-2).payload, {
     value: "top",
     componentId: "dm",
     component: "dropdown-menu",
   });
+
+  component.destroy();
+});
+
+test("a radio item with close-on-select={false} keeps the menu open", () => {
+  const { component, group, top, trigger } = build();
+  top.setAttribute("data-close-on-select", "false");
+
+  click(trigger);
+  click(top);
+
+  assert.equal(group.getAttribute("data-value"), "top");
+  assert.equal(component.state, "open");
 
   component.destroy();
 });
@@ -422,17 +436,26 @@ test("re-picking the checked radio item or a disabled one does not fire value-ch
   component.destroy();
 });
 
-test("reopening the root menu focuses the first item again", async () => {
-  const { component, newTeam, positioner, team, trigger } = build();
+test("reopening the root menu from the keyboard focuses the first item again", async () => {
+  const { component, el, newTeam, positioner, team, trigger } = build();
+  const content = el.querySelector('[data-part="content"]');
 
-  click(trigger);
+  keydown(trigger, "Enter");
   hover(newTeam);
   assert.equal(document.activeElement, newTeam);
 
   click(trigger);
   await waitFor(() => positioner.hidden === true);
 
+  // A pointer reopen highlights nothing...
   click(trigger);
+  assert.equal(document.activeElement, content);
+  assert.equal(component.menu.rovingFocus.focusedItem, null);
+  keydown(content, "Escape");
+  await waitFor(() => positioner.hidden === true);
+
+  // ...a keyboard one starts at the first item.
+  keydown(trigger, "ArrowDown");
   assert.equal(document.activeElement, team);
 
   component.destroy();
@@ -557,6 +580,8 @@ test("a server round-trip after picking a radio item keeps the menu usable", asy
     liveSocket: { execJS: () => {} },
   };
   const { group, top, trigger } = state;
+  // Keep the menu open across the pick, as close-on-select={false} does.
+  top.setAttribute("data-close-on-select", "false");
 
   click(trigger);
   top.focus();
@@ -640,7 +665,7 @@ test("typeahead is scoped to each menu panel: a sub-menu searches only its own i
   const { component, email, invite, message, more, newTeam, team, trigger } =
     build();
 
-  click(trigger);
+  keydown(trigger, "Enter");
   assert.equal(document.activeElement, team);
 
   keydown(team, "ArrowDown");
@@ -672,7 +697,7 @@ test("typeahead is scoped to each menu panel: a sub-menu searches only its own i
 test("typeahead skips disabled items in the parent panel", () => {
   const { component, team, trigger } = build();
 
-  click(trigger);
+  keydown(trigger, "Enter");
   keydown(team, "r");
   // "Right" is disabled and nothing else starts with "r".
   assert.equal(document.activeElement, team);

@@ -125,9 +125,9 @@ test("checkbox item exposes ARIA, toggles on Enter, and stops propagation", () =
   assert.equal(bubbled, false);
   assert.equal(checkbox.getAttribute("data-state"), "unchecked");
   assert.equal(checkbox.getAttribute("aria-checked"), "false");
-  // Toggling a checkbox item does not call parent.selectItem() (which would
-  // close the menu) — only the regular-item test exercises that path.
-  assert.deepEqual(selected, []);
+  // Toggling fires checked-change, then selectItem() closes the menu, as
+  // picking any item does in Radix.
+  assert.deepEqual(selected, ["bold"]);
   assert.deepEqual(
     pushed.map(({ event: eventName }) => eventName),
     ["selected", "checked"],
@@ -138,6 +138,96 @@ test("checkbox item exposes ARIA, toggles on Enter, and stops propagation", () =
     componentId: "menu-root",
     component: "dropdown-menu",
   });
+
+  menu.destroy();
+});
+
+test('data-close-on-select="false" keeps the menu open for every item kind', () => {
+  document.body.innerHTML = `
+    <div id="menu-root" data-component="dropdown-menu">
+      <div id="menu-content" data-part="content">
+        <div data-part="item" data-value="stay" data-close-on-select="false"
+             data-event-mappings='{"select":"selected"}'>Stay</div>
+        <div data-part="item" data-value="go">Go</div>
+        <div data-part="checkbox-item" data-value="bold" data-state="unchecked"
+             data-close-on-select="false"
+             data-event-mappings='{"checked-change":"checked"}'>
+          <span data-part="item-indicator" hidden>✓</span>Bold
+        </div>
+        <div data-part="radio-group" data-value="a"
+             data-event-mappings='{"value-changed":"changed"}'>
+          <div data-part="radio-item" data-value="a">
+            <span data-part="item-indicator" hidden>•</span>A
+          </div>
+          <div data-part="radio-item" data-value="b" data-close-on-select="false">
+            <span data-part="item-indicator" hidden>•</span>B
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const content = document.getElementById("menu-content");
+  const pushed = [];
+  const selected = [];
+  const menu = new Menu(content, {
+    hookContext: {
+      pushEventTo: (_target, event) => pushed.push(event),
+      liveSocket: { execJS: () => {} },
+    },
+    rootEl: document.getElementById("menu-root"),
+    onItemSelect: (item) => selected.push(item.value),
+  });
+  const q = (value) =>
+    content.querySelector(
+      `:not([data-part="radio-group"])[data-value="${value}"]`,
+    );
+
+  keydown(q("stay"), "Enter");
+  keydown(q("bold"), "Enter");
+  keydown(q("b"), "Enter");
+  assert.deepEqual(selected, [], "opted-out items never close the menu");
+  assert.deepEqual(pushed, ["selected", "checked", "changed"]);
+  assert.equal(q("bold").getAttribute("aria-checked"), "true");
+  assert.equal(q("b").getAttribute("aria-checked"), "true");
+
+  keydown(q("a"), "Enter");
+  keydown(q("go"), "Enter");
+  assert.deepEqual(selected, ["a", "go"], "the rest close it");
+
+  menu.destroy();
+});
+
+test("a radio group without a value adopts the item rendered checked", () => {
+  document.body.innerHTML = `
+    <div id="menu-root" data-component="dropdown-menu">
+      <div id="menu-content" data-part="content">
+        <div data-part="radio-group">
+          <div data-part="radio-item" data-value="a">
+            <span data-part="item-indicator" hidden>•</span>A
+          </div>
+          <div data-part="radio-item" data-value="b" data-state="checked">
+            <span data-part="item-indicator">•</span>B
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const content = document.getElementById("menu-content");
+  const menu = new Menu(content, {
+    hookContext: { pushEventTo: () => {}, liveSocket: { execJS: () => {} } },
+    rootEl: document.getElementById("menu-root"),
+  });
+  const [a, b] = content.querySelectorAll('[data-part="radio-item"]');
+
+  assert.equal(b.getAttribute("aria-checked"), "true");
+  assert.equal(b.querySelector('[data-part="item-indicator"]').hidden, false);
+  assert.equal(a.getAttribute("aria-checked"), "false");
+
+  keydown(a, "Enter");
+  assert.equal(a.getAttribute("aria-checked"), "true");
+  assert.equal(b.getAttribute("aria-checked"), "false");
 
   menu.destroy();
 });

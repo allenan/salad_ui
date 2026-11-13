@@ -295,6 +295,7 @@ defmodule SaladUI.Menubar do
   * `:inset` - Indent to line up with checkbox/radio items. Defaults to `false`.
   * `:disabled` - Skip the item in keyboard navigation and ignore clicks.
   * `:value` - Sent as `value` in the `select` event payload. Defaults to the item's text.
+  * `:close-on-select` - Set to `false` to keep the menu open when the item is picked. Defaults to `true`.
   * `:on-select` - Handler for item selection.
   * `:as` - Tag or function component to render. Defaults to `"div"`.
   """
@@ -302,6 +303,7 @@ defmodule SaladUI.Menubar do
   attr :variant, :string, values: ~w(default destructive), default: "default"
   attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
+  attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selection"
   attr :as, :any, default: "div"
   attr :class, :string, default: nil
@@ -313,18 +315,21 @@ defmodule SaladUI.Menubar do
   end
 
   @doc """
-  An item that toggles on and off. Toggling keeps the menu open.
+  An item that toggles on and off. Toggling closes the menu, unless
+  `close-on-select={false}`.
 
   ## Options
 
   * `:checked` - Whether the item is checked. Defaults to `false`.
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
+  * `:close-on-select` - Set to `false` to keep the menu open when the item is picked. Defaults to `true`.
   * `:on-checked-change` - Fired with `%{"value" => value, "checked" => checked}`.
   * `:on-select` - Fired whenever the item is activated.
   """
   attr :value, :string, default: nil
   attr :checked, :boolean, default: false
   attr :disabled, :boolean, default: false
+  attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item activation"
   attr :"on-checked-change", :any, default: nil, doc: "Handler for checked state changes"
   attr :class, :string, default: nil
@@ -339,8 +344,9 @@ defmodule SaladUI.Menubar do
 
   @doc """
   A group of mutually exclusive `menubar_radio_item/1`s. The item whose
-  `value` equals the group's `value` is checked; picking another keeps the
-  menu open and fires `on-value-changed` with `%{"value" => value}`.
+  `value` equals the group's `value` is checked; picking another fires
+  `on-value-changed` with `%{"value" => value}` and closes the menu (unless
+  the item has `close-on-select={false}`).
   """
   attr :value, :string, default: nil, doc: "The selected value"
   attr :"on-value-changed", :any, default: nil, doc: "Handler fired when the selected item changes"
@@ -359,10 +365,12 @@ defmodule SaladUI.Menubar do
 
   * `:value` - Required. The value this item selects.
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
+  * `:close-on-select` - Set to `false` to keep the menu open when the item is picked. Defaults to `true`.
   * `:on-select` - Fired whenever the item is activated, even if already checked.
   """
   attr :value, :string, required: true
   attr :disabled, :boolean, default: false
+  attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item activation"
   attr :class, :string, default: nil
   attr :rest, :global

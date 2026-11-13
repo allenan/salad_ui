@@ -11,13 +11,13 @@ defmodule SaladUI.DropdownMenu do
         <.dropdown_menu_trigger as={&SaladUI.Button.button/1} variant="outline">
           Open Menu
         </.dropdown_menu_trigger>
-        <.dropdown_menu_content>
+        <.dropdown_menu_content class="w-56">
           <.dropdown_menu_label>My Account</.dropdown_menu_label>
           <.dropdown_menu_separator />
           <.dropdown_menu_group>
             <.dropdown_menu_item on-select={JS.push("profile_selected")}>
               Profile
-              <.dropdown_menu_shortcut>⌘P</.dropdown_menu_shortcut>
+              <.dropdown_menu_shortcut>⇧⌘P</.dropdown_menu_shortcut>
             </.dropdown_menu_item>
             <.dropdown_menu_item on-select={JS.push("settings_selected")}>
               Settings
@@ -34,7 +34,15 @@ defmodule SaladUI.DropdownMenu do
         </.dropdown_menu_content>
       </.dropdown_menu>
 
+  Icons go straight into an item; they are sized `size-4` and muted unless they
+  carry their own `size-*` / `text-*` class:
+
+      <.dropdown_menu_item>
+        <.icon name="hero-user" /> Profile
+      </.dropdown_menu_item>
+
   ## Example with checkbox items
+
       <.dropdown_menu id="options-menu">
         <.dropdown_menu_trigger as={&SaladUI.Button.button/1} variant="outline">
           Options
@@ -48,9 +56,10 @@ defmodule SaladUI.DropdownMenu do
           </.dropdown_menu_checkbox_item>
           <.dropdown_menu_checkbox_item
             checked={@is_italic}
+            close-on-select={false}
             on-checked-change={JS.push("toggle_italic")}
           >
-            Italic
+            Italic (keeps the menu open)
           </.dropdown_menu_checkbox_item>
         </.dropdown_menu_content>
       </.dropdown_menu>
@@ -90,6 +99,21 @@ defmodule SaladUI.DropdownMenu do
         </.dropdown_menu_content>
       </.dropdown_menu>
 
+  ## Selecting items
+
+  Picking any item closes the menu, checkbox and radio items included (as in
+  Radix). Set `close-on-select={false}` on an item to keep the menu open when
+  it is picked, e.g. to let the user flip several checkbox items in a row
+  (Radix's `onSelect={(e) => e.preventDefault()}`).
+
+  ## Focus
+
+  Opening with the pointer focuses the menu panel itself, so no item is
+  highlighted until the pointer hovers one or `ArrowDown`/typeahead picks one.
+  Opening from the keyboard (`Enter`, `Space` or `ArrowDown` on the trigger)
+  focuses the first item. The panel is labelled by its trigger
+  (`aria-labelledby`).
+
   ## Keyboard
 
   Follows the WAI-ARIA menu pattern: `ArrowUp`/`ArrowDown`/`Home`/`End` move
@@ -105,6 +129,12 @@ defmodule SaladUI.DropdownMenu do
       <.dropdown_menu_item data-text-value="Settings">
         <span aria-hidden="true">⚙</span> Settings
       </.dropdown_menu_item>
+
+  ## Long menus
+
+  The panel's height is capped at the room the viewport leaves beside the
+  trigger (`max-h-(--dropdown-menu-content-available-height)`), so a long menu
+  near the viewport edge scrolls.
 
   ## Component events
 
@@ -124,11 +154,22 @@ defmodule SaladUI.DropdownMenu do
   ## Re-renders
 
   A LiveView re-render keeps an open menu open, with its open sub-menus and
-  focus. Closing fires `on-close` and returns focus as soon as the menu starts
-  closing, so a re-render during the exit animation (such as the reply to an
-  item's `on-select`) cannot drop them.
+  focus, also with `use-portal` (the portaled panel is moved back into the
+  root for the patch and portaled again after it). Closing fires `on-close`
+  and returns focus as soon as the menu starts closing, so a re-render during
+  the exit animation (such as the reply to an item's `on-select`) cannot drop
+  them.
   """
   use SaladUI, :component
+
+  alias SaladUI.MenuParts
+
+  @content_class "z-50 max-h-(--dropdown-menu-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-hidden data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+  @item_class "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:ps-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground data-[variant=destructive]:*:[svg]:text-destructive!"
+  @checkable_class "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pe-2 ps-8 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  @label_class "px-2 py-1.5 text-sm font-medium data-[inset]:ps-8"
+  @sub_trigger_class "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[inset]:ps-8 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground"
+  @sub_content_class "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg outline-hidden data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
 
   @doc """
   The main dropdown menu component that manages state and positioning.
@@ -233,6 +274,8 @@ defmodule SaladUI.DropdownMenu do
       data-slot="dropdown-menu-trigger"
       type={@type || "button"}
       data-part="trigger"
+      aria-haspopup="menu"
+      aria-expanded="false"
       class={classes(["", @class])}
       {@rest}
     >
@@ -244,6 +287,8 @@ defmodule SaladUI.DropdownMenu do
       tag={@as}
       type={@type}
       data-part="trigger"
+      aria-haspopup="menu"
+      aria-expanded="false"
       tabindex="0"
       class={classes(["", @class])}
       {@rest}
@@ -255,6 +300,9 @@ defmodule SaladUI.DropdownMenu do
 
   @doc """
   The dropdown menu content that appears when triggered.
+
+  Its height is capped at the room the viewport leaves beside the trigger,
+  so a long menu scrolls.
 
   ## Options
 
@@ -276,6 +324,7 @@ defmodule SaladUI.DropdownMenu do
   def dropdown_menu_content(assigns) do
     assigns =
       assign(assigns, %{
+        base: @content_class,
         side_offset: assigns[:"side-offset"],
         align_offset: assigns[:"align-offset"]
       })
@@ -296,12 +345,9 @@ defmodule SaladUI.DropdownMenu do
         data-part="content"
         data-side={@side}
         data-align={@align}
-        class={
-          classes([
-            "z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-            @class
-          ])
-        }
+        role="menu"
+        tabindex="-1"
+        class={classes([@base, @class])}
         {@rest}
       >
         {render_slot(@inner_block)}
@@ -322,17 +368,7 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_group(assigns) do
-    ~H"""
-    <div
-      data-slot="dropdown-menu-group"
-      data-part="group"
-      role="group"
-      class={classes([@class])}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns |> assign(:slot, "dropdown-menu-group") |> MenuParts.group()
   end
 
   @doc """
@@ -340,7 +376,7 @@ defmodule SaladUI.DropdownMenu do
 
   ## Options
 
-  * `:inset` - Whether to inset the label. Defaults to `false`.
+  * `:inset` - Indent to line up with checkbox/radio items (`data-inset`). Defaults to `false`.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
@@ -349,103 +385,72 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_label(assigns) do
-    ~H"""
-    <div
-      data-slot="dropdown-menu-label"
-      data-part="label"
-      class={classes(["px-2 py-1.5 text-sm font-semibold", @inset && "ps-8", @class])}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns |> assign(slot: "dropdown-menu-label", base: @label_class) |> MenuParts.label()
   end
 
   @doc """
-  An item in the dropdown menu.
+  An item in the dropdown menu. Picking it fires `on-select` and closes the menu.
 
   ## Options
 
+  * `:variant` - `"default"` or `"destructive"` (`data-variant`).
+  * `:inset` - Indent to line up with checkbox/radio items (`data-inset`). Defaults to `false`.
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
-  * `:variant` - Visual style variant of the item (default or destructive).
+  * `:value` - Sent as `value` in the `select` event payload. Defaults to the item's text.
+  * `:close-on-select` - Set to `false` to keep the menu open when the item is picked. Defaults to `true`.
   * `:on-select` - Handler for item selection.
+  * `:as` - Tag or function component to render. Defaults to `"div"`.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
   attr :value, :string, default: nil
   attr :variant, :string, values: ~w(default destructive), default: "default"
+  attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
+  attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selection"
   attr :as, :any, default: "div"
   attr :rest, :global
   slot :inner_block, required: true
 
   def dropdown_menu_item(assigns) do
-    # Collect event mappings
-    event_map = event_mappings(assigns)
-
-    assigns =
-      assign(assigns, :event_map, json(event_map))
-
-    ~H"""
-    <.dynamic
-      data-slot="dropdown-menu-item"
-      tag={@as}
-      data-part="item"
-      data-value={@value}
-      data-disabled={@disabled}
-      data-event-mappings={@event_map}
-      class={
-        classes([
-          "relative flex cursor-default select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:me-2",
-          @variant == "destructive" &&
-            "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
-          @class
-        ])
-      }
-      tabindex={if @disabled, do: "-1", else: "0"}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </.dynamic>
-    """
+    assigns |> assign(slot: "dropdown-menu-item", base: @item_class) |> MenuParts.item()
   end
 
   @doc """
-  An item in the dropdown menu.
+  A dropdown menu item rendered as a `Phoenix.Component.link/1`.
 
   ## Options
 
+  * `:href` / `:navigate` / `:patch` / `:method` - Passed to `link/1`.
+  * `:variant` - `"default"` or `"destructive"` (`data-variant`).
+  * `:inset` - Indent to line up with checkbox/radio items (`data-inset`). Defaults to `false`.
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
-  * `:variant` - Visual style variant of the item (default or destructive).
-  * `:on-select` - Handler for item selection.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
   attr :value, :string, default: nil
   attr :variant, :string, values: ~w(default destructive), default: "default"
+  attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
-  attr :rest, :global, include: ~w(href method)
+  attr :rest, :global, include: ~w(href navigate patch method replace)
   slot :inner_block, required: true
 
   def dropdown_menu_link_item(assigns) do
-    # Collect event mappings
+    assigns = assign(assigns, :base, @item_class)
 
     ~H"""
     <.link
       data-slot="dropdown-menu-item"
       data-part="item"
+      role="menuitem"
       data-value={@value}
+      data-inset={@inset}
+      data-variant={@variant}
       data-disabled={@disabled}
-      class={
-        classes([
-          "relative flex cursor-default select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:me-2",
-          @variant == "destructive" &&
-            "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
-          @class
-        ])
-      }
-      tabindex={if @disabled, do: "-1", else: "0"}
+      aria-disabled={@disabled && "true"}
+      class={classes([@base, @class])}
+      tabindex="-1"
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -454,13 +459,15 @@ defmodule SaladUI.DropdownMenu do
   end
 
   @doc """
-  A checkbox item in the dropdown menu that can be toggled on/off.
+  A checkbox item in the dropdown menu that can be toggled on/off. Toggling
+  it closes the menu, unless `close-on-select={false}`.
 
   ## Options
 
-  * `:checked` - Whether the item is initially checked. Defaults to `false`.
+  * `:checked` - Whether the item is checked. Defaults to `false`.
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
-  * `:on-checked-change` - Handler for when checked state changes.
+  * `:close-on-select` - Set to `false` to keep the menu open on toggle. Defaults to `true`.
+  * `:on-checked-change` - Fired with `%{"value" => value, "checked" => checked}`.
   * `:on-select` - Handler for item selection.
   * `:class` - Additional CSS classes.
   """
@@ -468,6 +475,7 @@ defmodule SaladUI.DropdownMenu do
   attr :value, :string, default: nil
   attr :checked, :boolean, default: false
   attr :disabled, :boolean, default: false
+  attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is toggled"
   attr :"on-select", :any, default: nil, doc: "Handler for item selected event"
   attr :"on-checked-change", :any, default: nil, doc: "Handler for when checked state changes"
 
@@ -475,65 +483,19 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_checkbox_item(assigns) do
-    # Collect event mappings
-    event_map = event_mappings(assigns)
-
-    assigns =
-      assign(assigns, :event_map, json(event_map))
-
-    ~H"""
-    <div
-      data-slot="dropdown-menu-checkbox-item"
-      data-part="checkbox-item"
-      data-value={@value}
-      data-disabled={@disabled}
-      data-checked={@checked}
-      data-state={(@checked && "checked") || "unchecked"}
-      data-event-mappings={@event_map}
-      class={
-        classes([
-          "relative flex cursor-default select-none items-center rounded-xs py-1.5 pe-2 ps-8 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-          @class
-        ])
-      }
-      tabindex={if @disabled, do: "-1", else: "0"}
-      {@rest}
-    >
-      <span class="absolute start-2 flex size-3.5 items-center justify-center">
-        <span
-          data-part="item-indicator"
-          data-state={(@checked && "checked") || "unchecked"}
-          hidden={!@checked}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="size-4"
-          >
-            <path d="M20 6 9 17l-5-5"></path>
-          </svg>
-        </span>
-      </span>
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns
+    |> assign(slot: "dropdown-menu-checkbox-item", base: @checkable_class)
+    |> MenuParts.checkbox_item()
   end
 
   @doc """
   A group of mutually exclusive `dropdown_menu_radio_item/1`s.
 
   The group owns the selected value: the item whose `value` equals the
-  group's `value` is rendered checked. Selecting another item updates the
-  checked item on the client, keeps the menu open (like checkbox items) and
-  fires `on-value-changed`. Pass the new value back as `value` from your
-  LiveView to keep server state in sync.
+  group's `value` is rendered checked. Picking another item updates the
+  checked item on the client, fires `on-value-changed` and closes the menu
+  (unless that item has `close-on-select={false}`). Pass the new value back
+  as `value` from your LiveView to keep server state in sync.
 
   ## Options
 
@@ -562,83 +524,39 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_radio_group(assigns) do
-    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
-
-    ~H"""
-    <div
-      data-slot="dropdown-menu-radio-group"
-      data-part="radio-group"
-      data-value={@value}
-      data-event-mappings={@event_map}
-      role="group"
-      class={classes([@class])}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns |> assign(:slot, "dropdown-menu-radio-group") |> MenuParts.radio_group()
   end
 
   @doc """
   A radio item inside a `dropdown_menu_radio_group/1`.
 
-  Its checked state comes from the enclosing group's `value`, so the item
-  itself only declares its own `value`.
+  Its checked state comes from the enclosing group's `value` once the menu is
+  mounted. `checked` only marks it checked in the initial (dead) render,
+  e.g. `checked={@position == "top"}`; a group rendered without a `value`
+  adopts the item rendered `checked`.
 
   ## Options
 
   * `:value` - Required. The value this item selects.
+  * `:checked` - Render the item checked before the menu mounts. Defaults to `false`.
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
+  * `:close-on-select` - Set to `false` to keep the menu open when the item is picked. Defaults to `true`.
   * `:on-select` - Handler fired whenever the item is activated, even if it is already checked.
   * `:class` - Additional CSS classes.
   """
   attr :value, :string, required: true, doc: "The value this item selects"
+  attr :checked, :boolean, default: false, doc: "Render the item checked before the menu mounts"
   attr :disabled, :boolean, default: false
+  attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selected event"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
   def dropdown_menu_radio_item(assigns) do
-    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
-
-    ~H"""
-    <div
-      data-slot="dropdown-menu-radio-item"
-      data-part="radio-item"
-      data-value={@value}
-      data-disabled={@disabled}
-      data-event-mappings={@event_map}
-      class={
-        classes([
-          "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pe-2 ps-8 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-          @class
-        ])
-      }
-      tabindex={if @disabled, do: "-1", else: "0"}
-      {@rest}
-    >
-      <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
-        <span data-part="item-indicator" hidden>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="size-2 fill-current"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-          </svg>
-        </span>
-      </span>
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns
+    |> assign(slot: "dropdown-menu-radio-item", base: @checkable_class)
+    |> MenuParts.radio_item()
   end
 
   @doc """
@@ -668,11 +586,7 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_sub(assigns) do
-    ~H"""
-    <div data-slot="dropdown-menu-sub" data-part="sub" class={classes([@class])} {@rest}>
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns |> assign(:slot, "dropdown-menu-sub") |> MenuParts.sub()
   end
 
   @doc """
@@ -691,41 +605,13 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_sub_trigger(assigns) do
-    ~H"""
-    <div
-      data-slot="dropdown-menu-sub-trigger"
-      data-part="sub-trigger"
-      data-inset={@inset}
-      data-disabled={@disabled}
-      data-state="closed"
-      aria-haspopup="menu"
-      aria-expanded="false"
-      class={
-        classes([
-          "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[inset]:ps-8 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
-          @class
-        ])
-      }
-      tabindex={if @disabled, do: "-1", else: "0"}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="ms-auto size-4 rtl:rotate-180"
-      >
-        <path d="m9 18 6-6-6-6"></path>
-      </svg>
-    </div>
-    """
+    assigns
+    |> assign(
+      slot: "dropdown-menu-sub-trigger",
+      base: @sub_trigger_class,
+      chevron_class: "ms-auto size-4 rtl:rotate-180"
+    )
+    |> MenuParts.sub_trigger()
   end
 
   @doc """
@@ -750,40 +636,14 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_sub_content(assigns) do
-    assigns =
-      assign(assigns, %{
-        side_offset: assigns[:"side-offset"],
-        align_offset: assigns[:"align-offset"]
-      })
-
-    ~H"""
-    <div
-      data-part="sub-positioner"
-      data-side={@side}
-      data-align={@align}
-      data-side-offset={@side_offset}
-      data-align-offset={@align_offset}
-      class="absolute z-50"
-      hidden
-    >
-      <div
-        data-slot="dropdown-menu-sub-content"
-        data-part="sub-content"
-        data-side={@side}
-        data-state="closed"
-        role="menu"
-        class={
-          classes([
-            "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-            @class
-          ])
-        }
-        {@rest}
-      >
-        {render_slot(@inner_block)}
-      </div>
-    </div>
-    """
+    assigns
+    |> assign(
+      slot: "dropdown-menu-sub-content",
+      base: @sub_content_class,
+      side_offset: assigns[:"side-offset"],
+      align_offset: assigns[:"align-offset"]
+    )
+    |> MenuParts.sub_content()
   end
 
   @doc """
@@ -795,20 +655,9 @@ defmodule SaladUI.DropdownMenu do
   """
   attr :class, :string, default: nil
   attr :rest, :global
-  slot :inner_block, required: false
 
   def dropdown_menu_separator(assigns) do
-    ~H"""
-    <div
-      data-slot="dropdown-menu-separator"
-      data-part="separator"
-      role="separator"
-      class={classes(["-mx-1 my-1 h-px bg-muted", @class])}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </div>
-    """
+    assigns |> assign(:slot, "dropdown-menu-separator") |> MenuParts.separator()
   end
 
   @doc """
@@ -823,16 +672,7 @@ defmodule SaladUI.DropdownMenu do
   slot :inner_block, required: true
 
   def dropdown_menu_shortcut(assigns) do
-    ~H"""
-    <span
-      data-slot="dropdown-menu-shortcut"
-      data-part="shortcut"
-      class={classes(["ms-auto text-xs tracking-widest opacity-60", @class])}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </span>
-    """
+    assigns |> assign(:slot, "dropdown-menu-shortcut") |> MenuParts.shortcut()
   end
 
   defp get_animation_config do

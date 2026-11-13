@@ -142,7 +142,19 @@ class MenuItemBase extends Component {
   handleActivation(event) {
     if (!this.notifyActivation(event)) return;
 
-    this.parent.selectItem(this);
+    this.closeMenuOnSelect();
+  }
+
+  // Picking any item (checkbox and radio items too) closes the menu, as in
+  // Radix. `data-close-on-select="false"` (the components'
+  // `close-on-select={false}`) keeps it open instead, like calling
+  // `event.preventDefault()` in a Radix `onSelect`.
+  get closeOnSelect() {
+    return this.el.getAttribute("data-close-on-select") !== "false";
+  }
+
+  closeMenuOnSelect() {
+    if (this.closeOnSelect) this.parent.selectItem(this);
   }
 
   // While a typeahead search is in progress, Space types a space (handled by
@@ -155,8 +167,8 @@ class MenuItemBase extends Component {
 
   // Shared activation bookkeeping: guards, prevents the native action, and
   // notifies the server. Returns whether activation should proceed, so
-  // subclasses (e.g. MenuCheckboxItem) can opt out of parent.selectItem()
-  // (which closes the menu) while still getting this behavior.
+  // subclasses (e.g. MenuCheckboxItem) can update their own state before
+  // closeMenuOnSelect().
   notifyActivation(event) {
     const shouldPreserveNativeClick =
       event?.type === "click" && this.isNativeLinkItem();
@@ -271,9 +283,7 @@ class MenuCheckboxItem extends MenuItemBase {
     return checkableConfig(this, "checkbox-item", "menuitemcheckbox");
   }
 
-  // Overridden (not calling super.handleActivation()) so toggling a
-  // checkbox item does not call parent.selectItem(), which would close the
-  // menu: checkbox items stay open on toggle.
+  // Toggles and fires `checked-change` before the menu closes.
   handleActivation(event) {
     if (!this.notifyActivation(event)) return;
 
@@ -287,6 +297,8 @@ class MenuCheckboxItem extends MenuItemBase {
       },
       this.parent.rootEl || this.parent.el,
     );
+
+    this.closeMenuOnSelect();
   }
 }
 
@@ -336,8 +348,8 @@ class MenuRadioGroup extends Component {
 }
 
 /**
- * Radio item: one checked item per `radio-group`. Like checkbox items,
- * picking one keeps the menu open.
+ * Radio item: one checked item per `radio-group`. Picking one checks it, then
+ * closes the menu like any item (unless `data-close-on-select="false"`).
  */
 class MenuRadioItem extends MenuItemBase {
   constructor(itemElement, parentComponent, options) {
@@ -354,6 +366,7 @@ class MenuRadioItem extends MenuItemBase {
     if (!this.notifyActivation(event)) return;
 
     this.group?.select(this);
+    this.closeMenuOnSelect();
   }
 }
 
@@ -711,7 +724,15 @@ class Menu extends Component {
           });
         case "radio-item": {
           const group = this.radioGroupFor(element);
-          // The group's value is the source of truth, not a stale data-state.
+          // A group rendered without a value adopts the item rendered
+          // `checked` (the dead-render hint); otherwise the group's value is
+          // the source of truth, not a stale data-state.
+          if (
+            group?.value === null &&
+            element.getAttribute("data-state") === "checked"
+          ) {
+            group.value = readItemValue(element);
+          }
           element.removeAttribute("data-state");
           return new MenuRadioItem(element, this, {
             group,

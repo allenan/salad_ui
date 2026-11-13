@@ -18,6 +18,8 @@ function build({
   side = "right",
   disabled = false,
   usePortal = false,
+  // `close-on-select={false}` on the checkbox item.
+  bookmarksStayOpen = false,
   // The exit animation context_menu/1 configures.
   animated = false,
 } = {}) {
@@ -52,6 +54,7 @@ function build({
               </div>
             </div>
             <div data-part="checkbox-item" data-value="bookmarks" data-state="checked"
+                 ${bookmarksStayOpen ? 'data-close-on-select="false"' : ""}
                  data-event-mappings='{"checked-change":"bookmarks"}' tabindex="-1">
               <span data-part="item-indicator">✓</span>Show Bookmarks
             </div>
@@ -247,8 +250,28 @@ test("selecting an item fires on-select and closes the menu", () => {
   component.destroy();
 });
 
-test("checkbox items toggle and keep the menu open", () => {
+test("checkbox items toggle and close the menu, as in Radix", () => {
   const { bookmarks, component, pushed, trigger } = build();
+
+  contextmenu(trigger, 200, 150);
+  click(bookmarks);
+
+  assert.equal(component.state, "closed");
+  assert.equal(bookmarks.getAttribute("aria-checked"), "false");
+  assert.ok(
+    pushed.some(
+      ({ event, payload }) =>
+        event === "bookmarks" && payload.checked === false,
+    ),
+  );
+
+  component.destroy();
+});
+
+test("a checkbox item with close-on-select={false} keeps the menu open", () => {
+  const { bookmarks, component, pushed, trigger } = build({
+    bookmarksStayOpen: true,
+  });
 
   contextmenu(trigger, 200, 150);
   click(bookmarks);
@@ -485,7 +508,9 @@ test("a LiveView rebuild keeps the open sub-menu and focused item", () => {
 });
 
 test("a LiveView rebuild keeps focus on a toggled checkbox item", () => {
-  const { bookmarks, component, el, hookContext, trigger } = build();
+  const { bookmarks, component, el, hookContext, trigger } = build({
+    bookmarksStayOpen: true,
+  });
 
   contextmenu(trigger, 200, 150);
   bookmarks.focus();
