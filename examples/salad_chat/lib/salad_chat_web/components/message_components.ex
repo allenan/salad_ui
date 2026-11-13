@@ -439,7 +439,8 @@ defmodule SaladChatWeb.MessageComponents do
     <.popover id={@id}>
       <.popover_trigger
         as={&button/1}
-        {%{variant: if(@compact, do: "outline", else: "ghost"), size: "icon-sm"}}
+        variant={if @compact, do: "outline", else: "ghost"}
+        size="icon-sm"
         class={if @compact, do: "size-7 rounded-full text-muted-foreground"}
         aria-label="Add reaction"
       >
@@ -548,7 +549,8 @@ defmodule SaladChatWeb.MessageComponents do
         <.dropdown_menu id={"#{@id}-more"}>
           <.dropdown_menu_trigger
             as={&button/1}
-            {%{variant: "ghost", size: "icon-sm"}}
+            variant="ghost"
+            size="icon-sm"
             aria-label="More actions"
           >
             <.icon name="hero-ellipsis-vertical" />

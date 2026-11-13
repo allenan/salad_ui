@@ -1,8 +1,6 @@
 // Client-side glue for Salad Chat: LiveView hooks plus a few global
 // listeners (keyboard shortcuts, theme, opening the thread sheet on phones).
 
-import DialogComponent from "salad_ui/components/dialog"
-
 const saladCommand = (selector, command, params = {}) => {
   const el = document.querySelector(selector)
   if (!el) return
@@ -117,31 +115,3 @@ const Composer = {
 }
 
 export const Hooks = {Composer}
-
-// ---------------------------------------------------------------------------
-// Keep open dialogs and sheets open across LiveView patches.
-//
-// SaladUI renders `data-state="closed"` / `hidden` on overlay roots and
-// parts, and its hook rebuilds a component whenever LiveView patches it. A
-// dialog whose content re-renders (form validation, a new reply in the thread
-// sheet, presence changes) therefore snaps shut. Until SaladUI preserves this
-// state itself, keep the client-owned attributes of *open* dialogs, and skip
-// rebuilding them while open.
-const CLIENT_ATTRS = ["data-state", "hidden", "aria-hidden", "aria-expanded"]
-
-export const keepOpenOverlays = (from, to) => {
-  if (from.nodeType !== Node.ELEMENT_NODE || !from.dataset) return
-  const isRoot = from.dataset.component === "dialog"
-  const root = isRoot ? from : from.dataset.part && from.closest('[data-component="dialog"]')
-  if (!root || root.dataset.state !== "open") return
-  if (!isRoot && from.closest("[data-component]") !== root) return
-
-  for (const attr of CLIENT_ATTRS) {
-    if (from.hasAttribute(attr)) to.setAttribute(attr, from.getAttribute(attr))
-    else to.removeAttribute(attr)
-  }
-}
-
-DialogComponent.prototype.skipReinitialize = function () {
-  return this.state === "open"
-}

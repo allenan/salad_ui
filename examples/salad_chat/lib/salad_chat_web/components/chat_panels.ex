@@ -111,7 +111,8 @@ defmodule SaladChatWeb.ChatPanels do
           <.popover id="pinned-popover">
             <.popover_trigger
               as={&button/1}
-              {%{variant: "outline", size: "sm"}}
+              variant="outline"
+              size="sm"
               aria-label="Pinned messages"
             >
               <.icon name="hero-bookmark" />
@@ -353,7 +354,7 @@ defmodule SaladChatWeb.ChatPanels do
 
     ~H"""
     <.command_dialog id="quick-switcher">
-      <.command_input {%{placeholder: "Jump to a channel, person or action…"}} />
+      <.command_input placeholder="Jump to a channel, person or action…" />
       <.command_list class="max-h-[60vh]">
         <.command_empty>
           <.empty class="p-6">

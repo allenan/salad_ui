@@ -52,14 +52,13 @@ import "salad_ui/components/context_menu";
 import "salad_ui/components/combobox";
 import "salad_ui/components/calendar";
 import "salad_ui/components/message_scroller";
-import {Hooks as ChatHooks, currentTheme, keepOpenOverlays} from "./chat";
+import {Hooks as ChatHooks, currentTheme} from "./chat";
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: () => ({_csrf_token: csrfToken, theme: currentTheme()}),
   hooks: {...colocatedHooks, ...ChatHooks, SaladUI: SaladUI.SaladUIHook},
-  dom: {onBeforeElUpdated: keepOpenOverlays},
 })
 
 // Show progress bar on live navigation and form submits

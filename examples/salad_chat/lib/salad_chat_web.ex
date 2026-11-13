@@ -81,7 +81,8 @@ defmodule SaladChatWeb do
       import Phoenix.HTML
       # SaladUI is the component library for the whole app
       use SaladUI
-      # Not part of `use SaladUI` (yet)
+      # Imported explicitly: SaladUI.Command's command/1 can clash with an icon
+      # component of the same name, so `use SaladUI` may leave it out
       import SaladUI.Command
 
       # Common modules used in templates

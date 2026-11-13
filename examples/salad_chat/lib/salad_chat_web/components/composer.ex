@@ -121,7 +121,7 @@ defmodule SaladChatWeb.Composer do
             <.popover id={"#{@id}-emoji"}>
               <.popover_trigger
                 as={&input_group_button/1}
-                {%{size: "icon-sm"}}
+                size="icon-sm"
                 class="rounded-full"
                 aria-label="Insert emoji"
               >
