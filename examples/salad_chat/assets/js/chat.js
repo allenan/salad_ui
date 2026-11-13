@@ -1,6 +1,8 @@
 // Client-side glue for Salad Chat: LiveView hooks plus a few global
 // listeners (keyboard shortcuts, theme, opening the thread sheet on phones).
 
+import {attachFiles} from "salad_ui/components/drop_zone"
+
 const saladCommand = (selector, command, params = {}) => {
   const el = document.querySelector(selector)
   if (!el) return
@@ -8,6 +10,15 @@ const saladCommand = (selector, command, params = {}) => {
     new CustomEvent("salad_ui:command", {detail: {command, params}, bubbles: false}),
   )
 }
+
+// SaladUI's emoji picker reports a pick as a bubbling `emoji-picker:select`
+// on the button that opened it; the composer's emoji button names its
+// textarea in `data-insert-into`.
+document.addEventListener("emoji-picker:select", (e) => {
+  const target = e.target.closest?.("[data-insert-into]")
+  const input = target && document.querySelector(target.dataset.insertInto)
+  if (input) input.dispatchEvent(new CustomEvent("salad-chat:insert", {detail: {text: e.detail.emoji}}))
+})
 
 const isMobile = () => window.matchMedia("(max-width: 767px)").matches
 
@@ -321,6 +332,15 @@ const Composer = {
       }
     })
     this.el.addEventListener("salad-chat:insert", (e) => insertAtCursor(this.el, e.detail.text))
+    // Pasted files (a screenshot) attach like dropped ones: SaladUI's
+    // attachFiles hands them to the composer's live_file_input.
+    this.el.addEventListener("paste", (e) => {
+      const files = e.clipboardData?.files
+      const input = this.el.form?.querySelector("input[type=file]")
+      if (!files?.length || !input) return
+      e.preventDefault()
+      attachFiles(input, files)
+    })
     this.el.addEventListener("salad-chat:set-text", (e) => {
       this.el.value = ""
       insertAtCursor(this.el, e.detail.text)

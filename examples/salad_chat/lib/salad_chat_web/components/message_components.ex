@@ -425,55 +425,30 @@ defmodule SaladChatWeb.MessageComponents do
     end
   end
 
-  # Not `emoji_picker/1`: `use SaladUI` imports SaladUI.EmojiPicker's. This
-  # one is a per-message popover with a short, curated grid.
-  @doc "An emoji grid in a popover, that reacts to a message."
+  @doc """
+  The "Add reaction" button: it opens the page's one SaladUI emoji picker
+  (rendered by ChatLive), which pushes "react" with this message's id, so a
+  long message list costs no popover per row.
+  """
   attr :id, :string, required: true
   attr :message_id, :integer, required: true
   attr :compact, :boolean, default: false
 
   def reaction_picker(assigns) do
     ~H"""
-    <.popover id={@id} use-portal portal-container="#chat-portal">
-      <.popover_trigger
-        as={&button/1}
-        variant={if @compact, do: "outline", else: "ghost"}
-        size="icon-sm"
-        class={if @compact, do: "size-7 rounded-full text-muted-foreground"}
-        aria-label="Add reaction"
-      >
-        <.icon name="hero-face-smile" />
-      </.popover_trigger>
-      <.popover_content side="top" align="start" class="w-64 p-2">
-        <.emoji_grid on_pick={
-          fn e ->
-            JS.push("react", value: %{id: @message_id, emoji: e})
-            |> SaladUI.JS.dispatch_command("close", to: "##{@id}")
-          end
-        } />
-      </.popover_content>
-    </.popover>
-    """
-  end
-
-  attr :on_pick, :any, required: true, doc: "fn emoji -> %JS{} end"
-
-  def emoji_grid(assigns) do
-    assigns = assign(assigns, :emoji, @emoji)
-
-    ~H"""
-    <div class="grid grid-cols-8 gap-0.5" role="listbox" aria-label="Emoji">
-      <button
-        :for={e <- @emoji}
-        type="button"
-        role="option"
-        aria-label={e}
-        class="flex size-7 items-center justify-center rounded-md text-lg hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
-        phx-click={@on_pick.(e)}
-      >
-        {e}
-      </button>
-    </div>
+    <.button
+      id={@id}
+      type="button"
+      variant={if @compact, do: "outline", else: "ghost"}
+      size="icon-sm"
+      class={if @compact, do: "size-7 rounded-full text-muted-foreground"}
+      aria-label="Add reaction"
+      data-emoji-picker="emoji-picker"
+      data-emoji-event="react"
+      data-emoji-value-id={@message_id}
+    >
+      <.icon name="hero-face-smile" />
+    </.button>
     """
   end
 

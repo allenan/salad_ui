@@ -6,7 +6,7 @@ defmodule SaladChatWeb.Composer do
   """
   use SaladChatWeb, :html
 
-  import SaladChatWeb.MessageComponents, only: [emoji_grid: 1, typing_indicator: 1]
+  import SaladChatWeb.MessageComponents, only: [typing_indicator: 1]
 
   @commands [
     {"/shrug", "[message]", "Append ¯\\_(ツ)_/¯ to your message"},
@@ -174,23 +174,19 @@ defmodule SaladChatWeb.Composer do
               </.tooltip_trigger>
               <.tooltip_content>Attach files</.tooltip_content>
             </.tooltip>
-            <.popover id={"#{@id}-emoji"}>
-              <.popover_trigger
-                as={&input_group_button/1}
-                size="icon-sm"
-                class="rounded-full"
-                aria-label="Insert emoji"
-              >
-                <.icon name="hero-face-smile" />
-              </.popover_trigger>
-              <.popover_content side="top" align="start" class="w-64 p-2">
-                <.emoji_grid on_pick={
-                  fn e ->
-                    JS.dispatch("salad-chat:insert", to: "##{@id}-input", detail: %{text: e})
-                  end
-                } />
-              </.popover_content>
-            </.popover>
+            <%!-- Opens the page's one SaladUI emoji picker (ChatLive); the
+                 pick comes back as an `emoji-picker:select` event on this
+                 button, which chat.js inserts into `data-insert-into`. --%>
+            <.input_group_button
+              type="button"
+              size="icon-sm"
+              class="rounded-full"
+              aria-label="Insert emoji"
+              data-emoji-picker="emoji-picker"
+              data-insert-into={"##{@id}-input"}
+            >
+              <.icon name="hero-face-smile" />
+            </.input_group_button>
             <.tooltip id={"#{@id}-commands-tooltip"}>
               <.tooltip_trigger>
                 <.input_group_button
