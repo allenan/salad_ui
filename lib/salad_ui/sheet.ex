@@ -108,6 +108,12 @@ defmodule SaladUI.Sheet do
 
   attr :"on-open", :any, default: nil, doc: "Handler for sheet open event"
   attr :"on-close", :any, default: nil, doc: "Handler for sheet close event"
+
+  attr :"return-focus", :string,
+    default: nil,
+    doc:
+      "CSS selector of the element that gets focus when it closes (Radix's `onCloseAutoFocus`); by default focus returns to the element focused at open, or to the trigger"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -124,7 +130,8 @@ defmodule SaladUI.Sheet do
         json(%{
           animations: get_animation_config(),
           closeOnOutsideClick: assigns[:"close-on-outside-click"],
-          modal: assigns.modal
+          modal: assigns.modal,
+          returnFocus: assigns[:"return-focus"]
         })
       )
 

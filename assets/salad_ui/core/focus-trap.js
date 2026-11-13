@@ -31,6 +31,9 @@ class FocusTrap {
       // element, or a function returning one. A dialog opened by the server
       // passes its trigger, as Radix returns focus to the trigger.
       returnFocus: null,
+      // When true, `returnFocus` wins over the element focused at activate()
+      // (Radix's onCloseAutoFocus): an app names where focus goes on close.
+      preferReturnFocus: false,
       ...options,
     };
 
@@ -88,21 +91,24 @@ class FocusTrap {
       );
     };
 
-    if (this.isRestorable(previouslyFocused)) {
-      if (this.isElementInViewport(previouslyFocused)) {
-        setTimeout(() => {
-          if (
-            typeof document === "undefined" ||
-            !document.body.contains(previouslyFocused)
-          ) {
-            return;
-          }
-          if (focusLost()) previouslyFocused.focus();
-        }, 0);
-      }
+    if (
+      this.isRestorable(previouslyFocused) &&
+      !this.options.preferReturnFocus
+    ) {
+      // Restored even when the opener is scrolled out of view, as Radix does;
+      // otherwise focus would fall to <body>.
+      setTimeout(() => {
+        if (
+          typeof document === "undefined" ||
+          !document.body.contains(previouslyFocused)
+        ) {
+          return;
+        }
+        if (focusLost()) previouslyFocused.focus();
+      }, 0);
     } else if (fallback) {
-      // Nothing was focused at open (a dialog the server opened): go to the
-      // fallback (the dialog's trigger).
+      // Nothing was focused at open (a dialog the server opened), or the app
+      // named a target: go to the fallback.
       setTimeout(() => {
         if (typeof document === "undefined") return;
         const target = focusTarget(
@@ -184,25 +190,6 @@ class FocusTrap {
   getFocusableElements() {
     return Array.from(
       this.element.querySelectorAll(this.options.focusableSelector),
-    );
-  }
-
-  /**
-   * Check if an element is currently visible in the viewport
-   */
-  isElementInViewport(element) {
-    if (!element || !document.body.contains(element)) {
-      return false;
-    }
-
-    const rect = element.getBoundingClientRect();
-
-    return (
-      rect.top >= 0 &&
-      rect.left >= 0 &&
-      rect.bottom <=
-        (window.innerHeight || document.documentElement.clientHeight) &&
-      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     );
   }
 
