@@ -1,6 +1,7 @@
 import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
+import { HoverPopup } from "../core/hover-popups.js";
 
 // Define constants at the module level outside the class
 const DEFAULT_POSITION_CONFIG = {
@@ -14,61 +15,6 @@ const DEFAULT_TIMING_CONFIG = {
   openDelay: 150,
   closeDelay: 100,
 };
-
-// Popups a tooltip must not compete with. While one is open, only tooltips
-// whose trigger sits inside open popup content may show.
-const OVERLAY_COMPONENTS = [
-  "dialog",
-  "drawer",
-  "popover",
-  "dropdown-menu",
-  "context-menu",
-  "menubar",
-  "select",
-  "combobox",
-  "hover-card",
-  "navigation-menu",
-];
-const OPEN_OVERLAY = OVERLAY_COMPONENTS.map(
-  (name) => `[data-component="${name}"][data-state="open"]`,
-).join(", ");
-const OPEN_CONTENT = OVERLAY_COMPONENTS.map(
-  (name) => `[data-slot^="${name}"][data-slot$="content"][data-state="open"]`,
-)
-  .concat(['[role="dialog"]', '[role="alertdialog"]', '[role="menu"]'])
-  .join(", ");
-
-// Every open tooltip, so opening one closes the others (Radix's
-// TooltipProvider allows one at a time).
-const openTooltips = new Set();
-
-// Whether the last interaction was a pointer (true) or a key (false): focus
-// that follows a click (or returns to a button after a menu it opened
-// closes) does not open a tooltip; keyboard focus does.
-let pointerInteraction = false;
-let interactionListening = false;
-function listenForInteraction() {
-  if (interactionListening || typeof document === "undefined") return;
-  interactionListening = true;
-  document.addEventListener(
-    "pointerdown",
-    () => {
-      pointerInteraction = true;
-    },
-    true,
-  );
-  document.addEventListener(
-    "keydown",
-    () => {
-      pointerInteraction = false;
-    },
-    true,
-  );
-}
-
-export function closeAllTooltips() {
-  openTooltips.forEach((tooltip) => tooltip.closeNow());
-}
 
 class TooltipComponent extends Component {
   constructor(el, hookContext) {
@@ -95,10 +41,7 @@ class TooltipComponent extends Component {
     this.openTimer = null;
     this.closeTimer = null;
 
-    listenForInteraction();
-    this.onDocumentPointerMove = this.onDocumentPointerMove.bind(this);
-    this.onDocumentKeyDown = this.onDocumentKeyDown.bind(this);
-    this.onDocumentScroll = this.onDocumentScroll.bind(this);
+    this.hoverPopup = new HoverPopup(this);
   }
 
   getFallbackTrigger() {
@@ -169,22 +112,13 @@ class TooltipComponent extends Component {
         },
       },
       events: {
-        closed: {
+        // Enter and leave are heard in every state: leaving during the open
+        // delay must cancel it, or the tooltip opens after the pointer left.
+        _all: {
           mouseMap: {
             trigger: {
               mouseover: "delayOpen",
               focusin: "delayOpen",
-              // Leaving before the open delay ends cancels it; without this
-              // the timer opened a tooltip the pointer had already left.
-              mouseout: "cancelOpen",
-              focusout: "cancelOpen",
-              pointerdown: "cancelOpen",
-            },
-          },
-        },
-        open: {
-          mouseMap: {
-            trigger: {
               mouseout: "delayClose",
               focusout: "delayClose",
               // Radix closes a tooltip when its trigger is pressed.
@@ -222,73 +156,34 @@ class TooltipComponent extends Component {
 
   // Generic methods for delayed state transitions
   delayOpen(event) {
-    if (event?.type === "focusin" && pointerInteraction) return;
-    if (this.blockedByOverlay()) return;
+    if (this.state === "open") {
+      this.clearTimers();
+      return;
+    }
+    if (!this.hoverPopup.mayOpen(event)) return;
 
     this.clearTimers();
     this.openTimer = setTimeout(() => {
       this.openTimer = null;
-      if (this.blockedByOverlay()) return;
+      if (this.hoverPopup.blocked()) return;
       this.transition("open");
     }, this.config.openDelay);
-  }
-
-  cancelOpen(event) {
-    if (
-      event?.type === "mouseout" &&
-      event.currentTarget?.contains(event.relatedTarget)
-    ) {
-      return;
-    }
-    this.clearTimers();
-  }
-
-  closeNow() {
-    this.clearTimers();
-    if (this.state === "open") this.transition("close");
-  }
-
-  // A popup (menu, popover, dialog, select, ...) is open and this trigger is
-  // not inside its content: the tooltip would compete with it.
-  blockedByOverlay() {
-    if (typeof document === "undefined" || !this.trigger) return false;
-    if (!document.querySelector(OPEN_OVERLAY)) return false;
-    return !this.trigger.closest(OPEN_CONTENT);
-  }
-
-  // A missed mouseout (the trigger was patched or moved under a still
-  // pointer) must not leave the tooltip stuck: close once the pointer is
-  // over something else.
-  onDocumentPointerMove(event) {
-    if (event.pointerType === "touch") return;
-    const target = event.target;
-    if (this.trigger?.contains(target) || this.content?.contains(target)) {
-      if (this.closeTimer) this.clearTimers();
-      return;
-    }
-    if (!this.closeTimer) this.delayClose();
-  }
-
-  onDocumentKeyDown(event) {
-    if (event.key === "Escape") this.closeNow();
-  }
-
-  // Radix closes a tooltip when a scroll container around its trigger
-  // scrolls: the content would otherwise float away from it.
-  onDocumentScroll(event) {
-    const target = event.target;
-    if (target === document || target?.contains?.(this.trigger)) {
-      this.closeNow();
-    }
   }
 
   delayClose(event) {
     if (event?.currentTarget?.contains(event.relatedTarget)) return;
 
     this.clearTimers();
+    if (this.state !== "open") return;
     this.closeTimer = setTimeout(() => {
+      this.closeTimer = null;
       this.transition("close");
     }, this.config.closeDelay);
+  }
+
+  closeNow() {
+    this.clearTimers();
+    if (this.state === "open") this.transition("close");
   }
 
   clearTimers() {
@@ -341,18 +236,7 @@ class TooltipComponent extends Component {
 
   // State machine handlers
   onOpenEnter() {
-    openTooltips.forEach((tooltip) => {
-      if (tooltip !== this) tooltip.closeNow();
-    });
-    openTooltips.add(this);
-    document.addEventListener("pointermove", this.onDocumentPointerMove, {
-      passive: true,
-    });
-    document.addEventListener("keydown", this.onDocumentKeyDown);
-    document.addEventListener("scroll", this.onDocumentScroll, {
-      capture: true,
-      passive: true,
-    });
+    this.hoverPopup.opened();
 
     // Initialize positioned element if needed
     this.initializePositionedElement();
@@ -367,7 +251,7 @@ class TooltipComponent extends Component {
   }
 
   onOpenExit() {
-    this.removeDocumentListeners();
+    this.hoverPopup.closed();
 
     // Destroy the positioned element because there are too many tooltips, if we keep them all, it will costs more memory
     if (this.positionedElement) {
@@ -381,18 +265,9 @@ class TooltipComponent extends Component {
     this.pushEvent("close");
   }
 
-  removeDocumentListeners() {
-    openTooltips.delete(this);
-    document.removeEventListener("pointermove", this.onDocumentPointerMove);
-    document.removeEventListener("keydown", this.onDocumentKeyDown);
-    document.removeEventListener("scroll", this.onDocumentScroll, {
-      capture: true,
-    });
-  }
-
   beforeDestroy() {
     this.clearTimers();
-    this.removeDocumentListeners();
+    this.hoverPopup.closed();
 
     // Clean up the positioned element if it exists
     if (this.positionedElement) {

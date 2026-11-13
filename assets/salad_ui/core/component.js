@@ -538,9 +538,11 @@ class Component {
 
           // Create a bound handler that will check the current state before executing
           const boundHandler = (event) => {
-            // Only execute the handler if we're in the correct state
+            // Only execute the handler if we're in the correct state; `_all`
+            // runs in every state, as in keyMap (a hover "leave" must cancel
+            // a delayed open that is still pending in the closed state).
             const currentState = this.stateMachine.state;
-            if (currentState === stateName) {
+            if (stateName === "_all" || currentState === stateName) {
               this.executeHandler(handlerAction, event);
             }
           };
