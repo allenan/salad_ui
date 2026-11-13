@@ -48,6 +48,7 @@ import "salad_ui/components/input_group";
 import "salad_ui/components/code_block";
 import "salad_ui/components/command";
 import "salad_ui/components/menu";
+import "salad_ui/components/context_menu";
 import "salad_ui/components/message_scroller";
 import {Hooks as ChatHooks, currentTheme, keepOpenOverlays} from "./chat";
 

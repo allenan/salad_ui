@@ -142,6 +142,33 @@ defmodule SaladChatWeb.ChatLiveTest do
     end
   end
 
+  describe "message context menu" do
+    test "right click offers the ⋮ menu's actions", %{conn: conn} do
+      {:ok, mine} = Chat.create_message("maya", "random", "mine")
+      {:ok, theirs} = Chat.create_message("leo", "random", "theirs")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      menu = "#msg-#{mine.id}-context"
+      assert has_element?(view, "#{menu}[data-component=context-menu]")
+      assert has_element?(view, "#{menu} [data-slot=context-menu-trigger]", "mine")
+
+      for label <-
+            ["React", "Reply in thread", "Copy text", "Pin to channel"] ++
+              ["Remind me about this", "Mark unread", "Edit message", "Delete message"] do
+        assert has_element?(view, "#{menu} [data-slot=context-menu-content]", label)
+      end
+
+      # same actions (and events) as the ⋮ menu
+      assert render(element(view, "#{menu} [data-slot=context-menu-content]")) =~ "toggle_pin"
+
+      refute has_element?(
+               view,
+               "#msg-#{theirs.id}-context [data-slot=context-menu-content]",
+               "Edit message"
+             )
+    end
+  end
+
   describe "threads" do
     test "replying in a thread updates the thread and the parent", %{conn: conn} do
       {:ok, parent} = Chat.create_message("leo", "design", "Which icon set?")

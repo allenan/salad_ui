@@ -30,7 +30,7 @@ private window) and pick someone else.
 Try:
 
 - <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> for the quick switcher, <kbd>⌥1</kbd>–<kbd>⌥5</kbd> to jump between channels.
-- Hover a message for reactions, "Reply in thread" and the ⋮ menu (pin, remind, edit, delete).
+- Hover a message for reactions, "Reply in thread" and the ⋮ menu (pin, remind, edit, delete), or right click it for the same actions.
 - Type `/` in the composer for slash commands (`/shrug`, `/me`, `/topic`, `/sprout`, `/theme`).
 - Ask Sprout "What did we decide about webhook retries?" in `#ai-assistant`.
 - Drag files onto the composer, or use the paper clip.
@@ -43,6 +43,7 @@ Try:
 | `sidebar` (+ `sidebar_trigger`, `sidebar_rail`, menu parts) | Workspace sidebar, collapsible to icons; a sheet on phones |
 | `collapsible` | Channel and DM sections in the sidebar; Sprout's trace rows |
 | `dropdown_menu` (sub-menus, radio group, link items) | Workspace menu, user menu, message ⋮ menu |
+| `context_menu` | Right click (or long press) on a message: the ⋮ menu's actions at the pointer |
 | `avatar`, `avatar_badge`, `avatar_group`, `avatar_group_count` | People everywhere, presence dots, channel members, thread participants |
 | `badge` | Unread and mention counts, `APP` tag, source chips |
 | `tooltip`, `kbd`, `kbd_group` | Icon buttons, keyboard hints |
@@ -93,7 +94,7 @@ and `assets/salad_ui`, and the JS resolved through npm (`"salad_ui":
 package's `exports`.
 
 Some pieces wait on components SaladUI doesn't ship yet; look for
-`TODO(salad-pass-2)` (context menu, combobox, date picker).
+`TODO(salad-pass-2)` (combobox, date picker).
 
 ## Tests
 

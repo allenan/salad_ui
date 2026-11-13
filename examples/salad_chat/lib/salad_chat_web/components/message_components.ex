@@ -64,94 +64,135 @@ defmodule SaladChatWeb.MessageComponents do
       >
         <.marker_content class="text-xs font-semibold text-destructive">New messages</.marker_content>
       </.marker>
-      <%!-- TODO(salad-pass-2): use context_menu for right-click actions on a message --%>
-      <div class={[
-        "group/msg relative px-4 transition-colors hover:bg-muted/50 has-[[data-state=open]]:bg-muted/50",
-        if(@row.grouped?, do: "py-0.5", else: "pt-2 pb-0.5"),
-        @message.id == @ctx.editing_id && "bg-amber-50 dark:bg-amber-400/5"
-      ]}>
-        <%= if @message.deleted? do %>
-          <.deleted_message />
-        <% else %>
-          <.message
-            align={if @ctx.bubbles? and @mine?, do: "end", else: "start"}
-            class="gap-3"
-          >
-            <.message_avatar class="w-9 self-start bg-transparent group-has-data-[slot=message-footer]/message:translate-y-0">
-              <%= if @row.grouped? do %>
-                <span
-                  class="mt-1 hidden w-9 text-center text-[10px] text-muted-foreground tabular-nums group-hover/msg:block"
-                  title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
-                >
-                  {@message.inserted_at |> TimeFormat.time(@ctx.tz) |> String.replace(~r/ [AP]M/, "")}
-                </span>
-              <% else %>
-                <.user_avatar user={@author} class="size-9 rounded-lg" />
-              <% end %>
-            </.message_avatar>
-            <.message_content class="min-w-0 gap-1">
-              <.message_header :if={!@row.grouped?} class="gap-2 px-0 text-sm">
-                <.author_name id={"#{@id}-author"} user={@author} ctx={@ctx} />
-                <.badge :if={@author.bot?} variant="secondary" class="h-4 px-1 text-[10px]">
-                  APP
-                </.badge>
-                <time
-                  class="text-xs font-normal text-muted-foreground"
-                  datetime={DateTime.to_iso8601(@message.inserted_at)}
-                  title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
-                >
-                  {TimeFormat.time(@message.inserted_at, @ctx.tz)}
-                </time>
-                <span
-                  :if={@message.pinned_by}
-                  class="flex items-center gap-0.5 text-xs text-amber-600"
-                >
-                  <.icon name="hero-bookmark-solid" class="size-3" /> Pinned
-                </span>
-              </.message_header>
+      <%!-- Right click (or long press) opens the same actions as the ⋮ menu --%>
+      <.context_menu id={"#{@id}-context"}>
+        <.context_menu_trigger
+          as="div"
+          disabled={
+            @message.deleted? or @message.id == @ctx.editing_id or Message.streaming?(@message)
+          }
+          class={
+            Enum.join(
+              [
+                "group/msg relative block px-4 transition-colors hover:bg-muted/50 has-[[data-state=open]]:bg-muted/50 data-[state=open]:bg-muted/50",
+                if(@row.grouped?, do: "py-0.5", else: "pt-2 pb-0.5"),
+                @message.id == @ctx.editing_id && "bg-amber-50 dark:bg-amber-400/5"
+              ]
+              |> Enum.filter(& &1),
+              " "
+            )
+          }
+        >
+          <%= if @message.deleted? do %>
+            <.deleted_message />
+          <% else %>
+            <.message
+              align={if @ctx.bubbles? and @mine?, do: "end", else: "start"}
+              class="gap-3"
+            >
+              <.message_avatar class="w-9 self-start bg-transparent group-has-data-[slot=message-footer]/message:translate-y-0">
+                <%= if @row.grouped? do %>
+                  <span
+                    class="mt-1 hidden w-9 text-center text-[10px] text-muted-foreground tabular-nums group-hover/msg:block"
+                    title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
+                  >
+                    {@message.inserted_at
+                    |> TimeFormat.time(@ctx.tz)
+                    |> String.replace(~r/ [AP]M/, "")}
+                  </span>
+                <% else %>
+                  <.user_avatar user={@author} class="size-9 rounded-lg" />
+                <% end %>
+              </.message_avatar>
+              <.message_content class="min-w-0 gap-1">
+                <.message_header :if={!@row.grouped?} class="gap-2 px-0 text-sm">
+                  <.author_name id={"#{@id}-author"} user={@author} ctx={@ctx} />
+                  <.badge :if={@author.bot?} variant="secondary" class="h-4 px-1 text-[10px]">
+                    APP
+                  </.badge>
+                  <time
+                    class="text-xs font-normal text-muted-foreground"
+                    datetime={DateTime.to_iso8601(@message.inserted_at)}
+                    title={TimeFormat.full(@message.inserted_at, @ctx.tz)}
+                  >
+                    {TimeFormat.time(@message.inserted_at, @ctx.tz)}
+                  </time>
+                  <span
+                    :if={@message.pinned_by}
+                    class="flex items-center gap-0.5 text-xs text-amber-600"
+                  >
+                    <.icon name="hero-bookmark-solid" class="size-3" /> Pinned
+                  </span>
+                </.message_header>
 
-              <%= cond do %>
-                <% @message.id == @ctx.editing_id -> %>
-                  <.edit_form message={@message} />
-                <% @message.bot -> %>
-                  <.bot_reply id={@id} message={@message} ctx={@ctx} />
-                <% true -> %>
-                  <.message_body id={@id} message={@message} ctx={@ctx} mine?={@mine?} />
-              <% end %>
+                <%= cond do %>
+                  <% @message.id == @ctx.editing_id -> %>
+                    <.edit_form message={@message} />
+                  <% @message.bot -> %>
+                    <.bot_reply id={@id} message={@message} ctx={@ctx} />
+                  <% true -> %>
+                    <.message_body id={@id} message={@message} ctx={@ctx} mine?={@mine?} />
+                <% end %>
 
-              <.attachments
-                :if={@message.attachments != []}
-                id={@id}
-                attachments={@message.attachments}
-              />
-              <.reactions
-                :if={@message.reactions != []}
-                id={@id}
-                message={@message}
-                ctx={@ctx}
-              />
-              <.message_footer
-                :if={(@message.reply_count > 0 and !@ctx.thread?) or @message.edited_at}
-                class="gap-2 px-0"
-              >
-                <.thread_summary
-                  :if={@message.reply_count > 0 and !@ctx.thread?}
+                <.attachments
+                  :if={@message.attachments != []}
+                  id={@id}
+                  attachments={@message.attachments}
+                />
+                <.reactions
+                  :if={@message.reactions != []}
+                  id={@id}
                   message={@message}
                   ctx={@ctx}
                 />
-                <span :if={@message.edited_at} class="text-[11px] font-normal">(edited)</span>
-              </.message_footer>
-            </.message_content>
-          </.message>
-          <.message_actions
-            :if={@message.id != @ctx.editing_id and !Message.streaming?(@message)}
-            id={@id}
-            message={@message}
-            mine?={@mine?}
-            ctx={@ctx}
-          />
-        <% end %>
-      </div>
+                <.message_footer
+                  :if={(@message.reply_count > 0 and !@ctx.thread?) or @message.edited_at}
+                  class="gap-2 px-0"
+                >
+                  <.thread_summary
+                    :if={@message.reply_count > 0 and !@ctx.thread?}
+                    message={@message}
+                    ctx={@ctx}
+                  />
+                  <span :if={@message.edited_at} class="text-[11px] font-normal">(edited)</span>
+                </.message_footer>
+              </.message_content>
+            </.message>
+            <.message_actions
+              :if={@message.id != @ctx.editing_id and !Message.streaming?(@message)}
+              id={@id}
+              message={@message}
+              mine?={@mine?}
+              ctx={@ctx}
+            />
+          <% end %>
+        </.context_menu_trigger>
+        <.context_menu_content :if={!@message.deleted?} class="w-56">
+          <.context_menu_sub>
+            <.context_menu_sub_trigger>
+              <.icon name="hero-face-smile" /> React
+            </.context_menu_sub_trigger>
+            <.context_menu_sub_content class="w-auto p-1">
+              <.context_menu_item
+                :for={e <- Enum.take(emoji(), 8)}
+                on-select={JS.push("react", value: %{id: @message.id, emoji: e})}
+                class="justify-center text-lg"
+              >
+                {e}
+              </.context_menu_item>
+            </.context_menu_sub_content>
+          </.context_menu_sub>
+          <%= for action <- message_menu_actions(@message, @mine?, @ctx) do %>
+            <.context_menu_separator :if={action.separator?} />
+            <.context_menu_item variant={action.variant} on-select={action.on_select}>
+              <.icon name={action.icon} /> {action.label}
+              <.context_menu_shortcut :if={action.shortcut}>
+                {action.shortcut}
+              </.context_menu_shortcut>
+            </.context_menu_item>
+          <% end %>
+        </.context_menu_content>
+      </.context_menu>
     </.message_scroller_item>
     """
   end
@@ -513,12 +554,6 @@ defmodule SaladChatWeb.MessageComponents do
             <.icon name="hero-ellipsis-vertical" />
           </.dropdown_menu_trigger>
           <.dropdown_menu_content align="end" class="w-56">
-            <.dropdown_menu_item
-              :if={!@ctx.thread?}
-              on-select={JS.patch(Paths.thread_path(@ctx.me, @message.channel_id, @message.id))}
-            >
-              <.icon name="hero-chat-bubble-left-ellipsis" /> Reply in thread
-            </.dropdown_menu_item>
             <.dropdown_menu_sub>
               <.dropdown_menu_sub_trigger>
                 <.icon name="hero-face-smile" /> React
@@ -533,28 +568,13 @@ defmodule SaladChatWeb.MessageComponents do
                 </.dropdown_menu_item>
               </.dropdown_menu_sub_content>
             </.dropdown_menu_sub>
-            <.dropdown_menu_item on-select={JS.push("toggle_pin", value: %{id: @message.id})}>
-              <.icon name={if @message.pinned_by, do: "hero-bookmark-slash", else: "hero-bookmark"} />
-              {if @message.pinned_by, do: "Unpin from channel", else: "Pin to channel"}
-            </.dropdown_menu_item>
-            <%!-- TODO(salad-pass-2): use date_picker in the reminder dialog --%>
-            <.dropdown_menu_item on-select={JS.push("remind", value: %{id: @message.id})}>
-              <.icon name="hero-bell-alert" /> Remind me about this
-            </.dropdown_menu_item>
-            <.dropdown_menu_item on-select={JS.push("mark_unread", value: %{id: @message.id})}>
-              <.icon name="hero-eye-slash" /> Mark unread
-            </.dropdown_menu_item>
-            <%= if @mine? and !@message.bot do %>
-              <.dropdown_menu_separator />
-              <.dropdown_menu_item on-select={JS.push("edit", value: %{id: @message.id})}>
-                <.icon name="hero-pencil" /> Edit message
-                <.dropdown_menu_shortcut>E</.dropdown_menu_shortcut>
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                variant="destructive"
-                on-select={JS.push("confirm_delete", value: %{id: @message.id})}
-              >
-                <.icon name="hero-trash" /> Delete message
+            <%= for action <- message_menu_actions(@message, @mine?, @ctx) do %>
+              <.dropdown_menu_separator :if={action.separator?} />
+              <.dropdown_menu_item variant={action.variant} on-select={action.on_select}>
+                <.icon name={action.icon} /> {action.label}
+                <.dropdown_menu_shortcut :if={action.shortcut}>
+                  {action.shortcut}
+                </.dropdown_menu_shortcut>
               </.dropdown_menu_item>
             <% end %>
           </.dropdown_menu_content>
@@ -562,6 +582,58 @@ defmodule SaladChatWeb.MessageComponents do
       </.button_group>
     </div>
     """
+  end
+
+  # The actions shared by the ⋮ menu and the right-click context menu (after
+  # their "React" sub-menu). Each one pushes an existing ChatLive event, except
+  # "Copy text", which is handled in the browser (assets/js/chat.js).
+  defp message_menu_actions(message, mine?, ctx) do
+    thread = Paths.thread_path(ctx.me, message.channel_id, message.id)
+
+    [
+      !ctx.thread? &&
+        action("hero-chat-bubble-left-ellipsis", "Reply in thread", JS.patch(thread)),
+      action(
+        "hero-clipboard-document",
+        "Copy text",
+        JS.dispatch("salad-chat:copy", detail: %{text: message.body})
+      ),
+      action(
+        if(message.pinned_by, do: "hero-bookmark-slash", else: "hero-bookmark"),
+        if(message.pinned_by, do: "Unpin from channel", else: "Pin to channel"),
+        JS.push("toggle_pin", value: %{id: message.id})
+      ),
+      action(
+        "hero-bell-alert",
+        "Remind me about this",
+        JS.push("remind", value: %{id: message.id})
+      ),
+      action("hero-eye-slash", "Mark unread", JS.push("mark_unread", value: %{id: message.id})),
+      (mine? and !message.bot) &&
+        action("hero-pencil", "Edit message", JS.push("edit", value: %{id: message.id}),
+          separator?: true,
+          shortcut: "E"
+        ),
+      (mine? and !message.bot) &&
+        action(
+          "hero-trash",
+          "Delete message",
+          JS.push("confirm_delete", value: %{id: message.id}),
+          variant: "destructive"
+        )
+    ]
+    |> Enum.filter(& &1)
+  end
+
+  defp action(icon, label, on_select, opts \\ []) do
+    %{
+      icon: icon,
+      label: label,
+      on_select: on_select,
+      separator?: Keyword.get(opts, :separator?, false),
+      shortcut: Keyword.get(opts, :shortcut),
+      variant: Keyword.get(opts, :variant, "default")
+    }
   end
 
   ## Sprout

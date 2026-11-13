@@ -63,6 +63,11 @@ window.addEventListener("keydown", (e) => {
   }
 })
 
+// "Copy text" in a message's ⋮ / right-click menu.
+window.addEventListener("salad-chat:copy", (e) => {
+  navigator.clipboard?.writeText(e.detail.text).catch(() => {})
+})
+
 // The server asks for the thread sheet when a thread opens. On desktop the
 // thread lives in the resizable pane instead, so only phones get the sheet.
 window.addEventListener("phx:thread-opened", () => {
