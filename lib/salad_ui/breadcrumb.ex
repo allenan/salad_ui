@@ -219,14 +219,24 @@ defmodule SaladUI.Breadcrumb do
   Renders a separator between breadcrumb items.
 
   Visual indicator that separates items in the breadcrumb path.
-  By default, shows a chevron right icon.
+  By default, shows a chevron right icon; pass content to replace it.
 
   ## Attributes
 
   * `:class` - Additional CSS classes to apply to the separator
+  * `:inner_block` - Optional custom separator (for example an icon)
+
+  ## Examples
+
+      <.breadcrumb_separator />
+
+      <.breadcrumb_separator>
+        <Lucideicons.dot />
+      </.breadcrumb_separator>
   """
   attr :class, :string, default: nil
   attr :rest, :global
+  slot :inner_block, doc: "custom separator content; defaults to a chevron"
 
   def breadcrumb_separator(assigns) do
     ~H"""
@@ -241,7 +251,9 @@ defmodule SaladUI.Breadcrumb do
       }
       {@rest}
     >
+      {render_slot(@inner_block)}
       <svg
+        :if={@inner_block == []}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"

@@ -7,7 +7,8 @@ defmodule Storybook.SaladUIComponents.Tooltip do
   def imports do
     [
       {SaladUI.Tooltip, [tooltip_trigger: 1, tooltip_content: 1]},
-      {SaladUI.Button, [button: 1]}
+      {SaladUI.Button, [button: 1]},
+      {SaladUI.Kbd, [kbd: 1]}
     ]
   end
 
@@ -87,6 +88,41 @@ defmodule Storybook.SaladUIComponents.Tooltip do
               """
             ]
           }
+        ]
+      },
+      %Variation{
+        id: :keyboard,
+        description: "shadcn tooltip-keyboard: a keyboard shortcut in the content.",
+        attributes: %{id: "tooltip-keyboard"},
+        slots: [
+          """
+          <.tooltip_trigger>
+            <.button variant="outline" size="icon-sm" aria-label="Save">
+              <Lucideicons.save />
+            </.button>
+          </.tooltip_trigger>
+          <.tooltip_content>
+            Save Changes <.kbd>S</.kbd>
+          </.tooltip_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :disabled,
+        description:
+          "shadcn tooltip-disabled: a disabled button gets no pointer events, so wrap it in a `span` that receives the hover.",
+        attributes: %{id: "tooltip-disabled"},
+        slots: [
+          """
+          <.tooltip_trigger>
+            <span class="inline-block w-fit">
+              <.button variant="outline" disabled>Disabled</.button>
+            </span>
+          </.tooltip_trigger>
+          <.tooltip_content>
+            <p>This feature is currently unavailable</p>
+          </.tooltip_content>
+          """
         ]
       },
       %Variation{

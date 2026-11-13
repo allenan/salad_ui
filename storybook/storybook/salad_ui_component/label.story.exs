@@ -4,7 +4,8 @@ defmodule Storybook.SaladUIComponents.Label do
 
   def function, do: &SaladUI.Label.label/1
 
-  def imports, do: [{SaladUI.Checkbox, [checkbox: 1]}]
+  def imports,
+    do: [{SaladUI.Checkbox, [checkbox: 1]}, {SaladUI.Field, [field: 1, field_label: 1]}, {SaladUI.Input, [input: 1]}]
 
   def variations do
     [
@@ -23,6 +24,16 @@ defmodule Storybook.SaladUIComponents.Label do
           <.checkbox id="terms" />
           <.label for="terms">Accept terms and conditions</.label>
         </div>
+        """
+      },
+      %Variation{
+        id: :label_in_field,
+        description: "shadcn label docs \"Label in Field\": for form fields, use `field` and `field_label`.",
+        template: """
+        <.field>
+          <.field_label for="label-field-email">Your email address</.field_label>
+          <.input id="label-field-email" />
+        </.field>
         """
       },
       %Variation{

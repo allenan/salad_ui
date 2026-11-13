@@ -118,6 +118,15 @@ defmodule SaladUI.InputTest do
       assert html =~ "Select file"
     end
 
+    test "It renders search input correctly" do
+      assigns = %{}
+
+      html = rendered_to_string(~H|<.input type="search" placeholder="Search..." />|)
+
+      assert html =~ ~s(type="search")
+      assert html =~ "Search..."
+    end
+
     test "It renders hidden input correctly" do
       assigns = %{}
 

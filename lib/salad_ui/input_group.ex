@@ -318,7 +318,7 @@ defmodule SaladUI.InputGroup do
 
   attr :type, :string,
     default: "text",
-    values: ~w(date datetime-local email file hidden month number password tel text time url week)
+    values: ~w(date datetime-local email file hidden month number password search tel text time url week)
 
   attr :"default-value", :any
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
