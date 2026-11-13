@@ -347,7 +347,7 @@ defmodule SaladChatWeb.MessageComponents do
             phx-click="react"
             phx-value-id={@message.id}
             phx-value-emoji={r.emoji}
-            class="h-7 gap-1 rounded-full px-2 text-xs has-[:checked]:border-primary/50 has-[:checked]:bg-primary/10 has-[:checked]:text-primary"
+            class="h-7 gap-1 rounded-full px-2 text-xs data-[state=on]:border-primary/50 data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
           >
             <span class="text-sm leading-none">{r.emoji}</span>
             <span class="tabular-nums">{length(r.users)}</span>

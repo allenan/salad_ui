@@ -104,7 +104,7 @@ defmodule SaladChatWeb.ChatLiveTest do
 
       # the toggle in the reactions row removes it again
       view
-      |> element("#msg-#{message.id} input[phx-value-emoji='👍']")
+      |> element("#msg-#{message.id} button[phx-value-emoji='👍']")
       |> render_click()
 
       assert Chat.get_message(message.id).reactions == []
