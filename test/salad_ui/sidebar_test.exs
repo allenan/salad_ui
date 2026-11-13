@@ -332,6 +332,36 @@ defmodule SaladUI.SidebarTest do
       refute html =~ "phx-click"
     end
 
+    test "a trigger draws shadcn's panel icon by default" do
+      assigns = %{}
+
+      html = rendered_to_string(~H"<.sidebar_trigger />")
+
+      assert html =~ ~s(<path d="M9 3v18"></path>)
+      assert html =~ ~s(<span class="sr-only">Toggle Sidebar</span>)
+    end
+
+    test "an icon slot replaces the panel icon and keeps the label and inner block" do
+      for as <- [nil, "a"] do
+        assigns = %{as: as}
+
+        html =
+          rendered_to_string(~H"""
+          <.sidebar_trigger as={@as} label="All chats">
+            <:icon><img id="logo" src="/logo.svg" alt="" /></:icon>
+            <span id="dot"></span>
+          </.sidebar_trigger>
+          """)
+
+        refute html =~ "M9 3v18"
+        assert html =~ ~s(<span class="sr-only">All chats</span>)
+        assert html =~ ~s(data-sidebar="trigger")
+        assert html =~ ~s(data-action="toggle")
+        assert [_, after_logo] = String.split(html, ~s(id="logo"))
+        assert after_logo =~ ~s(id="dot")
+      end
+    end
+
     test "a trigger with a target dispatches the toggle command to it" do
       assigns = %{}
 

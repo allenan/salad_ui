@@ -404,6 +404,15 @@ defmodule SaladUI.Sidebar do
   `label` is the screen-reader text (default `"Toggle Sidebar"`). Attributes
   passed through `rest` (`type`, `data-slot`, `data-sidebar`, ...) replace the
   trigger's own instead of rendering twice.
+
+  The trigger draws shadcn's panel icon. An `:icon` slot (a SaladUI extension)
+  draws something else in its place, such as a logo; the inner block still
+  follows it (a badge, say):
+
+      <.sidebar_trigger label="All chats" class="size-11">
+        <:icon><.logo class="size-6" aria-hidden="true" /></:icon>
+        <span :if={@unread > 0} class="absolute top-1.5 right-1 size-2.5 rounded-full bg-primary"></span>
+      </.sidebar_trigger>
   """
   attr(:class, :any, default: nil)
 
@@ -414,6 +423,12 @@ defmodule SaladUI.Sidebar do
   attr :as, :any, default: nil, doc: "Tag or function component to render. Defaults to a ghost icon `button`."
   attr :label, :string, default: "Toggle Sidebar", doc: "the trigger's screen-reader text"
   attr(:rest, :global)
+
+  slot :icon,
+    doc:
+      "replaces the default panel icon (shadcn's PanelLeft), e.g. an app logo. " <>
+        "The screen-reader `label` stays. A SaladUI extension"
+
   slot :inner_block
 
   def sidebar_trigger(%{as: nil} = assigns) do
@@ -438,7 +453,7 @@ defmodule SaladUI.Sidebar do
       class={classes([button_variant(%{variant: "ghost", size: "icon"}), "size-7", @class])}
       {@rest}
     >
-      <.sidebar_trigger_icon label={@label} />
+      <.sidebar_trigger_icon label={@label} icon={@icon} />
       {render_slot(@inner_block)}
     </button>
     """
@@ -459,17 +474,20 @@ defmodule SaladUI.Sidebar do
       class={classes(["size-7", @class])}
       {@rest}
     >
-      <.sidebar_trigger_icon label={@label} />
+      <.sidebar_trigger_icon label={@label} icon={@icon} />
       {render_slot(@inner_block)}
     </.dynamic>
     """
   end
 
   attr :label, :string, required: true
+  attr :icon, :list, default: []
 
   defp sidebar_trigger_icon(assigns) do
     ~H"""
+    {render_slot(@icon)}
     <svg
+      :if={@icon == []}
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"

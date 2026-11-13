@@ -51,6 +51,18 @@ defmodule Storybook.SaladUIComponents.ToggleGroup do
         """
       },
       %Variation{
+        id: :required,
+        description:
+          ~s|required (a SaladUI extension; Radix has none): pressing the pressed item does nothing, so one is always pressed|,
+        template: """
+        <.toggle_group :let={builder} id="toggle-group-required" variant="outline" type="single" default-value="all" required>
+          <.toggle_group_item value="all" builder={builder}>All</.toggle_group_item>
+          <.toggle_group_item value="mine" builder={builder}>Mine</.toggle_group_item>
+          <.toggle_group_item value="done" builder={builder}>Done</.toggle_group_item>
+        </.toggle_group>
+        """
+      },
+      %Variation{
         id: :outline,
         description: "toggle-group-outline",
         template: """

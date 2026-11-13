@@ -409,6 +409,27 @@ for status and known gaps. Every new JS-backed component is registered in
 - Toaster takes `label` (Sonner's `containerAriaLabel`, default
   "Notifications") and global attributes.
 
+**Extensions from downstream use** (not in shadcn/Radix/Sonner; defaults unchanged)
+- Toggle group takes `required`: in a `type="single"` group pressing the
+  pressed item (click, Space, Enter) does nothing: no release, no
+  `value-changed` event, and so no blink in a controlled group waiting for
+  the server. In a `type="multiple"` group the last pressed item cannot be
+  released. Radix has no `required`; without it nothing changes.
+- Toaster takes `breakpoint` (px, default 600 as in Sonner) for the switch to
+  the phone layout, which used a Tailwind `max-[600px]` fixed at build time.
+  The viewport now carries `data-mobile` from a `(max-width: <breakpoint>px)`
+  media query. Phone-layout cards fill the viewport width, as Sonner's do
+  (they kept 356px). The switch is now at or below 600px, as in Sonner (it
+  was below 600px).
+- `top-center` / `bottom-center` toasts centre on
+  `var(--toaster-center-x, 50%)`, so an app can centre them on the page
+  beside a sidebar (example in `SaladUI.Toast`, "Placement"). In the phone
+  layout they sit between the mobile offsets, as in Sonner. `offset` and
+  `mobile-offset` already took CSS lengths such as `"var(--header-height)"`;
+  now documented.
+- `sidebar_trigger` takes an `:icon` slot that replaces shadcn's panel icon
+  (e.g. an app logo), keeping the trigger's toggle wiring and label.
+
 # 0.14.0
 
 **Changes**

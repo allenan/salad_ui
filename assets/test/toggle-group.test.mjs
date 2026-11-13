@@ -27,10 +27,12 @@ function buildGroup({
   loop = true,
   dir,
   controlled,
+  required,
   items = [{ value: "bold" }, { value: "italic" }, { value: "underline" }],
 } = {}) {
   const options = { type, orientation, loop, disabled: false };
   if (controlled) options.controlled = true;
+  if (required) options.required = true;
   const eventMappings = { "value-changed": "style_changed" };
 
   document.body.innerHTML = `
@@ -439,4 +441,104 @@ test("uncontrolled: the push expects no reply", () => {
 
   click(getItem("bold"));
   assert.equal(pushed[0].onReply, undefined);
+});
+
+// `required` is a SaladUI extension (Radix has none).
+for (const controlled of [false, true]) {
+  const mode = controlled ? "controlled" : "uncontrolled";
+
+  test(`required single (${mode}): pressing the pressed item does nothing`, () => {
+    const { component, getItem, pushed } = buildGroup({
+      controlled,
+      required: true,
+      items: [{ value: "bold", pressed: true }, { value: "italic" }],
+    });
+    const bold = getItem("bold");
+    const changes = [];
+    bold
+      .querySelector("input")
+      .addEventListener("change", () => changes.push(1));
+
+    click(bold);
+
+    assert.equal(bold.getAttribute("data-state"), "on");
+    assert.equal(bold.getAttribute("aria-checked"), "true");
+    assert.equal(bold.querySelector("input").checked, true);
+    assert.equal(component.getValue(), "bold");
+    assert.deepEqual(pushed, []);
+    assert.deepEqual(changes, []);
+  });
+
+  test(`required single (${mode}): pressing another item still moves the value`, () => {
+    const { component, getItem, pushed } = buildGroup({
+      controlled,
+      required: true,
+      items: [{ value: "bold", pressed: true }, { value: "italic" }],
+    });
+
+    click(getItem("italic"));
+
+    assert.equal(getItem("italic").getAttribute("data-state"), "on");
+    assert.equal(getItem("bold").getAttribute("data-state"), "off");
+    assert.equal(component.getValue(), "italic");
+    assert.equal(pushed[0].payload.value, "italic");
+  });
+}
+
+test("required single: Space/Enter on the pressed item do nothing", () => {
+  const { getItem, pushed } = buildGroup({
+    required: true,
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+  const bold = getItem("bold");
+
+  // Space and Enter toggle through the button's native click.
+  for (const key of [" ", "Enter"]) {
+    keydown(bold, key);
+    click(bold);
+  }
+
+  assert.equal(bold.getAttribute("data-state"), "on");
+  assert.deepEqual(pushed, []);
+});
+
+test("required multiple: the last pressed item cannot be released", () => {
+  const { component, getItem, pushed } = buildGroup({
+    type: "multiple",
+    required: true,
+    items: [
+      { value: "bold", pressed: true },
+      { value: "italic", pressed: true },
+    ],
+  });
+
+  click(getItem("bold"));
+  assert.deepEqual(component.getValue(), ["italic"]);
+  assert.equal(pushed.length, 1);
+
+  click(getItem("italic"));
+  assert.equal(getItem("italic").getAttribute("data-state"), "on");
+  assert.equal(getItem("italic").getAttribute("aria-pressed"), "true");
+  assert.deepEqual(component.getValue(), ["italic"]);
+  assert.equal(pushed.length, 1);
+
+  click(getItem("bold"));
+  assert.deepEqual(component.getValue(), ["bold", "italic"]);
+});
+
+test("required: a group with nothing pressed can still be pressed", () => {
+  const { component, getItem } = buildGroup({ required: true });
+
+  click(getItem("italic"));
+  assert.equal(component.getValue(), "italic");
+});
+
+test("not required (Radix default): the pressed item is still released", () => {
+  const { component, getItem, pushed } = buildGroup({
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+
+  click(getItem("bold"));
+  assert.equal(component.getValue(), "");
+  assert.equal(pushed[0].payload.value, "");
 });
