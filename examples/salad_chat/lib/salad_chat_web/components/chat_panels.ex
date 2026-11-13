@@ -325,6 +325,7 @@ defmodule SaladChatWeb.ChatPanels do
         placeholder="Reply…"
         typing={@typing}
         mentions={@mentions}
+        mention_handles={MapSet.to_list(@ctx.known) ++ ["here", "channel"]}
         class="pt-1"
       />
     </div>

@@ -858,7 +858,7 @@ defmodule SaladChatWeb.ChatLive do
     ~H"""
     <Layouts.app flash={@flash}>
       <.sidebar_provider
-        class="h-dvh overflow-clip"
+        class="h-[var(--app-height,100dvh)] overflow-clip"
         data-no-scroll
         style={%{"--chat-font-size": "#{@me.prefs.font_size}px"}}
       >
@@ -874,7 +874,11 @@ defmodule SaladChatWeb.ChatLive do
           theme={@theme}
         />
 
-        <.sidebar_inset :if={@channel} class="h-dvh min-h-0 min-w-0 overflow-clip" data-no-scroll>
+        <.sidebar_inset
+          :if={@channel}
+          class="h-[var(--app-height,100dvh)] min-h-0 min-w-0 overflow-clip"
+          data-no-scroll
+        >
           <.channel_header
             channel={@channel}
             me={@me}
@@ -939,11 +943,12 @@ defmodule SaladChatWeb.ChatLive do
                 upload={@uploads.attachments}
                 slash={@slash}
                 mentions={@mentions}
+                mention_handles={mention_handles(@ctx)}
                 typing={typing_names(@typing, @users, nil)}
                 placeholder={"Message " <> composer_target(@channel, @me)}
               />
             </.resizable_panel>
-            <.resizable_handle with_handle class="max-md:hidden" />
+            <.resizable_handle with_handle class={if @thread, do: "max-md:hidden", else: "hidden"} />
             <.resizable_panel
               id="thread-panel"
               default-size={if @thread, do: 38, else: 0}
@@ -966,8 +971,14 @@ defmodule SaladChatWeb.ChatLive do
         </.sidebar_inset>
       </.sidebar_provider>
 
+      <%!-- Where message menus, the reaction picker and the mention profile
+           portal to: fixed-positioned, so outside every clipping scroller, but
+           still inside the LiveView, so their phx-click/JS commands work. --%>
+      <div id="chat-portal" phx-update="ignore"></div>
+
       <%!-- Overlay roots take no space; their panels are fixed-positioned. --%>
       <div class="h-0 overflow-hidden">
+        <.mention_profile users={@users} me={@me} online={@online} />
         <.sheet id="thread-sheet" on-close="close_thread">
           <.sheet_content side="right" class="w-full max-w-full p-0 sm:max-w-md md:hidden">
             <.thread_pane
@@ -1009,6 +1020,42 @@ defmodule SaladChatWeb.ChatLive do
   end
 
   @mention_limit 8
+
+  @doc false
+  # Handles the composer highlights as mentions: people, plus @here/@channel.
+  def mention_handles(ctx), do: MapSet.to_list(ctx.known) ++ ["here", "channel"]
+
+  attr :users, :map, required: true
+  attr :me, :any, required: true
+  attr :online, :any, required: true
+
+  # One profile popover for every @mention in message text. chat.js anchors it
+  # on the tapped mention and shows that person's card.
+  defp mention_profile(assigns) do
+    ~H"""
+    <.popover id="mention-profile" use-portal portal-container="#chat-portal">
+      <.popover_anchor
+        id="mention-profile-anchor"
+        class="pointer-events-none fixed"
+        phx-mounted={JS.ignore_attributes(["style"])}
+      />
+      <.popover_content side="top" align="start" class="w-auto">
+        <div
+          :for={u <- @users |> Map.values() |> Enum.sort_by(& &1.handle)}
+          data-profile={u.handle}
+          phx-mounted={JS.ignore_attributes(["hidden"])}
+          hidden
+        >
+          <SaladChatWeb.People.profile_card
+            user={u}
+            me={@me.handle}
+            online={u.bot? or MapSet.member?(@online, u.handle)}
+          />
+        </div>
+      </.popover_content>
+    </.popover>
+    """
+  end
 
   @doc false
   # People (and @here/@channel outside DMs) whose handle or any part of their

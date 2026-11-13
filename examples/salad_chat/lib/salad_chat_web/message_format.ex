@@ -83,11 +83,17 @@ defmodule SaladChatWeb.MessageFormat do
 
   defp mentions(line, known, me) do
     Regex.replace(~r/(?<![\w@&#])@([a-z][a-z0-9_]*)/, line, fn whole, handle ->
+      # People's mentions are buttons that open their profile card (chat.js).
       cond do
-        handle in [me, "here", "channel"] -> ~s(<span class="mention mention-me">#{whole}</span>)
-        MapSet.member?(known, handle) -> ~s(<span class="mention">#{whole}</span>)
+        handle in ["here", "channel"] -> ~s(<span class="mention mention-me">#{whole}</span>)
+        handle == me -> mention_button(whole, handle, "mention mention-me")
+        MapSet.member?(known, handle) -> mention_button(whole, handle, "mention")
         true -> whole
       end
     end)
+  end
+
+  defp mention_button(text, handle, class) do
+    ~s(<button type="button" class="#{class}" data-mention="#{handle}" aria-haspopup="dialog">#{text}</button>)
   end
 end
