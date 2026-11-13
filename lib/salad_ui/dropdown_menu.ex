@@ -259,10 +259,12 @@ defmodule SaladUI.DropdownMenu do
   attr :as, :any, default: "button"
   attr :type, :string, default: nil
   attr :class, :string, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def dropdown_menu_trigger(assigns) do
+    assigns = drop_button_props(assigns)
+
     assigns =
       if is_function(assigns.as, 1) && is_nil(assigns.type) do
         assign(assigns, :type, "button")

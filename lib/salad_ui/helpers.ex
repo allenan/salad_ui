@@ -335,6 +335,17 @@ defmodule SaladUI.Helpers do
   end
 
   @doc """
+  Trigger parts accept `variant` and `size` so `as={&button/1}` can style the
+  rendered button. When `as` is a plain tag they are dropped from `rest`, so
+  they don't leak as HTML attributes.
+  """
+  def drop_button_props(%{as: as, rest: rest} = assigns) when not is_function(as, 1) do
+    Phoenix.Component.assign(assigns, :rest, Map.drop(rest, [:variant, :size]))
+  end
+
+  def drop_button_props(assigns), do: assigns
+
+  @doc """
   Mimics the behavior of shadcn/ui's `asChild` attribute.
 
   Passes all attributes given to `as_child` through to the `tag` function

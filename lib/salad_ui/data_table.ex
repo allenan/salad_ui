@@ -841,7 +841,7 @@ defmodule SaladUI.DataTable do
 
     ~H"""
     <.dropdown_menu id={@id} {@rest}>
-      <.dropdown_menu_trigger as={&button/1} class={@class} {%{variant: @variant, size: @size}}>
+      <.dropdown_menu_trigger as={&button/1} class={@class} variant={@variant} size={@size}>
         <%= if @inner_block == [] do %>
           <.lucide name="settings-2" /> View
         <% else %>
