@@ -10,7 +10,8 @@ defmodule Storybook.SaladUIComponents.Accordion do
       {SaladUI.Button, [button: 1]},
       {SaladUI.Input, input: 1},
       {SaladUI.Label, [label: 1]},
-      {SaladUI.Checkbox, [checkbox: 1]}
+      {SaladUI.Checkbox, [checkbox: 1]},
+      {SaladUI.Card, [card: 1, card_header: 1, card_title: 1, card_description: 1, card_content: 1]}
     ]
 
   def variations do
@@ -236,6 +237,68 @@ defmodule Storybook.SaladUIComponents.Accordion do
           </.accordion_item>
           """
         ]
+      },
+      %Variation{
+        id: :accordion_borders,
+        description: "shadcn accordion-borders: a bordered container with padded items.",
+        template: """
+        <.accordion id="accordion-borders" type="single" default-value="billing" class="max-w-lg rounded-lg border">
+          <.accordion_item value="billing" class="border-b px-4 last:border-b-0">
+            <.accordion_trigger>How does billing work?</.accordion_trigger>
+            <.accordion_content>
+              We offer monthly and annual subscription plans. Billing is charged at the beginning of each cycle, and you can cancel anytime. All plans include automatic backups, 24/7 support, and unlimited team members.
+            </.accordion_content>
+          </.accordion_item>
+          <.accordion_item value="security" class="border-b px-4 last:border-b-0">
+            <.accordion_trigger>Is my data secure?</.accordion_trigger>
+            <.accordion_content>
+              Yes. We use end-to-end encryption, SOC 2 Type II compliance, and regular third-party security audits. All data is encrypted at rest and in transit using industry-standard protocols.
+            </.accordion_content>
+          </.accordion_item>
+          <.accordion_item value="integration" class="border-b px-4 last:border-b-0">
+            <.accordion_trigger>What integrations do you support?</.accordion_trigger>
+            <.accordion_content>
+              We integrate with 500+ popular tools including Slack, Zapier, Salesforce, HubSpot, and more. You can also build custom integrations using our REST API and webhooks.
+            </.accordion_content>
+          </.accordion_item>
+        </.accordion>
+        """
+      },
+      %Variation{
+        id: :accordion_card,
+        description: "shadcn accordion-card: an accordion inside a card.",
+        template: """
+        <.card class="w-full max-w-sm">
+          <.card_header>
+            <.card_title>Subscription & Billing</.card_title>
+            <.card_description>
+              Common questions about your account, plans, payments and cancellations.
+            </.card_description>
+          </.card_header>
+          <.card_content>
+            <.accordion id="accordion-card" type="single" default-value="plans">
+              <.accordion_item value="plans">
+                <.accordion_trigger>What subscription plans do you offer?</.accordion_trigger>
+                <.accordion_content>
+                  We offer three subscription tiers: Starter ($9/month), Professional ($29/month), and Enterprise ($99/month). Each plan includes increasing storage limits, API access, priority support, and team collaboration features.
+                </.accordion_content>
+              </.accordion_item>
+              <.accordion_item value="billing">
+                <.accordion_trigger>How does billing work?</.accordion_trigger>
+                <.accordion_content>
+                  Billing occurs automatically at the start of each billing cycle. We accept all major credit cards, PayPal, and ACH transfers for enterprise customers. You'll receive an invoice via email after each payment.
+                </.accordion_content>
+              </.accordion_item>
+              <.accordion_item value="cancel">
+                <.accordion_trigger>How do I cancel my subscription?</.accordion_trigger>
+                <.accordion_content>
+                  You can cancel your subscription anytime from your account settings. There are no cancellation fees or penalties. Your access will continue until the end of your current billing period.
+                </.accordion_content>
+              </.accordion_item>
+            </.accordion>
+          </.card_content>
+        </.card>
+        """
       }
     ]
   end

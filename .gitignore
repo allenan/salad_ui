@@ -27,7 +27,7 @@ salad_ui-*.tar
 
 .DS_Store
 
-node_modules/
+node_modules
 
 # Generated Tailwind build output (regenerate with `mix tailwind`); the
 # hand-authored source lives in assets/css/ and priv/static/assets/salad_ui.css

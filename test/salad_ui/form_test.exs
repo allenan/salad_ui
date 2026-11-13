@@ -16,7 +16,7 @@ defmodule SaladUI.FormTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ "<div class=\"space-y-2\">We are inside form item</div>"
+      assert html =~ ~s(<div data-slot="form-item" class="space-y-2">We are inside form item</div>)
     end
 
     test "It renders form label_correctly" do
@@ -29,7 +29,7 @@ defmodule SaladUI.FormTest do
         |> rendered_to_string()
         |> clean_string()
 
-      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-70) do
+      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-50) do
         assert html =~ class
       end
 
@@ -59,7 +59,8 @@ defmodule SaladUI.FormTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html == "<p class=\"text-muted-foreground text-sm\">This is a form description</p>"
+      assert html ==
+               ~s(<p data-slot="form-description" class="text-muted-foreground text-sm">This is a form description</p>)
     end
 
     test "It renders form message correctly" do
@@ -119,13 +120,15 @@ defmodule SaladUI.FormTest do
       assert String.contains?(html, "phx-submit=\"save\"")
       assert String.contains?(html, "phx-target=\"test-string\"")
 
-      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-70) do
+      for class <- ~w(font-medium leading-none text-sm peer-disabled:cursor-not-allowed peer-disabled:opacity-50) do
         assert html =~ class
       end
 
       assert html =~ "What is your project's name?"
 
-      assert html =~ "<p class=\"text-muted-foreground text-sm\">This is your public display name.</p>"
+      assert html =~
+               ~s(<p data-slot="form-description" class="text-muted-foreground text-sm">This is your public display name.</p>)
+
       assert html =~ "Save project</button>"
       assert html =~ "</div></form>"
     end

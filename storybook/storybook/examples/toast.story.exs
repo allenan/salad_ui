@@ -46,6 +46,11 @@ defmodule Storybook.Examples.Toast do
           <.button size="sm" variant="outline" phx-click="toast_error">Error</.button>
           <.button size="sm" variant="outline" phx-click="toast_warning">Warning</.button>
           <.button size="sm" variant="outline" phx-click="toast_info">Info</.button>
+          <.button size="sm" variant="outline" phx-click="toast_loading">Loading</.button>
+          <.button size="sm" variant="outline" phx-click="toast_promise">Promise</.button>
+          <.button size="sm" variant="outline" phx-click="toast_promise_error">
+            Promise (error)
+          </.button>
           <.button size="sm" variant="outline" phx-click="toast_with_description">
             With description
           </.button>
@@ -197,6 +202,20 @@ defmodule Storybook.Examples.Toast do
     {:noreply, toast_info(socket, "A new version is available.")}
   end
 
+  def handle_event("toast_loading", _params, socket) do
+    {:noreply, toast_loading(socket, "Loading...", description: "Use Dismiss all to clear it")}
+  end
+
+  # Sonner's toast.promise, server-side: a loading toast under a known id,
+  # resolved in place from handle_async/3 so one card morphs to the result.
+  def handle_event("toast_promise", _params, socket) do
+    {:noreply, start_promise(socket, fn -> %{name: "Event"} end)}
+  end
+
+  def handle_event("toast_promise_error", _params, socket) do
+    {:noreply, start_promise(socket, fn -> {:error, :timeout} end)}
+  end
+
   def handle_event("toast_with_description", _params, socket) do
     socket = toast(socket, "Event created", description: "Monday, January 3rd at 6:00pm")
     {:noreply, socket}
@@ -275,5 +294,25 @@ defmodule Storybook.Examples.Toast do
       )
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_async({:promise, id}, result, socket) do
+    {:noreply,
+     toast_resolve(socket, id, result,
+       success: fn data -> "#{data.name} has been created" end,
+       error: fn reason -> "Error: #{reason}" end
+     )}
+  end
+
+  defp start_promise(socket, work) do
+    id = "promise-#{System.unique_integer([:positive])}"
+
+    socket
+    |> toast_promise(id, loading: "Loading...")
+    |> start_async({:promise, id}, fn ->
+      Process.sleep(2000)
+      work.()
+    end)
   end
 end

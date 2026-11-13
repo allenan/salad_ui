@@ -15,7 +15,7 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 
@@ -34,7 +34,7 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 
@@ -53,7 +53,7 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 
@@ -72,7 +72,7 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 
@@ -91,7 +91,7 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 
@@ -110,12 +110,21 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 
       assert html =~ "file"
       assert html =~ "Select file"
+    end
+
+    test "It renders search input correctly" do
+      assigns = %{}
+
+      html = rendered_to_string(~H|<.input type="search" placeholder="Search..." />|)
+
+      assert html =~ ~s(type="search")
+      assert html =~ "Search..."
     end
 
     test "It renders hidden input correctly" do
@@ -129,7 +138,7 @@ defmodule SaladUI.InputTest do
         |> clean_string()
 
       for class <-
-            ~w(flex px-3 py-2 rounded-md border-input bg-background text-sm w-full h-10 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-hidden focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
+            ~w(flex px-3 py-1 rounded-md border-input bg-transparent shadow-xs text-base md:text-sm w-full min-w-0 h-9 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 file:border-0 file:bg-transparent file:font-medium file:text-sm border) do
         assert html =~ class
       end
 

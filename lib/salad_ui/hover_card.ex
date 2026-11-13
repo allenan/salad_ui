@@ -14,7 +14,7 @@ defmodule SaladUI.HoverCard do
         <.hover_card_content>
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-3">
-              <img src="/images/avatar.png" alt="" class="h-10 w-10 rounded-full" />
+              <img src="/images/avatar.png" alt="" class="size-10 rounded-full" />
               <div>
                 <div class="font-semibold">SaladUI</div>
                 <div class="text-sm text-muted-foreground">@salad_ui</div>
@@ -34,6 +34,12 @@ defmodule SaladUI.HoverCard do
 
   Hover card is a pure client-side interaction (hover/focus driven) and does not
   support `SaladUI.LiveView.send_command/4`.
+
+  ## Re-renders
+
+  A LiveView re-render keeps an open hover card open and positioned, and a
+  pending open or close still runs. Changing the options rebuilds it from the
+  new markup.
   """
   use SaladUI, :component
 
@@ -81,6 +87,7 @@ defmodule SaladUI.HoverCard do
 
     ~H"""
     <div
+      data-slot="hover-card"
       id={@id}
       class={classes(["inline-block relative", @class])}
       data-component="hover-card"
@@ -105,7 +112,7 @@ defmodule SaladUI.HoverCard do
 
   def hover_card_trigger(assigns) do
     ~H"""
-    <div data-part="trigger" class={classes(["", @class])} {@rest}>
+    <div data-slot="hover-card-trigger" data-part="trigger" class={classes(["", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -118,6 +125,7 @@ defmodule SaladUI.HoverCard do
 
   * `:side` - Placement of the hover card relative to the trigger (top, right, bottom, left). Defaults to `"top"`.
   * `:align` - Alignment of the hover card (start, center, end). Defaults to `"center"`.
+    `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.
@@ -139,6 +147,7 @@ defmodule SaladUI.HoverCard do
 
     ~H"""
     <div
+      data-slot="hover-card-portal"
       data-part="content"
       data-side={@side}
       data-align={@align}
@@ -149,6 +158,7 @@ defmodule SaladUI.HoverCard do
       {@rest}
     >
       <div
+        data-slot="hover-card-content"
         data-side={@side}
         class={
           classes([

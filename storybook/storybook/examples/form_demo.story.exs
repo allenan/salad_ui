@@ -154,14 +154,14 @@ defmodule Storybook.Examples.FormDemo do
               </.form_item>
               <.form_item>
                 <.label>Scale</.label>
-                <div>
+                <div class="flex items-center gap-4">
                   <.slider
-                    class="w-[60%] inline-block"
+                    class="w-[60%]"
                     id="slider-single-step-slider"
                     max={50}
                     step={5}
                     field={f[:scale]}
-                    onchange="document.querySelector('#slider-value').value = this.value"
+                    onchange="document.querySelector('#slider-value').value = event.target.value"
                   />
                   <.input class="inline w-16" type="number" id="slider-value" />
                 </div>
@@ -178,17 +178,17 @@ defmodule Storybook.Examples.FormDemo do
                 <.label>Style</.label>
                 <.toggle_group :let={builder} field={f[:style]} class="justify-start">
                   <.toggle_group_item value="bold" builder={builder} aria-label="Toggle bold">
-                    <.icon name="hero-bold" class="h-4 w-4" />
+                    <.icon name="hero-bold" class="size-4" />
                   </.toggle_group_item>
                   <.toggle_group_item value="italic" builder={builder} aria-label="Toggle italic">
-                    <.icon name="hero-italic" class="h-4 w-4" />
+                    <.icon name="hero-italic" class="size-4" />
                   </.toggle_group_item>
                   <.toggle_group_item
                     value="underline"
                     builder={builder}
                     aria-label="Toggle underline"
                   >
-                    <.icon name="hero-underline" class="h-4 w-4" />
+                    <.icon name="hero-underline" class="size-4" />
                   </.toggle_group_item>
                 </.toggle_group>
               </.form_item>

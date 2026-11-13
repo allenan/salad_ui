@@ -13,7 +13,7 @@ defmodule Storybook.Examples.Demo do
     <div class="my-4">
       <h1 class="text-2xl font-bold mb-4">Dashboard one</h1>
       <a href="/demo/dashboard-one" class="text-primary">
-        <Lucideicons.link class="w-4 h-4 inline-block mr-2" /> View full page
+        <Lucideicons.link class="size-4 inline-block mr-2" /> View full page
       </a>
     </div>
     <div class="border border-border rounded-lg overflow-hidden mb-12">
@@ -23,7 +23,7 @@ defmodule Storybook.Examples.Demo do
     <div class="my-4">
       <h1 class="text-2xl font-bold mb-4">Dashboard two</h1>
       <a href="/demo/dashboard-two" class="text-primary">
-        <Lucideicons.link class="w-4 h-4 inline-block mr-2" /> View full page
+        <Lucideicons.link class="size-4 inline-block mr-2" /> View full page
       </a>
     </div>
     <div class="border border-border rounded-lg overflow-hidden mb-12">
@@ -33,7 +33,7 @@ defmodule Storybook.Examples.Demo do
     <div class="my-4">
       <h1 class="text-2xl font-bold mb-4">Dashboard three</h1>
       <a href="/demo/dashboard-three" class="text-primary">
-        <Lucideicons.link class="w-4 h-4 inline-block mr-2" /> View full page
+        <Lucideicons.link class="size-4 inline-block mr-2" /> View full page
       </a>
     </div>
     <div class="border border-border rounded-lg overflow-hidden mb-12">

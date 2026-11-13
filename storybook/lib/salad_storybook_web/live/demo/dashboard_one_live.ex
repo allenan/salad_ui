@@ -41,17 +41,17 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
         <nav class="flex flex-col items-center gap-4 px-2 sm:py-5">
           <.link
             href="#"
-            class="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+            class="group flex size-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:size-8 md:text-base"
           >
-            <Lucideicons.package class="h-4 w-4 transition-all group-hover:scale-110" />
+            <Lucideicons.package class="size-4 transition-all group-hover:scale-110" />
             <span class="sr-only">Acme Inc</span>
           </.link>
           <.tooltip>
             <.link
               href="#"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
             >
-              <Lucideicons.home class="h-5 w-5" />
+              <Lucideicons.home class="size-5" />
               <span class="sr-only">Dashboard</span>
             </.link>
             <.tooltip_content side="right">Dashboard</.tooltip_content>
@@ -59,9 +59,9 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           <.tooltip>
             <.link
               href="#"
-              class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              class="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:size-8"
             >
-              <Lucideicons.shopping_cart class="h-5 w-5" />
+              <Lucideicons.shopping_cart class="size-5" />
               <span class="sr-only">Orders</span>
             </.link>
             <.tooltip_content side="right">Orders</.tooltip_content>
@@ -69,9 +69,9 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           <.tooltip>
             <.link
               href="#"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
             >
-              <Lucideicons.package class="h-5 w-5" />
+              <Lucideicons.package class="size-5" />
               <span class="sr-only">Products</span>
             </.link>
             <.tooltip_content side="right">Products</.tooltip_content>
@@ -79,9 +79,9 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           <.tooltip>
             <.link
               href="#"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
             >
-              <Lucideicons.users class="h-5 w-5" />
+              <Lucideicons.users class="size-5" />
               <span class="sr-only">Customers</span>
             </.link>
             <.tooltip_content side="right">Customers</.tooltip_content>
@@ -89,9 +89,9 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           <.tooltip>
             <.link
               href="#"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
             >
-              <Lucideicons.line_chart class="h-5 w-5" />
+              <Lucideicons.line_chart class="size-5" />
               <span class="sr-only">Analytics</span>
             </.link>
             <.tooltip_content side="right">Analytics</.tooltip_content>
@@ -101,9 +101,9 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           <.tooltip>
             <.link
               href="#"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+              class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
             >
-              <Lucideicons.settings class="h-5 w-5" />
+              <Lucideicons.settings class="size-5" />
               <span class="sr-only">Settings</span>
             </.link>
             <.tooltip_content side="right">Settings</.tooltip_content>
@@ -115,7 +115,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
           <.sheet id="menu">
             <.sheet_trigger>
               <.button size="icon" variant="outline" class="sm:hidden">
-                <Lucideicons.panel_left class="h-5 w-5" />
+                <Lucideicons.panel_left class="size-5" />
                 <span class="sr-only">Toggle Menu</span>
               </.button>
             </.sheet_trigger>
@@ -123,38 +123,38 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
               <nav class="grid gap-6 text-lg font-medium">
                 <.link
                   href="#"
-                  class="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
+                  class="group flex size-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
                 >
-                  <Lucideicons.package class="h-5 w-5 transition-all group-hover:scale-110" />
+                  <Lucideicons.package class="size-5 transition-all group-hover:scale-110" />
                   <span class="sr-only">Acme Inc</span>
                 </.link>
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.home class="h-5 w-5" /> Dashboard
+                  <Lucideicons.home class="size-5" /> Dashboard
                 </.link>
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.shopping_cart class="h-5 w-5" /> Orders
+                  <Lucideicons.shopping_cart class="size-5" /> Orders
                 </.link>
                 <.link href="#" class="flex items-center gap-4 px-2.5 text-foreground">
-                  <Lucideicons.package class="h-5 w-5" /> Products
+                  <Lucideicons.package class="size-5" /> Products
                 </.link>
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.users class="h-5 w-5" /> Customers
+                  <Lucideicons.users class="size-5" /> Customers
                 </.link>
 
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.line_chart class="h-5 w-5" /> Settings
+                  <Lucideicons.line_chart class="size-5" /> Settings
                 </.link>
               </nav>
             </.sheet_content>
@@ -179,7 +179,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
             </.breadcrumb_list>
           </.breadcrumb>
           <div class="relative ml-auto flex-1 md:grow-0">
-            <Lucideicons.search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Lucideicons.search class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <.input
               type="text"
               placeholder="Search..."
@@ -232,7 +232,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
                     size="sm"
                     class="h-8 gap-1"
                   >
-                    <Lucideicons.list_filter class="h-3.5 w-3.5" />
+                    <Lucideicons.list_filter class="size-3.5" />
                     <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
                       Filter
                     </span>
@@ -250,13 +250,13 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
                   </.dropdown_menu_content>
                 </.dropdown_menu>
                 <.button size="sm" variant="outline" class="h-8 gap-1">
-                  <Lucideicons.file class="h-3.5 w-3.5" />
+                  <Lucideicons.file class="size-3.5" />
                   <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
                 </.button>
                 <.button size="sm" class="h-8 gap-1">
-                  <Lucideicons.circle_plus class="h-3.5 w-3.5" />
+                  <Lucideicons.circle_plus class="size-3.5" />
                   <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Add Product
                   </span>
@@ -295,7 +295,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
                     <.table_body :for={product <- @products}>
                       <.table_row>
                         <.table_cell class="hidden sm:table-cell">
-                          <.skeleton class="h-16 w-16" />
+                          <.skeleton class="size-16" />
                         </.table_cell>
                         <.table_cell class="font-medium">
                           {product.name}
@@ -320,7 +320,7 @@ defmodule SaladStorybookWeb.Demo.DashboardOne do
                               size="icon"
                               variant="ghost"
                             >
-                              <Lucideicons.ellipsis class="h-4 w-4" />
+                              <Lucideicons.ellipsis class="size-4" />
                               <span class="sr-only">Toggle menu</span>
                             </.as_child>
                             <.dropdown_menu_content align="end">

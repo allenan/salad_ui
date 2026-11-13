@@ -25,6 +25,24 @@ defmodule SaladUI.Tabs do
         </.tabs_content>
       </.tabs>
 
+  ## Orientation and variants
+
+  Pass `orientation="vertical"` to `tabs/1` to stack the list beside the
+  content; the arrow keys then become Up/Down (Left/Right for the default
+  horizontal orientation) and the list gets `aria-orientation="vertical"`.
+  `tabs_list/1` takes `variant="line"` for an underlined style:
+
+      <.tabs id="vertical-tabs" default="account" orientation="vertical">
+        <.tabs_list variant="line">
+          <.tabs_trigger value="account">Account</.tabs_trigger>
+          <.tabs_trigger value="password">Password</.tabs_trigger>
+          <.tabs_trigger value="notifications">Notifications</.tabs_trigger>
+        </.tabs_list>
+        <.tabs_content value="account">Account settings</.tabs_content>
+        <.tabs_content value="password">Password settings</.tabs_content>
+        <.tabs_content value="notifications">Notification settings</.tabs_content>
+      </.tabs>
+
   ## Component events
 
   * `:on-tab-changed` - Maps the `tab-changed` event. Fired when a different tab is selected.
@@ -33,6 +51,13 @@ defmodule SaladUI.Tabs do
 
   Tabs does not support `SaladUI.LiveView.send_command/4`. To change the active
   tab from the server, update the `value` assign and let LiveView re-render.
+
+  ## Re-renders
+
+  A LiveView re-render (such as the `phx-change` round trip of a form in a
+  panel) keeps the tab the user chose, and keyboard focus where it was, on a
+  trigger or a field in the panel. A new `value` selects that tab; changing
+  other options rebuilds the tabs from the new markup.
   """
   use SaladUI, :component
 
@@ -46,6 +71,12 @@ defmodule SaladUI.Tabs do
   attr :id, :string, required: true, doc: "Unique identifier for the tabs component"
   attr :default, :string, default: nil, doc: "Default selected tab value"
   attr :value, :string, default: nil, doc: "Currently selected tab value"
+
+  attr :orientation, :string,
+    values: ~w(horizontal vertical),
+    default: "horizontal",
+    doc: "Layout and arrow-key axis: horizontal (Left/Right) or vertical (Up/Down)"
+
   attr :class, :string, default: nil
   attr :"on-tab-changed", :any, default: nil, doc: "Handler for tab change events"
   attr :rest, :global
@@ -62,14 +93,17 @@ defmodule SaladUI.Tabs do
         :options,
         json(%{
           defaultValue: assigns.default,
-          value: assigns.value
+          value: assigns.value,
+          orientation: assigns.orientation
         })
       )
 
     ~H"""
     <div
+      data-slot="tabs"
       id={@id}
-      class={classes(["", @class])}
+      data-orientation={@orientation}
+      class={classes(["group/tabs flex gap-2 data-[orientation=horizontal]:flex-col", @class])}
       data-component="tabs"
       data-state="idle"
       data-options={@options}
@@ -85,18 +119,28 @@ defmodule SaladUI.Tabs do
 
   @doc """
   Container for tab triggers that provides proper styling and ARIA attributes.
+
+  ## Options
+
+  * `:variant` - `"default"` (muted pill background) or `"line"` (transparent, underlined active tab).
   """
+  attr :variant, :string, values: ~w(default line), default: "default", doc: "Visual style of the list"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
   def tabs_list(assigns) do
+    assigns = assign(assigns, :variant_class, tabs_list_variant(assigns.variant))
+
     ~H"""
     <div
+      data-slot="tabs-list"
       data-part="list"
+      data-variant={@variant}
       class={
         classes([
-          "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+          "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-[orientation=horizontal]/tabs:h-9 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none",
+          @variant_class,
           @class
         ])
       }
@@ -119,6 +163,7 @@ defmodule SaladUI.Tabs do
   def tabs_trigger(assigns) do
     ~H"""
     <button
+      data-slot="tabs-trigger"
       type="button"
       data-part="trigger"
       data-value={@value}
@@ -126,7 +171,10 @@ defmodule SaladUI.Tabs do
       data-disabled={to_string(@disabled)}
       class={
         classes([
-          "inline-flex items-center justify-center whitespace-nowrap rounded-xs px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs",
+          "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 group-data-[variant=default]/tabs-list:data-[state=active]:shadow-sm group-data-[variant=line]/tabs-list:data-[state=active]:shadow-none dark:text-muted-foreground dark:hover:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent dark:group-data-[variant=line]/tabs-list:data-[state=active]:border-transparent dark:group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent",
+          "data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 dark:data-[state=active]:text-foreground",
+          "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:opacity-100",
           @class
         ])
       }
@@ -149,13 +197,14 @@ defmodule SaladUI.Tabs do
   def tabs_content(assigns) do
     ~H"""
     <div
+      data-slot="tabs-content"
       data-part="content"
       data-value={@value}
       data-state="inactive"
       hidden
       class={
         classes([
-          "mt-2 focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+          "flex-1 outline-none",
           @class
         ])
       }
@@ -165,4 +214,7 @@ defmodule SaladUI.Tabs do
     </div>
     """
   end
+
+  defp tabs_list_variant("line"), do: "gap-1 bg-transparent"
+  defp tabs_list_variant(_variant), do: "bg-muted"
 end

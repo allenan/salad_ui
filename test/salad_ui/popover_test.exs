@@ -131,4 +131,45 @@ defmodule SaladUI.PopoverTest do
       assert html =~ "Popover Content"
     end
   end
+
+  describe "popover_anchor/1" do
+    test "renders anchor part with slot and classes" do
+      assigns = %{}
+
+      html =
+        ~H"""
+        <.popover_anchor class="w-64" id="anchor">Anchor here</.popover_anchor>
+        """
+        |> rendered_to_string()
+        |> clean_string()
+
+      assert html =~ ~s(data-slot="popover-anchor")
+      assert html =~ ~s(data-part="anchor")
+      assert html =~ ~s(class="w-64")
+      assert html =~ ~s(id="anchor")
+      assert html =~ "Anchor here"
+    end
+  end
+
+  describe "popover header parts" do
+    test "render shadcn slots and classes" do
+      assigns = %{}
+
+      html =
+        ~H"""
+        <.popover_header class="mb-2">
+          <.popover_title>Dimensions</.popover_title>
+          <.popover_description class="text-xs">Set the dimensions for the layer.</.popover_description>
+        </.popover_header>
+        """
+        |> rendered_to_string()
+        |> clean_string()
+
+      assert html =~ ~s(data-slot="popover-header" class="flex flex-col gap-1 text-sm mb-2")
+      assert html =~ ~s(<div data-slot="popover-title" class="font-medium">)
+      assert html =~ ~s(<p data-slot="popover-description" class="text-muted-foreground text-xs">)
+      assert html =~ "Dimensions"
+      assert html =~ "Set the dimensions for the layer."
+    end
+  end
 end

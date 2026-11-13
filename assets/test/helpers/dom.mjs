@@ -1,5 +1,7 @@
 import { JSDOM } from "jsdom";
 
+import { SaladUIHook } from "../../salad_ui/core/hook.js";
+
 const GLOBAL_KEYS = [
   "window",
   "document",
@@ -107,4 +109,52 @@ export function setRect(element, rect) {
       configurable: true,
     });
   }
+}
+
+/**
+ * Approximates what a LiveView patch does to a component's DOM: whatever the
+ * client wrote reverts to the server-rendered markup. On the root and every
+ * `[data-part]` below it, `data-state`, inline `style`, `role` and `aria-*`
+ * are dropped. LiveView's morphdom keys elements by id, so any element still
+ * carrying an id other than `keepIds` (the ids the server renders) is
+ * swapped for a fresh copy, as are elements matching `replace`; a component
+ * that wants its parts patched in place must drop the ids it made up in
+ * beforeUpdate(). Elements matching `hidden` get `hidden` back and elements
+ * matching `remove` (client-inserted nodes) go. Selectors are matched before
+ * anything changes.
+ */
+export function simulatePatch(
+  el,
+  { hidden = [], remove = [], replace = [], keepIds = [el.id] } = {},
+) {
+  const all = (selectors) =>
+    selectors.flatMap((selector) => [...el.querySelectorAll(selector)]);
+  const toHide = all(hidden);
+  const toRemove = all(remove);
+  const keyed = [...el.querySelectorAll("[id]")].filter(
+    (node) => !keepIds.includes(node.id),
+  );
+  const toReplace = [...new Set([...all(replace), ...keyed])].filter(
+    (node, _index, nodes) =>
+      !nodes.some((other) => other !== node && other.contains(node)),
+  );
+
+  toRemove.forEach((node) => node.remove());
+  [el, ...el.querySelectorAll("[data-part]")].forEach((node) => {
+    node.removeAttribute("data-state");
+    node.removeAttribute("style");
+    for (const { name } of [...node.attributes]) {
+      if (name.startsWith("aria-") || name === "role") {
+        node.removeAttribute(name);
+      }
+    }
+  });
+  keyed.forEach((node) => node.removeAttribute("id"));
+  toHide.forEach((node) => (node.hidden = true));
+  toReplace.forEach((node) => node.replaceWith(node.cloneNode(true)));
+}
+
+/** A SaladUIHook bound to `el` that already holds `component`. */
+export function hookFor(el, component) {
+  return { ...SaladUIHook, el, component, handleEvent() {} };
 }

@@ -3,6 +3,7 @@
  * PositionedElement - Main positioning class that integrates all positioning utilities
  */
 import Positioner from "./positioner.js";
+import { getDirection } from "./direction.js";
 import FocusTrap from "./focus-trap.js";
 import ClickOutsideMonitor from "./click-outside.js";
 import Portal from "./portal.js";
@@ -39,6 +40,9 @@ class PositionedElement {
       // Event handlers
       onOutsideClick: null,
       onPosition: null,
+      // (element, reference) => {x, y, placement} | null: custom placement,
+      // tried before the side/align placement on every position pass.
+      computePosition: null,
       scrollPassThrough: false,
 
       ...options,
@@ -187,11 +191,15 @@ class PositionedElement {
    * Calculate and apply position to the element
    */
   calculateAndApplyPosition() {
-    const position = Positioner.calculate(
-      this.element,
-      this.reference,
-      this.options,
-    );
+    // A component can place the element its own way (e.g. select's
+    // item-aligned mode) by returning `{x, y, placement}` from
+    // `computePosition`; returning null falls back to side/align placement.
+    const position =
+      this.options.computePosition?.(this.element, this.reference) ||
+      Positioner.calculate(this.element, this.reference, {
+        ...this.options,
+        dir: this.direction(),
+      });
 
     // Apply positioning - with fixed positioning, we no longer need to
     // adjust for scroll position since fixed is relative to the viewport
@@ -202,6 +210,17 @@ class PositionedElement {
     this.options.onPosition?.(position);
 
     return position;
+  }
+
+  /**
+   * Reading direction used to mirror `start`/`end` alignment: an explicit
+   * `dir` option, else the reference's (the trigger stays in the page even
+   * while the element is portaled).
+   */
+  direction() {
+    const { dir } = this.options;
+    if (dir === "rtl" || dir === "ltr") return dir;
+    return getDirection(this.reference);
   }
 
   /**

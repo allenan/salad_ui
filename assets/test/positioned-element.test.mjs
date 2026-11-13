@@ -217,3 +217,29 @@ test("activate() with trapFocus moves focus into the element, deactivate() resto
 
   pe.destroy();
 });
+
+test("computePosition places the element its own way, and null falls back to side/align", () => {
+  const { reference, element } = buildDom();
+  let custom = { x: 7, y: 9, placement: "item-aligned" };
+  const placements = [];
+  const pe = new PositionedElement(element, reference, {
+    placement: "bottom",
+    alignment: "start",
+    sideOffset: 0,
+    computePosition: () => custom,
+    onPosition: ({ placement }) => placements.push(placement),
+  });
+
+  pe.activate();
+  assert.equal(element.style.left, "7px");
+  assert.equal(element.style.top, "9px");
+  assert.equal(element.getAttribute("data-placement"), "item-aligned");
+
+  custom = null;
+  pe.update();
+  assert.equal(element.style.left, "200px");
+  assert.equal(element.style.top, "140px");
+  assert.deepEqual(placements, ["item-aligned", "bottom"]);
+
+  pe.destroy();
+});

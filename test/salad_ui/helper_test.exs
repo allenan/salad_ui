@@ -89,7 +89,15 @@ defmodule SaladUI.HelperTest do
   end
 
   test "build error with custom translation function" do
+    previous = Application.fetch_env(:salad_ui, :error_translator_function)
     Application.put_env(:salad_ui, :error_translator_function, {__MODULE__, :translate_error})
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(:salad_ui, :error_translator_function, value)
+        :error -> Application.delete_env(:salad_ui, :error_translator_function)
+      end
+    end)
 
     assigns = %{
       __changed__: %{},
@@ -108,6 +116,24 @@ defmodule SaladUI.HelperTest do
 
   def translate_error({"error 1", _}), do: "translated error 1"
   def translate_error({"error 2", _}), do: "translated error 2"
+
+  describe "tw_merge/1" do
+    test "merges conflicting Tailwind classes, later wins" do
+      assert Helpers.tw_merge(["px-2 py-1", nil, "px-4"]) == "py-1 px-4"
+    end
+
+    test "keeps not-* opt-out classes TwMerge cannot parse instead of crashing" do
+      # kept where it was, like any class TwMerge has no group for
+      assert Helpers.tw_merge(["flex px-2", "not-typeset px-4", nil]) == "flex not-typeset px-4"
+      assert Helpers.tw_merge(["not-prose"]) == "not-prose"
+      assert Helpers.tw_merge(["not-italic"]) == "not-italic"
+    end
+
+    test "keeps the scroll-fade utilities side by side" do
+      assert Helpers.tw_merge(["scroll-fade-x data-wrap:scroll-fade-y", "scroll-fade-y scroll-fade-8"]) ==
+               "scroll-fade-x data-wrap:scroll-fade-y scroll-fade-y scroll-fade-8"
+    end
+  end
 
   describe "style/1" do
     test "merges maps and appends a single trailing semicolon" do

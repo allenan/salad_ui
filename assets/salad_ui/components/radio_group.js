@@ -37,8 +37,9 @@ class RadioGroupComponent extends Component {
       events: {
         idle: {
           keyMap: {
-            ArrowLeft: () => this.navigateItem("prev"),
-            ArrowRight: () => this.navigateItem("next"),
+            // Left/Right follow the reading direction (mirrored under RTL).
+            ArrowLeft: () => this.navigateItem(this.isRtl() ? "next" : "prev"),
+            ArrowRight: () => this.navigateItem(this.isRtl() ? "prev" : "next"),
             ArrowUp: () => this.navigateItem("prev"),
             ArrowDown: () => this.navigateItem("next"),
             Home: () => this.navigateItem("first"),

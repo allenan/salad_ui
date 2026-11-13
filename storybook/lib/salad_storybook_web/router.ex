@@ -35,6 +35,16 @@ defmodule SaladStorybookWeb.Router do
     live "/demo", Demo.Demo
   end
 
+  scope "/blocks", SaladStorybookWeb.Blocks do
+    pipe_through :browser
+
+    live "/dashboard-01", Dashboard01
+    live "/sidebar-07", Sidebar07
+    live "/login-03", Login03
+    live "/signup-03", Signup03
+    live "/chat-01", Chat01
+  end
+
   scope "/", SaladStorybookWeb do
     pipe_through :browser
 

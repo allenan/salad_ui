@@ -23,9 +23,14 @@ defmodule SaladUI.Button do
       * `"link"` - Button that appears as a link
   * `:size` - Size of the button:
       * `"default"` - Standard size
+      * `"xs"` - Extra small size
       * `"sm"` - Small size
       * `"lg"` - Large size
       * `"icon"` - Square button optimized for icons
+      * `"icon-xs"`, `"icon-sm"`, `"icon-lg"` - Smaller and larger square icon buttons
+  * `:href`, `:navigate`, `:patch` - When any is set the button renders as a
+    link (`<a>` via `Phoenix.Component.link/1`) with the same styles. This is
+    the SaladUI equivalent of shadcn's `<Button asChild><a /></Button>`.
   * `:rest` - Additional HTML attributes including `disabled`, `form`, `name`, `value`
 
   ## Examples
@@ -37,6 +42,10 @@ defmodule SaladUI.Button do
         <.icon name="hero-x-mark" />
       </.button>
       <.button type="submit" phx-disable-with="Saving...">Save Changes</.button>
+      <.button navigate="/login">Login</.button>
+      <.button variant="outline" size="icon" class="rounded-full" aria-label="Scroll up">
+        <.icon name="hero-arrow-up" />
+      </.button>
   """
   attr :type, :string, default: nil
   attr :class, :any, default: nil
@@ -46,17 +55,44 @@ defmodule SaladUI.Button do
     default: "default",
     doc: "the button variant style"
 
-  attr :size, :string, values: ~w(default sm lg icon), default: "default"
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :size, :string, values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg), default: "default"
+  attr :href, :string, default: nil, doc: "renders the button as a link to this URL"
+  attr :navigate, :string, default: nil, doc: "renders the button as a LiveView `navigate` link"
+  attr :patch, :string, default: nil, doc: "renders the button as a LiveView `patch` link"
+
+  attr :rest, :global, include: ~w(disabled form name value method download hreflang referrerpolicy rel target replace)
 
   slot :inner_block, required: true
 
-  def(button(assigns)) do
+  def button(%{href: href, navigate: navigate, patch: patch} = assigns)
+      when not is_nil(href) or not is_nil(navigate) or not is_nil(patch) do
+    assigns = assign(assigns, :variant_class, button_variant(assigns))
+
+    ~H"""
+    <.link
+      href={@href}
+      navigate={@navigate}
+      patch={@patch}
+      data-slot="button"
+      data-variant={@variant}
+      data-size={@size}
+      class={classes([@variant_class, @class])}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.link>
+    """
+  end
+
+  def button(assigns) do
     assigns = assign(assigns, :variant_class, button_variant(assigns))
 
     ~H"""
     <button
       type={@type}
+      data-slot="button"
+      data-variant={@variant}
+      data-size={@size}
       class={
         classes([
           "phx-submit-loading:opacity-75",

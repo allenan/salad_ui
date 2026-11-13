@@ -30,9 +30,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
         <nav class="flex flex-col items-center gap-4 px-2 sm:py-5">
           <.link
             href="#"
-            class="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+            class="group flex size-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:size-8 md:text-base"
           >
-            <Lucideicons.package class="h-4 w-4 transition-all group-hover:scale-110" />
+            <Lucideicons.package class="size-4 transition-all group-hover:scale-110" />
             <span class="sr-only">
               Acme Inc
             </span>
@@ -41,9 +41,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             <.tooltip_trigger>
               <.link
                 href="#"
-                class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
               >
-                <Lucideicons.home class="h-5 w-5" />
+                <Lucideicons.home class="size-5" />
                 <span class="sr-only">
                   Dashboard
                 </span>
@@ -57,9 +57,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             <.tooltip_trigger>
               <.link
                 href="#"
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                class="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:size-8"
               >
-                <Lucideicons.shopping_cart class="h-5 w-5" />
+                <Lucideicons.shopping_cart class="size-5" />
                 <span class="sr-only">
                   Orders
                 </span>
@@ -73,9 +73,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             <.tooltip_trigger>
               <.link
                 href="#"
-                class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
               >
-                <Lucideicons.package class="h-5 w-5" />
+                <Lucideicons.package class="size-5" />
                 <span class="sr-only">
                   Products
                 </span>
@@ -89,9 +89,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             <.tooltip_trigger>
               <.link
                 href="#"
-                class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
               >
-                <Lucideicons.users class="h-5 w-5" />
+                <Lucideicons.users class="size-5" />
                 <span class="sr-only">
                   Customers
                 </span>
@@ -105,9 +105,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             <.tooltip_trigger>
               <.link
                 href="#"
-                class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
               >
-                <Lucideicons.line_chart class="h-5 w-5" />
+                <Lucideicons.line_chart class="size-5" />
                 <span class="sr-only">
                   Analytics
                 </span>
@@ -123,9 +123,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             <.tooltip_trigger>
               <.link
                 href="#"
-                class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
+                class="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:size-8"
               >
-                <Lucideicons.settings class="h-5 w-5" />
+                <Lucideicons.settings class="size-5" />
                 <span class="sr-only">
                   Settings
                 </span>
@@ -142,7 +142,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
           <.sheet id="sheet">
             <.sheet_trigger>
               <.button size="icon" variant="outline" class="sm:hidden">
-                <Lucideicons.panel_left class="h-5 w-5" />
+                <Lucideicons.panel_left class="size-5" />
                 <span class="sr-only">
                   Toggle Menu
                 </span>
@@ -152,9 +152,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               <nav class="grid gap-6 text-lg font-medium">
                 <.link
                   href="#"
-                  class="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
+                  class="group flex size-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
                 >
-                  <Lucideicons.package class="h-5 w-5 transition-all group-hover:scale-110" />
+                  <Lucideicons.package class="size-5 transition-all group-hover:scale-110" />
                   <span class="sr-only">
                     Acme Inc
                   </span>
@@ -163,29 +163,29 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <home class="h-5 w-5"></home>
+                  <home class="size-5"></home>
                   Dashboard
                 </.link>
                 <.link href="#" class="flex items-center gap-4 px-2.5 text-foreground">
-                  <Lucideicons.shopping_cart class="h-5 w-5" /> Orders
+                  <Lucideicons.shopping_cart class="size-5" /> Orders
                 </.link>
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.package class="h-5 w-5" /> Products
+                  <Lucideicons.package class="size-5" /> Products
                 </.link>
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.users class="h-5 w-5" /> Customers
+                  <Lucideicons.users class="size-5" /> Customers
                 </.link>
                 <.link
                   href="#"
                   class="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
                 >
-                  <Lucideicons.line_chart class="h-5 w-5" /> Settings
+                  <Lucideicons.line_chart class="size-5" /> Settings
                 </.link>
               </nav>
             </.sheet_content>
@@ -216,7 +216,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
             </.breadcrumb_list>
           </.breadcrumb>
           <div class="relative ml-auto flex-1 md:grow-0">
-            <Lucideicons.search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Lucideicons.search class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <.input
               type="text"
               placeholder="Search..."
@@ -243,14 +243,14 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               <.dropdown_menu_label>
                 My Account
               </.dropdown_menu_label>
-              <.dropdown_menu_separator></.dropdown_menu_separator>
+              <.dropdown_menu_separator />
               <.dropdown_menu_item>
                 Settings
               </.dropdown_menu_item>
               <.dropdown_menu_item>
                 Support
               </.dropdown_menu_item>
-              <.dropdown_menu_separator></.dropdown_menu_separator>
+              <.dropdown_menu_separator />
               <.dropdown_menu_item>
                 Logout
               </.dropdown_menu_item>
@@ -335,7 +335,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                       size="sm"
                       class="h-7 gap-1 text-sm"
                     >
-                      <Lucideicons.list_filter class="h-3.5 w-3.5" />
+                      <Lucideicons.list_filter class="size-3.5" />
                       <span class="sr-only sm:not-sr-only">
                         Filter
                       </span>
@@ -357,7 +357,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                     </.dropdown_menu_content>
                   </.dropdown_menu>
                   <.button size="sm" variant="outline" class="h-7 gap-1 text-sm">
-                    <Lucideicons.file class="h-3.5 w-3.5" />
+                    <Lucideicons.file class="size-3.5" />
                     <span class="sr-only sm:not-sr-only">
                       Export
                     </span>
@@ -604,9 +604,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                     <.button
                       size="icon"
                       variant="outline"
-                      class="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                      class="size-6 opacity-0 transition-opacity group-hover:opacity-100"
                     >
-                      <copy class="h-3 w-3"></copy>
+                      <copy class="size-3"></copy>
                       <span class="sr-only">
                         Copy Order ID
                       </span>
@@ -618,7 +618,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                 </div>
                 <div class="ml-auto flex items-center gap-1">
                   <.button size="sm" variant="outline" class="h-8 gap-1">
-                    <Lucideicons.truck class="h-3.5 w-3.5" />
+                    <Lucideicons.truck class="size-3.5" />
                     <span class="lg:sr-only xl:not-sr-only xl:whitespace-nowrap">
                       Track Order
                     </span>
@@ -629,9 +629,9 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                       child={&button/1}
                       size="icon"
                       variant="outline"
-                      class="h-8 w-8"
+                      class="size-8"
                     >
-                      <Lucideicons.ellipsis_vertical class="h-3.5 w-3.5" />
+                      <Lucideicons.ellipsis_vertical class="size-3.5" />
                       <span class="sr-only">
                         More
                       </span>
@@ -643,7 +643,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                       <.dropdown_menu_item>
                         Export
                       </.dropdown_menu_item>
-                      <.dropdown_menu_separator></.dropdown_menu_separator>
+                      <.dropdown_menu_separator />
                       <.dropdown_menu_item>
                         Trash
                       </.dropdown_menu_item>
@@ -787,7 +787,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                   <dl class="grid gap-3">
                     <div class="flex items-center justify-between">
                       <dt class="flex items-center gap-1 text-muted-foreground">
-                        <Lucideicons.credit_card class="h-4 w-4" /> Visa
+                        <Lucideicons.credit_card class="size-4" /> Visa
                       </dt>
                       <dd>
                         **** **** **** 4532
@@ -806,16 +806,16 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
                 <.pagination class="ml-auto mr-0 w-auto">
                   <.pagination_content>
                     <.pagination_item>
-                      <.button size="icon" variant="outline" class="h-6 w-6">
-                        <Lucideicons.chevron_left class="h-3.5 w-3.5" />
+                      <.button size="icon" variant="outline" class="size-6">
+                        <Lucideicons.chevron_left class="size-3.5" />
                         <span class="sr-only">
                           Previous Order
                         </span>
                       </.button>
                     </.pagination_item>
                     <.pagination_item>
-                      <.button size="icon" variant="outline" class="h-6 w-6">
-                        <Lucideicons.chevron_right class="h-3.5 w-3.5" />
+                      <.button size="icon" variant="outline" class="size-6">
+                        <Lucideicons.chevron_right class="size-3.5" />
                         <span class="sr-only">
                           Next Order
                         </span>

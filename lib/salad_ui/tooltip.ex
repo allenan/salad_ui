@@ -9,7 +9,7 @@ defmodule SaladUI.Tooltip do
       <.tooltip id="help-tooltip">
         <.tooltip_trigger>
           <.button variant="ghost" size="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle h-4 w-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle size-4">
               <circle cx="12" cy="12" r="10"></circle>
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
               <path d="M12 17h.01"></path>
@@ -28,6 +28,12 @@ defmodule SaladUI.Tooltip do
 
   Tooltip is a pure client-side interaction (hover/focus driven) and does not
   support `SaladUI.LiveView.send_command/4`.
+
+  ## Re-renders
+
+  A LiveView re-render keeps an open tooltip open and positioned, and a
+  pending open or close still runs. Changing the options rebuilds it from the
+  new markup.
   """
   use SaladUI, :component
 
@@ -82,6 +88,7 @@ defmodule SaladUI.Tooltip do
 
     ~H"""
     <div
+      data-slot="tooltip"
       id={@id}
       class={classes(["relative inline-block", @class])}
       data-component="tooltip"
@@ -108,7 +115,7 @@ defmodule SaladUI.Tooltip do
 
   def tooltip_trigger(assigns) do
     ~H"""
-    <div data-part="trigger" class={classes(["", @class])} {@rest}>
+    <div data-slot="tooltip-trigger" data-part="trigger" class={classes(["", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -121,9 +128,16 @@ defmodule SaladUI.Tooltip do
 
   * `:side` - Placement of the tooltip relative to the trigger (top, right, bottom, left). Defaults to `"top"`.
   * `:align` - Alignment of the tooltip (start, center, end). Defaults to `"center"`.
+    `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.
+
+  The content ends with shadcn's arrow: a rotated `size-2.5` square in the
+  content's color, centred on the edge that faces the trigger. It follows
+  `data-side`, which the positioner updates when the tooltip flips sides.
+  If you change the content's background, recolor the arrow to match, e.g.
+  `class="bg-primary [&_[data-slot=tooltip-arrow]>span]:bg-primary"`.
   """
   attr :class, :string, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "top"
@@ -143,13 +157,14 @@ defmodule SaladUI.Tooltip do
     ~H"""
     <div
       data-part="content"
+      data-slot="tooltip-content"
       data-side={@side}
       data-align={@align}
       data-side-offset={@side_offset}
       data-align-offset={@align_offset}
       class={
         classes([
-          "z-50 overflow-hidden rounded-md border border-border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          "group/tooltip z-50 w-fit animate-in rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           @class
         ])
       }
@@ -157,6 +172,19 @@ defmodule SaladUI.Tooltip do
       {@rest}
     >
       {render_slot(@inner_block)}
+      <span
+        data-slot="tooltip-arrow"
+        aria-hidden="true"
+        class={[
+          "pointer-events-none absolute",
+          "group-data-[side=top]/tooltip:top-full group-data-[side=top]/tooltip:left-1/2 group-data-[side=top]/tooltip:-translate-x-1/2",
+          "group-data-[side=bottom]/tooltip:bottom-full group-data-[side=bottom]/tooltip:left-1/2 group-data-[side=bottom]/tooltip:-translate-x-1/2 group-data-[side=bottom]/tooltip:rotate-180",
+          "group-data-[side=left]/tooltip:top-1/2 group-data-[side=left]/tooltip:left-full group-data-[side=left]/tooltip:-translate-y-1/2 group-data-[side=left]/tooltip:-rotate-90",
+          "group-data-[side=right]/tooltip:top-1/2 group-data-[side=right]/tooltip:right-full group-data-[side=right]/tooltip:-translate-y-1/2 group-data-[side=right]/tooltip:rotate-90"
+        ]}
+      >
+        <span class="z-50 block size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground"></span>
+      </span>
     </div>
     """
   end

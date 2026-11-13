@@ -61,6 +61,213 @@ defmodule Storybook.SaladUIComponents.Select do
         ]
       },
       %Variation{
+        id: :groups,
+        description: "Groups, labels and a separator",
+        attributes: %{id: "groups-select", name: "food", "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-48">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_label>Fruits</.select_label>
+                <.select_item value="apple">Apple</.select_item>
+                <.select_item value="banana">Banana</.select_item>
+                <.select_item value="blueberry">Blueberry</.select_item>
+              </.select_group>
+              <.select_separator />
+              <.select_group>
+                <.select_label>Vegetables</.select_label>
+                <.select_item value="carrot">Carrot</.select_item>
+                <.select_item value="broccoli">Broccoli</.select_item>
+                <.select_item value="spinach">Spinach</.select_item>
+              </.select_group>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :scrollable,
+        description: "A long list scrolls inside the content; the scroll buttons appear while there is more to see",
+        attributes: %{id: "timezone-select", name: "timezone", "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-64">
+              <.select_value placeholder="Select a timezone" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_label>North America</.select_label>
+                <.select_item value="est">Eastern Standard Time</.select_item>
+                <.select_item value="cst">Central Standard Time</.select_item>
+                <.select_item value="mst">Mountain Standard Time</.select_item>
+                <.select_item value="pst">Pacific Standard Time</.select_item>
+                <.select_item value="akst">Alaska Standard Time</.select_item>
+                <.select_item value="hst">Hawaii Standard Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>Europe &amp; Africa</.select_label>
+                <.select_item value="gmt">Greenwich Mean Time</.select_item>
+                <.select_item value="cet">Central European Time</.select_item>
+                <.select_item value="eet">Eastern European Time</.select_item>
+                <.select_item value="west">Western European Summer Time</.select_item>
+                <.select_item value="cat">Central Africa Time</.select_item>
+                <.select_item value="eat">East Africa Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>Asia</.select_label>
+                <.select_item value="msk">Moscow Time</.select_item>
+                <.select_item value="ist">India Standard Time</.select_item>
+                <.select_item value="cst_china">China Standard Time</.select_item>
+                <.select_item value="jst">Japan Standard Time</.select_item>
+                <.select_item value="kst">Korea Standard Time</.select_item>
+                <.select_item value="ist_indonesia">Indonesia Central Standard Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>Australia &amp; Pacific</.select_label>
+                <.select_item value="awst">Australian Western Standard Time</.select_item>
+                <.select_item value="acst">Australian Central Standard Time</.select_item>
+                <.select_item value="aest">Australian Eastern Standard Time</.select_item>
+                <.select_item value="nzst">New Zealand Standard Time</.select_item>
+                <.select_item value="fjt">Fiji Time</.select_item>
+              </.select_group>
+              <.select_group>
+                <.select_label>South America</.select_label>
+                <.select_item value="art">Argentina Time</.select_item>
+                <.select_item value="bot">Bolivia Time</.select_item>
+                <.select_item value="brt">Brasilia Time</.select_item>
+                <.select_item value="clt">Chile Standard Time</.select_item>
+              </.select_group>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :align_item,
+        description:
+          ~s|`position="item-aligned"` (shadcn's default) lines the selected item up over the trigger; `position="popper"` (SaladUI's default) opens below it|,
+        template: """
+        <div class="flex w-full max-w-xs flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-medium">Item aligned</span>
+            <.select id="align-item-select" name="fruit" default-value="banana">
+              <.select_trigger class="w-full">
+                <.select_value />
+              </.select_trigger>
+              <.select_content position="item-aligned">
+                <.select_group>
+                  <.select_item value="apple">Apple</.select_item>
+                  <.select_item value="banana">Banana</.select_item>
+                  <.select_item value="blueberry">Blueberry</.select_item>
+                  <.select_item value="grapes">Grapes</.select_item>
+                  <.select_item value="pineapple">Pineapple</.select_item>
+                </.select_group>
+              </.select_content>
+            </.select>
+          </div>
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-medium">Popper</span>
+            <.select id="popper-select" name="fruit" default-value="banana">
+              <.select_trigger class="w-full">
+                <.select_value />
+              </.select_trigger>
+              <.select_content position="popper">
+                <.select_group>
+                  <.select_item value="apple">Apple</.select_item>
+                  <.select_item value="banana">Banana</.select_item>
+                  <.select_item value="blueberry">Blueberry</.select_item>
+                  <.select_item value="grapes">Grapes</.select_item>
+                  <.select_item value="pineapple">Pineapple</.select_item>
+                </.select_group>
+              </.select_content>
+            </.select>
+          </div>
+        </div>
+        """
+      },
+      %Variation{
+        id: :side_and_align,
+        description: ~s|Popper placement on another `side`, with `align`|,
+        attributes: %{id: "side-select", name: "fruit", "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-[180px]">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content side="right" align="center">
+              <.select_item value="apple">Apple</.select_item>
+              <.select_item value="banana">Banana</.select_item>
+              <.select_item value="blueberry">Blueberry</.select_item>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :disabled,
+        description:
+          "`disabled` on the select (handed to the trigger through `:let` so the button is disabled before the hook mounts), and a disabled item",
+        let: :select,
+        attributes: %{id: "disabled-select", name: "fruit", disabled: true, "use-portal": false},
+        slots: [
+          """
+            <.select_trigger class="w-full max-w-48" disabled={select.disabled}>
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_item value="apple">Apple</.select_item>
+                <.select_item value="banana">Banana</.select_item>
+                <.select_item value="blueberry">Blueberry</.select_item>
+                <.select_item value="grapes" disabled>Grapes</.select_item>
+                <.select_item value="pineapple">Pineapple</.select_item>
+              </.select_group>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :invalid,
+        description:
+          ~s|Error styling via aria-invalid on the trigger (a form field with errors sets data-invalid on the root, which styles and marks the trigger automatically)|,
+        attributes: %{
+          id: "invalid-select",
+          name: "fruit",
+          "use-portal": false
+        },
+        slots: [
+          """
+            <.select_trigger class="w-[180px]" aria-invalid="true">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_item value="apple">Apple</.select_item>
+              <.select_item value="banana">Banana</.select_item>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :small,
+        description: ~s|`size="sm"` on the trigger|,
+        attributes: %{
+          id: "small-select",
+          name: "fruit",
+          "use-portal": false
+        },
+        slots: [
+          """
+            <.select_trigger size="sm" class="w-[180px]">
+              <.select_value placeholder="Select a fruit" />
+            </.select_trigger>
+            <.select_content>
+              <.select_item value="apple">Apple</.select_item>
+              <.select_item value="banana">Banana</.select_item>
+            </.select_content>
+          """
+        ]
+      },
+      %Variation{
         id: :with_default_value,
         description: "A select component with a pre-selected default value",
         attributes: %{
@@ -142,6 +349,36 @@ defmodule Storybook.SaladUIComponents.Select do
             </.select_content>
           """
         ]
+      },
+      %Variation{
+        id: :rtl,
+        description: "Right-to-left",
+        template: """
+        <div dir="rtl">
+          <.select id="rtl-select" name="fruit">
+            <.select_trigger class="w-32">
+              <.select_value placeholder="اختر فاكهة" />
+            </.select_trigger>
+            <.select_content>
+              <.select_group>
+                <.select_label>الفواكه</.select_label>
+                <.select_item value="apple">تفاح</.select_item>
+                <.select_item value="banana">موز</.select_item>
+                <.select_item value="blueberry">توت أزرق</.select_item>
+                <.select_item value="grapes">عنب</.select_item>
+                <.select_item value="pineapple">أناناس</.select_item>
+              </.select_group>
+              <.select_separator />
+              <.select_group>
+                <.select_label>الخضروات</.select_label>
+                <.select_item value="carrot">جزر</.select_item>
+                <.select_item value="broccoli">بروكلي</.select_item>
+                <.select_item value="spinach">سبانخ</.select_item>
+              </.select_group>
+            </.select_content>
+          </.select>
+        </div>
+        """
       }
     ]
   end

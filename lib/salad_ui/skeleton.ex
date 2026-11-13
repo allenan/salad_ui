@@ -18,7 +18,7 @@ defmodule SaladUI.Skeleton do
 
       # Avatar and text loading skeleton
       <div class="flex items-center gap-4">
-        <.skeleton class="h-12 w-12 rounded-full" />
+        <.skeleton class="size-12 rounded-full" />
         <div class="space-y-2">
           <.skeleton class="h-4 w-32" />
           <.skeleton class="h-4 w-24" />
@@ -39,7 +39,7 @@ defmodule SaladUI.Skeleton do
   ## Examples
 
       <.skeleton class="h-6 w-24" />
-      <.skeleton class="h-12 w-12 rounded-full" />
+      <.skeleton class="size-12 rounded-full" />
       <.skeleton class="h-4 w-full max-w-sm" />
   """
   attr :class, :string, default: nil
@@ -48,9 +48,10 @@ defmodule SaladUI.Skeleton do
   def skeleton(assigns) do
     ~H"""
     <div
+      data-slot="skeleton"
       class={
         classes([
-          "animate-pulse rounded-md bg-muted",
+          "animate-pulse rounded-md bg-accent",
           @class
         ])
       }

@@ -1,4 +1,6 @@
 // saladui/core/portal.js
+import { getDirection } from "./direction.js";
+
 /**
  * Portal utility for SaladUI components
  * Manages moving elements to a different DOM context (usually body)
@@ -18,9 +20,17 @@ class Portal {
   static move(element, container = document.body) {
     if (!element) return false;
 
+    // A portaled element leaves the subtree it inherited `dir` from (e.g. a
+    // `direction_provider/1`), so carry its direction along as an attribute
+    // when the portal container reads the other way.
+    const dir = getDirection(element);
+    const addedDir =
+      !element.hasAttribute("dir") && dir !== getDirection(container);
+
     // Store original information for restoration
     const originalData = {
       parent: element.parentElement,
+      addedDir,
       styles: {
         position: element.style.position,
         top: element.style.top,
@@ -38,6 +48,7 @@ class Portal {
 
     // Move the element to the portal container
     container.appendChild(element);
+    if (addedDir) element.setAttribute("dir", dir);
 
     // Apply portal styles
     element.style.position = "absolute";
@@ -65,6 +76,10 @@ class Portal {
     try {
       // Move back to original parent
       originalData.parent.appendChild(element);
+      if (originalData.addedDir) {
+        element.removeAttribute("dir");
+        originalData.addedDir = false;
+      }
 
       // Restore original styles
       const styles = originalData.styles;

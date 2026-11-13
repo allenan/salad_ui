@@ -3,7 +3,12 @@ import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/accordion.js"; // self-registers "accordion"
-import { installDom, uninstallDom } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  simulatePatch,
+  uninstallDom,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -180,6 +185,8 @@ test("disabled item ignores clicks and keeps a non-focusable trigger", () => {
 
   const { trigger } = getItemEls("item-1");
   assert.equal(trigger.getAttribute("tabindex"), "-1");
+  assert.equal(trigger.disabled, true);
+  assert.equal(getItemEls("item-2").trigger.disabled, false);
 
   click(trigger);
 
@@ -219,4 +226,127 @@ test("keyboard navigation: ArrowDown/ArrowUp/Home/End move focus across triggers
 
   keydown(el, "End");
   assert.equal(document.activeElement, getItemEls("item-3").trigger);
+});
+
+// Re-render from the server markup, which renders no ids below the root.
+// `replace` swaps the matched elements for fresh copies, as when the server
+// re-renders them under new keys.
+function patch(el, options, { replace = [] } = {}) {
+  simulatePatch(el, { hidden: ['[data-part="item-content"]'], replace });
+  if (options) el.dataset.options = JSON.stringify(options);
+}
+
+test("a LiveView patch keeps the items opened on the client open", () => {
+  const { component, el, getItemEls, pushed } = buildAccordion({
+    type: "multiple",
+  });
+  const hook = hookFor(el, component);
+  click(getItemEls("item-1").trigger);
+  click(getItemEls("item-3").trigger);
+  const item3 = getItemEls("item-3");
+  item3.trigger.focus();
+
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  // The client ids were dropped before the patch, so the items were patched
+  // in place rather than replaced.
+  assert.equal(getItemEls("item-3").item, item3.item);
+  assert.equal(getItemEls("item-3").content, item3.content);
+  for (const [value, open] of [
+    ["item-1", true],
+    ["item-2", false],
+    ["item-3", true],
+  ]) {
+    const { item, trigger, content } = getItemEls(value);
+    assert.equal(item.dataset.state, open ? "open" : "closed", value);
+    assert.equal(content.hidden, !open, value);
+    assert.equal(trigger.getAttribute("aria-expanded"), String(open), value);
+    assert.equal(trigger.getAttribute("aria-controls"), content.id, value);
+    assert.ok(content.id, value);
+  }
+  assert.equal(document.activeElement, item3.trigger);
+  assert.equal(pushed.length, 2);
+
+  // The rebuilt items are wired up and report the kept values.
+  click(getItemEls("item-2").trigger);
+  assert.equal(getItemEls("item-2").content.hidden, false);
+  assert.deepEqual(pushed.at(-1).payload.value, ["item-1", "item-3", "item-2"]);
+  component.destroy();
+});
+
+test("a field focused in an open item keeps focus across a patch", () => {
+  const { component, el, getItemEls } = buildAccordion({ value: "item-2" });
+  const hook = hookFor(el, component);
+  const field = document.createElement("input");
+  getItemEls("item-2").content.append(field);
+  field.focus();
+
+  // e.g. the phx-change round trip of a form in the item.
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  assert.equal(field.isConnected, true);
+  assert.equal(document.activeElement, field);
+  assert.equal(getItemEls("item-2").content.hidden, false);
+  component.destroy();
+});
+
+test("items the server replaces keep their state, and focus moves over", () => {
+  const { component, el, getItemEls } = buildAccordion({ type: "multiple" });
+  const hook = hookFor(el, component);
+  click(getItemEls("item-1").trigger);
+  const old = getItemEls("item-1");
+  old.trigger.focus();
+
+  hook.beforeUpdate();
+  patch(el, null, { replace: ['[data-part="item"]'] });
+  hook.updated();
+
+  const { item, trigger, content } = getItemEls("item-1");
+  assert.notEqual(item, old.item);
+  assert.equal(item.dataset.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(trigger.getAttribute("aria-controls"), content.id);
+  assert.equal(document.activeElement, trigger);
+  click(trigger);
+  assert.equal(content.hidden, true);
+  component.destroy();
+});
+
+test("a new server value opens exactly those items in place", () => {
+  const { component, el, getItemEls, pushed } = buildAccordion({
+    value: "item-1",
+  });
+  const hook = hookFor(el, component);
+
+  hook.beforeUpdate();
+  patch(el, {
+    type: "single",
+    value: "item-2",
+    defaultValue: null,
+    disabled: false,
+  });
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(getItemEls("item-1").content.hidden, true);
+  assert.equal(getItemEls("item-2").content.hidden, false);
+  assert.equal(pushed.length, 0);
+  component.destroy();
+});
+
+test("changed accordion options rebuild it", () => {
+  const { component, el } = buildAccordion();
+  const hook = hookFor(el, component);
+
+  patch(el, { type: "multiple", value: null, defaultValue: null });
+  hook.updated();
+
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  hook.destroyed();
 });

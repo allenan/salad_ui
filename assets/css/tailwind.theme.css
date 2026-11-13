@@ -7,6 +7,9 @@
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
     --color-background: var(--background);
@@ -26,7 +29,14 @@
     --color-ring: var(--ring);
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
-    --color-sidebar: var(--sidebar-background);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    /* shadcn names this token `--sidebar`; `--sidebar-background` is the
+       name older SaladUI color schemes used, kept as a fallback. */
+    --color-sidebar: var(--sidebar, var(--sidebar-background));
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);

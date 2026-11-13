@@ -3,6 +3,7 @@ import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import FocusTrap from "../core/focus-trap.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
+import { lockScroll } from "../core/scroll-lock.js";
 
 class DialogComponent extends Component {
   constructor(el, hookContext) {
@@ -16,6 +17,50 @@ class DialogComponent extends Component {
     this.content = this.getPart("content");
     this.contentPanel = this.getPart("content-panel");
     this.config.preventDefaultKeys = ["Escape"];
+    this.serverOpen = this.readServerOpen(el);
+  }
+
+  /**
+   * The open state the server rendered: `data-open` (dialog/1), else the
+   * root's `data-state` (sheet/1, alert_dialog/1).
+   */
+  readServerOpen(el) {
+    return el.dataset.open === undefined
+      ? el.dataset.state === "open"
+      : el.dataset.open === "true";
+  }
+
+  /**
+   * A LiveView patch (a phx-change form inside the dialog, a flash anywhere
+   * on the page) puts back the server-rendered markup: the content `hidden`,
+   * the closed `data-state` and no ARIA. Rebuilding from that would close a
+   * dialog the user opened. Keep the instance and re-apply its state instead,
+   * unless the options or event mappings changed. A new server open state is
+   * applied as an open/close.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el)) return false;
+    // The focus trap is bound to the panel.
+    if (!this.refreshParts(["content", "content-panel"])) return false;
+
+    // Read before reapplyState() overwrites the root's data-state.
+    const serverOpen = this.readServerOpen(el);
+    this.reapplyState();
+
+    if (serverOpen !== this.serverOpen) {
+      this.serverOpen = serverOpen;
+      if (serverOpen !== (this.state === "open")) {
+        this.transition(serverOpen ? "open" : "close");
+      }
+    }
+
+    return true;
+  }
+
+  // The title and description get client ids for aria-labelledby/-describedby;
+  // drop them so the patch keeps those elements (see skipReinitialize).
+  beforeUpdate() {
+    this.clearGeneratedIds();
   }
 
   afterMount() {
@@ -143,7 +188,34 @@ class DialogComponent extends Component {
 
   // State machine handlers
   onClosedEnter() {
-    // Content hides after its exit animation completes.
+    // Content hides after its exit animation completes; the scroll lock is
+    // released then too (see updatePartsVisibility).
+  }
+
+  /**
+   * Runs once the parts reach a state's visibility: straight away, or after
+   * the exit animation. Like Radix, the page stays locked until the closing
+   * dialog is gone, so the scrollbar does not come back mid-animation.
+   */
+  updatePartsVisibility() {
+    super.updatePartsVisibility();
+    if (this.state === "closed") this.releaseScrollLock();
+  }
+
+  /**
+   * Lock page scrolling while open, as Radix Dialog does. Idempotent, so a
+   * re-activation (a patch, a reopen mid-exit-animation) never stacks a
+   * second lock. A non-modal dialog (`modal: false` in the options) does
+   * not lock.
+   */
+  acquireScrollLock() {
+    if (this.releaseScroll || this.options.modal === false) return;
+    this.releaseScroll = lockScroll();
+  }
+
+  releaseScrollLock() {
+    this.releaseScroll?.();
+    this.releaseScroll = null;
   }
 
   onClosedExit() {
@@ -166,6 +238,8 @@ class DialogComponent extends Component {
   }
 
   activateOpenState() {
+    this.acquireScrollLock();
+
     // Initialize focus trap if not already created
     this.el.focus();
     if (!this.focusTrap) {
@@ -187,6 +261,9 @@ class DialogComponent extends Component {
     // Clean up focus trap
     this.focusTrap?.destroy();
     this.focusTrap = null;
+    // Destroyed while open (or mid-exit-animation): a rebuild that is still
+    // open locks again from afterMount().
+    this.releaseScrollLock();
   }
 }
 

@@ -4,8 +4,11 @@
 //
 import SaladUI from "salad_ui";
 import "salad_ui/components/dialog";
+import "salad_ui/components/drawer";
 import "salad_ui/components/select";
+import "salad_ui/components/combobox";
 import "salad_ui/components/tabs";
+import "salad_ui/components/carousel";
 import "salad_ui/components/radio_group";
 import "salad_ui/components/popover";
 import "salad_ui/components/hover-card";
@@ -13,11 +16,25 @@ import "salad_ui/components/collapsible";
 import "salad_ui/components/tooltip";
 import "salad_ui/components/accordion";
 import "salad_ui/components/slider";
+import "salad_ui/components/resizable";
+import "salad_ui/components/input_otp";
+import "salad_ui/components/checkbox";
 import "salad_ui/components/switch";
 import "salad_ui/components/dropdown_menu";
+import "salad_ui/components/context_menu";
+import "salad_ui/components/menubar";
+import "salad_ui/components/navigation_menu";
 import "salad_ui/components/chart";
 import "salad_ui/components/toast";
 import "salad_ui/components/toast-flash";
+import "salad_ui/components/input_group";
+import "salad_ui/components/code_block";
+import "salad_ui/components/calendar";
+import "salad_ui/components/questionnaire";
+import "salad_ui/components/message_scroller";
+import "salad_ui/components/toggle";
+import "salad_ui/components/toggle_group";
+import "salad_ui/components/sidebar";
 
 // import * as Params from "./params";
 // import * as Uploaders from "./uploaders";
@@ -52,6 +69,77 @@ import "salad_ui/components/toast-flash";
 //     }
 //   };
 // })();
+
+// LTR/RTL switch: sets `dir` on every story sandbox so each component can be
+// checked right-to-left. The choice is kept in localStorage (iframe stories
+// read it too) and a toggle reloads the page, so components mount under the
+// new direction rather than being flipped mid-life.
+(function () {
+  const KEY = "salad-storybook-dir";
+  const SANDBOX = ".salad-storybook-web";
+  const TOGGLE_ID = "salad-storybook-dir-toggle";
+
+  let dir = "ltr";
+  try {
+    dir = localStorage.getItem(KEY) === "rtl" ? "rtl" : "ltr";
+  } catch {
+    // Storage blocked: stay LTR.
+  }
+
+  function applyDir() {
+    document.querySelectorAll(SANDBOX).forEach((el) => {
+      if (el.getAttribute("dir") !== dir) el.setAttribute("dir", dir);
+    });
+  }
+
+  function mountToggle() {
+    if (window.self !== window.top || document.getElementById(TOGGLE_ID)) {
+      return;
+    }
+    const button = document.createElement("button");
+    button.id = TOGGLE_ID;
+    button.type = "button";
+    button.textContent = dir === "rtl" ? "RTL" : "LTR";
+    button.title = "Switch story direction (LTR / RTL)";
+    button.setAttribute("aria-pressed", String(dir === "rtl"));
+    button.style.cssText =
+      "position:fixed;bottom:12px;left:12px;z-index:100000;padding:4px 10px;" +
+      "border-radius:6px;border:1px solid #d4d4d8;background:#fff;color:#18181b;" +
+      "font:600 12px/1.5 ui-sans-serif,system-ui,sans-serif;cursor:pointer;";
+    button.addEventListener("click", () => {
+      try {
+        localStorage.setItem(KEY, dir === "rtl" ? "ltr" : "rtl");
+      } catch {
+        return;
+      }
+      window.location.reload();
+    });
+    document.body.appendChild(button);
+  }
+
+  // LiveView patches can drop the attribute from a re-rendered sandbox.
+  new MutationObserver(applyDir).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["dir"],
+  });
+
+  const start = () => {
+    applyDir();
+    mountToggle();
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+})();
+
+// Used by the data table example's "Copy payment ID" action.
+window.addEventListener("storybook:clipboard", ({ detail }) => {
+  navigator.clipboard?.writeText(detail.text);
+});
 
 window.addEventListener("phx:js-exec", ({ detail }) => {
   document.querySelectorAll(detail.to).forEach((el) => {

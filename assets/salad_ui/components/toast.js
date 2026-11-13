@@ -16,18 +16,38 @@ const SWIPE_THRESHOLD_PX = 45;
 const SWIPE_VELOCITY_THRESHOLD = 0.11; // px/ms, matches Sonner's flick-to-dismiss
 const SWIPE_EXIT_DISTANCE = "150%";
 
-const VARIANT_ICON_NAMES = {
-  success: "hero-check-circle",
-  error: "hero-x-circle",
-  warning: "hero-exclamation-triangle",
-  info: "hero-information-circle",
+// shadcn's Toaster icon set (lucide CircleCheck / Info / TriangleAlert /
+// OctagonX / Loader2), inlined as SVG so the library carries no icon-font or
+// sprite dependency. Each renders at size-4, like shadcn's `className="size-4"`.
+const LUCIDE_PATHS = {
+  success:
+    '<circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path>',
+  info: '<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>',
+  warning:
+    '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>' +
+    '<path d="M12 9v4"></path><path d="M12 17h.01"></path>',
+  error:
+    '<path d="m15 9-6 6"></path>' +
+    '<path d="M2.586 16.726A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2h6.624a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586z"></path>' +
+    '<path d="m9 9 6 6"></path>',
+  loading: '<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>',
 };
 
-const NEUTRAL_CARD_CLASSES = "border-border bg-background text-foreground";
+const LUCIDE_ICON_NAMES = {
+  success: "circle-check",
+  info: "info",
+  warning: "triangle-alert",
+  error: "octagon-x",
+  loading: "loader-circle",
+};
+
+// Sonner's neutral card as shadcn themes it: --normal-bg: var(--popover),
+// --normal-text: var(--popover-foreground), --normal-border: var(--border).
+const NEUTRAL_CARD_CLASSES = "border-border bg-popover text-popover-foreground";
 
 const CARD_BASE_CLASSES = [
-  "group relative flex w-[var(--toast-width)] items-center gap-3 rounded-lg border p-4 text-sm shadow-lg",
-  "[&_svg]:size-5 [&_svg]:shrink-0",
+  "group relative flex w-[var(--toast-width)] items-center gap-3 rounded-(--radius) border p-4 text-sm shadow-lg",
+  "[&_svg]:shrink-0",
   "[transition:translate_300ms_ease-out,scale_300ms_ease-out,transform_300ms_ease-out,opacity_300ms_ease-out,height_300ms_ease-out,background-color_300ms_ease-out,border-color_300ms_ease-out,color_300ms_ease-out,box-shadow_200ms_ease-out]",
   "data-[swiping=true]:transition-none",
   "relative",
@@ -106,11 +126,26 @@ class Timer {
   }
 }
 
-function resolveDuration(params) {
+// A loading toast never times out (Sonner skips its timer while
+// `type === "loading"`, whatever `duration` says); it stays up until an
+// update() resolves it to another variant or it is dismissed explicitly.
+function resolveDuration(params, variant) {
+  if (variant === "loading") return Infinity;
   if (params.duration === "infinity" || params.duration === Infinity)
     return Infinity;
   if (typeof params.duration === "number") return params.duration;
   return DEFAULT_DURATION;
+}
+
+function lucideIcon(variant) {
+  const spin = variant === "loading" ? " animate-spin" : "";
+  return (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true" class="lucide lucide-${LUCIDE_ICON_NAMES[variant]} size-4${spin}">` +
+    LUCIDE_PATHS[variant] +
+    "</svg>"
+  );
 }
 
 function resolveImportant(params, variant) {
@@ -190,6 +225,10 @@ class ToastComponent extends Component {
     this.templates = new Map(); // name -> <template>
     this.viewports = new Map(); // position -> viewport element
     this._viewportListeners = new Map(); // viewport -> { expand, collapse }
+    // Viewports currently hovered/focused. While any is, every timer stays
+    // paused — including one armed by an add/update mid-hover (e.g. a
+    // loading toast resolving under the pointer), as in Sonner.
+    this._interacting = new Set();
 
     this.getAllParts("toast-template").forEach((tpl) => {
       if (tpl.dataset.name) this.templates.set(tpl.dataset.name, tpl);
@@ -210,8 +249,12 @@ class ToastComponent extends Component {
 
     this.el.__toastComponent = this;
 
+    // Tracked from visibilitychange (not read off document.hidden directly)
+    // so a toaster mounted in a tab that never fires the event keeps running.
+    this._hidden = false;
     this.onVisibilityChange = () => {
-      if (document.hidden) {
+      this._hidden = document.hidden;
+      if (this.timersPaused()) {
         this.forEachTimer((timer) => timer.pause());
       } else {
         this.forEachTimer((timer) => timer.resume());
@@ -274,6 +317,7 @@ class ToastComponent extends Component {
       }
     });
     this._viewportListeners.clear();
+    this._interacting.clear();
 
     if (this.el) this.el.__toastComponent = null;
   }
@@ -295,6 +339,19 @@ class ToastComponent extends Component {
 
   forEachTimer(fn) {
     this.stack.forEach((record) => record.timer && fn(record.timer));
+  }
+
+  timersPaused() {
+    return this._hidden || this._interacting.size > 0;
+  }
+
+  // Arms a dismiss timer for `id` (null for a sticky toast), born paused
+  // when the stack is hovered/focused or the tab is hidden.
+  armTimer(id, duration) {
+    if (duration === Infinity) return null;
+    const timer = new Timer(() => this.dismissToast(id, "timeout"), duration);
+    if (this.timersPaused()) timer.pause();
+    return timer;
   }
 
   generateId() {
@@ -343,15 +400,19 @@ class ToastComponent extends Component {
   }
 
   expandViewport(viewport) {
+    this._interacting.add(viewport);
     viewport.dataset.expanded = "true";
     this.forEachTimer((timer) => timer.pause());
     this.recomputeStackPositions(viewport);
   }
 
   collapseViewport(viewport) {
+    this._interacting.delete(viewport);
+    if (!this.timersPaused()) this.forEachTimer((timer) => timer.resume());
+    // An always-expanded toaster still resumes its timers on leave; it just
+    // never collapses.
     if (this.options.expand) return;
     viewport.dataset.expanded = "false";
-    this.forEachTimer((timer) => timer.resume());
     this.recomputeStackPositions(viewport);
   }
 
@@ -367,7 +428,7 @@ class ToastComponent extends Component {
     const variant = params.variant || "default";
     const position = params.position || this.options.position || "bottom-right";
     const viewport = this.getOrCreateViewport(position);
-    const duration = resolveDuration(params);
+    const duration = resolveDuration(params, variant);
 
     const card = this.buildCard(id, params, variant, position);
     card.dataset.state = "entering";
@@ -394,10 +455,7 @@ class ToastComponent extends Component {
       });
     });
 
-    const timer =
-      duration === Infinity
-        ? null
-        : new Timer(() => this.dismissToast(id, "timeout"), duration);
+    const timer = this.armTimer(id, duration);
 
     this.stack.set(id, {
       id,
@@ -440,11 +498,7 @@ class ToastComponent extends Component {
     record.variant = variant;
     record.dismissible = merged.dismissible !== false;
 
-    const duration = resolveDuration(merged);
-    record.timer =
-      duration === Infinity
-        ? null
-        : new Timer(() => this.dismissToast(id, "timeout"), duration);
+    record.timer = this.armTimer(id, resolveDuration(merged, variant));
 
     this.recomputeStackPositions(this.viewports.get(record.position));
   }
@@ -479,6 +533,8 @@ class ToastComponent extends Component {
       done = true;
       el.removeEventListener("transitionend", finish);
       el.remove();
+      // The exit fallback can fire after the toaster was destroyed.
+      if (this.destroyed) return;
       this.pushEvent("dismiss", { id, reason });
       this.recomputeStackPositions(this.viewports.get(position));
     };
@@ -650,21 +706,34 @@ class ToastComponent extends Component {
     }
   }
 
-  // Icon has no color class of its own — hero-* icons are `background-color:
-  // currentColor` (mask-based), so they pick up whatever color the card
+  // Icon has no color class of its own — the built-in lucide SVGs stroke
+  // with `currentColor` and hero-* overrides are `background-color:
+  // currentColor` (mask-based), so either picks up whatever color the card
   // resolved to (see populateCard's colorClass) by inheritance, same as the
   // title text does.
+  //
+  // `params.icon` / the toaster's `icons` option replace the built-in icon
+  // with an icon class name (e.g. "hero-sparkles"); `icon: false` drops it.
   buildIcon(params, variant) {
     if (params.icon === false) return null;
 
-    const override = this.options.icons?.[variant];
-    const iconName = params.icon || override || VARIANT_ICON_NAMES[variant];
-    if (!iconName) return null;
+    const override = params.icon || this.options.icons?.[variant];
+    if (!override && !LUCIDE_PATHS[variant]) return null;
 
-    const span = document.createElement("span");
-    span.className = [iconName, "size-5 shrink-0 self-center"].join(" ");
+    const wrapper = document.createElement("span");
+    wrapper.dataset.part = "icon";
+    wrapper.className =
+      "flex size-4 shrink-0 items-center justify-center self-center";
 
-    return span;
+    if (override) {
+      const span = document.createElement("span");
+      span.className = [override, "size-4 shrink-0"].join(" ");
+      wrapper.appendChild(span);
+    } else {
+      wrapper.innerHTML = lucideIcon(variant);
+    }
+
+    return wrapper;
   }
 
   buildContent(params) {
@@ -796,7 +865,13 @@ class ToastComponent extends Component {
 
     const onPointerDown = (event) => {
       const record = this.stack.get(id);
-      if (!record || record.dismissible === false) return;
+      // Like Sonner, a loading toast can't be swiped away mid-flight.
+      if (
+        !record ||
+        record.dismissible === false ||
+        record.variant === "loading"
+      )
+        return;
       if (
         event.target.closest(
           '[data-part="action"], [data-part="cancel"], [data-part="close-trigger"]',
@@ -941,6 +1016,7 @@ toast.success = (message, opts) => dispatchToast("success", message, opts);
 toast.error = (message, opts) => dispatchToast("error", message, opts);
 toast.warning = (message, opts) => dispatchToast("warning", message, opts);
 toast.info = (message, opts) => dispatchToast("info", message, opts);
+toast.loading = (message, opts) => dispatchToast("loading", message, opts);
 toast.message = (message, opts = {}) =>
   dispatchToast(opts.variant || "default", message, opts);
 
@@ -950,6 +1026,55 @@ toast.dismiss = (id) => {
 
 toast.update = (id, opts = {}) => {
   getToaster()?.handleCommand("update", { ...opts, id });
+};
+
+/**
+ * Sonner's `toast.promise`: shows a loading toast (if `loading` is given),
+ * then morphs that same card into a success or error toast when the promise
+ * settles. `success`/`error` are strings or functions of the resolved value /
+ * rejection reason. A settled state with no matching message dismisses the
+ * card, as in Sonner. Returns the toast id (or null with no toaster mounted).
+ */
+toast.promise = (promise, data = {}) => {
+  const toaster = getToaster();
+  if (!toaster) {
+    console.error(
+      "SaladUI: toast.promise() called but no <.toaster> is mounted",
+    );
+    return null;
+  }
+
+  const { loading, success, error, ...opts } = data;
+  const id = opts.id || toaster.generateId();
+
+  if (loading !== undefined) {
+    toaster.handleCommand("add", {
+      ...opts,
+      id,
+      variant: "loading",
+      title: loading,
+    });
+  }
+
+  const settle = (variant, message, arg) => {
+    if (message === undefined) {
+      toaster.handleCommand("dismiss", { id });
+      return;
+    }
+    const title = typeof message === "function" ? message(arg) : message;
+    toaster.handleCommand("update", { ...opts, id, variant, title });
+  };
+
+  // Wrapped so a promise factory that throws synchronously rejects (and
+  // settles the card as an error) instead of escaping toast.promise().
+  new Promise((resolve) =>
+    resolve(typeof promise === "function" ? promise() : promise),
+  ).then(
+    (value) => settle("success", success, value),
+    (reason) => settle("error", error, reason),
+  );
+
+  return id;
 };
 
 export default ToastComponent;

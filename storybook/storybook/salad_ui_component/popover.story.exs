@@ -8,7 +8,15 @@ defmodule Storybook.SaladUIComponents.Popover do
 
   def imports do
     [
-      {Popover, [popover_trigger: 1, popover_content: 1]},
+      {Popover,
+       [
+         popover_trigger: 1,
+         popover_content: 1,
+         popover_anchor: 1,
+         popover_header: 1,
+         popover_title: 1,
+         popover_description: 1
+       ]},
       {SaladUI.Button, [button: 1]},
       {SaladUI.Card, [card: 1, card_content: 1, card_description: 1, card_header: 1, card_title: 1]},
       {SaladUI.Input, [input: 1]},
@@ -65,6 +73,71 @@ defmodule Storybook.SaladUIComponents.Popover do
               </div>
               </.card_content>
             </.card>
+          </.popover_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :basic,
+        description: "A simple popover with a header, title, and description.",
+        attributes: %{id: "popover-basic"},
+        slots: [
+          """
+          <.popover_trigger as={&button/1} variant="outline">Open Popover</.popover_trigger>
+          <.popover_content align="start">
+            <.popover_header>
+              <.popover_title>Dimensions</.popover_title>
+              <.popover_description>
+                Set the dimensions for the layer.
+              </.popover_description>
+            </.popover_header>
+          </.popover_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :with_form,
+        description: "A popover with form fields inside.",
+        attributes: %{id: "popover-form"},
+        slots: [
+          """
+          <.popover_trigger as={&button/1} variant="outline">Open Popover</.popover_trigger>
+          <.popover_content class="w-64" align="start">
+            <.popover_header>
+              <.popover_title>Dimensions</.popover_title>
+              <.popover_description>
+                Set the dimensions for the layer.
+              </.popover_description>
+            </.popover_header>
+            <div class="mt-4 flex flex-col gap-4">
+              <div class="flex items-center gap-3">
+                <.label for="popover-form-width" class="w-1/2">Width</.label>
+                <.input id="popover-form-width" value="100%" />
+              </div>
+              <div class="flex items-center gap-3">
+                <.label for="popover-form-height" class="w-1/2">Height</.label>
+                <.input id="popover-form-height" value="25px" />
+              </div>
+            </div>
+          </.popover_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :anchor,
+        description: "popover_anchor positions the content against another element; the trigger still toggles it.",
+        attributes: %{id: "popover-anchor", class: "flex flex-col items-start gap-3"},
+        slots: [
+          """
+          <.popover_anchor class="w-72 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            The content is positioned against this box.
+          </.popover_anchor>
+          <.popover_trigger as={&button/1} variant="outline" size="sm">Open</.popover_trigger>
+          <.popover_content side="bottom" align="start">
+            <.popover_header>
+              <.popover_title>Anchored</.popover_title>
+              <.popover_description>Opened by the button, placed by the anchor.</.popover_description>
+            </.popover_header>
           </.popover_content>
           """
         ]

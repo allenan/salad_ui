@@ -11,6 +11,43 @@ defmodule SaladUI.Dialog do
 
   * `"open"` - Opens the dialog.
   * `"close"` - Closes the dialog.
+
+  ## Parts
+
+  `dialog/1`, `dialog_trigger/1`, `dialog_content/1`, `dialog_header/1`,
+  `dialog_title/1`, `dialog_description/1`, `dialog_footer/1`, `dialog_close/1`.
+
+  `dialog_content/1` renders a close button in the top-right corner; pass
+  `show_close_button={false}` to hide it. `dialog_close/1` closes the dialog
+  from any element you place inside it:
+
+      <.dialog_footer>
+        <.dialog_close>
+          <.button variant="outline">Cancel</.button>
+        </.dialog_close>
+        <.button type="submit">Save</.button>
+      </.dialog_footer>
+
+  ## Re-renders
+
+  A LiveView re-render (a `phx-change` form inside the dialog validating, a
+  flash anywhere on the page) keeps a dialog the user opened open, with focus
+  where it was and without firing `on-open` again. Changing the rendered
+  `open` value opens or closes it; changing other options rebuilds it from the
+  new markup.
+
+  ## Scroll lock
+
+  Like Radix Dialog, an open dialog locks page scrolling: `<html>` and
+  `<body>` get `overflow: hidden`, and `<body>` is padded by the scrollbar's
+  width so the layout does not shift (nothing is padded when the page uses
+  `scrollbar-gutter: stable`). The page's own inline styles come back when the
+  dialog has finished closing. Locks are counted, so a dialog opened from
+  another dialog, sheet or drawer keeps the page locked until the last one
+  closes. While locked, `<body>` carries `data-scroll-locked` and the
+  `--removed-body-scroll-bar-size` custom property (the padding added), which
+  fixed-position elements can use to avoid shifting:
+  `body[data-scroll-locked] .my-header { padding-right: var(--removed-body-scroll-bar-size) }`.
   """
   use SaladUI, :component
 
@@ -91,6 +128,7 @@ defmodule SaladUI.Dialog do
 
     ~H"""
     <div
+      data-slot="dialog"
       id={@id}
       class="relative z-50 group/dialog"
       data-component="dialog"
@@ -112,28 +150,42 @@ defmodule SaladUI.Dialog do
 
   def dialog_trigger(assigns) do
     ~H"""
-    <.dynamic data-part="trigger" data-action="open" tag={@as} class={classes(["", @class])} {@rest}>
+    <.dynamic
+      data-slot="dialog-trigger"
+      data-part="trigger"
+      data-action="open"
+      tag={@as}
+      class={classes(["", @class])}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </.dynamic>
     """
   end
 
   attr :class, :string, default: nil
+
+  attr :show_close_button, :boolean,
+    default: true,
+    doc: "render the close button in the top-right corner"
+
   slot :inner_block, required: true
 
   def dialog_content(assigns) do
     ~H"""
-    <div data-part="content" tabindex="0" hidden class="z-50">
+    <div data-slot="dialog-portal" data-part="content" tabindex="0" hidden class="z-50">
       <div
+        data-slot="dialog-overlay"
         data-part="overlay"
-        class="fixed inset-0 bg-black/80  data-[state=open]/dialog:animate-in data-[state=closed]/dialog:animate-out data-[state=closed]/dialog:fade-out-0 data-[state=open]/dialog:fade-in-0"
+        class="fixed inset-0 bg-black/50 data-[state=open]/dialog:animate-in data-[state=closed]/dialog:animate-out data-[state=closed]/dialog:fade-out-0 data-[state=open]/dialog:fade-in-0"
       />
 
       <div
+        data-slot="dialog-content"
         data-part="content-panel"
         class={
           classes([
-            "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
+            "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
             @class
           ])
         }
@@ -141,10 +193,12 @@ defmodule SaladUI.Dialog do
         {render_slot(@inner_block)}
 
         <button
+          :if={@show_close_button}
+          data-slot="dialog-close"
           type="button"
           data-part="close-trigger"
           data-action="close"
-          class="absolute right-4 top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-ring/50 focus:ring-[3px] disabled:pointer-events-none data-[state=open]/dialog:bg-accent data-[state=open]/dialog:text-muted-foreground"
+          class="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -156,7 +210,7 @@ defmodule SaladUI.Dialog do
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="lucide lucide-x h-4 w-4"
+            class="lucide lucide-x size-4"
           >
             <path d="M18 6 6 18"></path>
             <path d="m6 6 12 12"></path>
@@ -173,7 +227,10 @@ defmodule SaladUI.Dialog do
 
   def dialog_header(assigns) do
     ~H"""
-    <div class={classes(["flex flex-col space-y-1.5 text-center sm:text-left", @class])}>
+    <div
+      data-slot="dialog-header"
+      class={classes(["flex flex-col gap-2 text-center sm:text-left", @class])}
+    >
       {render_slot(@inner_block)}
     </div>
     """
@@ -185,8 +242,9 @@ defmodule SaladUI.Dialog do
   def dialog_title(assigns) do
     ~H"""
     <h3
+      data-slot="dialog-title"
       data-part="title"
-      class={classes(["text-lg font-semibold leading-none tracking-tight", @class])}
+      class={classes(["text-lg leading-none font-semibold", @class])}
     >
       {render_slot(@inner_block)}
     </h3>
@@ -198,20 +256,80 @@ defmodule SaladUI.Dialog do
 
   def dialog_description(assigns) do
     ~H"""
-    <p data-part="description" class={classes(["text-sm text-muted-foreground", @class])}>
+    <p
+      data-slot="dialog-description"
+      data-part="description"
+      class={classes(["text-sm text-muted-foreground", @class])}
+    >
       {render_slot(@inner_block)}
     </p>
     """
   end
 
   attr :class, :string, default: nil
-  slot :inner_block, required: true
+
+  attr :show_close_button, :boolean,
+    default: false,
+    doc: "append an outline \"Close\" button that closes the dialog"
+
+  slot :inner_block
 
   def dialog_footer(assigns) do
+    # The footer may hold only the built-in Close button: `<.dialog_footer show_close_button />`
+    assigns = assign_new(assigns, :inner_block, fn -> [] end)
+
     ~H"""
-    <div class={classes(["flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", @class])}>
+    <div
+      data-slot="dialog-footer"
+      class={classes(["flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", @class])}
+    >
       {render_slot(@inner_block)}
+      <button
+        :if={@show_close_button}
+        type="button"
+        data-slot="dialog-close"
+        data-part="close"
+        data-action="close"
+        class={button_variant(%{variant: "outline"})}
+      >
+        Close
+      </button>
     </div>
+    """
+  end
+
+  @doc """
+  Closes the dialog when clicked. Wrap any element (usually a `button/1`) in it,
+  the SaladUI equivalent of shadcn's `<DialogClose asChild>`.
+
+  Unlike the built-in top-right close button it takes no extra ARIA label, so
+  the wrapped element's own text is announced.
+
+  ## Examples
+
+      <.dialog_close>
+        <.button type="button">Close</.button>
+      </.dialog_close>
+
+      <.dialog_close as="button" type="button" class="text-sm underline">Dismiss</.dialog_close>
+  """
+  attr :class, :string, default: nil
+  attr :as, :any, default: "div", doc: "the tag (or function component) to render"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def dialog_close(assigns) do
+    ~H"""
+    <.dynamic
+      data-slot="dialog-close"
+      data-part="close"
+      data-action="close"
+      tag={@as}
+      class={@class}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.dynamic>
     """
   end
 

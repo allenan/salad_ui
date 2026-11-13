@@ -17,9 +17,61 @@ defmodule SaladUI.CheckboxTest do
       assert html =~ ~s(<input type="hidden" name="remember_me" value="false">)
 
       for css_class <-
-            ~w(peer h-4 w-4 shrink-0 rounded-xs border border-primary shadow-sm focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 checked:bg-primary checked:text-primary-foreground) do
+            ~w(peer size-4 shrink-0 rounded-[4px] border border-input shadow-xs outline-none focus:ring-0 focus:ring-offset-0 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 checked:border-primary checked:bg-primary checked:text-primary-foreground) do
         assert html =~ css_class
       end
+    end
+  end
+
+  describe "indeterminate" do
+    test "a boolean attaches the checkbox hook and renders data-indeterminate" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="select-all" indeterminate={true} aria-label="Select all" />
+        """)
+
+      assert html =~ ~s(phx-hook="SaladUI")
+      assert html =~ ~s(data-component="checkbox")
+      assert html =~ ~s(data-part="root")
+      assert html =~ ~s(data-indeterminate="true")
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="select-all" value={true} indeterminate={false} />
+        """)
+
+      assert html =~ ~s(data-indeterminate="false")
+      assert html =~ "checked"
+    end
+
+    test "nil (the default) renders a plain checkbox without the hook" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="terms" />
+        """)
+
+      refute html =~ "phx-hook"
+      refute html =~ "data-component"
+      refute html =~ "data-indeterminate"
+    end
+
+    test "disabled is passed to the input, as for an empty select-all" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.checkbox id="select-all" indeterminate={false} disabled={true} />
+        <.checkbox id="other" disabled={false} />
+        """)
+
+      [select_all, other] = ~r/<input type="checkbox"[^>]*>/ |> Regex.scan(html) |> List.flatten()
+      assert select_all =~ ~s(id="select-all") and select_all =~ ~r/\sdisabled[\s>]/
+      assert other =~ ~s(id="other")
+      refute other =~ ~r/\sdisabled[\s>]/
     end
   end
 end

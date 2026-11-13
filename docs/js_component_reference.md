@@ -354,7 +354,8 @@ Dropdown select with search and keyboard navigation.
 
 ### Slider (`components/slider.js`)
 
-Range input slider.
+Single-value, range, or multi-thumb slider. One thumb (and one hidden input)
+per value; every thumb is focusable and keyboard-driven on its own.
 
 **States:**
 - `idle` - Not being dragged
@@ -363,30 +364,40 @@ Range input slider.
 **Options:**
 - `min` - Minimum value (default: 0)
 - `max` - Maximum value (default: 100)
-- `step` - Step increment (default: 1)
+- `step` - Step increment, may be fractional (default: 1)
+- `minStepsBetweenThumbs` - Minimum steps between neighbouring thumbs (default: 0)
 - `orientation` - `horizontal` or `vertical`
-- `multiple` - Multiple thumbs
+- `dir` - `ltr` or `rtl`
+- `inverted` - Reverse the visual direction
+- `disabled`
+
+Values are read from the root's `data-value` (comma-separated). A LiveView
+patch that renders the same `data-value` as the previous render keeps the
+current instance and the user's values (and any drag in progress); a new
+`data-value`, new options, or a different thumb count rebuilds the component.
 
 **Events:**
-- `value-changed` - Value changed
-- `drag-start` - Drag started
-- `drag-end` - Drag ended
+- `value-changed` - On drag end or key press. Payload: `value` (number for one
+  thumb, list otherwise) and `values` (list)
+
+**Commands:**
+- `setValue` - `{value: number | number[]}`
 
 **Parts:**
 - `root` - Container
 - `track` - Slider track
 - `range` - Filled range
-- `thumb` - Draggable handle
+- `thumb` - Draggable handle (one per value)
 
-**Keyboard:**
-- `←`/`↓` - Decrease value
+**Keyboard (on a thumb):**
+- `←`/`↓` - Decrease value (`←`/`→` flip for `rtl` / `inverted`)
 - `→`/`↑` - Increase value
+- `Shift` + arrow, `PageUp`/`PageDown` - Change by 10 steps
 - `Home` - Minimum value
 - `End` - Maximum value
-- `PageUp`/`PageDown` - Large increment
 
 **ARIA:**
-- `role="slider"` on thumb
+- `role="slider"` on each thumb
 - `aria-valuemin`, `aria-valuemax`, `aria-valuenow`
 - `aria-orientation`
 

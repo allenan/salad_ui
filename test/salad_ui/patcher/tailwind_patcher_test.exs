@@ -131,6 +131,77 @@ defmodule SaladUI.Patcher.TailwindPatcherTest do
     end
   end
 
+  describe "theme tokens" do
+    # `--x: value;` declarations inside an `@theme inline { ... }` block.
+    defp theme_decls(css) do
+      [_, block] = Regex.run(~r/@theme inline \{(.*?)\n\s*\}/s, css)
+
+      ~r/(--[\w-]+):\s*([^;]+);/
+      |> Regex.scan(block)
+      |> Map.new(fn [_, name, value] -> {name, value} end)
+    end
+
+    defp patched_theme do
+      File.write!(@tailwind_css, "")
+      TailwindPatcher.patch(@tailwind_css)
+      theme_decls(File.read!(@tailwind_css))
+    end
+
+    test "installer theme block matches assets/css/tailwind.theme.css" do
+      assert patched_theme() == theme_decls(File.read!("assets/css/tailwind.theme.css"))
+    end
+
+    test "maps shadcn's sidebar, chart and radius tokens" do
+      theme = patched_theme()
+
+      assert theme["--color-sidebar"] == "var(--sidebar, var(--sidebar-background))"
+
+      for i <- 1..5 do
+        assert theme["--color-chart-#{i}"] == "var(--chart-#{i})"
+      end
+
+      for size <- ~w(sm md lg xl 2xl 3xl 4xl) do
+        assert Map.has_key?(theme, "--radius-#{size}")
+      end
+    end
+
+    test "every color scheme defines each token the theme reads" do
+      read =
+        patched_theme()
+        |> Map.values()
+        |> Enum.flat_map(&Regex.scan(~r/var\((--[\w-]+)/, &1, capture: :all_but_first))
+        |> List.flatten()
+        |> Enum.uniq()
+        # back-compat fallback name; schemes define `--sidebar`
+        |> List.delete("--sidebar-background")
+
+      for path <- Path.wildcard("priv/static/assets/colors/*.css") do
+        css = File.read!(path)
+        refute css =~ "--sidebar-background:", "#{path} should use shadcn's --sidebar name"
+
+        for token <- read do
+          assert css =~ "#{token}:", "#{path} is missing #{token}"
+        end
+      end
+    end
+
+    test "patch/1 upgrades a theme block that reads only --sidebar-background" do
+      File.write!(@tailwind_css, """
+      @import "tailwindcss";
+      @theme inline {
+        --color-background: var(--background);
+        --color-sidebar: var(--sidebar-background);
+      }
+      """)
+
+      TailwindPatcher.patch(@tailwind_css)
+      patched = File.read!(@tailwind_css)
+
+      assert patched =~ "--color-sidebar: var(--sidebar, var(--sidebar-background));"
+      assert count(patched, "--color-sidebar:") == 1
+    end
+  end
+
   describe "patch_color_scheme/2" do
     @scheme_css File.read!("priv/static/assets/colors/gray.css")
 

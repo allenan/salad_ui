@@ -103,6 +103,23 @@ defmodule MyAppWeb.PageLive do
 end
 ```
 
+### Method 3: Add Only the Components You Need
+
+Like `npx shadcn add`: copy selected components plus everything they depend on
+(other components, helpers and JavaScript), and add more later.
+
+```bash
+mix salad.add button dialog dropdown-menu
+mix salad.add sidebar --prefix MyAppWeb.UI --color-scheme slate
+
+# later: the existing prefix is reused, existing files are kept
+mix salad.add data-table
+```
+
+Then `use MyAppWeb.UI` (or the default `MyAppUi`) wherever you render components.
+Run `mix salad.add` with no arguments to list the components, and pass
+`--overwrite` to replace files you already have.
+
 ## What Each Method Does
 
 ### `mix salad.setup`
@@ -120,6 +137,12 @@ end
 - ✅ No external runtime dependencies
 - ✅ Custom module prefixes
 
+### `mix salad.add <component...>`
+- ✅ Same setup and options as `mix salad.install`
+- ✅ Copies only the selected components and their dependencies
+- ✅ Imports only the JavaScript those components need
+- ✅ Safe to re-run: adds new imports, keeps files you've changed
+
 ## More configuration
 
 1. Custom error translate function
@@ -127,6 +150,32 @@ end
 ```elixir
 config :salad_ui, :error_translator_function, {MyAppWeb.CoreComponents, :translate_error}
 ```
+
+2. Typeset for rendered markdown and chat content (opt-in)
+
+SaladUI ships shadcn's [typeset](https://ui.shadcn.com/docs/typeset) stylesheet. Import it after
+Tailwind and SaladUI's CSS, then wrap rendered markdown in a `typeset` container:
+
+```css
+/* assets/css/app.css */
+@import "../../deps/salad_ui/priv/static/assets/typeset.css";
+```
+
+```heex
+<div class="typeset">{raw(@html)}</div>
+```
+
+Tune it with `--typeset-size`, `--typeset-leading` and `--typeset-flow` (for example
+`class="typeset [--typeset-flow:1em]"`). Components such as `code_block` keep their own
+styles inside it, and `not-typeset` opts a subtree out. To customise it, copy the file next to
+`app.css` instead.
+
+3. Scroll fade utilities
+
+`salad_ui.css` (copied by the installers) includes shadcn's `scroll-fade` utilities: add
+`scroll-fade` / `scroll-fade-y` to a vertical scroller, `scroll-fade-x` to a horizontal one, or
+an edge utility (`scroll-fade-t`, `-b`, `-l`, `-r`, `-s`, `-e`). Size them with
+`scroll-fade-<n>` / `scroll-fade-{t,b,s,e}-<n>` and turn them off with `scroll-fade-none`.
 
 
 ## 🛠️ Development
@@ -167,11 +216,13 @@ All v1 component are not covered by UnitTest. Currently I'm working on an import
 | Dialog         | ✅    | ✅     |
 | Drawer         | ❌    |      |
 | Dropdown Menu  | ✅    | ✅     |
-| Form           | ✅    | ✅     |
+| Field          | ❌    | ✅     |
+| Form (legacy; use Field) | ✅    | ✅     |
 | Hover Card     | ✅    | ✅      |
 | Input          | ✅    | ✅     |
 | Input OTP      | ❌    |      |
 | Label          | ✅    | ✅      |
+| Native Select  | ❌    | ✅     |
 | Pagination     | ✅    | ✅     |
 | Popover        | ✅    | ✅     |
 | Progress       | ✅    | ✅    |

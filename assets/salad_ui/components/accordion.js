@@ -1,5 +1,5 @@
 // saladui/components/accordion.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import {
   CollectionRegistry,
   RovingFocus,
@@ -19,8 +19,8 @@ class AccordionItem extends Component {
     // so aria-controls/aria-labelledby never resolve to an empty string.
     const trigger = itemElement.querySelector("[data-part='item-trigger']");
     const content = itemElement.querySelector("[data-part='item-content']");
-    if (trigger && !trigger.id) trigger.id = `${itemElement.id}-trigger`;
-    if (content && !content.id) content.id = `${itemElement.id}-content`;
+    assignId(trigger, `${itemElement.id}-trigger`);
+    assignId(content, `${itemElement.id}-content`);
 
     super(itemElement, { initialState, ignoreItems: false });
     this.parent = parentComponent;
@@ -123,6 +123,9 @@ class AccordionItem extends Component {
 
   initialize() {
     if (this.disabled) {
+      // Mirrors Radix: a disabled item's trigger is a disabled <button>, so
+      // the trigger's `disabled:` styles (dimmed, no pointer events) apply.
+      this.trigger.disabled = true;
       this.trigger.setAttribute("tabindex", "-1");
     } else {
       this.trigger.setAttribute("tabindex", "0");
@@ -232,7 +235,7 @@ class AccordionComponent extends Component {
     this.items = itemElements.map((element) => {
       // Initialize AccordionItem without hook context
       const itemValue = element.dataset.value;
-      element.id = `${this.el.id}-item-${itemValue}`;
+      assignId(element, `${this.el.id}-item-${itemValue}`);
 
       // Check if this item is initially open
       const isOpen = this.selection.getValue(true).includes(itemValue);
@@ -243,6 +246,64 @@ class AccordionComponent extends Component {
       this.selection.initializeItem(collectionItem);
       return item;
     });
+  }
+
+  /**
+   * A LiveView patch puts back the server-rendered markup: every item closed
+   * and its content `hidden`, no ids or ARIA. Rebuilding would collapse the
+   * items the user opened. Keep the open values and rebuild only the items
+   * (the server may have added or removed some), unless the options or event
+   * mappings changed; a new server `value` opens exactly those items.
+   */
+  skipReinitialize(el) {
+    if (!this.sameConfig(el, ["value"])) return false;
+
+    this.refreshParts();
+    const changed = this.adoptOptions(el, ["value"]);
+    if (changed.includes("value")) {
+      this.selection.values = this.selection.normalizeValues(
+        this.options.value,
+      );
+    }
+
+    this.destroyItems();
+    this.initializeItems();
+    this.restoreFocus();
+    return true;
+  }
+
+  // Items, triggers and contents get client ids; drop them so the patch
+  // keeps those elements (and a focused field in an item) instead of
+  // replacing them. Should the server still replace the focused item,
+  // remember which trigger had focus so skipReinitialize() can hand it on.
+  beforeUpdate() {
+    const trigger = document.activeElement?.closest?.(
+      "[data-part='item-trigger']",
+    );
+    const item = this.items.find((item) => item.trigger === trigger);
+    this.focusedValue = trigger && item ? item.value : null;
+    this.clearGeneratedIds();
+  }
+
+  restoreFocus() {
+    const value = this.focusedValue;
+    this.focusedValue = null;
+    if (value === null) return;
+
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    this.items.find((item) => item.value === value)?.trigger?.focus();
+  }
+
+  destroyItems() {
+    this.items?.forEach((item) => item.destroy());
+    this.items = [];
+    this.registry.clear();
+    this.rovingFocus.reset();
+  }
+
+  beforeDestroy() {
+    this.destroyItems();
   }
 
   toggleItem(item) {

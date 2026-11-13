@@ -114,15 +114,17 @@ jobs:
           npm ci --prefix assets
           mix assets.setup
           mix assets.build
+      # salad_ui.css utilities (scroll-fade, shimmer, ...) and typeset.css build under the pinned Tailwind.
+      - run: ../.github/scripts/css-utilities.sh
 
-  # mix salad.setup / mix salad.install against a freshly generated Phoenix app.
+  # mix salad.setup / salad.install / salad.add against a freshly generated Phoenix app.
   installer:
     name: Installer e2e (${{ matrix.mode }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        mode: [setup, install]
+        mode: [setup, install, add]
     steps:
       - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1

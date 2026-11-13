@@ -62,67 +62,57 @@ defmodule Storybook.SaladUIComponents.HoverCard do
           """
         ]
       },
-      %VariationGroup{
-        id: :side_examples,
-        description: "Hover card placement relative to its trigger.",
-        variations: [
-          %Variation{
-            id: :top,
-            attributes: %{id: "top-hover-card"},
-            slots: [
-              """
-              <.hover_card_trigger>
-                <.button variant="outline" size="sm">Top</.button>
-              </.hover_card_trigger>
-              <.hover_card_content side="top" align="center">
-                <p class="text-sm">Content appears above the trigger.</p>
-              </.hover_card_content>
-              """
-            ]
-          },
-          %Variation{
-            id: :right,
-            attributes: %{id: "right-hover-card"},
-            slots: [
-              """
-              <.hover_card_trigger>
-                <.button variant="outline" size="sm">Right</.button>
-              </.hover_card_trigger>
-              <.hover_card_content side="right" align="center">
-                <p class="text-sm">Content appears to the right of the trigger.</p>
-              </.hover_card_content>
-              """
-            ]
-          },
-          %Variation{
-            id: :bottom,
-            attributes: %{id: "bottom-hover-card"},
-            slots: [
-              """
-              <.hover_card_trigger>
-                <.button variant="outline" size="sm">Bottom</.button>
-              </.hover_card_trigger>
-              <.hover_card_content side="bottom" align="center">
-                <p class="text-sm">Content appears below the trigger.</p>
-              </.hover_card_content>
-              """
-            ]
-          },
-          %Variation{
-            id: :left,
-            attributes: %{id: "left-hover-card"},
-            slots: [
-              """
-              <.hover_card_trigger>
-                <.button variant="outline" size="sm">Left</.button>
-              </.hover_card_trigger>
-              <.hover_card_content side="left" align="center">
-                <p class="text-sm">Content appears to the left of the trigger.</p>
-              </.hover_card_content>
-              """
-            ]
-          }
-        ]
+      %Variation{
+        id: :sides,
+        description: "shadcn hover-card-sides: `side` places the content on any side of the trigger.",
+        template: """
+        <div class="flex flex-wrap justify-center gap-2">
+          <.hover_card id="hover-card-side-left" open-delay={100} close-delay={100}>
+            <.hover_card_trigger>
+              <.button variant="outline" class="capitalize">left</.button>
+            </.hover_card_trigger>
+            <.hover_card_content side="left">
+              <div class="flex flex-col gap-1">
+                <h4 class="font-medium">Hover Card</h4>
+                <p>This hover card appears on the left side of the trigger.</p>
+              </div>
+            </.hover_card_content>
+          </.hover_card>
+          <.hover_card id="hover-card-side-top" open-delay={100} close-delay={100}>
+            <.hover_card_trigger>
+              <.button variant="outline" class="capitalize">top</.button>
+            </.hover_card_trigger>
+            <.hover_card_content side="top">
+              <div class="flex flex-col gap-1">
+                <h4 class="font-medium">Hover Card</h4>
+                <p>This hover card appears on the top side of the trigger.</p>
+              </div>
+            </.hover_card_content>
+          </.hover_card>
+          <.hover_card id="hover-card-side-bottom" open-delay={100} close-delay={100}>
+            <.hover_card_trigger>
+              <.button variant="outline" class="capitalize">bottom</.button>
+            </.hover_card_trigger>
+            <.hover_card_content side="bottom">
+              <div class="flex flex-col gap-1">
+                <h4 class="font-medium">Hover Card</h4>
+                <p>This hover card appears on the bottom side of the trigger.</p>
+              </div>
+            </.hover_card_content>
+          </.hover_card>
+          <.hover_card id="hover-card-side-right" open-delay={100} close-delay={100}>
+            <.hover_card_trigger>
+              <.button variant="outline" class="capitalize">right</.button>
+            </.hover_card_trigger>
+            <.hover_card_content side="right">
+              <div class="flex flex-col gap-1">
+                <h4 class="font-medium">Hover Card</h4>
+                <p>This hover card appears on the right side of the trigger.</p>
+              </div>
+            </.hover_card_content>
+          </.hover_card>
+        </div>
+        """
       },
       %Variation{
         id: :alignment_variations,

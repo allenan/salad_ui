@@ -2,6 +2,9 @@ defmodule Mix.Tasks.Salad.Install do
   @moduledoc """
   Install SaladUI components and assets with customizable module prefix and color scheme.
 
+  Copies every component. To copy only some (plus what they depend on), use
+  `mix salad.add`.
+
   ## Usage
 
       mix salad.install
@@ -11,7 +14,7 @@ defmodule Mix.Tasks.Salad.Install do
   """
   use Igniter.Mix.Task
 
-  alias SaladUI.Patcher.TailwindPatcher
+  alias SaladUI.Mix.Tasks.LocalInstaller
 
   @impl Igniter.Mix.Task
   def igniter(igniter) do
@@ -22,108 +25,61 @@ defmodule Mix.Tasks.Salad.Install do
         aliases: [p: :prefix, c: :color_scheme, y: :yes]
       )
 
-    prefix = opts[:prefix] || get_default_prefix(igniter)
+    prefix = opts[:prefix] || LocalInstaller.default_prefix(igniter)
     color_scheme = opts[:color_scheme] || "gray"
+    source_root = LocalInstaller.source_root!()
 
     igniter
-    |> setup_base_config(color_scheme)
-    |> copy_javascript_files()
-    |> copy_component_files(prefix)
+    |> LocalInstaller.setup_base_config(color_scheme)
+    |> copy_javascript_files(source_root)
+    |> copy_component_files(source_root, prefix)
     |> patch_app_js_with_local_imports()
   end
 
-  # Setup base configuration (similar to salad.setup)
-  defp setup_base_config(igniter, color_scheme) do
-    igniter
-    |> patch_tw_merge()
-    |> patch_css_color_scheme(color_scheme)
-    |> copy_salad_ui_css()
-    |> patch_css_import_salad_ui()
-    |> patch_tailwind_config()
-    |> copy_tailwind_colors()
-    |> SaladUI.Mix.Tasks.TwAnimateInstaller.install()
-  end
-
   # Copy all JavaScript files to assets/js/ui/
-  defp copy_javascript_files(igniter) do
-    {:ok, dep_path} = find_salad_ui_dep()
-    source_dir = Path.join([dep_path, "assets/salad_ui"])
-    target_dir = "./assets/js/ui"
+  defp copy_javascript_files(igniter, source_root) do
+    source_dir = Path.join(source_root, "assets/salad_ui")
 
-    # Create target directory if it doesn't exist
-    File.mkdir_p!(target_dir)
-
-    # Get all .js files from the source directory
-    js_files = Path.wildcard(Path.join(source_dir, "**/*.js"))
-
-    Enum.reduce(js_files, igniter, fn source_file, acc_igniter ->
-      # Get relative path from source directory
+    source_dir
+    |> Path.join("**/*.js")
+    |> Path.wildcard()
+    |> Enum.reduce(igniter, fn source_file, acc_igniter ->
       relative_path = Path.relative_to(source_file, source_dir)
-      target_file = Path.join(target_dir, relative_path)
+      target_file = Path.join(LocalInstaller.js_dir(), relative_path)
 
-      # Create subdirectories if needed
-      target_file |> Path.dirname() |> File.mkdir_p!()
-
-      # Copy the file
-      Igniter.copy_template(acc_igniter, source_file, target_file, [])
+      Igniter.create_new_file(acc_igniter, target_file, File.read!(source_file))
     end)
   end
 
   # Copy all component files to lib/<app>_web/components/ui/
-  defp copy_component_files(igniter, prefix) do
-    {:ok, dep_path} = find_salad_ui_dep()
-
-    app_name = get_app_name(igniter)
-    source_dir = Path.join([dep_path, "lib/salad_ui"])
-    target_dir = "./lib/#{app_name}_web/components/ui"
-
-    # Create target directory if it doesn't exist
-    File.mkdir_p!(target_dir)
-
-    # Get all .ex files from the source directory
-    component_files =
-      Path.wildcard(Path.join(source_dir, "**/*.ex"))
+  defp copy_component_files(igniter, source_root, prefix) do
+    source_dir = Path.join(source_root, "lib/salad_ui")
+    target_dir = LocalInstaller.components_dir(igniter)
 
     igniter =
-      Enum.reduce(component_files, igniter, fn source_file, acc_igniter ->
-        filename = Path.basename(source_file)
-        target_file = Path.join(target_dir, filename)
+      source_dir
+      |> Path.join("**/*.ex")
+      |> Path.wildcard()
+      |> Enum.reduce(igniter, fn source_file, acc_igniter ->
+        target_file = Path.join(target_dir, Path.basename(source_file))
 
-        # Read source content and transform it
-        source_content = File.read!(source_file)
-        transformed_content = transform_component_content(source_content, prefix)
+        content =
+          source_file
+          |> File.read!()
+          |> LocalInstaller.transform_component_content(prefix)
 
-        # Write transformed content to target
-        Igniter.create_new_file(acc_igniter, target_file, transformed_content)
+        Igniter.create_new_file(acc_igniter, target_file, content)
       end)
 
     # copy root index file
-    ui_file = [Path.join([dep_path, "lib/salad_ui.ex"])]
-
     content =
-      ui_file
+      source_root
+      |> Path.join("lib/salad_ui.ex")
       |> File.read!()
-      |> transform_component_content(prefix)
+      |> LocalInstaller.transform_component_content(prefix)
 
     Igniter.create_new_file(igniter, Path.join(target_dir, "ui.ex"), content)
   end
-
-  # Transform component content to replace module prefix
-  defp transform_component_content(content, prefix) do
-    content
-    |> String.replace("defmodule SaladUI", "defmodule #{prefix}")
-    |> String.replace("use SaladUI, :component", "use #{prefix}, :component")
-    |> String.replace("import SaladUI.", "import #{prefix}.")
-    |> String.replace("alias SaladUI.", "alias #{prefix}.")
-    |> replace_component_calls_with_prefix(prefix)
-  end
-
-  # Replace component calls with custom prefix
-  defp replace_component_calls_with_prefix(content, prefix) when prefix != "SaladUI" do
-    String.replace(content, "SaladUI.", prefix <> ".")
-  end
-
-  defp replace_component_calls_with_prefix(content, _prefix), do: content
 
   # Patch app.js with local imports instead of external package imports
   defp patch_app_js_with_local_imports(igniter) do
@@ -132,8 +88,11 @@ defmodule Mix.Tasks.Salad.Install do
     js_import = """
     import SaladUI from "./ui/index.js";
     import "./ui/components/dialog.js";
+    import "./ui/components/drawer.js";
     import "./ui/components/select.js";
+    import "./ui/components/combobox.js";
     import "./ui/components/tabs.js";
+    import "./ui/components/carousel.js";
     import "./ui/components/radio_group.js";
     import "./ui/components/popover.js";
     import "./ui/components/hover-card.js";
@@ -141,10 +100,24 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/tooltip.js";
     import "./ui/components/accordion.js";
     import "./ui/components/slider.js";
+    import "./ui/components/resizable.js";
+    import "./ui/components/input_otp.js";
+    import "./ui/components/checkbox.js";
     import "./ui/components/switch.js";
     import "./ui/components/dropdown_menu.js";
+    import "./ui/components/context_menu.js";
+    import "./ui/components/menubar.js";
+    import "./ui/components/navigation_menu.js";
     import "./ui/components/toast.js";
     import "./ui/components/toast-flash.js";
+    import "./ui/components/input_group.js";
+    import "./ui/components/code_block.js";
+    import "./ui/components/calendar.js";
+    import "./ui/components/questionnaire.js";
+    import "./ui/components/message_scroller.js";
+    import "./ui/components/toggle.js";
+    import "./ui/components/toggle_group.js";
+    import "./ui/components/sidebar.js";
     """
 
     js_hooks = "SaladUI: SaladUI.SaladUIHook"
@@ -157,107 +130,5 @@ defmodule Mix.Tasks.Salad.Install do
     File.write!(app_js_path, js_content)
 
     igniter
-  end
-
-  # Helper functions (copied from salad.setup)
-  defp patch_tw_merge(igniter) do
-    Igniter.Project.Application.add_new_child(igniter, TwMerge.Cache)
-  end
-
-  defp patch_css_color_scheme(igniter, color_scheme) do
-    css_file = "./assets/css/app.css"
-    IO.puts("Patching #{css_file}")
-
-    scheme_css = "colors/#{color_scheme}.css" |> assets_path() |> File.read!()
-    TailwindPatcher.patch_color_scheme(css_file, scheme_css)
-
-    igniter
-  end
-
-  defp copy_salad_ui_css(igniter) do
-    source_file = assets_path("salad_ui.css")
-    target_file = "./assets/css/salad_ui.css"
-
-    Igniter.copy_template(igniter, source_file, target_file, [])
-  end
-
-  defp patch_css_import_salad_ui(igniter) do
-    css_file = "./assets/css/app.css"
-    content = File.read!(css_file)
-    import_snippet = "@import \"./salad_ui.css\";\n"
-
-    IO.puts("Patching #{css_file}")
-    IO.puts("Add:  #{import_snippet}")
-
-    if !String.contains?(content, import_snippet) do
-      import_regex = ~r/(@import.*?;\n)/
-      imports = Regex.scan(import_regex, content)
-
-      updated_content =
-        case imports do
-          [] ->
-            # No imports found, return original content
-            import_snippet <> "\n" <> content
-
-          _ ->
-            # Get the last import statement
-            last_import = imports |> List.last() |> List.first()
-
-            # Replace only the last occurrence
-            # First, split the string at the last import
-            [before_last_import, after_last_import] = String.split(content, last_import, parts: 2)
-
-            # Reconstruct the string with the inserted content after the last import
-            before_last_import <> last_import <> import_snippet <> after_last_import
-        end
-
-      File.write(css_file, updated_content)
-    end
-
-    igniter
-  end
-
-  defp copy_tailwind_colors(igniter) do
-    source_file = assets_path("tailwind.colors.json")
-    target_file = "./assets/tailwind.colors.json"
-
-    Igniter.copy_template(igniter, source_file, target_file, [])
-  end
-
-  defp patch_tailwind_config(igniter) do
-    css_path = "./assets/css/app.css"
-    TailwindPatcher.patch(css_path)
-
-    igniter
-  end
-
-  # Helper functions for paths
-  defp assets_path(directory) do
-    Path.join([:code.priv_dir(:salad_ui), "static/assets", directory])
-  end
-
-  defp find_salad_ui_dep do
-    Mix.Dep.load_and_cache()
-    |> Enum.find(&(&1.app == :salad_ui))
-    |> case do
-      %Mix.Dep{opts: opts} = dep ->
-        {:ok, opts[:path] || default_dep_path(dep)}
-
-      nil ->
-        {:error, "SaladUI not found in dependencies"}
-    end
-  end
-
-  defp default_dep_path(dep) do
-    Path.join([File.cwd!(), "deps", Atom.to_string(dep.app)])
-  end
-
-  defp get_app_name(igniter) do
-    Igniter.Project.Application.app_name(igniter)
-  end
-
-  defp get_default_prefix(igniter) do
-    app_name = get_app_name(igniter)
-    Phoenix.Naming.camelize("#{app_name}_ui")
   end
 end

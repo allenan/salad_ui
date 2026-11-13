@@ -4,14 +4,26 @@ defmodule SaladUI.Popover do
 
   ## Example:
 
-      <.popover id="profile-popover">
-        <.popover_trigger>Open Popover</.popover_trigger>
-        <.popover_content side="bottom" align="center">
-          <div class="p-4">
-            <h3 class="font-medium">Profile</h3>
-            <p class="mt-2">View and edit your profile details</p>
-          </div>
+      <.popover id="dimensions-popover">
+        <.popover_trigger as={&button/1} variant="outline">Open Popover</.popover_trigger>
+        <.popover_content align="start">
+          <.popover_header>
+            <.popover_title>Dimensions</.popover_title>
+            <.popover_description>Set the dimensions for the layer.</.popover_description>
+          </.popover_header>
         </.popover_content>
+      </.popover>
+
+  ## Anchor
+
+  By default the content is positioned against the trigger. Render a
+  `popover_anchor/1` inside the popover to position it against another
+  element instead, while the trigger still toggles it:
+
+      <.popover id="anchored-popover">
+        <.popover_anchor class="w-64 rounded-md border p-2">Positioned here</.popover_anchor>
+        <.popover_trigger>Open</.popover_trigger>
+        <.popover_content>Anchored content</.popover_content>
       </.popover>
 
   ## Component events
@@ -75,6 +87,7 @@ defmodule SaladUI.Popover do
 
     ~H"""
     <div
+      data-slot="popover"
       id={@id}
       class={classes(["relative inline-block", @class])}
       data-component="popover"
@@ -113,6 +126,7 @@ defmodule SaladUI.Popover do
     ~H"""
     <button
       :if={@as == "button"}
+      data-slot="popover-trigger"
       type={@type || "button"}
       data-part="trigger"
       data-action="toggle"
@@ -123,6 +137,7 @@ defmodule SaladUI.Popover do
     </button>
     <.dynamic
       :if={@as != "button"}
+      data-slot="popover-trigger"
       tag={@as}
       type={@type}
       data-part="trigger"
@@ -142,6 +157,7 @@ defmodule SaladUI.Popover do
 
   * `:side` - Placement of the popover relative to the trigger (top, right, bottom, left). Defaults to `"bottom"`.
   * `:align` - Alignment of the popover (start, center, end). Defaults to `"center"`.
+    `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `8`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.
@@ -168,6 +184,7 @@ defmodule SaladUI.Popover do
       hidden
     >
       <div
+        data-slot="popover-content"
         data-part="content"
         data-side={@side}
         data-align={@align}
@@ -182,6 +199,68 @@ defmodule SaladUI.Popover do
         {render_slot(@inner_block)}
       </div>
     </div>
+    """
+  end
+
+  @doc """
+  An optional element to position the content against instead of the trigger.
+
+  Wraps its inner block in a `div`; at most one anchor per popover is used.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block
+
+  def popover_anchor(assigns) do
+    ~H"""
+    <div data-slot="popover-anchor" data-part="anchor" class={classes([@class])} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  Groups a `popover_title/1` and `popover_description/1` at the top of the content.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def popover_header(assigns) do
+    ~H"""
+    <div data-slot="popover-header" class={classes(["flex flex-col gap-1 text-sm", @class])} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  The popover heading.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def popover_title(assigns) do
+    ~H"""
+    <div data-slot="popover-title" class={classes(["font-medium", @class])} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  Supporting text below the popover title.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def popover_description(assigns) do
+    ~H"""
+    <p data-slot="popover-description" class={classes(["text-muted-foreground", @class])} {@rest}>
+      {render_slot(@inner_block)}
+    </p>
     """
   end
 

@@ -29,6 +29,13 @@ defmodule SaladUI.Collapsible do
   * `"open"` - Opens the collapsible.
   * `"close"` - Closes the collapsible.
   * `"toggle"` - Toggles the collapsible.
+
+  ## Re-renders
+
+  A LiveView re-render keeps a collapsible the user opened (or closed) that
+  way, with focus where it was (a field in the content keeps it), without
+  firing `on-open`/`on-close` again. A new `open` value opens or
+  closes it; changing other options rebuilds it from the new markup.
   """
   use SaladUI, :component
 
@@ -80,6 +87,7 @@ defmodule SaladUI.Collapsible do
 
     ~H"""
     <div
+      data-slot="collapsible"
       id={@id}
       class={classes(["relative", @class])}
       data-component="collapsible"
@@ -106,6 +114,7 @@ defmodule SaladUI.Collapsible do
   def collapsible_trigger(assigns) do
     ~H"""
     <.dynamic
+      data-slot="collapsible-trigger"
       data-part="trigger"
       data-action="toggle"
       tag={@as}
@@ -129,6 +138,7 @@ defmodule SaladUI.Collapsible do
   def collapsible_content(assigns) do
     ~H"""
     <div
+      data-slot="collapsible-content"
       data-part="content"
       hidden
       class={

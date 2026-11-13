@@ -8,35 +8,23 @@ defmodule Storybook.Examples.ReactiveChart do
   alias SaladUI.LiveView
 
   def doc do
-    "An example of a chart that auto updates whenever its data changes."
+    "Charts that update in place: one re-rendered from assigns, one pushed new rows with send_command/4, and a legacy raw Chart.js canvas."
   end
 
-  @chart_options %{
-    responsive: true
-  }
+  @months ~w(January February March April May June July August September October November December)
 
-  @chart_data %{
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    datasets: [
-      %{
-        label: "Desktop",
-        data: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 90, 80],
-        backgroundColor: "rgb(0, 0, 0)"
-      },
-      %{
-        label: "Mobile",
-        data: [20, 10, 10, 80, 20, 90, 30, 30, 40, 50, 60, 70],
-        backgroundColor: "rgb(128, 128, 128)"
-      }
-    ]
+  @chart_config %{
+    desktop: %{label: "Desktop", color: "var(--chart-1)"},
+    mobile: %{label: "Mobile", color: "var(--chart-2)"}
   }
 
   @impl true
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> assign(:chart_options, @chart_options)
-      |> assign(:chart_data, @chart_data)
+      |> assign(:chart_config, @chart_config)
+      |> assign(:chart_data, random_rows())
+      |> assign(:legacy_data, legacy_data())
 
     {:ok, socket}
   end
@@ -45,41 +33,51 @@ defmodule Storybook.Examples.ReactiveChart do
   def render(assigns) do
     ~H"""
     <div class="container flex flex-col gap-y-4">
+      <.chart_container id="reactive-chart" config={@chart_config} class="min-h-[240px] w-full">
+        <.chart type="bar" data={@chart_data} index="month" tick_chars={3} />
+        <.chart_tooltip />
+        <.chart_legend />
+      </.chart_container>
+      <div class="flex gap-2">
+        <.button phx-click="update-chart">Update from assigns</.button>
+        <.button variant="outline" phx-click="push-chart">Push with send_command</.button>
+      </div>
+
       <.chart
-        id="reactive-chart"
-        chart-options={@chart_options}
-        chart-data={@chart_data}
-        chart-type="bar"
+        id="reactive-chart-legacy"
+        name="Legacy Chart.js canvas"
+        chart-type="line"
+        chart-options={%{responsive: true}}
+        chart-data={@legacy_data}
       />
-      <.button phx-click="update-chart">Update Chart</.button>
+      <.button variant="secondary" phx-click="update-legacy">Update legacy chart</.button>
     </div>
     """
   end
 
   @impl true
   def handle_event("update-chart", _params, socket) do
-    new_chart_data =
-      Map.merge(socket.assigns.chart_data, %{
-        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        datasets: [
-          %{
-            label: "Desktop",
-            data: Enum.map(1..12, fn _ -> :rand.uniform(100) end),
-            backgroundColor: "rgb(0, 0, 0)"
-          },
-          %{
-            label: "Mobile",
-            data: Enum.map(1..12, fn _ -> :rand.uniform(100) end),
-            backgroundColor: "rgb(128, 128, 128)"
-          }
-        ]
-      })
+    {:noreply, assign(socket, :chart_data, random_rows())}
+  end
 
-    socket =
-      LiveView.send_command(socket, "reactive-chart", "update", %{
-        data: new_chart_data
-      })
+  def handle_event("push-chart", _params, socket) do
+    {:noreply, LiveView.send_command(socket, "reactive-chart", "update", %{data: random_rows()})}
+  end
 
-    {:noreply, socket}
+  def handle_event("update-legacy", _params, socket) do
+    {:noreply, LiveView.send_command(socket, "reactive-chart-legacy", "update", %{data: legacy_data()})}
+  end
+
+  defp random_rows do
+    Enum.map(@months, &%{month: &1, desktop: :rand.uniform(300), mobile: :rand.uniform(300)})
+  end
+
+  defp legacy_data do
+    %{
+      labels: ["Q1", "Q2", "Q3", "Q4"],
+      datasets: [
+        %{label: "Sales", data: Enum.map(1..4, fn _ -> :rand.uniform(100) end), borderColor: "rgb(0, 0, 0)", tension: 0.4}
+      ]
+    }
   end
 end

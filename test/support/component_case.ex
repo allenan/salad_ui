@@ -2,12 +2,6 @@ defmodule ComponentCase do
   @moduledoc false
   use ExUnit.CaseTemplate
 
-  setup do
-    # This will run before each test that uses this case
-    TwMerge.Cache.create_table()
-    :ok
-  end
-
   using do
     quote do
       import Phoenix.Component

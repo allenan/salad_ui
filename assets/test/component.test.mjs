@@ -182,6 +182,19 @@ test("handleActionClick(): clicking a [data-action] element triggers the matchin
   assert.equal(component.state, "closed");
 });
 
+test("handleActionClick(): ignores actions that belong to a nested component (regression)", () => {
+  const { component, el } = buildComponent();
+  component.setupEvents();
+
+  const nested = document.createElement("div");
+  nested.setAttribute("data-component", "collapsible");
+  nested.innerHTML = '<button data-action="open"><span>inner</span></button>';
+  el.appendChild(nested);
+
+  click(nested.querySelector("span"));
+  assert.equal(component.state, "closed");
+});
+
 test("setupEvents() does not accumulate duplicate click listeners across repeated calls (regression)", () => {
   const { component, elements } = buildComponent();
   const calls = [];
@@ -415,4 +428,30 @@ test("parseOptions() falls back to an empty options object and logs an error on 
   } finally {
     console.error = originalError;
   }
+});
+
+test("destroy() detaches key handlers of every state bound to the same element (regression)", () => {
+  const calls = [];
+
+  class TwoStateKeys extends Component {
+    getComponentConfig() {
+      const keyMap = { Enter: () => calls.push("Enter") };
+      return {
+        stateMachine: { on: {}, off: {} },
+        events: { _all: { keyMap }, on: { keyMap }, off: { keyMap } },
+      };
+    }
+  }
+
+  document.body.innerHTML = `<div data-part="root" data-state="on"></div>`;
+  const el = document.body.firstElementChild;
+  const component = new TwoStateKeys(el, {});
+  component.setupEvents();
+  component.destroy();
+
+  el.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+  );
+
+  assert.deepEqual(calls, []);
 });

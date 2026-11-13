@@ -32,21 +32,35 @@ defmodule SaladUI do
   - `card/1` - Content containers with headers and footers
   - `separator/1` - Visual dividers between content sections
   - `scroll_area/1` - Custom scrollable containers
+  - `aspect_ratio/1` - Content constrained to a width/height ratio
+  - `item/1`, `item_group/1` - Flexible rows with media, title, description and actions
+  - `resizable_panel_group/1`, `resizable_panel/1`, `resizable_handle/1` - Resizable panel layouts
 
   ### Forms & Input
   - `button/1` - Interactive buttons with multiple variants
+  - `button_group/1` - Groups of joined buttons, inputs and selects
   - `input/1` - Text inputs with validation support
+  - `input_group/1` - Inputs with icon, text and button addons
+  - `input_otp/1` - One-time password inputs with copy-paste support
   - `textarea/1` - Multi-line text input areas
   - `checkbox/1` - Binary choice inputs
   - `radio_group/1` - Single choice from multiple options
   - `select/1` - Dropdown selection menus
+  - `combobox/1` - Autocomplete input with a filtered list, single or multiple (chips)
+  - `native_select/1` - Styled native `<select>` with options and optgroups
   - `slider/1` - Range value selection
+  - `calendar/1` - Month grid for picking a date, dates or a range
+  - `date_picker/1` - Popover + calendar date picker
   - `switch/1` - Toggle controls
-  - `form/1`, `form_item/1`, `form_label/1` - Form structure and validation
+  - `questionnaire/1` - Multi-step single, multiple, freeform and skippable questions
+  - `field/1`, `field_set/1`, `field_group/1`, `field_label/1`, `field_error/1` - Form field structure and validation
+  - `form_item/1`, `form_label/1`, `form_message/1` - Legacy form helpers (prefer `field/1`)
 
   ### Navigation
   - `tabs/1` - Tabbed content navigation
   - `breadcrumb/1` - Hierarchical navigation paths
+  - `navigation_menu/1` - Site navigation with hover/keyboard dropdown panels
+  - `menubar/1` - Desktop-style application menu bar
   - `pagination/1` - Page navigation controls
   - `sidebar/1` - Application navigation sidebars
 
@@ -54,27 +68,45 @@ defmodule SaladUI do
   - `dialog/1` - Modal dialogs and confirmations
   - `alert_dialog/1` - Alert and confirmation dialogs
   - `sheet/1` - Slide-out panels
+  - `drawer/1` - Draggable bottom/side drawers with snap points
   - `popover/1` - Contextual popup content
   - `tooltip/1` - Hover information displays
   - `hover_card/1` - Rich hover content
   - `dropdown_menu/1` - Contextual action menus
+  - `context_menu/1` - Right-click / long-press menus
 
   ### Feedback & Status
   - `alert/1` - Status messages and notifications
   - `badge/1` - Labels and status indicators
   - `progress/1` - Progress bars and loading states
   - `skeleton/1` - Loading placeholder content
+  - `spinner/1` - Animated loading indicator
+  - `empty/1` - Empty states with media, title, description and actions
 
   ### Data Display
   - `table/1` - Data tables with sorting and selection
+  - `data_table_column_header/1`, `data_table_view_options/1`, `data_table_pagination/1` - Data table parts; state helpers in `SaladUI.DataTable`
   - `chart/1` - Data visualization charts
+  - `code_block/1` - Code, terminal output and diffs with line numbers and a copy button
   - `avatar/1` - User profile images
   - `accordion/1` - Collapsible content sections
+  - `kbd/1`, `kbd_group/1` - Keyboard keys and shortcuts
+  - `typography_h1/1`, `typography_p/1`, ... - Headings, paragraphs, lists and text styles
+  - `carousel/1` - Scroll-snapping slide carousels
+
+  ### Chat
+  - `message/1`, `message_group/1` - Chat message layout with avatar, header and footer
+  - `message_scroller/1` - Chat transcript scroller: turn anchoring, follow-output, history prepends, jumps
+  - `bubble/1`, `bubble_group/1` - Chat bubbles with variants, alignment and reactions
+  - `marker/1` - Inline notes, statuses and dividers between turns
+  - `attachment/1`, `attachment_upload_entry/1` - File cards, including LiveView upload entries
+  - `trace/1`, `trace_collapsible/1` - Agent steps: reasoning, tool calls and sources
 
   ### Utility
   - `toggle/1`, `toggle_group/1` - Toggle controls and groups
   - `collapsible/1` - Expandable content areas
   - `command/1` - Command palette interfaces
+  - `direction_provider/1` - Right-to-left (`dir="rtl"`) support for a subtree
 
   ## Architecture
 
@@ -96,13 +128,11 @@ defmodule SaladUI do
   ### Form Integration
 
       <.form for={@form} phx-change="validate" phx-submit="save">
-        <.form_item>
-          <.form_label>Email</.form_label>
-          <.form_control>
-            <.input field={@form[:email]} type="email" />
-          </.form_control>
-          <.form_message field={@form[:email]} />
-        </.form_item>
+        <.field field={@form[:email]}>
+          <.field_label field={@form[:email]}>Email</.field_label>
+          <.input field={@form[:email]} type="email" />
+          <.field_error field={@form[:email]} />
+        </.field>
       </.form>
 
   ### Interactive Components with Events
@@ -163,7 +193,7 @@ defmodule SaladUI do
       alias Phoenix.LiveView.JS
 
       defp classes(input) do
-        TwMerge.merge(List.flatten(input))
+        tw_merge(input)
       end
     end
   end
@@ -180,27 +210,57 @@ defmodule SaladUI do
       import SaladUI.Accordion
       import SaladUI.Alert
       import SaladUI.AlertDialog
+      import SaladUI.AspectRatio
+      import SaladUI.Attachment
       import SaladUI.Avatar
       import SaladUI.Badge
       import SaladUI.Breadcrumb
+      import SaladUI.Bubble
       import SaladUI.Button
+      import SaladUI.ButtonGroup
+      import SaladUI.Calendar
       import SaladUI.Card
+      import SaladUI.Carousel
       import SaladUI.Chart
       import SaladUI.Checkbox
+      import SaladUI.CodeBlock
       import SaladUI.Collapsible
+      import SaladUI.Combobox
+      import SaladUI.ContextMenu
+
+      import SaladUI.DataTable,
+        only: [data_table_column_header: 1, data_table_pagination: 1, data_table_view_options: 1]
+
+      import SaladUI.DatePicker
       import SaladUI.Dialog
+      import SaladUI.Direction
+      import SaladUI.Drawer
       import SaladUI.DropdownMenu
+      import SaladUI.Empty
+      import SaladUI.Field
       import SaladUI.Form
       import SaladUI.Helpers
       import SaladUI.HoverCard
       import SaladUI.Icon
       import SaladUI.Input
+      import SaladUI.InputGroup
+      import SaladUI.InputOTP
+      import SaladUI.Item
+      import SaladUI.Kbd
       import SaladUI.Label
+      import SaladUI.Marker
       import SaladUI.Menu
+      import SaladUI.Menubar
+      import SaladUI.Message
+      import SaladUI.MessageScroller
+      import SaladUI.NativeSelect
+      import SaladUI.NavigationMenu
       import SaladUI.Pagination
       import SaladUI.Popover
       import SaladUI.Progress
+      import SaladUI.Questionnaire
       import SaladUI.RadioGroup
+      import SaladUI.Resizable
       import SaladUI.ScrollArea
       import SaladUI.Select
       import SaladUI.Separator
@@ -208,6 +268,7 @@ defmodule SaladUI do
       import SaladUI.Sidebar
       import SaladUI.Skeleton
       import SaladUI.Slider
+      import SaladUI.Spinner
       import SaladUI.Switch
       import SaladUI.Table
       import SaladUI.Tabs
@@ -216,6 +277,8 @@ defmodule SaladUI do
       import SaladUI.Toggle
       import SaladUI.ToggleGroup
       import SaladUI.Tooltip
+      import SaladUI.Trace
+      import SaladUI.Typography
     end
   end
 end

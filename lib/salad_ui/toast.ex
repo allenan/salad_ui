@@ -19,6 +19,48 @@ defmodule SaladUI.Toast do
         {:noreply, SaladUI.Toast.toast_success(socket, "Saved!")}
       end
 
+  Variants mirror Sonner's types: `toast/3` (default), `toast_success/3`,
+  `toast_info/3`, `toast_warning/3`, `toast_error/3` and `toast_loading/3`.
+  Each non-default variant shows shadcn's lucide icon (CircleCheck, Info,
+  TriangleAlert, OctagonX, and a spinning Loader2 for loading).
+
+  Every helper also takes `description:`, `position:` (any of the toaster's
+  six positions, per toast), `duration:` (ms or `:infinity`), `id:`,
+  `action:`/`cancel:`, `icon:`, `color:`, `class:`, `dismissible:` and
+  `toaster:` (target a `<.toaster>` other than `"toaster"`):
+
+      toast(socket, "Event has been created",
+        description: "Monday, January 3rd at 6:00pm",
+        position: "top-center"
+      )
+
+  ## Loading and promise toasts
+
+  A loading toast never times out and can't be swiped away. Resolve it in
+  place, so one card morphs from loading to success or error the way Sonner's
+  `toast.promise` does. With `start_async/3`:
+
+      def handle_event("create", _params, socket) do
+        {:noreply,
+         socket
+         |> toast_promise("create-event", loading: "Loading...")
+         |> start_async(:create_event, fn -> Events.create() end)}
+      end
+
+      def handle_async(:create_event, result, socket) do
+        {:noreply,
+         toast_resolve(socket, "create-event", result,
+           success: fn event -> "\#{event.name} has been created" end,
+           error: "Error"
+         )}
+      end
+
+  `toast_resolve/4` maps `{:ok, value}` to success and `{:exit, reason}`,
+  `{:ok, {:error, reason}}` or `{:ok, :error}` to error. To resolve by hand,
+  call `toast_update/3`:
+
+      toast_update(socket, "create-event", variant: "success", message: "Event has been created")
+
   ## Rich-content toasts
 
   Declare a `:template` next to the toaster and reference it by name:
@@ -34,9 +76,9 @@ defmodule SaladUI.Toast do
 
   ## Customization
 
-  SaladUI ships no predefined per-variant palette — every toast renders in the
-  card's neutral default (`border-border bg-background text-foreground`)
-  unless you opt in, either toaster-wide or per call.
+  SaladUI ships no predefined per-variant palette — every toast renders in
+  shadcn's neutral card (`border-border bg-popover text-popover-foreground`,
+  `rounded-(--radius)`) unless you opt in, either toaster-wide or per call.
 
   Toaster-wide, applied to every card of that variant:
 
@@ -60,6 +102,13 @@ defmodule SaladUI.Toast do
       SaladUI.Toast.toast(socket, "Something broke",
         class: "!border-fuchsia-500/30 !bg-fuchsia-50 !text-fuchsia-900"
       )
+
+  Icons are overridden with an icon class name, toaster-wide by variant or per
+  toast; `icon: false` hides it:
+
+      <.toaster id="toaster" icons={%{success: "hero-sparkles", loading: "hero-arrow-path animate-spin"}} />
+
+      SaladUI.Toast.toast_info(socket, "Heads up", icon: "hero-bell")
 
   `unstyled: true` drops every built-in class, leaving bare `data-part`
   elements for `class` to style from scratch:
@@ -115,7 +164,12 @@ defmodule SaladUI.Toast do
   attr :offset, :any, default: 24, doc: "px gap from the viewport edge, or a %{top:, right:, bottom:, left:} map"
   attr :"mobile-offset", :any, default: 16, doc: "Same as :offset, applied below the 600px breakpoint"
   attr :hotkey, :string, default: "Alt+T", doc: "Keyboard shortcut that moves focus into the front toast"
-  attr :icons, :map, default: %{}, doc: ~S(toaster-wide icon overrides, e.g. %{success: "hero-sparkles"})
+
+  attr :icons, :map,
+    default: %{},
+    doc:
+      ~S(toaster-wide icon class overrides by variant, e.g. %{success: "hero-sparkles"}. ) <>
+        "Without one, success/info/warning/error/loading show shadcn's lucide icons at size-4."
 
   attr :colors, :map,
     default: %{},
@@ -243,21 +297,32 @@ defmodule SaladUI.Toast do
       socket = SaladUI.Toast.toast(socket, "Saved!", description: "Changes are live")
       socket = SaladUI.Toast.toast(socket, template: "new-follower", variant: "default")
 
-  Call `toast/4` directly to target a `<.toaster>` other than the default `"toaster"` id.
-  See `toaster/1`'s moduledoc for the full opts table.
+  Pass `toaster: id` (or call `toast/4` directly) to target a `<.toaster>`
+  other than the default `"toaster"` id. See the moduledoc for the full opts list.
   """
   def toast(socket, message, opts \\ [])
 
   def toast(socket, message, opts) when is_binary(message) or is_nil(message) do
-    toast(socket, "toaster", message, opts)
+    {toaster_id, opts} = pop_toaster(opts)
+    toast(socket, toaster_id, message, opts)
   end
 
-  def toast(socket, message_opts, _opts) do
-    toast(socket, "toaster", nil, message_opts)
+  # Template-based toast: `message_opts` carries the opts. Merge in `opts` so
+  # the variant helpers (`toast_loading(socket, template: "upload")`) keep
+  # their variant instead of silently falling back to "default".
+  def toast(socket, message_opts, opts) do
+    {toaster_id, message_opts} = message_opts |> Map.new() |> Map.merge(Map.new(opts)) |> pop_toaster()
+    toast(socket, toaster_id, nil, message_opts)
   end
 
   def toast(socket, toaster_id, message, opts) do
-    SaladUI.LiveView.send_command(socket, toaster_id, "add", build_toast_params(message, opts))
+    params =
+      opts
+      |> build_toast_params(message)
+      |> Map.put_new(:id, generate_toast_id())
+      |> Map.put_new(:variant, "default")
+
+    SaladUI.LiveView.send_command(socket, toaster_id, "add", params)
   end
 
   @doc """
@@ -294,15 +359,138 @@ defmodule SaladUI.Toast do
   @doc "Same as `toast/3`, with `variant: \"info\"`."
   def toast_info(socket, message, opts \\ []), do: toast(socket, message, Keyword.put(opts, :variant, "info"))
 
-  @doc "Transitions an existing toast (by `id`) to a new variant/content, patched in place."
+  @doc """
+  Same as `toast/3`, with `variant: "loading"`: a spinning loader icon, and
+  no timeout — the toast stays up (and can't be swiped away) until
+  `toast_update/3`/`toast_resolve/4` turns it into another variant or
+  `toast_dismiss/3` removes it.
+  """
+  def toast_loading(socket, message, opts \\ []), do: toast(socket, message, Keyword.put(opts, :variant, "loading"))
+
+  @doc """
+  Starts a Sonner-style promise toast: shows a loading toast under a known id,
+  to be resolved in place later by `toast_resolve/4` or `toast_update/3`
+  (typically from `handle_async/3`).
+
+  The second argument is the toast id, or an opts list. `:loading` (the
+  loading message) is required; every other `toast/3` opt (`description:`,
+  `position:`, `toaster:`, ...) is passed through.
+
+      socket
+      |> toast_promise("export", loading: "Exporting...")
+      |> start_async(:export, fn -> Reports.export() end)
+
+  With an opts list and no `:id`, an id is generated and assigned to the
+  socket as `:toast_id`, so the result handler can find it:
+
+      socket = toast_promise(socket, loading: "Exporting...")
+      socket.assigns.toast_id #=> "toast-42"
+  """
+  def toast_promise(socket, id_or_opts, opts \\ [])
+
+  def toast_promise(socket, id, opts) when is_binary(id) do
+    {loading, opts} = Keyword.pop(opts, :loading)
+
+    if !is_binary(loading) do
+      raise ArgumentError, "toast_promise/3 requires a :loading message, got: #{inspect(loading)}"
+    end
+
+    toast_loading(socket, loading, Keyword.put(opts, :id, id))
+  end
+
+  def toast_promise(socket, opts, more_opts) when is_list(opts) do
+    opts = Keyword.merge(opts, more_opts)
+
+    case Keyword.pop(opts, :id) do
+      {nil, opts} ->
+        id = generate_toast_id()
+
+        socket
+        |> toast_promise(id, opts)
+        |> Phoenix.Component.assign(:toast_id, id)
+
+      {id, opts} ->
+        toast_promise(socket, id, opts)
+    end
+  end
+
+  @doc """
+  Resolves a promise toast (see `toast_promise/3`) from an async result, in
+  place: the same card morphs from loading to success or error.
+
+  `result` is what `handle_async/3` receives. `{:ok, value}` (or
+  `{:ok, {:ok, value}}`) resolves to success; `{:exit, reason}`,
+  `{:ok, {:error, reason}}` and `{:ok, :error}` resolve to error.
+
+  `:success` and `:error` are each a message string, or a 1-arity function of
+  the value/reason returning a message string or a keyword list of
+  `toast_update/3` opts (e.g. `[message: "Saved", description: "..."]`). When
+  the matching one is omitted, the toast is dismissed instead, as in Sonner.
+  Any other opts (`description:`, `duration:`, `toaster:`, ...) are passed to
+  `toast_update/3`.
+
+      def handle_async(:export, result, socket) do
+        {:noreply,
+         toast_resolve(socket, "export", result,
+           success: fn report -> "\#{report.name} is ready" end,
+           error: fn reason -> "Export failed: \#{inspect(reason)}" end
+         )}
+      end
+  """
+  def toast_resolve(socket, id, result, opts \\ []) do
+    {success, opts} = Keyword.pop(opts, :success)
+    {error, opts} = Keyword.pop(opts, :error)
+
+    case result do
+      {:ok, {:error, reason}} -> settle(socket, id, "error", error, reason, opts)
+      {:ok, :error} -> settle(socket, id, "error", error, :error, opts)
+      {:exit, reason} -> settle(socket, id, "error", error, reason, opts)
+      {:ok, {:ok, value}} -> settle(socket, id, "success", success, value, opts)
+      {:ok, value} -> settle(socket, id, "success", success, value, opts)
+    end
+  end
+
+  defp settle(socket, id, _variant, nil, _arg, opts) do
+    {toaster_id, _opts} = pop_toaster(opts)
+    toast_dismiss(socket, toaster_id, id)
+  end
+
+  defp settle(socket, id, variant, message, arg, opts) when is_function(message, 1) do
+    settle(socket, id, variant, message.(arg), arg, opts)
+  end
+
+  defp settle(socket, id, variant, message, _arg, opts) when is_binary(message) do
+    toast_update(socket, id, Keyword.merge(opts, variant: variant, message: message))
+  end
+
+  defp settle(socket, id, variant, message_opts, _arg, opts) when is_list(message_opts) do
+    toast_update(socket, id, opts |> Keyword.merge(message_opts) |> Keyword.put(:variant, variant))
+  end
+
+  @doc """
+  Patches an existing toast (by `id`) in place: the same card animates to the
+  new variant/content instead of a second toast appearing. This is how a
+  loading toast resolves (see `toast_promise/3`).
+
+      toast_update(socket, "export", variant: "success", message: "Export ready")
+      toast_update(socket, "export", variant: "error", message: "Export failed", description: "Try again")
+
+  `:message` (or `:title`) sets the title. Keys left out keep their current
+  value, except that changing the variant resets the duration to the default
+  unless `:duration` is given — so a resolved loading toast times out
+  normally. Without `:variant` the toast keeps its current one. Pass
+  `toaster: id` to target a `<.toaster>` other than `"toaster"`.
+  """
   def toast_update(socket, id, opts) do
+    {toaster_id, opts} = pop_toaster(opts)
+    {message, opts} = Keyword.pop(opts, :message)
+
     params =
       opts
-      |> Keyword.get(:title)
-      |> build_toast_params(opts)
+      |> build_toast_params(message)
       |> Map.put(:id, id)
 
-    SaladUI.LiveView.send_command(socket, "toaster", "update", params)
+    SaladUI.LiveView.send_command(socket, toaster_id, "update", params)
   end
 
   @doc "Removes one toast, or every toast on the given toaster if `id` is omitted."
@@ -311,17 +499,29 @@ defmodule SaladUI.Toast do
     SaladUI.LiveView.send_command(socket, toaster_id, "dismiss", params)
   end
 
-  defp build_toast_params(message, opts) do
+  defp pop_toaster(%{} = opts) do
+    {Map.get(opts, :toaster, "toaster"), Map.delete(opts, :toaster)}
+  end
+
+  defp pop_toaster(opts) when is_list(opts), do: Keyword.pop(opts, :toaster, "toaster")
+
+  defp build_toast_params(opts, message) do
     opts
     |> Map.new()
-    |> Map.put_new(:id, generate_toast_id())
-    |> Map.update(:variant, "default", &to_string/1)
+    |> stringify(:variant)
     |> Map.update(:duration, nil, fn
       :infinity -> "infinity"
       other -> other
     end)
     |> drop_if_nil(:duration)
     |> maybe_put_title(message)
+  end
+
+  defp stringify(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, value} when not is_nil(value) -> Map.put(map, key, to_string(value))
+      _ -> Map.delete(map, key)
+    end
   end
 
   defp drop_if_nil(map, key) do

@@ -19,7 +19,14 @@ defmodule Storybook.SaladUIComponents.Breadcrumb do
          breadcrumb_ellipsis: 1,
          breadcrumb_page: 1
        ]},
-      {DropdownMenu, [dropdown_menu: 1, dropdown_menu_trigger: 1, dropdown_menu_content: 1]},
+      {DropdownMenu,
+       [
+         dropdown_menu: 1,
+         dropdown_menu_trigger: 1,
+         dropdown_menu_content: 1,
+         dropdown_menu_group: 1,
+         dropdown_menu_item: 1
+       ]},
       {Menu, [menu: 1, menu_label: 1, menu_separator: 1, menu_item: 1, menu_shortcut: 1, menu_group: 1]}
     ]
 
@@ -37,7 +44,7 @@ defmodule Storybook.SaladUIComponents.Breadcrumb do
             <.breadcrumb_item>
               <.dropdown_menu id="breadcrumb-dropdown">
                 <.dropdown_menu_trigger class="flex items-center gap-1">
-                  <.breadcrumb_ellipsis class="h-4 w-4" />
+                  <.breadcrumb_ellipsis class="size-4" />
                   <span class="sr-only">toggle menu</span>
                 </.dropdown_menu_trigger>
                 <.dropdown_menu_content align="start">
@@ -61,6 +68,135 @@ defmodule Storybook.SaladUIComponents.Breadcrumb do
         </.breadcrumb>
         """,
         attributes: %{}
+      },
+      %Variation{
+        id: :basic,
+        description: "shadcn breadcrumb-basic: links and the current page.",
+        template: """
+        <.breadcrumb>
+          <.breadcrumb_list>
+            <.breadcrumb_item>
+              <.breadcrumb_link href="#">Home</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_link href="#">Components</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_page>Breadcrumb</.breadcrumb_page>
+            </.breadcrumb_item>
+          </.breadcrumb_list>
+        </.breadcrumb>
+        """
+      },
+      %Variation{
+        id: :separator,
+        description: "shadcn breadcrumb-separator: a custom separator passed as the separator's content.",
+        template: """
+        <.breadcrumb>
+          <.breadcrumb_list>
+            <.breadcrumb_item>
+              <.breadcrumb_link href="/">Home</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator>
+              <Lucideicons.dot />
+            </.breadcrumb_separator>
+            <.breadcrumb_item>
+              <.breadcrumb_link href="#">Components</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator>
+              <Lucideicons.dot />
+            </.breadcrumb_separator>
+            <.breadcrumb_item>
+              <.breadcrumb_page>Breadcrumb</.breadcrumb_page>
+            </.breadcrumb_item>
+          </.breadcrumb_list>
+        </.breadcrumb>
+        """
+      },
+      %Variation{
+        id: :dropdown,
+        description: "shadcn breadcrumb-dropdown: a dropdown menu inside a breadcrumb item.",
+        template: """
+        <.breadcrumb>
+          <.breadcrumb_list>
+            <.breadcrumb_item>
+              <.breadcrumb_link href="/">Home</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator>
+              <Lucideicons.dot />
+            </.breadcrumb_separator>
+            <.breadcrumb_item>
+              <.dropdown_menu id="breadcrumb-dropdown-components">
+                <.dropdown_menu_trigger class="flex items-center gap-1">
+                  Components
+                  <Lucideicons.chevron_down class="size-3.5" />
+                </.dropdown_menu_trigger>
+                <.dropdown_menu_content align="start">
+                  <.dropdown_menu_group>
+                    <.dropdown_menu_item>Documentation</.dropdown_menu_item>
+                    <.dropdown_menu_item>Themes</.dropdown_menu_item>
+                    <.dropdown_menu_item>GitHub</.dropdown_menu_item>
+                  </.dropdown_menu_group>
+                </.dropdown_menu_content>
+              </.dropdown_menu>
+            </.breadcrumb_item>
+            <.breadcrumb_separator>
+              <Lucideicons.dot />
+            </.breadcrumb_separator>
+            <.breadcrumb_item>
+              <.breadcrumb_page>Breadcrumb</.breadcrumb_page>
+            </.breadcrumb_item>
+          </.breadcrumb_list>
+        </.breadcrumb>
+        """
+      },
+      %Variation{
+        id: :ellipsis,
+        description: "shadcn breadcrumb-ellipsis: collapsed items shown as an ellipsis.",
+        template: """
+        <.breadcrumb>
+          <.breadcrumb_list>
+            <.breadcrumb_item>
+              <.breadcrumb_link href="/">Home</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_ellipsis />
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_link href="/docs/components">Components</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_page>Breadcrumb</.breadcrumb_page>
+            </.breadcrumb_item>
+          </.breadcrumb_list>
+        </.breadcrumb>
+        """
+      },
+      %Variation{
+        id: :link,
+        description: "shadcn breadcrumb-link: `breadcrumb_link` renders a plain `<a>`; pass `href`.",
+        template: """
+        <.breadcrumb>
+          <.breadcrumb_list>
+            <.breadcrumb_item>
+              <.breadcrumb_link href="/">Home</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_link href="/components">Components</.breadcrumb_link>
+            </.breadcrumb_item>
+            <.breadcrumb_separator />
+            <.breadcrumb_item>
+              <.breadcrumb_page>Breadcrumb</.breadcrumb_page>
+            </.breadcrumb_item>
+          </.breadcrumb_list>
+        </.breadcrumb>
+        """
       }
     ]
   end

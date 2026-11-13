@@ -10,16 +10,32 @@ defmodule SaladUI.Pagination do
             <.pagination_previous href="#" />
           </.pagination_item>
           <.pagination_item>
-            <.pagination_link href="#" is_active={@page == 1}>1</.pagination_link>
+            <.pagination_link href="#" is-active={@page == 1}>1</.pagination_link>
           </.pagination_item>
           <.pagination_item>
-            <.pagination_link href="#" is_active={@page == 2}>2</.pagination_link>
+            <.pagination_link href="#" is-active={@page == 2}>2</.pagination_link>
           </.pagination_item>
           <.pagination_item>
-            <.pagination_link href="#" is_active={@page == 3}>3</.pagination_link>
+            <.pagination_link href="#" is-active={@page == 3}>3</.pagination_link>
           </.pagination_item>
           <.pagination_item>
             <.pagination_ellipsis />
+          </.pagination_item>
+          <.pagination_item>
+            <.pagination_next href="#" />
+          </.pagination_item>
+        </.pagination_content>
+      </.pagination>
+
+  ## Icons only
+
+  Below the `sm` breakpoint `pagination_previous/1` and `pagination_next/1`
+  show only their chevrons. For a data table footer, use them on their own:
+
+      <.pagination class="mx-0 w-auto">
+        <.pagination_content>
+          <.pagination_item>
+            <.pagination_previous href="#" />
           </.pagination_item>
           <.pagination_item>
             <.pagination_next href="#" />
@@ -39,8 +55,9 @@ defmodule SaladUI.Pagination do
   def pagination(assigns) do
     ~H"""
     <nav
+      data-slot="pagination"
       aria-label="pagination"
-      role="pagination"
+      role="navigation"
       class={
         classes([
           "mx-auto flex w-full justify-center",
@@ -64,6 +81,7 @@ defmodule SaladUI.Pagination do
   def pagination_content(assigns) do
     ~H"""
     <ul
+      data-slot="pagination-content"
       class={
         classes([
           "flex flex-row items-center gap-1",
@@ -87,6 +105,7 @@ defmodule SaladUI.Pagination do
   def pagination_item(assigns) do
     ~H"""
     <li
+      data-slot="pagination-item"
       class={
         classes([
           "",
@@ -105,7 +124,7 @@ defmodule SaladUI.Pagination do
 
   ## Options
 
-  * `:is_active` - Whether this link represents the current page
+  * `:is-active` - Whether this link represents the current page
   * `:size` - Link size variant (default, sm, lg, icon)
   """
   attr :"is-active", :boolean, default: false
@@ -121,20 +140,15 @@ defmodule SaladUI.Pagination do
       assigns
       |> assign(
         :variation_class,
-        variant(%{size: assigns[:size], variant: (is_active && "outline") || "ghost"})
+        button_variant(%{size: assigns[:size], variant: (is_active && "outline") || "ghost"})
       )
       |> assign(:"is-active", is_active)
 
     ~H"""
     <.link
+      data-slot="pagination-link"
       aria-current={(assigns[:"is-active"] && "page") || ""}
-      class={
-        classes([
-          "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50",
-          @variation_class,
-          @class
-        ])
-      }
+      class={classes([@variation_class, @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -143,9 +157,13 @@ defmodule SaladUI.Pagination do
   end
 
   @doc """
-  Renders a next page button.
+  Renders a next page button. Like shadcn, the label is hidden below the `sm`
+  breakpoint, leaving only the chevron (the `aria-label` still names it).
+  Pass `text` to translate the label (e.g. for an RTL page); the chevron
+  flips under `dir="rtl"`.
   """
   attr :class, :string, default: nil
+  attr :text, :string, default: "Next", doc: "Visible label"
   attr :rest, :global, include: ~w(href navigate patch)
 
   def pagination_next(assigns) do
@@ -153,17 +171,17 @@ defmodule SaladUI.Pagination do
     <.pagination_link
       aria-label="Go to next page"
       size="default"
-      class={classes(["gap-1 pr-2.5", @class])}
+      class={classes(["gap-1 px-2.5 sm:pe-2.5", @class])}
       {@rest}
     >
-      <span>Next</span>
+      <span class="hidden sm:block">{@text}</span>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-3.5"
+        class="size-6 w-3.5 rtl:rotate-180"
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
       </svg>
@@ -172,9 +190,13 @@ defmodule SaladUI.Pagination do
   end
 
   @doc """
-  Renders a previous page button.
+  Renders a previous page button. Like shadcn, the label is hidden below the
+  `sm` breakpoint, leaving only the chevron (the `aria-label` still names
+  it). Pass `text` to translate the label (e.g. for an RTL page); the
+  chevron flips under `dir="rtl"`.
   """
   attr :class, :string, default: nil
+  attr :text, :string, default: "Previous", doc: "Visible label"
   attr :rest, :global, include: ~w(href navigate patch)
 
   def pagination_previous(assigns) do
@@ -182,7 +204,7 @@ defmodule SaladUI.Pagination do
     <.pagination_link
       aria-label="Go to previous page"
       size="default"
-      class={classes(["gap-1 pr-2.5", @class])}
+      class={classes(["gap-1 px-2.5 sm:ps-2.5", @class])}
       {@rest}
     >
       <svg
@@ -191,11 +213,11 @@ defmodule SaladUI.Pagination do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-3.5"
+        class="size-6 w-3.5 rtl:rotate-180"
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
       </svg>
-      <span>Previous</span>
+      <span class="hidden sm:block">{@text}</span>
     </.pagination_link>
     """
   end
@@ -209,9 +231,10 @@ defmodule SaladUI.Pagination do
   def pagination_ellipsis(assigns) do
     ~H"""
     <span
+      data-slot="pagination-ellipsis"
       class={
         classes([
-          "flex h-9 w-9 items-center justify-center",
+          "flex size-9 items-center justify-center",
           @class
         ])
       }
@@ -223,7 +246,7 @@ defmodule SaladUI.Pagination do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-4 h-4"
+        class="size-4"
       >
         <path
           stroke-linecap="round"
@@ -235,25 +258,5 @@ defmodule SaladUI.Pagination do
       <span class="sr-only">More pages</span>
     </span>
     """
-  end
-
-  @variants %{
-    variant: %{
-      "outline" => "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
-      "ghost" => "hover:bg-accent hover:text-accent-foreground"
-    },
-    size: %{
-      "default" => "h-9 px-4 py-2",
-      "sm" => "h-8 rounded-md px-3 text-xs",
-      "lg" => "h-10 rounded-md px-8",
-      "icon" => "h-9 w-9"
-    }
-  }
-
-  defp variant(props) do
-    variants =
-      Map.take(props, ~w(variant size)a)
-
-    Enum.map_join(variants, " ", fn {key, value} -> @variants[key][value] end)
   end
 end

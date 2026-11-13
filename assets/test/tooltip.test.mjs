@@ -3,7 +3,15 @@ import { after, afterEach, before, test } from "node:test";
 
 import "../salad_ui/components/tooltip.js";
 import { registry } from "../salad_ui/core/factory.js";
-import { installDom, setRect, uninstallDom, wait } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  setRect,
+  simulatePatch,
+  uninstallDom,
+  wait,
+  waitFor,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -188,4 +196,73 @@ test("content hover cancels pending close, then mouseleave closes after animatio
   assert.equal(pushed.at(-1).target, el);
 
   component.destroy();
+});
+
+test("a LiveView patch keeps an open tooltip open and positioned", async () => {
+  const { el, button, pushed, hookContext } = buildTooltip({
+    fallback: true,
+    closeDelay: 1000,
+  });
+  const component = registry.create("tooltip", el, hookContext);
+  const hook = hookFor(el, component);
+
+  focusEvent("focusin", button);
+  await waitFor(() => component.state === "open");
+
+  // The content's client id is dropped first, so the patch keeps the
+  // element; the stamped data-part on the fallback trigger is not in the
+  // server markup.
+  const content = el.querySelector('[data-part="content"]');
+  hook.beforeUpdate();
+  simulatePatch(el, { hidden: ['[data-part="content"]'] });
+  delete button.dataset.part;
+  setRect(content, { width: 80, height: 40 });
+  hook.updated();
+
+  assert.equal(el.querySelector('[data-part="content"]'), content);
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(button.dataset.part, "trigger");
+  assert.equal(button.getAttribute("aria-describedby"), "tooltip-1-content");
+  assert.equal(content.id, "tooltip-1-content");
+  assert.equal(content.hidden, false);
+  assert.equal(content.getAttribute("role"), "tooltip");
+  assert.equal(content.style.position, "fixed");
+  assert.equal(pushed.filter(({ event }) => event === "opened").length, 1);
+
+  // Content the server replaces is placed again and wired up.
+  hook.beforeUpdate();
+  simulatePatch(el, {
+    hidden: ['[data-part="content"]'],
+    replace: ['[data-part="content"]'],
+  });
+  delete button.dataset.part;
+  const newContent = el.querySelector('[data-part="content"]');
+  setRect(newContent, { width: 80, height: 40 });
+  hook.updated();
+
+  assert.notEqual(newContent, content);
+  assert.equal(component.state, "open");
+  assert.equal(newContent.hidden, false);
+  assert.equal(newContent.style.position, "fixed");
+  assert.equal(button.getAttribute("aria-describedby"), newContent.id);
+
+  // Leaving the new content still closes the tooltip.
+  component.config.closeDelay = 1;
+  mouseEvent("mouseout", newContent);
+  await waitFor(() => component.state === "closed");
+  assert.equal(newContent.hidden, true);
+  component.destroy();
+});
+
+test("changed tooltip options rebuild it", () => {
+  const { el, hookContext } = buildTooltip();
+  const component = registry.create("tooltip", el, hookContext);
+  const hook = hookFor(el, component);
+
+  el.dataset.options = JSON.stringify({ openDelay: 500 });
+  hook.updated();
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
+  hook.destroyed();
 });

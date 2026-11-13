@@ -4,6 +4,7 @@ defmodule Storybook.SaladUIComponents.Tab do
 
   alias SaladUI.Button
   alias SaladUI.Card
+  alias SaladUI.Icon
   alias SaladUI.Input
   alias SaladUI.Label
   alias SaladUI.Tabs
@@ -16,6 +17,7 @@ defmodule Storybook.SaladUIComponents.Tab do
     do: [
       {Card, [card: 1, card_header: 1, card_title: 1, card_description: 1, card_content: 1, card_footer: 1]},
       {Button, [button: 1]},
+      {Icon, [icon: 1]},
       {Input, [input: 1]},
       {Label, [label: 1]},
       {Tabs, [tabs_list: 1, tabs_trigger: 1, tabs_content: 1]}
@@ -79,6 +81,73 @@ defmodule Storybook.SaladUIComponents.Tab do
               </.card_footer>
             </.card>
           </.tabs_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :line,
+        description: ~s|`variant="line"` on the list for a line style|,
+        attributes: %{default: "overview", id: "line-tabs"},
+        slots: [
+          """
+          <.tabs_list variant="line">
+            <.tabs_trigger value="overview">Overview</.tabs_trigger>
+            <.tabs_trigger value="analytics">Analytics</.tabs_trigger>
+            <.tabs_trigger value="reports">Reports</.tabs_trigger>
+          </.tabs_list>
+          """
+        ]
+      },
+      %Variation{
+        id: :vertical,
+        description: ~s|`orientation="vertical"`: the list stacks beside the content and Up/Down move between tabs|,
+        attributes: %{default: "account", id: "vertical-tabs", orientation: "vertical"},
+        slots: [
+          """
+          <.tabs_list>
+            <.tabs_trigger value="account">Account</.tabs_trigger>
+            <.tabs_trigger value="password">Password</.tabs_trigger>
+            <.tabs_trigger value="notifications">Notifications</.tabs_trigger>
+          </.tabs_list>
+          <.tabs_content value="account" class="text-sm">Make changes to your account here.</.tabs_content>
+          <.tabs_content value="password" class="text-sm">Change your password here.</.tabs_content>
+          <.tabs_content value="notifications" class="text-sm">Manage your notifications here.</.tabs_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :vertical_line,
+        description: "Vertical orientation with the line variant",
+        attributes: %{default: "general", id: "vertical-line-tabs", orientation: "vertical"},
+        slots: [
+          """
+          <.tabs_list variant="line">
+            <.tabs_trigger value="general">General</.tabs_trigger>
+            <.tabs_trigger value="security">Security</.tabs_trigger>
+            <.tabs_trigger value="billing">Billing</.tabs_trigger>
+          </.tabs_list>
+          <.tabs_content value="general" class="text-sm">General settings.</.tabs_content>
+          <.tabs_content value="security" class="text-sm">Security settings.</.tabs_content>
+          <.tabs_content value="billing" class="text-sm">Billing settings.</.tabs_content>
+          """
+        ]
+      },
+      %Variation{
+        id: :icons,
+        description: "Triggers with icons",
+        attributes: %{default: "preview", id: "icon-tabs"},
+        slots: [
+          """
+          <.tabs_list>
+            <.tabs_trigger value="preview">
+              <.icon name="hero-window" class="size-4" />
+              Preview
+            </.tabs_trigger>
+            <.tabs_trigger value="code">
+              <.icon name="hero-code-bracket" class="size-4" />
+              Code
+            </.tabs_trigger>
+          </.tabs_list>
           """
         ]
       },

@@ -1,6 +1,12 @@
 defmodule SaladUI.Form do
   @moduledoc """
-  Form-related components that help build accessible forms.
+  Legacy form-related components that help build accessible forms.
+
+  > #### Legacy {: .warning}
+  >
+  > shadcn/ui replaced its `Form` components with the `Field` family. New code
+  > should use `SaladUI.Field` (`field/1`, `field_label/1`, `field_error/1`,
+  > ...). These helpers stay for backwards compatibility and are not going away.
 
   SaladUI doesn't define its own form component, but instead provides a set of
   form-related components to enhance the native Phoenix LiveView form.
@@ -60,7 +66,7 @@ defmodule SaladUI.Form do
 
   def form_item(assigns) do
     ~H"""
-    <div class={classes(["space-y-2", @class])} {@rest}>
+    <div data-slot="form-item" class={classes(["space-y-2", @class])} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -69,7 +75,9 @@ defmodule SaladUI.Form do
   @doc """
   Form label component that renders a label for a form field.
 
-  Shows validation errors through text color when a field has errors.
+  Shows validation errors through text color when a field has errors. Like the
+  form controls, errors on a field the user has not interacted with yet don't
+  count (see `SaladUI.Helpers.field_invalid?/1`).
 
   ## Examples:
 
@@ -89,10 +97,11 @@ defmodule SaladUI.Form do
   attr :rest, :global
 
   def form_label(assigns) do
-    assigns = assign(assigns, error: assigns[:error] || has_error?(assigns[:field]))
+    assigns = assign(assigns, error: assigns[:error] || field_invalid?(assigns[:field]))
 
     ~H"""
     <SaladUI.Label.label
+      data-slot="form-label"
       for={(@field && @field.id) || @for}
       class={
         classes([
@@ -141,7 +150,7 @@ defmodule SaladUI.Form do
 
   def form_description(assigns) do
     ~H"""
-    <p class={classes(["text-muted-foreground text-sm", @class])} {@rest}>
+    <p data-slot="form-description" class={classes(["text-muted-foreground text-sm", @class])} {@rest}>
       {render_slot(@inner_block)}
     </p>
     """
@@ -149,6 +158,10 @@ defmodule SaladUI.Form do
 
   @doc """
   Form message component that displays validation errors for a form field.
+
+  Errors from `field` show only once the user has interacted with the field
+  (see `SaladUI.Helpers.field_invalid?/1`), matching the controls' `aria-invalid`.
+  Errors passed through `errors` always show.
 
   ## Examples:
 
@@ -173,12 +186,12 @@ defmodule SaladUI.Form do
   def form_message(assigns) do
     assigns =
       assigns
-      |> assign(error: has_error?(assigns[:field]) || not Enum.empty?(assigns[:errors]))
+      |> assign(error: field_invalid?(assigns[:field]) || not Enum.empty?(assigns[:errors]))
       |> assign(
         :message,
         List.first(
           case assigns[:errors] do
-            [] -> field_errors(assigns[:field])
+            [] -> if field_invalid?(assigns[:field]), do: field_errors(assigns[:field]), else: []
             errors -> errors
           end
         )
@@ -187,6 +200,7 @@ defmodule SaladUI.Form do
     ~H"""
     <p
       :if={(msg = render_slot(@inner_block)) || @error}
+      data-slot="form-message"
       class={classes(["text-sm font-medium", (msg || @error) && "text-destructive", @class])}
       {@rest}
     >

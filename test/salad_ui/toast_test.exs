@@ -315,11 +315,137 @@ defmodule SaladUI.ToastTest do
             {&toast_success/2, "success"},
             {&toast_error/2, "error"},
             {&toast_warning/2, "warning"},
-            {&toast_info/2, "info"}
+            {&toast_info/2, "info"},
+            {&toast_loading/2, "loading"}
           ] do
         {_event, payload} = last_command(fun.(%Socket{}, "msg"))
         assert payload.params.variant == variant
       end
+    end
+
+    test "per-toast position and toaster opts" do
+      {_event, payload} = last_command(toast_success(%Socket{}, "msg", position: "top-center", toaster: "other"))
+
+      assert payload.target == "other"
+      assert payload.params.position == "top-center"
+      refute Map.has_key?(payload.params, :toaster)
+    end
+  end
+
+  describe "toast_loading/3" do
+    test "adds a loading toast with no duration of its own (the client keeps it sticky)" do
+      {_event, payload} = last_command(toast_loading(%Socket{}, "Loading...", description: "Hang on"))
+
+      assert payload.command == "add"
+      assert payload.params.variant == "loading"
+      assert payload.params.title == "Loading..."
+      assert payload.params.description == "Hang on"
+      refute Map.has_key?(payload.params, :duration)
+    end
+
+    test "keeps the loading variant for a template-based toast" do
+      {_event, payload} = last_command(toast_loading(%Socket{}, template: "upload", toaster: "uploads"))
+
+      assert payload.target == "uploads"
+      assert payload.params.variant == "loading"
+      assert payload.params.template == "upload"
+      refute Map.has_key?(payload.params, :title)
+      refute Map.has_key?(payload.params, :toaster)
+    end
+  end
+
+  describe "toast_promise/3" do
+    test "with an id, adds a loading toast under that id and leaves assigns alone" do
+      socket = toast_promise(%Socket{}, "create-event", loading: "Loading...", position: "top-right")
+      {_event, payload} = last_command(socket)
+
+      assert payload.command == "add"
+      assert payload.target == "toaster"
+      assert payload.params.id == "create-event"
+      assert payload.params.variant == "loading"
+      assert payload.params.title == "Loading..."
+      assert payload.params.position == "top-right"
+      refute Map.has_key?(payload.params, :loading)
+      refute Map.has_key?(socket.assigns, :toast_id)
+    end
+
+    test "with opts and no :id, generates one and assigns it as :toast_id" do
+      socket = toast_promise(%Socket{}, loading: "Saving...")
+      {_event, payload} = last_command(socket)
+
+      assert is_binary(socket.assigns.toast_id)
+      assert payload.params.id == socket.assigns.toast_id
+      assert payload.params.variant == "loading"
+    end
+
+    test "with opts and an :id, uses it" do
+      {_event, payload} = last_command(toast_promise(%Socket{}, id: "save", loading: "Saving...", toaster: "t2"))
+
+      assert payload.params.id == "save"
+      assert payload.target == "t2"
+    end
+
+    test "raises without a :loading message" do
+      assert_raise ArgumentError, ~r/:loading/, fn -> toast_promise(%Socket{}, "x", []) end
+    end
+  end
+
+  describe "toast_resolve/4" do
+    test "{:ok, value} updates the same id to success, calling a success function with the value" do
+      {_event, payload} =
+        last_command(
+          toast_resolve(%Socket{}, "create-event", {:ok, %{name: "Event"}},
+            success: fn data -> "#{data.name} has been created" end,
+            error: "Error"
+          )
+        )
+
+      assert payload.command == "update"
+      assert payload.params == %{id: "create-event", variant: "success", title: "Event has been created"}
+    end
+
+    test "{:ok, {:ok, value}} unwraps the value" do
+      {_event, payload} =
+        last_command(toast_resolve(%Socket{}, "x", {:ok, {:ok, 3}}, success: &"#{&1} saved"))
+
+      assert payload.params.title == "3 saved"
+    end
+
+    test "{:exit, reason}, {:ok, {:error, reason}} and {:ok, :error} resolve to error" do
+      for result <- [{:exit, :boom}, {:ok, {:error, :boom}}, {:ok, :error}] do
+        {_event, payload} =
+          last_command(toast_resolve(%Socket{}, "x", result, success: "Done", error: "Error"))
+
+        assert payload.command == "update"
+        assert payload.params.variant == "error"
+        assert payload.params.title == "Error"
+      end
+
+      {_event, payload} =
+        last_command(toast_resolve(%Socket{}, "x", {:ok, {:error, :timeout}}, error: &"Failed: #{&1}"))
+
+      assert payload.params.title == "Failed: timeout"
+    end
+
+    test "a function may return toast_update/3 opts, and extra opts pass through" do
+      {_event, payload} =
+        last_command(
+          toast_resolve(%Socket{}, "x", {:ok, 1},
+            success: fn _ -> [message: "Saved", description: "All good"] end,
+            duration: 2000,
+            toaster: "t2"
+          )
+        )
+
+      assert payload.target == "t2"
+      assert payload.params == %{id: "x", variant: "success", title: "Saved", description: "All good", duration: 2000}
+    end
+
+    test "with no message for the settled state, dismisses the toast" do
+      {_event, payload} = last_command(toast_resolve(%Socket{}, "x", {:ok, 1}, error: "Error"))
+
+      assert payload.command == "dismiss"
+      assert payload.params == %{id: "x"}
     end
   end
 
@@ -333,6 +459,19 @@ defmodule SaladUI.ToastTest do
       assert payload.params.id == "export-1"
       assert payload.params.variant == "success"
       assert payload.params.title == "Done"
+    end
+
+    test ":message sets the title, and omitting :variant keeps the toast's current one" do
+      {_event, payload} = last_command(toast_update(%Socket{}, "upload", message: "Uploading 60%"))
+
+      assert payload.params == %{id: "upload", title: "Uploading 60%"}
+    end
+
+    test "stringifies the variant and honors toaster:" do
+      {_event, payload} = last_command(toast_update(%Socket{}, "x", variant: :error, message: "Error", toaster: "t2"))
+
+      assert payload.target == "t2"
+      assert payload.params == %{id: "x", variant: "error", title: "Error"}
     end
   end
 

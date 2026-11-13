@@ -180,8 +180,11 @@ defmodule Mix.Tasks.Salad.Setup do
   @js_import """
   import SaladUI from "salad_ui";
   import "salad_ui/components/dialog";
+  import "salad_ui/components/drawer";
   import "salad_ui/components/select";
+  import "salad_ui/components/combobox";
   import "salad_ui/components/tabs";
+  import "salad_ui/components/carousel";
   import "salad_ui/components/radio_group";
   import "salad_ui/components/popover";
   import "salad_ui/components/hover-card";
@@ -189,10 +192,24 @@ defmodule Mix.Tasks.Salad.Setup do
   import "salad_ui/components/tooltip";
   import "salad_ui/components/accordion";
   import "salad_ui/components/slider";
+  import "salad_ui/components/resizable";
+  import "salad_ui/components/input_otp";
+  import "salad_ui/components/checkbox";
   import "salad_ui/components/switch";
   import "salad_ui/components/dropdown_menu";
+  import "salad_ui/components/context_menu";
+  import "salad_ui/components/menubar";
+  import "salad_ui/components/navigation_menu";
   import "salad_ui/components/toast";
   import "salad_ui/components/toast-flash";
+  import "salad_ui/components/input_group";
+  import "salad_ui/components/code_block";
+  import "salad_ui/components/calendar";
+  import "salad_ui/components/questionnaire";
+  import "salad_ui/components/message_scroller";
+  import "salad_ui/components/toggle";
+  import "salad_ui/components/toggle_group";
+  import "salad_ui/components/sidebar";
   """
   @js_hooks "SaladUI: SaladUI.SaladUIHook"
   defp patch_app_js(igniter) do

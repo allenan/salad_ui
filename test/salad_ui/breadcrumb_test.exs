@@ -37,5 +37,21 @@ defmodule SaladUI.BreadcrumbTest do
       assert html =~ "Breadcrumb"
       assert html =~ "<span "
     end
+
+    test "separator renders a chevron by default and custom content when given" do
+      assigns = %{}
+
+      default = rendered_to_string(~H"<.breadcrumb_separator />")
+      assert default =~ ~s(data-slot="breadcrumb-separator")
+      assert default =~ "<svg"
+
+      custom =
+        rendered_to_string(~H"""
+        <.breadcrumb_separator><span class="dot">•</span></.breadcrumb_separator>
+        """)
+
+      assert custom =~ ~s(<span class="dot">•</span>)
+      refute custom =~ "<svg"
+    end
   end
 end

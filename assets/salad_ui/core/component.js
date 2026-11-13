@@ -5,6 +5,26 @@
  */
 import StateMachine from "./state-machine.js";
 import { animateTransition, queryDOM } from "./utils.js";
+import { getDirection } from "./direction.js";
+
+// Ids the client generated for ARIA references (see assignId()). LiveView's
+// morphdom keys nodes by id, so an id the server does not render makes the
+// next patch replace that node with a fresh server-rendered copy instead of
+// patching it, dropping focus, listeners and any state inside it.
+const generatedIds = new WeakSet();
+
+/**
+ * Give `el` the id `id` unless it already has one (e.g. rendered by the
+ * server), remembering that the client made it up. Returns the element's id.
+ */
+export function assignId(el, id) {
+  if (!el) return null;
+  if (!el.id) {
+    el.id = id;
+    generatedIds.add(el);
+  }
+  return el.id;
+}
 
 /**
  * Base class every interactive SaladUI component extends.
@@ -42,6 +62,7 @@ class Component {
     };
 
     this.initialState = initialState;
+    this.ignoreItems = ignoreItems;
     this.eventConfig = {};
     this.componentConfig = {};
     this.hiddenConfig = {};
@@ -57,15 +78,7 @@ class Component {
     this.initStateMachine(this.componentConfig.stateMachine, this.initialState);
     this.ariaManager = new AriaManager(this, this.ariaConfig);
 
-    // ignore item's part
-    this.allParts = this.queryParts();
-    if (ignoreItems) {
-      this.allParts = this.allParts.filter(
-        (element) =>
-          !element.dataset.part.startsWith("item") &&
-          !element.dataset.part.endsWith("-item"),
-      );
-    }
+    this.allParts = this.collectParts();
 
     this.updateUI();
     this.updatePartsVisibility();
@@ -109,6 +122,138 @@ class Component {
       if (node.getAttribute("phx-hook") != null) return -1;
       return 1;
     }).concat([this.el]);
+  }
+
+  /**
+   * queryParts(), minus item parts when the component was built with
+   * `ignoreItems` (the default): those belong to per-item instances.
+   */
+  collectParts() {
+    const parts = this.queryParts();
+    if (!this.ignoreItems) return parts;
+
+    return parts.filter(
+      (element) =>
+        !element.dataset.part.startsWith("item") &&
+        !element.dataset.part.endsWith("-item"),
+    );
+  }
+
+  // --- Keeping the instance across a LiveView patch ----------------------
+  //
+  // A patch puts the server-rendered markup back: `hidden`, `data-state`,
+  // ARIA and any id the client assigned are reverted, and an element whose
+  // client-assigned id the server does not render is replaced outright.
+  // Components whose state lives on the client call clearGeneratedIds() in
+  // beforeUpdate() so their parts are patched in place, and implement
+  // skipReinitialize() with these helpers: check sameConfig(), re-read the
+  // parts with refreshParts(), then re-apply their state (and so the ids)
+  // onto the patched markup.
+
+  /**
+   * Whether the patched root still carries the data-options and
+   * data-event-mappings this instance was built from. Options named in
+   * `liveOptions` (e.g. a controlled `value`) are left out of the comparison;
+   * the component applies a change to them in place (see adoptOptions()).
+   */
+  sameConfig(el, liveOptions = []) {
+    if (el !== this.el) return false;
+    if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
+      return false;
+    }
+
+    const raw = el.getAttribute("data-options");
+    if (raw === this._optionsRaw) return true;
+    if (liveOptions.length === 0) return false;
+
+    const withoutLive = (json) => {
+      try {
+        const options = json ? JSON.parse(json) : {};
+        liveOptions.forEach((key) => delete options[key]);
+        return JSON.stringify(options);
+      } catch {
+        return null;
+      }
+    };
+    const next = withoutLive(raw);
+    return next !== null && next === withoutLive(this._optionsRaw);
+  }
+
+  /**
+   * Take the patched root's data-options as current. Returns the names in
+   * `liveOptions` whose server value changed since the last render.
+   */
+  adoptOptions(el, liveOptions = []) {
+    const raw = el.getAttribute("data-options");
+    if (raw === this._optionsRaw) return [];
+
+    let next;
+    try {
+      next = raw ? JSON.parse(raw) : {};
+    } catch {
+      return [];
+    }
+
+    const previous = this.options || {};
+    const changed = liveOptions.filter(
+      (key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key]),
+    );
+    this.options = next;
+    this._optionsRaw = raw;
+    return changed;
+  }
+
+  /**
+   * Re-read the parts after a patch. Returns false, changing nothing, when a
+   * part named in `stableParts` is now a different element (state such as a
+   * focus trap is bound to it, so the caller should rebuild). Otherwise the
+   * part list is replaced, and the per-part key/mouse listeners are rebound
+   * if any part element changed.
+   */
+  refreshParts(stableParts = []) {
+    const parts = this.collectParts();
+    const find = (list, name) =>
+      list.find((part) => part.dataset.part === name) || null;
+    const stable = stableParts.every(
+      (name) => find(parts, name) === find(this.allParts, name),
+    );
+    if (!stable) return false;
+
+    const changed =
+      parts.length !== this.allParts.length ||
+      parts.some((part, index) => part !== this.allParts[index]);
+    this.allParts = parts;
+    if (changed && this.eventSetupCompleted) this.rebindPartListeners();
+
+    return true;
+  }
+
+  /**
+   * Drop the ids assignId() generated on this component's parts, so the
+   * coming patch matches those parts to the server-rendered markup and
+   * patches them in place. Call it from beforeUpdate(); skipReinitialize()
+   * (or the rebuilt instance) assigns them again.
+   */
+  clearGeneratedIds() {
+    this.queryParts().forEach((node) => {
+      if (!generatedIds.has(node)) return;
+      node.removeAttribute("id");
+      generatedIds.delete(node);
+    });
+  }
+
+  /** Re-attach the keyMap/mouseMap listeners to the current part elements. */
+  rebindPartListeners() {
+    this.removeKeyEventHandlers();
+    this.removeMouseEventListeners();
+    this.setupKeyEventHandlers();
+    this.setupMouseEventHandlers();
+  }
+
+  /** Re-apply data-state, ARIA and part visibility for the current state. */
+  reapplyState() {
+    this.updateUI();
+    this.updatePartsVisibility();
   }
 
   initEventMappings() {
@@ -266,6 +411,12 @@ class Component {
     const actionElement = event.target.closest("[data-action]");
     if (!actionElement) return;
 
+    // A nested component (e.g. a collapsible row inside another collapsible,
+    // or a dialog trigger inside a collapsible) owns its own actions; the
+    // click still bubbles up here, so skip actions that belong to it.
+    const owner = actionElement.closest("[data-component]");
+    if (owner && owner !== this.el) return;
+
     const action = actionElement.getAttribute("data-action");
     this.transition(action, {
       originalEvent: event,
@@ -322,7 +473,12 @@ class Component {
       const element = this.getPart(stateEvents.keyEventTarget) || this.el;
 
       element.addEventListener("keydown", boundHandler);
-      this.keyEventHandlers.set(element, boundHandler);
+      // Several states (e.g. checked/unchecked) can bind the same element,
+      // so keep every handler: overwriting one would leak it past destroy().
+      if (!this.keyEventHandlers.has(element)) {
+        this.keyEventHandlers.set(element, []);
+      }
+      this.keyEventHandlers.get(element).push(boundHandler);
     });
   }
 
@@ -382,8 +538,10 @@ class Component {
   removeKeyEventHandlers() {
     if (this.keyEventHandlers) {
       // For each element that has event handlers
-      this.keyEventHandlers.forEach((handler, element) => {
-        element.removeEventListener("keydown", handler);
+      this.keyEventHandlers.forEach((handlers, element) => {
+        handlers.forEach((handler) =>
+          element.removeEventListener("keydown", handler),
+        );
       });
 
       // Clear the map for future use
@@ -484,10 +642,7 @@ class Component {
     const part = this.getPart(partName);
     if (!part) return null;
 
-    if (!part.id) {
-      part.id = `${this.el.id}-${partName}`;
-    }
-    return part.id;
+    return assignId(part, `${this.el.id}-${partName}`);
   }
 
   // Push event to server (for frameworks like Phoenix LiveView)
@@ -581,6 +736,19 @@ class Component {
    * counterpart and also runs if setupEvents() is ever re-invoked.
    */
   beforeDestroy() {}
+
+  /**
+   * Reading direction of the component (`"ltr"` or `"rtl"`): the nearest
+   * `dir` attribute on or above the root, else the computed CSS direction.
+   * Read on demand so a `dir` toggled after mount is honoured.
+   */
+  getDirection() {
+    return getDirection(this.el);
+  }
+
+  isRtl() {
+    return this.getDirection() === "rtl";
+  }
 
   // Alias for transition()
   handleCommand(command, params = {}) {

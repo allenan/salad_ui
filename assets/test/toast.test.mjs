@@ -483,6 +483,20 @@ test("expand option keeps the viewport permanently expanded", () => {
   component.destroy();
 });
 
+test("with expand on, leaving the viewport still resumes paused timers", async () => {
+  const { component, viewport } = buildToaster({ options: { expand: true } });
+
+  const id = component.handleCommand("add", { title: "Bye", duration: 30 });
+  viewport.dispatchEvent(new window.Event("mouseenter"));
+  await wait(60);
+  assert.ok(cardFor(viewport, id), "paused while hovered");
+
+  viewport.dispatchEvent(new window.Event("mouseleave"));
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
 test("action and cancel buttons push their configured event, then dismiss", async () => {
   const { component, viewport, pushedTo: pushedList } = buildToaster();
 
@@ -598,8 +612,8 @@ test("card background never varies by variant — no predefined color palette", 
   });
   await wait(10);
 
-  assert.match(cardFor(viewport, successId).className, /bg-background/);
-  assert.match(cardFor(viewport, errorId).className, /bg-background/);
+  assert.match(cardFor(viewport, successId).className, /bg-popover/);
+  assert.match(cardFor(viewport, errorId).className, /bg-popover/);
   assert.equal(
     cardFor(viewport, successId).className,
     cardFor(viewport, errorId).className,
@@ -618,10 +632,11 @@ test("the card renders in the default text color by default (icon has no color c
   await wait(10);
 
   const card = cardFor(viewport, id);
-  const icon = card.querySelector(".hero-check-circle");
+  const icon = card.querySelector('[data-part="icon"] svg.lucide-circle-check');
   assert.ok(icon);
-  assert.match(card.className, /text-foreground/);
-  assert.doesNotMatch(icon.className, /text-/);
+  assert.match(card.className, /text-popover-foreground/);
+  assert.equal(icon.getAttribute("stroke"), "currentColor");
+  assert.doesNotMatch(icon.getAttribute("class"), /text-/);
 
   component.destroy();
 });
@@ -651,10 +666,10 @@ test("the toaster's colors option replaces the whole card's border/background/te
   assert.match(successCard.className, /bg-emerald-50/);
   assert.match(successCard.className, /text-emerald-900/);
   assert.doesNotMatch(successCard.className, /border-border/);
-  assert.doesNotMatch(successCard.className, /bg-background/);
-  assert.doesNotMatch(successCard.className, /text-foreground/);
+  assert.doesNotMatch(successCard.className, /bg-popover/);
+  assert.doesNotMatch(successCard.className, /text-popover-foreground/);
   assert.doesNotMatch(
-    successCard.querySelector(".hero-check-circle").className,
+    successCard.querySelector('[data-part="icon"] svg').getAttribute("class"),
     /text-/,
   );
 
@@ -1124,4 +1139,343 @@ test("toast() called with no <.toaster> mounted logs an error and returns null",
   } finally {
     console.error = originalError;
   }
+});
+
+// -- loading / promise / shadcn icon set --------------------------------------
+
+test("each variant renders shadcn's lucide icon at size-4; loading spins", async () => {
+  const { component, viewport } = buildToaster();
+
+  const expected = {
+    success: "lucide-circle-check",
+    info: "lucide-info",
+    warning: "lucide-triangle-alert",
+    error: "lucide-octagon-x",
+    loading: "lucide-loader-circle",
+  };
+
+  const ids = Object.keys(expected).map((variant) => [
+    variant,
+    component.handleCommand("add", { title: variant, variant }),
+  ]);
+
+  for (const [variant, id] of ids) {
+    const wrapper = cardFor(viewport, id).querySelector('[data-part="icon"]');
+    assert.match(wrapper.className, /\bsize-4\b/);
+    const svgClass = wrapper.querySelector("svg").getAttribute("class");
+    assert.match(svgClass, new RegExp(expected[variant]));
+    assert.match(svgClass, /\bsize-4\b/);
+    if (variant === "loading") {
+      assert.match(svgClass, /animate-spin/);
+    } else {
+      assert.doesNotMatch(svgClass, /animate-spin/);
+    }
+  }
+
+  const plain = component.handleCommand("add", { title: "No icon" });
+  assert.equal(
+    cardFor(viewport, plain).querySelector('[data-part="icon"]'),
+    null,
+  );
+
+  component.destroy();
+});
+
+test("icon overrides (toaster-wide, per-toast, or icon: false) still replace the built-in icon", () => {
+  const { component, viewport } = buildToaster({
+    options: { icons: { success: "hero-sparkles" } },
+  });
+
+  const toasterWide = component.handleCommand("add", {
+    title: "Wide",
+    variant: "success",
+  });
+  const perToast = component.handleCommand("add", {
+    title: "Per toast",
+    variant: "success",
+    icon: "hero-bolt",
+  });
+  const none = component.handleCommand("add", {
+    title: "None",
+    variant: "error",
+    icon: false,
+  });
+
+  const wideIcon = cardFor(viewport, toasterWide).querySelector(
+    '[data-part="icon"] .hero-sparkles',
+  );
+  assert.ok(wideIcon);
+  assert.match(wideIcon.className, /\bsize-4\b/);
+  assert.equal(
+    cardFor(viewport, toasterWide).querySelector('[data-part="icon"] svg'),
+    null,
+  );
+  assert.ok(
+    cardFor(viewport, perToast).querySelector('[data-part="icon"] .hero-bolt'),
+  );
+  assert.equal(
+    cardFor(viewport, none).querySelector('[data-part="icon"]'),
+    null,
+  );
+
+  component.destroy();
+});
+
+test("the neutral card uses shadcn's popover tokens and --radius", () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", { title: "Themed" });
+  const className = cardFor(viewport, id).className;
+
+  assert.match(className, /\bbg-popover\b/);
+  assert.match(className, /\btext-popover-foreground\b/);
+  assert.match(className, /\bborder-border\b/);
+  assert.match(className, /rounded-\(--radius\)/);
+  assert.doesNotMatch(className, /\bbg-background\b/);
+
+  component.destroy();
+});
+
+test("a loading toast never arms a timeout, even with an explicit duration", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Loading...",
+    variant: "loading",
+    duration: 20,
+  });
+  const card = cardFor(viewport, id);
+  await waitFor(() => card.dataset.state === "visible");
+
+  assert.equal(component.stack.get(id).timer, null);
+  // A polite status, announced like Sonner's — not aria-busy, which would
+  // tell screen readers to hold back the "Loading..." message itself.
+  assert.equal(card.getAttribute("role"), "status");
+  assert.equal(card.getAttribute("aria-live"), "polite");
+  assert.equal(card.hasAttribute("aria-busy"), false);
+
+  // Hover/visibility resume must not start one either.
+  component.forEachTimer((timer) => timer.resume());
+  assert.equal(component.stack.get(id).timer, null);
+  assert.ok(cardFor(viewport, id));
+
+  component.destroy();
+});
+
+test("a loading toast can't be swiped away", () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Loading...",
+    variant: "loading",
+  });
+  const card = cardFor(viewport, id);
+  card.dispatchEvent(
+    new window.MouseEvent("pointerdown", { clientX: 0, clientY: 0 }),
+  );
+
+  assert.equal(card.dataset.swiping, undefined);
+  assert.ok(component.stack.has(id));
+
+  component.destroy();
+});
+
+test("update morphs a loading card into success in place, re-arming the default timeout", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Loading...",
+    variant: "loading",
+  });
+  const card = cardFor(viewport, id);
+  await waitFor(() => card.dataset.state === "visible");
+
+  component.handleCommand("update", {
+    id,
+    variant: "success",
+    title: "Event has been created",
+  });
+
+  assert.equal(cardFor(viewport, id), card, "same DOM node, not a new card");
+  assert.equal(viewport.children.length, 1);
+  assert.equal(card.dataset.variant, "success");
+  assert.equal(
+    card.querySelector('[data-part="title"]').textContent,
+    "Event has been created",
+  );
+  assert.ok(card.querySelector("svg.lucide-circle-check"));
+  assert.equal(card.querySelector("svg.lucide-loader-circle"), null);
+
+  // The loading toast's Infinity doesn't leak into the resolved card.
+  const { timer } = component.stack.get(id);
+  assert.ok(timer);
+  assert.equal(timer.delay, 4000);
+
+  component.destroy();
+});
+
+test("a resolved loading toast auto-dismisses on its new duration", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Loading...",
+    variant: "loading",
+  });
+  component.handleCommand("update", {
+    id,
+    variant: "error",
+    title: "Error",
+    duration: 20,
+  });
+
+  assert.equal(cardFor(viewport, id).dataset.variant, "error");
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
+test("an update that keeps the loading variant stays sticky", () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Uploading 10%",
+    variant: "loading",
+  });
+  component.handleCommand("update", { id, title: "Uploading 60%" });
+
+  assert.equal(cardFor(viewport, id).dataset.variant, "loading");
+  assert.equal(component.stack.get(id).timer, null);
+
+  component.destroy();
+});
+
+test("toast.loading() adds a loading toast", () => {
+  const { component, viewport } = buildToaster();
+
+  const id = toast.loading("Loading...");
+
+  assert.equal(cardFor(viewport, id).dataset.variant, "loading");
+  component.destroy();
+});
+
+test("toast.promise() shows loading, then morphs the same card into success with the resolved value", async () => {
+  const { component, viewport } = buildToaster();
+
+  let resolve;
+  const id = toast.promise(
+    new Promise((r) => {
+      resolve = r;
+    }),
+    {
+      loading: "Loading...",
+      success: (data) => `${data.name} has been created`,
+      error: "Error",
+    },
+  );
+
+  const card = cardFor(viewport, id);
+  assert.equal(card.dataset.variant, "loading");
+
+  resolve({ name: "Event" });
+  await waitFor(() => card.dataset.variant === "success");
+
+  assert.equal(cardFor(viewport, id), card);
+  assert.equal(
+    card.querySelector('[data-part="title"]').textContent,
+    "Event has been created",
+  );
+
+  component.destroy();
+});
+
+test("toast.promise() morphs into error on rejection and accepts a promise-returning function", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = toast.promise(() => Promise.reject(new Error("boom")), {
+    loading: "Loading...",
+    error: (err) => `Failed: ${err.message}`,
+  });
+
+  const card = cardFor(viewport, id);
+  await waitFor(() => card.dataset.variant === "error");
+  assert.equal(
+    card.querySelector('[data-part="title"]').textContent,
+    "Failed: boom",
+  );
+
+  component.destroy();
+});
+
+test("toast.promise() dismisses the card when the settled state has no message", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = toast.promise(Promise.resolve("ok"), { loading: "Loading..." });
+  assert.ok(cardFor(viewport, id));
+
+  await waitFor(() => !component.stack.has(id));
+
+  component.destroy();
+});
+
+test("a loading toast resolved while the stack is hovered stays up until the pointer leaves", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Loading...",
+    variant: "loading",
+  });
+  viewport.dispatchEvent(new window.Event("mouseenter"));
+
+  component.handleCommand("update", {
+    id,
+    variant: "success",
+    title: "Done",
+    duration: 30,
+  });
+
+  await wait(80);
+  assert.ok(
+    component.stack.has(id),
+    "the resolved card's timer is born paused while hovered",
+  );
+
+  viewport.dispatchEvent(new window.Event("mouseleave"));
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
+test("a toast added while the stack is hovered doesn't time out under the pointer", async () => {
+  const { component, viewport } = buildToaster();
+
+  viewport.dispatchEvent(new window.Event("mouseenter"));
+  const id = component.handleCommand("add", { title: "New", duration: 30 });
+
+  await wait(80);
+  assert.ok(component.stack.has(id), "not dismissed while hovered");
+
+  viewport.dispatchEvent(new window.Event("mouseleave"));
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
+test("toast.promise() settles as an error when the promise factory throws synchronously", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = toast.promise(
+    () => {
+      throw new Error("sync");
+    },
+    { loading: "Loading...", error: (err) => `Failed: ${err.message}` },
+  );
+
+  const card = cardFor(viewport, id);
+  await waitFor(() => card.dataset.variant === "error");
+  assert.equal(
+    card.querySelector('[data-part="title"]').textContent,
+    "Failed: sync",
+  );
+
+  component.destroy();
 });

@@ -4,7 +4,14 @@ import { after, afterEach, before, test } from "node:test";
 import "../salad_ui/components/dialog.js";
 import { registry } from "../salad_ui/core/factory.js";
 import { SaladUIHook } from "../salad_ui/core/hook.js";
-import { installDom, uninstallDom, wait, waitFor } from "./helpers/dom.mjs";
+import {
+  hookFor,
+  installDom,
+  simulatePatch,
+  uninstallDom,
+  wait,
+  waitFor,
+} from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
@@ -19,6 +26,7 @@ function buildDialog({
   closeOnOutsideClick = true,
   closeOnEscape = true,
   animations,
+  extraPanelHtml = "",
 } = {}) {
   const initialState =
     state === undefined ? `data-open="${open}"` : `data-state="${state}"`;
@@ -43,6 +51,7 @@ function buildDialog({
           <p data-part="description">Dialog description</p>
           <button data-part="close-trigger" data-action="close" type="button">Close</button>
           <button id="dialog-action" type="button">Action</button>
+          ${extraPanelHtml}
         </div>
       </div>
     </div>
@@ -68,6 +77,14 @@ function buildDialog({
     pushed,
     hookContext,
   };
+}
+
+// Re-render from the server markup, which renders only these ids.
+function patch(el) {
+  simulatePatch(el, {
+    hidden: ['[data-part="content"]'],
+    keepIds: [el.id, "dialog-action", "field"],
+  });
 }
 
 function click(el) {
@@ -104,6 +121,29 @@ test("opens from trigger and closes from close trigger", () => {
   assert.equal(panel.hasAttribute("aria-modal"), false);
   assert.equal(panel.hasAttribute("aria-labelledby"), false);
   assert.equal(panel.hasAttribute("aria-describedby"), false);
+  assert.equal(pushed.at(-1).event, "close");
+
+  component.destroy();
+});
+
+test("dialog_close wrapper closes from a nested element and keeps its label", () => {
+  const { component, trigger, el, pushed } = buildDialog({
+    extraPanelHtml: `
+      <div data-slot="dialog-close" data-part="close" data-action="close">
+        <button id="custom-close" type="button">Cancel</button>
+      </div>
+    `,
+  });
+
+  click(trigger);
+  assert.equal(component.state, "open");
+
+  const wrapper = el.querySelector('[data-part="close"]');
+  // Only the built-in corner button gets the generic "Close dialog" label.
+  assert.equal(wrapper.hasAttribute("aria-label"), false);
+
+  click(document.getElementById("custom-close"));
+  assert.equal(component.state, "closed");
   assert.equal(pushed.at(-1).event, "close");
 
   component.destroy();
@@ -207,19 +247,78 @@ test("SSR-open state initializes dialog without emitting open on remount", async
   remounted.destroy();
 });
 
-test("LiveView hook updates remount dialog from server-rendered state", () => {
-  const { el, trigger } = buildDialog();
-  const hook = createHookInstance(el);
-  hook.mounted();
+test("a LiveView patch keeps a client-opened dialog open", () => {
+  const { component, el, content, panel, trigger, pushed } = buildDialog({
+    extraPanelHtml: '<input id="field" />',
+  });
+  const hook = hookFor(el, component);
   click(trigger);
+  const field = document.getElementById("field");
+  field.focus();
+  const title = el.querySelector('[data-part="title"]');
+  assert.equal(panel.getAttribute("aria-labelledby"), title.id);
 
-  const original = hook.component;
+  // A phx-change on a form in the dialog re-renders it from the server,
+  // which still says closed.
+  hook.beforeUpdate();
+  patch(el);
   hook.updated();
 
-  assert.equal(original.destroyed, true);
-  assert.notEqual(hook.component, original);
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(panel.getAttribute("data-state"), "open");
+  assert.equal(panel.getAttribute("role"), "dialog");
+  assert.equal(panel.getAttribute("aria-modal"), "true");
+  assert.equal(panel.getAttribute("aria-labelledby"), "dialog-1-title");
+  // The title's client id was dropped before the patch, so it was patched
+  // in place rather than replaced, and got its id back.
+  assert.equal(document.getElementById("dialog-1-title"), title);
+  assert.equal(document.activeElement, field);
+  assert.equal(pushed.filter(({ event }) => event === "open").length, 1);
+
+  // Still interactive.
+  content.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  );
+  assert.equal(component.state, "closed");
+  assert.equal(content.hidden, true);
+  component.destroy();
+});
+
+test("a LiveView patch keeps a client-opened sheet (data-state root) open", () => {
+  const { component, el, content, trigger } = buildDialog({
+    state: "closed",
+  });
+  const hook = hookFor(el, component);
+  click(trigger);
+
+  hook.beforeUpdate();
+  patch(el);
+  el.dataset.state = "closed";
+  hook.updated();
+
+  assert.equal(hook.component, component);
+  assert.equal(component.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(el.dataset.state, "open");
+  component.destroy();
+});
+
+test("changed dialog options rebuild it from the server-rendered state", () => {
+  const { component, el, content, trigger } = buildDialog();
+  const hook = hookFor(el, component);
+  click(trigger);
+
+  hook.beforeUpdate();
+  patch(el);
+  el.setAttribute("data-options", JSON.stringify({ closeOnEscape: false }));
+  hook.updated();
+
+  assert.notEqual(hook.component, component);
+  assert.equal(component.destroyed, true);
   assert.equal(hook.component.state, "closed");
-  assert.equal(el.querySelector('[data-part="content"]').hidden, true);
+  assert.equal(content.hidden, true);
   hook.destroyed();
 });
 
@@ -228,9 +327,11 @@ test("LiveView hook updates honor changed server dialog state", () => {
   const hook = createHookInstance(el);
   hook.mounted();
 
+  const original = hook.component;
   el.dataset.open = "false";
   hook.updated();
 
+  assert.equal(hook.component, original);
   assert.equal(hook.component.state, "closed");
   assert.equal(el.querySelector('[data-part="content"]').hidden, true);
   hook.destroyed();

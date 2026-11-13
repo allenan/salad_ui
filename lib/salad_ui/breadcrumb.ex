@@ -75,6 +75,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb(assigns) do
     ~H"""
     <nav
+      data-slot="breadcrumb"
       aria-label="breadcrumb"
       class={
         classes([
@@ -105,6 +106,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_list(assigns) do
     ~H"""
     <ol
+      data-slot="breadcrumb-list"
       class={
         classes([
           "flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5",
@@ -134,6 +136,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_item(assigns) do
     ~H"""
     <li
+      data-slot="breadcrumb-item"
       class={
         classes([
           "inline-flex items-center gap-1.5",
@@ -164,6 +167,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_link(assigns) do
     ~H"""
     <.link
+      data-slot="breadcrumb-link"
       class={
         classes([
           "transition-colors hover:text-foreground",
@@ -194,6 +198,7 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_page(assigns) do
     ~H"""
     <span
+      data-slot="breadcrumb-page"
       role="link"
       aria-disabled="true"
       aria-current="page"
@@ -214,18 +219,29 @@ defmodule SaladUI.Breadcrumb do
   Renders a separator between breadcrumb items.
 
   Visual indicator that separates items in the breadcrumb path.
-  By default, shows a chevron right icon.
+  By default, shows a chevron right icon; pass content to replace it.
 
   ## Attributes
 
   * `:class` - Additional CSS classes to apply to the separator
+  * `:inner_block` - Optional custom separator (for example an icon)
+
+  ## Examples
+
+      <.breadcrumb_separator />
+
+      <.breadcrumb_separator>
+        <Lucideicons.dot />
+      </.breadcrumb_separator>
   """
   attr :class, :string, default: nil
   attr :rest, :global
+  slot :inner_block, doc: "custom separator content; defaults to a chevron"
 
   def breadcrumb_separator(assigns) do
     ~H"""
     <li
+      data-slot="breadcrumb-separator"
       role="presentation"
       class={
         classes([
@@ -235,13 +251,15 @@ defmodule SaladUI.Breadcrumb do
       }
       {@rest}
     >
+      {render_slot(@inner_block)}
       <svg
+        :if={@inner_block == []}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="size-6 w-3"
+        class="size-6 w-3 rtl:rotate-180"
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
       </svg>
@@ -265,9 +283,10 @@ defmodule SaladUI.Breadcrumb do
   def breadcrumb_ellipsis(assigns) do
     ~H"""
     <div
+      data-slot="breadcrumb-ellipsis"
       class={
         classes([
-          "flex h-9 w-9 items-center justify-center",
+          "flex size-9 items-center justify-center",
           @class
         ])
       }
@@ -279,7 +298,7 @@ defmodule SaladUI.Breadcrumb do
         viewBox="0 0 24 24"
         stroke-width="2"
         stroke="currentColor"
-        class="w-4 h-4"
+        class="size-4"
       >
         <path
           stroke-linecap="round"
