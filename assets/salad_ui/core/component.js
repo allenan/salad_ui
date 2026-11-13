@@ -27,6 +27,22 @@ export function assignId(el, id) {
 }
 
 /**
+ * Drop every id assignId() generated on the descendants of `roots`, whatever
+ * component they belong to. For a component whose parts live outside its
+ * root (a portaled positioner) or inside nested panels it built itself (menu
+ * sub-menus); most components use the clearGeneratedIds() method instead.
+ */
+export function clearGeneratedIdsWithin(...roots) {
+  roots.forEach((root) =>
+    root?.querySelectorAll("[id]").forEach((node) => {
+      if (!generatedIds.has(node)) return;
+      node.removeAttribute("id");
+      generatedIds.delete(node);
+    }),
+  );
+}
+
+/**
  * Base class every interactive SaladUI component extends.
  *
  * Lifecycle (see docs/component_lifecycle.md for the full reference):

@@ -15,6 +15,34 @@ defmodule ComponentCase do
         |> Kernel.-(1)
       end
 
+      # Returns `{tag, [attribute]}` for every rendered start tag that carries an
+      # attribute more than once (the browser keeps only the first copy).
+      def duplicate_attrs(html) do
+        for [tag] <- Regex.scan(~r/<[a-zA-Z][^>]*>/, html),
+            names =
+              for(
+                [name] <- Regex.scan(~r/\s([^\s=\/>]+)/, Regex.replace(~r/"[^"]*"/, tag, ~s("")), capture: :all_but_first),
+                do: name
+              ),
+            duplicates = Enum.uniq(names -- Enum.uniq(names)),
+            duplicates != [],
+            do: {tag, duplicates}
+      end
+
+      # Asserts some `<tag ...>` opening tag carries every `{name, value}` in
+      # `attrs`, in any order. Rendered attribute order is not stable (it
+      # follows atom creation order), so never assert it with one regex.
+      defp assert_tag(html, tag, attrs) do
+        found =
+          ~r/<#{tag}\b[^>]*>/
+          |> Regex.scan(html)
+          |> Enum.any?(fn [open] ->
+            Enum.all?(attrs, fn {name, value} -> open =~ ~s( #{name}="#{value}") end)
+          end)
+
+        assert found, "no <#{tag}> with #{inspect(attrs)} in:\n#{html}"
+      end
+
       def clean_string(str) do
         str
         |> String.replace("\n", "")

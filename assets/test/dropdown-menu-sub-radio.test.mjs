@@ -236,9 +236,32 @@ test("arrow navigation inside a sub-menu stays in the sub-menu", () => {
   keydown(message, "ArrowDown");
   assert.equal(document.activeElement, more);
   keydown(more, "ArrowDown");
-  assert.equal(document.activeElement, email, "wraps within the sub-menu");
+  assert.equal(
+    document.activeElement,
+    more,
+    "stops at the last item (no loop)",
+  );
+  keydown(more, "Home");
+  assert.equal(document.activeElement, email);
   keydown(email, "End");
   assert.equal(document.activeElement, more);
+
+  component.destroy();
+});
+
+test("a sub-content with data-loop wraps within the sub-menu", () => {
+  const { component, email, invite, more, trigger } = build();
+  more.closest("[data-part='sub-content']").setAttribute("data-loop", "true");
+
+  click(trigger);
+  invite.focus();
+  keydown(invite, "ArrowRight");
+
+  keydown(email, "End");
+  keydown(more, "ArrowDown");
+  assert.equal(document.activeElement, email, "wraps within the sub-menu");
+  keydown(email, "ArrowUp");
+  assert.equal(document.activeElement, more, "wraps back to the last");
 
   component.destroy();
 });

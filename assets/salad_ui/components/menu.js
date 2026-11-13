@@ -1,5 +1,5 @@
 // saladui/components/menu.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import { CollectionRegistry, RovingFocus } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
@@ -18,29 +18,6 @@ const MENU_SELECTOR = "[data-part='content'], [data-part='sub-content']";
 const POINTER_GRACE_MS = 300;
 
 let subMenuCounter = 0;
-
-// Ids this module (or the dropdown root) generated. LiveView's morphdom keys
-// nodes by id, so a client-only id makes it replace the node on the next
-// patch instead of patching it; they are stripped before each patch.
-const generatedIds = new WeakSet();
-
-export function assignId(el, id) {
-  if (el && !el.id) {
-    el.id = id;
-    generatedIds.add(el);
-  }
-  return el?.id || null;
-}
-
-export function clearGeneratedIds(...roots) {
-  roots.forEach((root) =>
-    root?.querySelectorAll("[id]").forEach((node) => {
-      if (!generatedIds.has(node)) return;
-      node.removeAttribute("id");
-      generatedIds.delete(node);
-    }),
-  );
-}
 
 function isPointInPolygon({ x, y }, polygon) {
   let inside = false;
@@ -820,6 +797,13 @@ class Menu extends Component {
     }
   }
 
+  // Whether ArrowDown/ArrowUp wrap around (`data-loop="true"`, the content's
+  // `loop` attr). Off by default, as in Radix: ArrowDown on the last item
+  // stays put.
+  get loop() {
+    return this.el.getAttribute("data-loop") === "true";
+  }
+
   // Activate menu, focus the first (or last) item
   activate(direction = "first") {
     // Forget the previously focused item so reopening focuses the first item
@@ -959,7 +943,7 @@ class Menu extends Component {
     let currentItem = this.rovingFocus.focusedItem;
 
     // Get target item using registry navigation methods
-    const targetItem = this.registry.getItem(direction, currentItem);
+    const targetItem = this.registry.getItem(direction, currentItem, this.loop);
 
     if (targetItem) {
       this.rovingFocus.focus(targetItem);

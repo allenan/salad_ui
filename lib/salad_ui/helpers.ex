@@ -10,8 +10,8 @@ defmodule SaladUI.Helpers do
   Merges Tailwind classes, later classes winning conflicts. This is what
   `classes/1` calls; see `SaladUI.ClassMerge` for the Tailwind v4 handling.
 
-  Classes TwMerge 0.1 crashes on, such as typeset's `not-typeset` or
-  typography's `not-prose`, are kept in place instead of failing the render.
+  Classes that aren't Tailwind utilities, such as typeset's `not-typeset` or
+  typography's `not-prose`, are kept in place.
   """
   def tw_merge(classes), do: SaladUI.ClassMerge.merge(classes)
 
@@ -132,6 +132,26 @@ defmodule SaladUI.Helpers do
   """
   def put_data_slot(assigns, slot) do
     assign(assigns, :rest, Map.put_new(assigns[:rest] || %{}, :"data-slot", slot))
+  end
+
+  @doc """
+  Moves the attributes in `defaults` out of `:rest` into `:own_attrs`, keeping
+  the caller's value when it passed one and the default otherwise.
+
+  For components another component renders through `as`/`as_child` (shadcn's
+  `asChild`): e.g. `dropdown_menu_item as={&button/1}` passes its own
+  `data-slot` and `data-variant`, which must replace the button's, as in shadcn
+  where the wrapper's props are spread last. Render them from `@own_attrs`
+  (`data-slot={@own_attrs[:"data-slot"]}`) instead of a literal next to
+  `{@rest}`, which would render the attribute twice (the browser keeps the
+  first).
+  """
+  def put_own_attrs(assigns, defaults) do
+    {given, rest} = Map.split(assigns[:rest] || %{}, Keyword.keys(defaults))
+
+    assigns
+    |> assign(:rest, rest)
+    |> assign(:own_attrs, Map.merge(Map.new(defaults), given))
   end
 
   @doc """

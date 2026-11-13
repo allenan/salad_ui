@@ -14,7 +14,10 @@ defmodule SaladUI.MarkerTest do
       </.marker>
       """)
 
-    assert html =~ ~r/^<div[^>]*data-slot="marker" data-variant="default"/
+    # dynamic_tag renders its attributes in map (atom) order, which shifts
+    # with the atoms other modules create, so don't pin the order.
+    assert html =~ ~r/^<div[^>]*\sdata-slot="marker"/
+    assert html =~ ~r/^<div[^>]*\sdata-variant="default"/
     refute html =~ ~s(name=)
     assert html =~ "group/marker"
     assert html =~ ~s(role="status")

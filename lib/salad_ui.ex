@@ -22,7 +22,7 @@ defmodule SaladUI do
       use SaladUI
 
       # In templates
-      <.button variant="primary" phx-click="save">
+      <.button phx-click="save">
         Save Changes
       </.button>
 
