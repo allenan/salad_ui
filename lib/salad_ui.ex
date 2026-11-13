@@ -226,6 +226,7 @@ defmodule SaladUI do
       import SaladUI.CodeBlock
       import SaladUI.Collapsible
       import SaladUI.Combobox
+      import SaladUI.Command
       import SaladUI.ContextMenu
 
       import SaladUI.DataTable,
