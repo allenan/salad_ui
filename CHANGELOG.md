@@ -82,6 +82,30 @@ for status and known gaps. Every new JS-backed component is registered in
   menus, carousel, resizable, calendar and navigation menu follow `dir="rtl"`.
 - `salad_ui.css`: shimmer, `scroll-fade-x`/`scroll-fade-b` and `scrollbar-none`
   utilities from shadcn.
+- Toggle group (new-york-v4): `type` (single/multiple), `spacing` (0 = connected
+  items), `orientation`, `loop`, `on-value-changed`; roving tab stop with arrow
+  keys that follow orientation and RTL, Home/End. Toggle: `on-pressed-changed` and
+  `toggle`/`on`/`off` commands.
+- Toast: a `loading` variant (spinner, never times out, can't be swiped away),
+  `toast_loading/3`, `toast_promise/3` + `toast_resolve/4` for `handle_async`
+  results, `:message` in `toast_update/3`, a `toaster:` option on every helper,
+  and client `toast.loading()` / `toast.promise()`. Icons and card colors follow
+  shadcn's Toaster.
+- Select: `disabled` on `select/1`; `position="item-aligned"` (shadcn's default;
+  popper stays SaladUI's default), `align`, and `side="left"/"right"` on
+  `select_content/1`; `:let` yields `%{invalid, disabled}` for the trigger.
+- Sidebar: a JS hook on `sidebar_provider`. Below 768px the sidebar becomes an
+  offcanvas sheet; Cmd/Ctrl+B toggles it; desktop toggles write the
+  `sidebar_state` cookie; `default_open`, controlled `open` with `on-open-change`,
+  `on-open-mobile-change`, open/close/toggle commands and the `toggle_sidebar`,
+  `open_sidebar` and `close_sidebar` JS helpers. Menu button tooltips show only while collapsed and follow client
+  toggles.
+- Typeahead (Radix style) in dropdown menu, context menu, menubar and select,
+  including the closed select trigger. `data-text-value` overrides an item's text.
+- Separator: `decorative` attr. Sheet and command dialog: `show_close_button`.
+  Command dialog: `title` and `description` (screen-reader header). Tooltip: arrow.
+  Accordion: disabled items render a disabled trigger.
+- Theme maps shadcn's `--sidebar`, `chart-1..5` and the `radius-2xl..4xl` scale.
 
 **Behaviour changes**
 - Form errors are now hidden on fields the user has not touched
@@ -104,10 +128,37 @@ for status and known gaps. Every new JS-backed component is registered in
   input per thumb; several thumbs post as `name[]`). A number `value` still gives
   one thumb and a scalar `value` in `value-changed`, which now also carries
   `values`. With no `dir`, the slider follows the page direction.
-- Popover, dropdown menu, carousel, slider, resizable, navigation menu, drawer and
-  chart keep their client state across LiveView patches instead of resetting to
-  the server render. Open popovers and menus stay open, and drags in progress
-  continue.
+- Popover, dropdown menu, carousel, slider, resizable, navigation menu, drawer,
+  chart, dialog (and so sheet and alert dialog), select, tabs, accordion,
+  collapsible, tooltip, hover card, command, toggle, toggle group and sidebar keep
+  their client state across LiveView patches instead of resetting to the server
+  render. Open overlays and menus stay open, drags in progress continue, and a
+  field focused inside a tab panel, accordion item or collapsible keeps focus. A
+  changed server `open`/`value` is still applied.
+- Dropdown menu fires `on-close` and returns focus as soon as closing starts, not
+  after the exit animation.
+- **Toggle (breaking)**: `id` now goes on the button (the checkbox gets
+  `"<id>-input"`), global attributes land on the button instead of the hidden
+  input, and styling uses `data-[state=on]` instead of `has-[:checked]`. Apps that
+  ran `mix salad.setup` before this release must import the new `toggle` and
+  `toggle_group` JS components, or the controls stop responding.
+- Toggle group: clicking the pressed item of a single group now releases it (as
+  Radix); a single group with a name submits `""` when nothing is pressed, and a
+  multiple group with a plain `name` submits `name[]`.
+- `toast_update/3` without `:variant` keeps the toast's current variant (it used
+  to reset to default).
+- Color schemes define `--sidebar` instead of `--sidebar-background`; the theme
+  reads either, and re-running the installer upgrades an old theme block.
+- Separator defaults to `role="none"` (decorative); pass `decorative={false}` for
+  `role="separator"`.
+- Alert uses the v4 two-column grid; sheet padding moved from the panel to header
+  and footer; accordion, label, progress, table and command use new-york-v4
+  classes (table gets a scroll container).
+- Sidebar: `data-collapsible` is `""` while expanded (was `"none"`); the
+  server-side `is_mobile` Sheet branch is gone (the hook handles mobile); the
+  sidebar no longer imports Sheet or Tooltip; only its own trigger, rail and
+  overlay `data-action`s toggle it.
+- An empty `multiple` select submits `name=""`, so it reaches the changeset.
 - Menu-family items (dropdown, context menu, menubar, select, combobox) use logical
   padding and indicator classes (`ps-8`, `start-2`), so a caller's `pl-*` no longer
   replaces the default through `tw_merge`.
@@ -128,6 +179,12 @@ for status and known gaps. Every new JS-backed component is registered in
   parent (for example a collapsible inside a collapsible).
 - Menu items apply `aria-disabled`; checkbox items highlight on hover; reopening a
   menu focuses its first item again.
+- Table: the checkbox column tweaks now match SaladUI's native checkbox.
+- Toast: a dismiss that finished after the toaster was destroyed no longer throws;
+  timers started while the stack is hovered start paused, and `expand` stacks
+  resume them after a hover.
+- Sidebar menu buttons with a tooltip keep the `sidebar_menu_action`/`_badge`
+  styles, and an outer trigger passed through `as_child` works again.
 
 # 0.14.0
 
