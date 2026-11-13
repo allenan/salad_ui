@@ -225,6 +225,10 @@ class ToastComponent extends Component {
     this.templates = new Map(); // name -> <template>
     this.viewports = new Map(); // position -> viewport element
     this._viewportListeners = new Map(); // viewport -> { expand, collapse }
+    // Viewports currently hovered/focused. While any is, every timer stays
+    // paused — including one armed by an add/update mid-hover (e.g. a
+    // loading toast resolving under the pointer), as in Sonner.
+    this._interacting = new Set();
 
     this.getAllParts("toast-template").forEach((tpl) => {
       if (tpl.dataset.name) this.templates.set(tpl.dataset.name, tpl);
@@ -245,8 +249,12 @@ class ToastComponent extends Component {
 
     this.el.__toastComponent = this;
 
+    // Tracked from visibilitychange (not read off document.hidden directly)
+    // so a toaster mounted in a tab that never fires the event keeps running.
+    this._hidden = false;
     this.onVisibilityChange = () => {
-      if (document.hidden) {
+      this._hidden = document.hidden;
+      if (this.timersPaused()) {
         this.forEachTimer((timer) => timer.pause());
       } else {
         this.forEachTimer((timer) => timer.resume());
@@ -309,6 +317,7 @@ class ToastComponent extends Component {
       }
     });
     this._viewportListeners.clear();
+    this._interacting.clear();
 
     if (this.el) this.el.__toastComponent = null;
   }
@@ -330,6 +339,19 @@ class ToastComponent extends Component {
 
   forEachTimer(fn) {
     this.stack.forEach((record) => record.timer && fn(record.timer));
+  }
+
+  timersPaused() {
+    return this._hidden || this._interacting.size > 0;
+  }
+
+  // Arms a dismiss timer for `id` (null for a sticky toast), born paused
+  // when the stack is hovered/focused or the tab is hidden.
+  armTimer(id, duration) {
+    if (duration === Infinity) return null;
+    const timer = new Timer(() => this.dismissToast(id, "timeout"), duration);
+    if (this.timersPaused()) timer.pause();
+    return timer;
   }
 
   generateId() {
@@ -378,15 +400,19 @@ class ToastComponent extends Component {
   }
 
   expandViewport(viewport) {
+    this._interacting.add(viewport);
     viewport.dataset.expanded = "true";
     this.forEachTimer((timer) => timer.pause());
     this.recomputeStackPositions(viewport);
   }
 
   collapseViewport(viewport) {
+    this._interacting.delete(viewport);
+    if (!this.timersPaused()) this.forEachTimer((timer) => timer.resume());
+    // An always-expanded toaster still resumes its timers on leave; it just
+    // never collapses.
     if (this.options.expand) return;
     viewport.dataset.expanded = "false";
-    this.forEachTimer((timer) => timer.resume());
     this.recomputeStackPositions(viewport);
   }
 
@@ -429,10 +455,7 @@ class ToastComponent extends Component {
       });
     });
 
-    const timer =
-      duration === Infinity
-        ? null
-        : new Timer(() => this.dismissToast(id, "timeout"), duration);
+    const timer = this.armTimer(id, duration);
 
     this.stack.set(id, {
       id,
@@ -475,11 +498,7 @@ class ToastComponent extends Component {
     record.variant = variant;
     record.dismissible = merged.dismissible !== false;
 
-    const duration = resolveDuration(merged, variant);
-    record.timer =
-      duration === Infinity
-        ? null
-        : new Timer(() => this.dismissToast(id, "timeout"), duration);
+    record.timer = this.armTimer(id, resolveDuration(merged, variant));
 
     this.recomputeStackPositions(this.viewports.get(record.position));
   }
@@ -651,11 +670,6 @@ class ToastComponent extends Component {
     card.setAttribute("aria-live", important ? "assertive" : "polite");
     card.setAttribute("aria-atomic", "true");
     card.dataset.live = important ? "assertive" : "polite";
-    if (variant === "loading") {
-      card.setAttribute("aria-busy", "true");
-    } else {
-      card.removeAttribute("aria-busy");
-    }
 
     if (!unstyled) {
       card.className = [
@@ -1051,7 +1065,11 @@ toast.promise = (promise, data = {}) => {
     toaster.handleCommand("update", { ...opts, id, variant, title });
   };
 
-  Promise.resolve(typeof promise === "function" ? promise() : promise).then(
+  // Wrapped so a promise factory that throws synchronously rejects (and
+  // settles the card as an error) instead of escaping toast.promise().
+  new Promise((resolve) =>
+    resolve(typeof promise === "function" ? promise() : promise),
+  ).then(
     (value) => settle("success", success, value),
     (reason) => settle("error", error, reason),
   );

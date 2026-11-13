@@ -483,6 +483,20 @@ test("expand option keeps the viewport permanently expanded", () => {
   component.destroy();
 });
 
+test("with expand on, leaving the viewport still resumes paused timers", async () => {
+  const { component, viewport } = buildToaster({ options: { expand: true } });
+
+  const id = component.handleCommand("add", { title: "Bye", duration: 30 });
+  viewport.dispatchEvent(new window.Event("mouseenter"));
+  await wait(60);
+  assert.ok(cardFor(viewport, id), "paused while hovered");
+
+  viewport.dispatchEvent(new window.Event("mouseleave"));
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
 test("action and cancel buttons push their configured event, then dismiss", async () => {
   const { component, viewport, pushedTo: pushedList } = buildToaster();
 
@@ -1234,8 +1248,11 @@ test("a loading toast never arms a timeout, even with an explicit duration", asy
   await waitFor(() => card.dataset.state === "visible");
 
   assert.equal(component.stack.get(id).timer, null);
-  assert.equal(card.getAttribute("aria-busy"), "true");
+  // A polite status, announced like Sonner's — not aria-busy, which would
+  // tell screen readers to hold back the "Loading..." message itself.
   assert.equal(card.getAttribute("role"), "status");
+  assert.equal(card.getAttribute("aria-live"), "polite");
+  assert.equal(card.hasAttribute("aria-busy"), false);
 
   // Hover/visibility resume must not start one either.
   component.forEachTimer((timer) => timer.resume());
@@ -1286,7 +1303,6 @@ test("update morphs a loading card into success in place, re-arming the default 
     card.querySelector('[data-part="title"]').textContent,
     "Event has been created",
   );
-  assert.equal(card.hasAttribute("aria-busy"), false);
   assert.ok(card.querySelector("svg.lucide-circle-check"));
   assert.equal(card.querySelector("svg.lucide-loader-circle"), null);
 
@@ -1397,6 +1413,69 @@ test("toast.promise() dismisses the card when the settled state has no message",
   assert.ok(cardFor(viewport, id));
 
   await waitFor(() => !component.stack.has(id));
+
+  component.destroy();
+});
+
+test("a loading toast resolved while the stack is hovered stays up until the pointer leaves", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = component.handleCommand("add", {
+    title: "Loading...",
+    variant: "loading",
+  });
+  viewport.dispatchEvent(new window.Event("mouseenter"));
+
+  component.handleCommand("update", {
+    id,
+    variant: "success",
+    title: "Done",
+    duration: 30,
+  });
+
+  await wait(80);
+  assert.ok(
+    component.stack.has(id),
+    "the resolved card's timer is born paused while hovered",
+  );
+
+  viewport.dispatchEvent(new window.Event("mouseleave"));
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
+test("a toast added while the stack is hovered doesn't time out under the pointer", async () => {
+  const { component, viewport } = buildToaster();
+
+  viewport.dispatchEvent(new window.Event("mouseenter"));
+  const id = component.handleCommand("add", { title: "New", duration: 30 });
+
+  await wait(80);
+  assert.ok(component.stack.has(id), "not dismissed while hovered");
+
+  viewport.dispatchEvent(new window.Event("mouseleave"));
+  await waitFor(() => cardFor(viewport, id) === null);
+
+  component.destroy();
+});
+
+test("toast.promise() settles as an error when the promise factory throws synchronously", async () => {
+  const { component, viewport } = buildToaster();
+
+  const id = toast.promise(
+    () => {
+      throw new Error("sync");
+    },
+    { loading: "Loading...", error: (err) => `Failed: ${err.message}` },
+  );
+
+  const card = cardFor(viewport, id);
+  await waitFor(() => card.dataset.variant === "error");
+  assert.equal(
+    card.querySelector('[data-part="title"]').textContent,
+    "Failed: sync",
+  );
 
   component.destroy();
 });

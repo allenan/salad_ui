@@ -307,8 +307,11 @@ defmodule SaladUI.Toast do
     toast(socket, toaster_id, message, opts)
   end
 
-  def toast(socket, message_opts, _opts) do
-    {toaster_id, message_opts} = pop_toaster(message_opts)
+  # Template-based toast: `message_opts` carries the opts. Merge in `opts` so
+  # the variant helpers (`toast_loading(socket, template: "upload")`) keep
+  # their variant instead of silently falling back to "default".
+  def toast(socket, message_opts, opts) do
+    {toaster_id, message_opts} = message_opts |> Map.new() |> Map.merge(Map.new(opts)) |> pop_toaster()
     toast(socket, toaster_id, nil, message_opts)
   end
 

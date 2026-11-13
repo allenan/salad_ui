@@ -342,6 +342,16 @@ defmodule SaladUI.ToastTest do
       assert payload.params.description == "Hang on"
       refute Map.has_key?(payload.params, :duration)
     end
+
+    test "keeps the loading variant for a template-based toast" do
+      {_event, payload} = last_command(toast_loading(%Socket{}, template: "upload", toaster: "uploads"))
+
+      assert payload.target == "uploads"
+      assert payload.params.variant == "loading"
+      assert payload.params.template == "upload"
+      refute Map.has_key?(payload.params, :title)
+      refute Map.has_key?(payload.params, :toaster)
+    end
   end
 
   describe "toast_promise/3" do
