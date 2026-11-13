@@ -135,6 +135,7 @@ defmodule SaladUI.EmojiPicker do
         <.popover_content
           side={@side}
           align={@align}
+          collision-padding={8}
           aria-label={@l["emoji"]}
           class={
             classes([

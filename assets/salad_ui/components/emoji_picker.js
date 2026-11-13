@@ -103,15 +103,6 @@ export function valuesFrom(dataset) {
   return values;
 }
 
-function command(el, name) {
-  el?.dispatchEvent(
-    new CustomEvent("salad_ui:command", {
-      detail: { command: name, params: {} },
-      bubbles: false,
-    }),
-  );
-}
-
 let dataPromise = null;
 
 class EmojiPickerComponent extends Component {
@@ -323,14 +314,13 @@ class EmojiPickerComponent extends Component {
       values: opener ? valuesFrom(opener.dataset) : values || {},
     };
 
-    // On a narrow screen the picker spans the width, 8px in from each side.
+    // The popover is positioned against this fixed anchor laid over the
+    // opener; its collision padding keeps it 8px in from the viewport edges.
     const rect = anchorEl.getBoundingClientRect();
-    const vw = document.documentElement.clientWidth;
-    const narrow = vw > 0 && vw < 480;
     Object.assign(this.anchor.style, {
-      left: `${narrow ? 8 : rect.left}px`,
+      left: `${rect.left}px`,
       top: `${rect.top}px`,
-      width: `${narrow ? vw - 16 : rect.width}px`,
+      width: `${rect.width}px`,
       height: `${rect.height}px`,
     });
 
@@ -348,7 +338,7 @@ class EmojiPickerComponent extends Component {
     }
 
     this.wasOpen = true;
-    command(this.popover, "open");
+    SaladUI.command(this.popover, "open");
     requestAnimationFrame(() => {
       if (this.destroyed) return;
       this.fitColumns();
@@ -357,7 +347,7 @@ class EmojiPickerComponent extends Component {
   }
 
   close() {
-    command(this.popover, "close");
+    SaladUI.command(this.popover, "close");
   }
 
   // The popover's on-close; runs a tick later, after its focus trap has

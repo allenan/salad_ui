@@ -49,6 +49,7 @@ defmodule SaladUI.EmojiPickerTest do
   test "places the content on top, aligned to the end, by default" do
     html = render_picker(%{id: "emoji"})
     assert html =~ ~r/data-part="positioner" data-side="top" data-align="end"/
+    assert html =~ ~s(data-collision-padding="8")
 
     html = render_picker(%{id: "emoji", side: "bottom", align: "start"})
     assert html =~ ~r/data-part="positioner" data-side="bottom" data-align="start"/
