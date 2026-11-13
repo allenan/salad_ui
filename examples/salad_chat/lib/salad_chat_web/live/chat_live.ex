@@ -937,6 +937,14 @@ defmodule SaladChatWeb.ChatLive do
                 </.message_scroller_viewport>
                 <.message_scroller_button aria-label="Jump to latest messages" />
               </.message_scroller>
+              <%!-- Drag files anywhere over the conversation to attach them. --%>
+              <.drop_zone
+                id="chat-drop"
+                for="#main-panel"
+                input="#main-form input[type=file]"
+                label="Drop files to attach"
+                description="Up to 4 files, 8 MB each"
+              />
               <.composer
                 id="main"
                 form={@main_form}
@@ -975,6 +983,15 @@ defmodule SaladChatWeb.ChatLive do
            portal to: fixed-positioned, so outside every clipping scroller, but
            still inside the LiveView, so their phx-click/JS commands work. --%>
       <div id="chat-portal" phx-update="ignore"></div>
+
+      <%!-- One SaladUI emoji picker for the page: the composers' emoji
+           buttons and every message's "Add reaction" open it. --%>
+      <.emoji_picker
+        id="emoji-picker"
+        portal-container="#chat-portal"
+        storage-key="salad-chat:emoji"
+        align="start"
+      />
 
       <%!-- Overlay roots take no space; their panels are fixed-positioned. --%>
       <div class="h-0 overflow-hidden">

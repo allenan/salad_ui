@@ -80,7 +80,9 @@ Try:
 | `badge` | Unread and mention counts, `APP` tag, source chips |
 | `tooltip`, `kbd`, `kbd_group` | Icon buttons, keyboard hints |
 | `button`, `button_group` | Header actions, message hover toolbar, reminder quick picks |
-| `popover` | Pinned messages, emoji pickers |
+| `popover` | Pinned messages |
+| `emoji_picker` | One picker for the page: the composer's emoji button (inserts at the cursor) and every message's "Add reaction" (search, categories, recents, skin tone) |
+| `drop_zone` | Drag files over the conversation to attach them; pasted files attach too (`attachFiles`) |
 | `sheet` | Channel details, the thread on phones, the mobile sidebar |
 | `tabs` | Channel details, settings |
 | `message`, `bubble` | Message rows (ghost bubbles in channels, real bubbles in DMs) |
