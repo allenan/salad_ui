@@ -1,5 +1,6 @@
 // saladui/components/toast.js
 import Component from "../core/component.js";
+import { getDirection } from "../core/direction.js";
 import SaladUI from "../index.js";
 
 const DEFAULT_DURATION = 4000;
@@ -74,7 +75,7 @@ const CARD_BASE_CLASSES = [
 ].join(" ");
 
 const CLOSE_TRIGGER_CLASSES =
-  "absolute right-0 top-0 -translate-y-1/2 translate-x-1/2 rounded-full p-0.5 flex items-center justify-center text-foreground/50 opacity-0 transition-opacity " +
+  "absolute end-0 top-0 -translate-y-1/2 translate-x-1/2 rtl:-translate-x-1/2 rounded-full p-0.5 flex items-center justify-center text-foreground/50 opacity-0 transition-opacity " +
   "bg-background border border-border hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 " +
   "focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
@@ -186,11 +187,11 @@ function viewportClasses(position) {
 
   if (position.endsWith("left")) {
     classes.push(
-      "left-[var(--offset-l)] items-start max-[600px]:left-[var(--mobile-offset-l)]",
+      "left-[var(--offset-l)] items-start rtl:items-end max-[600px]:left-[var(--mobile-offset-l)]",
     );
   } else if (position.endsWith("right")) {
     classes.push(
-      "right-[var(--offset-r)] items-end max-[600px]:right-[var(--mobile-offset-r)]",
+      "right-[var(--offset-r)] items-end rtl:items-start max-[600px]:right-[var(--mobile-offset-r)]",
     );
   } else {
     classes.push("left-1/2 -translate-x-1/2 items-center");
@@ -214,6 +215,16 @@ function defaultSwipeDirections(position) {
   if (xPart === "left") directions.push("left");
   if (xPart === "right") directions.push("right");
   return directions;
+}
+
+// Positions (and so the default swipe directions) are physical, as in
+// Sonner: a bottom-right toaster sits bottom-right on an RTL page too. A
+// configured `swipeDirection` may also be logical: "end" dismisses towards
+// the end of the line (right in LTR, left in RTL), "start" towards its start.
+export function resolveSwipeDirection(direction, dir) {
+  if (direction === "end") return dir === "rtl" ? "left" : "right";
+  if (direction === "start") return dir === "rtl" ? "right" : "left";
+  return direction;
 }
 
 class ToastComponent extends Component {
@@ -844,9 +855,19 @@ class ToastComponent extends Component {
     // otherwise both directions implied by the toast's corner are allowed
     // (e.g. bottom-right dismisses on a swipe down *or* right), matching
     // Sonner's getDefaultSwipeDirections.
-    const allowedDirections = this.options.swipeDirection
-      ? [this.options.swipeDirection]
-      : defaultSwipeDirections(card.dataset.position);
+    // Logical directions resolve against the card's reading direction on
+    // each pointerdown, so a direction switched after the toast appeared is
+    // still honoured.
+    const resolveAllowedDirections = () =>
+      this.options.swipeDirection
+        ? [
+            resolveSwipeDirection(
+              this.options.swipeDirection,
+              getDirection(card),
+            ),
+          ]
+        : defaultSwipeDirections(card.dataset.position);
+    let allowedDirections = resolveAllowedDirections();
 
     let dragging = false;
     // Locked on first move past 1px, like Sonner — whichever axis has the
@@ -882,6 +903,7 @@ class ToastComponent extends Component {
 
       dragging = true;
       axis = null;
+      allowedDirections = resolveAllowedDirections();
       startX = event.clientX;
       startY = event.clientY;
       startTime = Date.now();

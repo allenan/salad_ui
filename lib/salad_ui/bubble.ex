@@ -169,7 +169,7 @@ defmodule SaladUI.Bubble do
       data-slot="bubble-content"
       class={
         classes([
-          "w-fit max-w-full min-w-0 overflow-hidden rounded-xl border border-transparent px-3 py-2 text-sm leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end [button]:text-left [button,a]:transition-colors [button,a]:outline-none [button,a]:focus-visible:border-ring [button,a]:focus-visible:ring-3 [button,a]:focus-visible:ring-ring/50",
+          "w-fit max-w-full min-w-0 overflow-hidden rounded-xl border border-transparent px-3 py-2 text-sm leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end [button]:text-start [button,a]:transition-colors [button,a]:outline-none [button,a]:focus-visible:border-ring [button,a]:focus-visible:ring-3 [button,a]:focus-visible:ring-ring/50",
           @class
         ])
       }
@@ -202,7 +202,7 @@ defmodule SaladUI.Bubble do
     assigns =
       assign(assigns,
         side_class: %{"top" => "top-0 -translate-y-3/4", "bottom" => "bottom-0 translate-y-3/4"}[assigns.side],
-        align_class: %{"start" => "left-3", "end" => "right-3"}[assigns.align]
+        align_class: %{"start" => "start-3", "end" => "end-3"}[assigns.align]
       )
 
     ~H"""

@@ -118,11 +118,11 @@ defmodule SaladUI.Dialog do
           </.dialog_header>
           <div class="grid gap-4 py-4">
             <div class="grid grid-cols-4 items-center gap-4">
-              <.label for="name" class="text-right">Name</.label>
+              <.label for="name" class="text-end">Name</.label>
               <.input id="name" name="name" value="Pedro Duarte" class="col-span-3" />
             </div>
             <div class="grid grid-cols-4 items-center gap-4">
-              <.label for="username" class="text-right">Username</.label>
+              <.label for="username" class="text-end">Username</.label>
               <.input id="username" name="username" value="@peduarte" class="col-span-3" />
             </div>
           </div>
@@ -242,7 +242,7 @@ defmodule SaladUI.Dialog do
           type="button"
           data-part="close-trigger"
           data-action="close"
-          class="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+          class="absolute top-4 end-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -273,7 +273,7 @@ defmodule SaladUI.Dialog do
     ~H"""
     <div
       data-slot="dialog-header"
-      class={classes(["flex flex-col gap-2 text-center sm:text-left", @class])}
+      class={classes(["flex flex-col gap-2 text-center sm:text-start", @class])}
     >
       {render_slot(@inner_block)}
     </div>

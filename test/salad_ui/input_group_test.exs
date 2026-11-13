@@ -56,12 +56,12 @@ defmodule SaladUI.InputGroupTest do
       assert html =~ ~s(data-part="addon")
       assert html =~ ~s(data-align="inline-start")
       assert html =~ ~s(role="group")
-      assert html =~ "order-first pl-3"
+      assert html =~ "order-first ps-3"
     end
 
     test "each alignment renders its classes" do
       for {align, class} <- [
-            {"inline-end", "order-last pr-3"},
+            {"inline-end", "order-last pe-3"},
             {"block-start", "order-first w-full justify-start px-3 pt-3"},
             {"block-end", "order-last w-full justify-start px-3 pb-3"}
           ] do

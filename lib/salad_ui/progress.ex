@@ -13,7 +13,7 @@ defmodule SaladUI.Progress do
       <.field class="w-full max-w-sm">
         <.field_label for="progress-upload">
           <span>Upload progress</span>
-          <span class="ml-auto">66%</span>
+          <span class="ms-auto">66%</span>
         </.field_label>
         <.progress value={66} id="progress-upload" />
       </.field>

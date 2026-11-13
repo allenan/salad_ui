@@ -200,7 +200,7 @@ defmodule SaladUI.InputOTP do
           data-input-otp
           class={
             classes([
-              "absolute inset-0 m-0 flex size-full appearance-none rounded-none border-0 bg-transparent p-0 text-left font-mono leading-none tracking-[-.5em] tabular-nums text-transparent caret-transparent opacity-100 shadow-none outline-none pointer-events-auto [font-size:var(--root-height,2.25rem)] [-webkit-text-fill-color:transparent]",
+              "absolute inset-0 m-0 flex size-full appearance-none rounded-none border-0 bg-transparent p-0 text-start font-mono leading-none tracking-[-.5em] tabular-nums text-transparent caret-transparent opacity-100 shadow-none outline-none pointer-events-auto [font-size:var(--root-height,2.25rem)] [-webkit-text-fill-color:transparent]",
               "focus:shadow-none focus:ring-0 focus:outline-none selection:bg-transparent selection:text-transparent",
               "autofill:border-transparent! autofill:bg-transparent! autofill:opacity-0! autofill:shadow-none!",
               "supports-[-webkit-touch-callout:none]:tracking-[-.6em]",

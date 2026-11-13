@@ -23,6 +23,12 @@ defmodule SaladUI.Direction do
 
   * Text, flex/grid order and logical (`ms-*`, `ps-*`, `start-*`) classes, as
     in plain CSS; `rtl:` variants (e.g. `rtl:rotate-180` on arrow icons) apply.
+    Component classes are logical throughout (shadcn's RTL transform, baked
+    in): dialog and sheet close buttons, input group addons, table and
+    accordion text, sidebar menu actions, carousel buttons, switch thumbs and
+    so on. Classes stay physical only where the API is physical (sheet,
+    drawer and sidebar `side`, tooltip/popover `side` arrows, toast
+    `position`) or where JS positions an element in physical coordinates.
   * Popover, tooltip, hover card, select, combobox, dropdown menu and menubar
     content: `align="start"`/`"end"` mirror for `top`/`bottom` placements, as
     in Radix (`side="left"`/`"right"` stay physical).
@@ -32,7 +38,11 @@ defmodule SaladUI.Direction do
   * Horizontal arrow keys follow the reading direction in tabs, radio groups,
     menubar, navigation menu, carousel, resizable handles and the calendar.
   * Slider: a horizontal slider starts at the right (its own `dir` attribute
-    wins over the inherited one).
+    wins over the inherited one), already in the server-rendered markup.
+  * Chart: the x axis runs right to left, the y axis sits on the right, and
+    `ArrowLeft` moves to the next point.
+  * Toast: `swipe-direction="end"` dismisses towards the left; positions stay
+    physical, as in Sonner.
   * Content moved to `<body>` (`use_portal`) keeps the direction of its
     trigger.
 

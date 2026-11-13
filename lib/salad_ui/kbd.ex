@@ -21,7 +21,7 @@ defmodule SaladUI.Kbd do
         <.kbd>B</.kbd>
       </.kbd_group>
 
-      <.button variant="outline" size="sm" class="pr-2">
+      <.button variant="outline" size="sm" class="pe-2">
         Accept <.kbd>⏎</.kbd>
       </.button>
   """

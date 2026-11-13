@@ -17,11 +17,27 @@ const BACK_KEYS = {
   top: ["Home", "PageDown", "ArrowUp", "ArrowLeft"],
 };
 
-const END_EDGE = { left: "right", right: "left", bottom: "top", top: "bottom" };
+// Style properties the thumbs and range are placed with. Horizontal edges
+// are logical (`inset-inline-*`), like the server-rendered markup, so an
+// inherited RTL direction is right before the hook mounts and stays right
+// when a LiveView patch restores the server styles.
+const POSITION_PROPS = [
+  "left",
+  "right",
+  "top",
+  "bottom",
+  "inset-inline-start",
+  "inset-inline-end",
+];
+
+const END_EDGE = {
+  "inset-inline-start": "inset-inline-end",
+  "inset-inline-end": "inset-inline-start",
+  bottom: "top",
+  top: "bottom",
+};
 
 const THUMB_TRANSFORM = {
-  left: "translateX(-50%)",
-  right: "translateX(50%)",
   bottom: "translateY(50%)",
   top: "translateY(-50%)",
 };
@@ -125,6 +141,15 @@ class SliderComponent extends Component {
     }
     const rtl = this.dir === "rtl";
     return rtl !== this.inverted ? "right" : "left";
+  }
+
+  // The style property the value grows away from: physical for vertical,
+  // logical for horizontal (the browser resolves it against `dir`).
+  get positionEdge() {
+    if (this.orientation === "vertical") {
+      return this.inverted ? "top" : "bottom";
+    }
+    return this.inverted ? "inset-inline-end" : "inset-inline-start";
   }
 
   // Backwards-compatible accessor for single-thumb sliders.
@@ -432,33 +457,38 @@ class SliderComponent extends Component {
   }
 
   updatePosition() {
-    const edge = this.startEdge;
+    const edge = this.positionEdge;
     const endEdge = END_EDGE[edge];
     const percents = this.values.map((value) => this.percentOf(value));
     const rangeStart = percents.length > 1 ? Math.min(...percents) : 0;
     const rangeEnd = 100 - Math.max(...percents);
 
     if (this.range) {
-      this.range.style.left = "";
-      this.range.style.right = "";
-      this.range.style.top = "";
-      this.range.style.bottom = "";
-      this.range.style[edge] = `${rangeStart}%`;
-      this.range.style[endEdge] = `${rangeEnd}%`;
+      POSITION_PROPS.forEach((prop) => this.range.style.removeProperty(prop));
+      this.range.style.setProperty(edge, `${rangeStart}%`);
+      this.range.style.setProperty(endEdge, `${rangeEnd}%`);
     }
 
-    const half = this.thumbSize() / 2;
+    const size = this.thumbSize();
+    const half = size / 2;
     this.thumbs.forEach((thumb, i) => {
       const pct = percents[i] ?? 0;
-      // Keep the thumb inside the track: centre at `half` for 0%, at
-      // `100% - half` for 100% (Radix's in-bounds offset).
-      const offset = half * (1 - pct / 50);
-      thumb.style.left = "";
-      thumb.style.right = "";
-      thumb.style.top = "";
-      thumb.style.bottom = "";
-      thumb.style[edge] = `calc(${pct}% + ${offset}px)`;
-      thumb.style.transform = THUMB_TRANSFORM[edge];
+      POSITION_PROPS.forEach((prop) => thumb.style.removeProperty(prop));
+      thumb.style.removeProperty("transform");
+
+      const transform = THUMB_TRANSFORM[edge];
+      if (transform) {
+        // Keep the thumb inside the track: centre at `half` for 0%, at
+        // `100% - half` for 100% (Radix's in-bounds offset).
+        const offset = half * (1 - pct / 50);
+        thumb.style.setProperty(edge, `calc(${pct}% + ${offset}px)`);
+        thumb.style.transform = transform;
+      } else {
+        // Horizontal: the same centre, placed by the thumb's start edge with
+        // no transform (`translateX` has no logical form).
+        const shift = (size * pct) / 100;
+        thumb.style.setProperty(edge, `calc(${pct}% - ${shift}px)`);
+      }
     });
   }
 

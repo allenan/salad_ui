@@ -100,10 +100,10 @@ defmodule SaladUI.Trace do
       data-slot="trace"
       class={
         classes([
-          "flex w-full min-w-0 flex-col gap-2 *:has-[>[data-slot=trace-line]]:flex *:has-[>[data-slot=trace-line]]:w-fit *:has-[>[data-slot=trace-line]]:max-w-full *:has-[>[data-slot=trace-line]]:min-w-0 *:has-[>[data-slot=trace-line]]:rounded-md *:has-[>[data-slot=trace-line]]:text-left *:has-[>[data-slot=trace-line]]:outline-none *:has-[>[data-slot=trace-line]]:focus-visible:ring-3 *:has-[>[data-slot=trace-line]]:focus-visible:ring-ring/50",
+          "flex w-full min-w-0 flex-col gap-2 *:has-[>[data-slot=trace-line]]:flex *:has-[>[data-slot=trace-line]]:w-fit *:has-[>[data-slot=trace-line]]:max-w-full *:has-[>[data-slot=trace-line]]:min-w-0 *:has-[>[data-slot=trace-line]]:rounded-md *:has-[>[data-slot=trace-line]]:text-start *:has-[>[data-slot=trace-line]]:outline-none *:has-[>[data-slot=trace-line]]:focus-visible:ring-3 *:has-[>[data-slot=trace-line]]:focus-visible:ring-ring/50",
           # SaladUI overlays (dialog, sheet) render a root <div>, so their
           # trigger is a grandchild of the trace rather than a child.
-          "*:*:has-[>[data-slot=trace-line]]:flex *:*:has-[>[data-slot=trace-line]]:w-fit *:*:has-[>[data-slot=trace-line]]:max-w-full *:*:has-[>[data-slot=trace-line]]:min-w-0 *:*:has-[>[data-slot=trace-line]]:rounded-md *:*:has-[>[data-slot=trace-line]]:text-left *:*:has-[>[data-slot=trace-line]]:cursor-pointer *:*:has-[>[data-slot=trace-line]]:outline-none *:*:has-[>[data-slot=trace-line]]:focus-visible:ring-3 *:*:has-[>[data-slot=trace-line]]:focus-visible:ring-ring/50",
+          "*:*:has-[>[data-slot=trace-line]]:flex *:*:has-[>[data-slot=trace-line]]:w-fit *:*:has-[>[data-slot=trace-line]]:max-w-full *:*:has-[>[data-slot=trace-line]]:min-w-0 *:*:has-[>[data-slot=trace-line]]:rounded-md *:*:has-[>[data-slot=trace-line]]:text-start *:*:has-[>[data-slot=trace-line]]:cursor-pointer *:*:has-[>[data-slot=trace-line]]:outline-none *:*:has-[>[data-slot=trace-line]]:focus-visible:ring-3 *:*:has-[>[data-slot=trace-line]]:focus-visible:ring-ring/50",
           @class
         ])
       }
@@ -161,7 +161,7 @@ defmodule SaladUI.Trace do
       aria-hidden="true"
       class={
         classes([
-          "flex size-4 shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [[data-slot=trace-title]~&]:-ml-1",
+          "flex size-4 shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [[data-slot=trace-title]~&]:-ms-1",
           @class
         ])
       }
@@ -274,7 +274,7 @@ defmodule SaladUI.Trace do
       aria-expanded="false"
       class={
         classes([
-          "group/trace-collapsible-trigger flex w-fit max-w-full min-w-0 cursor-pointer items-center gap-1 rounded-md text-left text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 has-[[data-status=error]]:text-destructive",
+          "group/trace-collapsible-trigger flex w-fit max-w-full min-w-0 cursor-pointer items-center gap-1 rounded-md text-start text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 has-[[data-status=error]]:text-destructive",
           @class
         ])
       }
@@ -320,7 +320,7 @@ defmodule SaladUI.Trace do
         data-slot="trace-collapsible-content-inner"
         class={
           classes([
-            "mt-2 mb-1 ml-[calc(--spacing(2)-1px)] min-w-0 border-l pr-1 pl-4 leading-relaxed wrap-break-word text-muted-foreground",
+            "mt-2 mb-1 ms-[calc(--spacing(2)-1px)] min-w-0 border-s pe-1 ps-4 leading-relaxed wrap-break-word text-muted-foreground",
             @class
           ])
         }

@@ -276,19 +276,45 @@ test("range spans between the outer thumbs and thumbs stay in bounds", () => {
   });
   const range = el.querySelector('[data-part="range"]');
 
-  assert.equal(range.style.left, "25%");
-  assert.equal(range.style.right, "25%");
-  // 20px thumb: offset = 10 * (1 - 25/50) = 5px
-  assert.equal(thumbs[0].style.left, "calc(25% + 5px)");
-  assert.equal(thumbs[0].style.transform, "translateX(-50%)");
+  assert.equal(range.style.getPropertyValue("inset-inline-start"), "25%");
+  assert.equal(range.style.getPropertyValue("inset-inline-end"), "25%");
+  assert.equal(range.style.left, "");
+  // 20px thumb: centre at 25% + 10 * (1 - 25/50) = 25% + 5px, so its start
+  // edge sits at 25% - 5px (no transform: translateX has no logical form).
+  assert.equal(
+    thumbs[0].style.getPropertyValue("inset-inline-start"),
+    "calc(25% - 5px)",
+  );
+  assert.equal(thumbs[0].style.transform, "");
+  assert.equal(
+    thumbs[1].style.getPropertyValue("inset-inline-start"),
+    "calc(75% - 15px)",
+  );
 });
 
 test("single thumb range fills from the start edge", () => {
   const { el } = buildSlider({ value: 30, min: 0, max: 100 });
   const range = el.querySelector('[data-part="range"]');
 
-  assert.equal(range.style.left, "0%");
-  assert.equal(range.style.right, "70%");
+  assert.equal(range.style.getPropertyValue("inset-inline-start"), "0%");
+  assert.equal(range.style.getPropertyValue("inset-inline-end"), "70%");
+});
+
+test("inverted horizontal slider grows from the inline-end edge", () => {
+  const { el, thumbs } = buildSlider({
+    value: 30,
+    min: 0,
+    max: 100,
+    inverted: true,
+  });
+  const range = el.querySelector('[data-part="range"]');
+
+  assert.equal(range.style.getPropertyValue("inset-inline-end"), "0%");
+  assert.equal(range.style.getPropertyValue("inset-inline-start"), "70%");
+  assert.equal(
+    thumbs[0].style.getPropertyValue("inset-inline-end"),
+    "calc(30% - 6px)",
+  );
 });
 
 test("vertical slider positions from the bottom and maps pointer Y", () => {
@@ -328,7 +354,11 @@ test("rtl flips horizontal direction and arrow keys", () => {
     dir: "rtl",
   });
 
-  assert.equal(thumbs[0].style.right, "calc(50% + 0px)");
+  // Logical styles: the browser resolves inline-start to the right under RTL.
+  assert.equal(
+    thumbs[0].style.getPropertyValue("inset-inline-start"),
+    "calc(50% - 10px)",
+  );
   assert.equal(
     slider.valueFromPointer(
       new window.MouseEvent("mousedown", { clientX: 20 }),
@@ -423,7 +453,7 @@ function patchFromServer(el, { value, options } = {}) {
   });
   el.querySelectorAll('[data-part="thumb"]').forEach((thumb, i) => {
     thumb.setAttribute("aria-valuenow", values[i]);
-    thumb.style.left = "0px";
+    thumb.style.setProperty("inset-inline-start", "0px");
   });
 }
 
@@ -448,7 +478,10 @@ test("a patch re-rendering the same server value keeps the user's values", () =>
     ["20", "50"],
   );
   assert.equal(thumbs[1].getAttribute("aria-valuenow"), "50");
-  assert.notEqual(thumbs[1].style.left, "0px");
+  assert.notEqual(
+    thumbs[1].style.getPropertyValue("inset-inline-start"),
+    "0px",
+  );
 });
 
 test("a patch with a new server value rebuilds from the server", () => {

@@ -480,6 +480,45 @@ test("arrow keys walk the categories and Escape clears", () => {
   assert.equal(tooltipEl.hidden, true);
 });
 
+test("under RTL, ArrowLeft moves forward and ArrowRight moves back", () => {
+  const { el, chart, canvas } = buildChart();
+  el.setAttribute("dir", "rtl");
+
+  keydown(canvas, "ArrowLeft");
+  assert.deepEqual(chart.calls.at(-3)[1][0], { datasetIndex: 0, index: 0 });
+  keydown(canvas, "ArrowLeft");
+  assert.deepEqual(chart.calls.at(-3)[1][0], { datasetIndex: 0, index: 1 });
+  keydown(canvas, "ArrowRight");
+  assert.deepEqual(chart.calls.at(-3)[1][0], { datasetIndex: 0, index: 0 });
+  keydown(canvas, "ArrowRight");
+  assert.deepEqual(chart.calls.at(-3)[1][0], { datasetIndex: 0, index: 2 });
+
+  // Up/Down keep their meaning.
+  keydown(canvas, "ArrowDown");
+  assert.deepEqual(chart.calls.at(-3)[1][0], { datasetIndex: 0, index: 0 });
+});
+
+test("an inherited RTL direction mirrors the axes", () => {
+  document.documentElement.setAttribute("dir", "rtl");
+  try {
+    const { chart } = buildChart();
+    assert.equal(chart.options.scales.x.reverse, true);
+    assert.equal(chart.options.scales.y.position, "right");
+
+    const horizontal = buildChart({
+      options: { type: "bar", index: "month", horizontal: true },
+    }).chart;
+    assert.equal(horizontal.options.scales.x.reverse, true);
+    assert.equal(horizontal.options.scales.y.position, "right");
+  } finally {
+    document.documentElement.removeAttribute("dir");
+  }
+
+  const { chart } = buildChart();
+  assert.equal(chart.options.scales.x.reverse, false);
+  assert.equal(chart.options.scales.y.position, "left");
+});
+
 test("LiveView patch with unchanged attributes keeps the chart and repairs it", () => {
   const { el, component, chart, legendEl } = buildChart();
 

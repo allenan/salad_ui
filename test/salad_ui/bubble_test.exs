@@ -94,10 +94,10 @@ defmodule SaladUI.BubbleTest do
     assert html =~ ~s(data-slot="bubble-group")
     assert html =~ ~s(data-slot="bubble-reactions" data-align="end" data-side="bottom")
     assert html =~ "bottom-0 translate-y-3/4"
-    assert html =~ "right-3"
+    assert html =~ "end-3"
     assert html =~ ~s(data-align="start" data-side="top")
     assert html =~ "top-0 -translate-y-3/4"
-    assert html =~ "left-3"
+    assert html =~ "start-3"
     assert html =~ "ring-3 ring-card"
     assert html =~ ~s(aria-label="Reactions: thumbs up")
   end

@@ -33,13 +33,13 @@ defmodule SaladUI.DialogTest do
         |> rendered_to_string()
         |> clean_string()
 
-      for class <- ~w(flex text-center flex-col gap-2 sm:text-left) do
+      for class <- ~w(flex text-center flex-col gap-2 sm:text-start) do
         assert html =~ class
       end
 
       assert html =~ "This is the content of the header"
 
-      for css_class <- ~w(flex flex-col gap-2 text-center sm:text-left) do
+      for css_class <- ~w(flex flex-col gap-2 text-center sm:text-start) do
         assert html =~ css_class
       end
     end

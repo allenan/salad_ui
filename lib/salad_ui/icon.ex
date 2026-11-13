@@ -14,7 +14,7 @@ defmodule SaladUI.Icon do
 
   ## Examples
       <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 size-3 animate-spin" />
+      <.icon name="hero-arrow-path" class="ms-1 size-3 animate-spin" />
   """
 
   use SaladUI, :component

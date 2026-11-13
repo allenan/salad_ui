@@ -97,7 +97,7 @@ defmodule SaladUI.AvatarTest do
       assert html =~ ~s(data-slot="avatar-badge")
 
       for class <-
-            ~w(absolute right-0 bottom-0 z-10 rounded-full ring-2 ring-background bg-green-600 dark:bg-green-800 group-data-[size=default]/avatar:size-2.5 group-data-[size=sm]/avatar:size-2 group-data-[size=lg]/avatar:size-3) do
+            ~w(absolute end-0 bottom-0 z-10 rounded-full ring-2 ring-background bg-green-600 dark:bg-green-800 group-data-[size=default]/avatar:size-2.5 group-data-[size=sm]/avatar:size-2 group-data-[size=lg]/avatar:size-3) do
         assert html =~ class
       end
 

@@ -92,9 +92,10 @@ defmodule SaladUI.Slider do
     neighbouring thumbs (defaults to 0).
   * `:orientation` - `"horizontal"` (default) or `"vertical"`.
   * `:dir` - `"ltr"` or `"rtl"`; `"rtl"` makes a horizontal slider start at the right.
-    Defaults to the inherited direction (`<html dir>`, `direction_provider/1`),
-    applied once the hook mounts; set it to render the thumbs on the right
-    side from the first paint.
+    Defaults to the inherited direction (`<html dir>`, `direction_provider/1`).
+    Horizontal thumbs and range are placed with logical CSS
+    (`inset-inline-start`/`-end`), so an inherited RTL direction is already
+    right on the server-rendered markup, before the hook mounts.
   * `:inverted` - Reverse the visual direction.
   * `:disabled` - Disable the slider.
   * `:name` / `:field` - Form binding.
@@ -157,7 +158,7 @@ defmodule SaladUI.Slider do
       |> Enum.map(&(&1 |> to_number(min) |> snap_to_step(min, max, step, decimals)))
       |> Enum.sort()
 
-    start_edge = start_edge(assigns.orientation != "vertical", assigns.dir == "rtl", assigns.inverted)
+    start_edge = start_edge(assigns.orientation != "vertical", assigns.inverted)
     percents = Enum.map(values, &percent(&1, min, max))
 
     options = %{
@@ -254,13 +255,16 @@ defmodule SaladUI.Slider do
     """
   end
 
-  # Edge the value grows away from, mirroring Radix:
-  # horizontal LTR -> left, RTL or inverted -> right; vertical -> bottom, inverted -> top.
-  defp start_edge(true = _horizontal, rtl?, inverted?), do: if(rtl? == inverted?, do: "left", else: "right")
-  defp start_edge(false, _rtl?, inverted?), do: if(inverted?, do: "top", else: "bottom")
+  # Edge the value grows away from, mirroring Radix: horizontal -> the
+  # inline-start edge (left in LTR, right in RTL), the inline-end edge when
+  # inverted; vertical -> bottom, top when inverted. Horizontal edges are
+  # logical so the markup is right for an inherited `dir` before the hook
+  # mounts (an explicit `dir` is rendered on the root, so it resolves too).
+  defp start_edge(true = _horizontal, inverted?), do: if(inverted?, do: "inset-inline-end", else: "inset-inline-start")
+  defp start_edge(false, inverted?), do: if(inverted?, do: "top", else: "bottom")
 
-  defp end_edge("left"), do: "right"
-  defp end_edge("right"), do: "left"
+  defp end_edge("inset-inline-start"), do: "inset-inline-end"
+  defp end_edge("inset-inline-end"), do: "inset-inline-start"
   defp end_edge("bottom"), do: "top"
   defp end_edge("top"), do: "bottom"
 
@@ -319,6 +323,15 @@ defmodule SaladUI.Slider do
 
   # Keeps the thumb inside the track: the centre sits at `half` at 0% and at
   # `100% - half` at 100% (same in-bounds offset Radix computes).
+  #
+  # A horizontal thumb is placed by its start edge (`centre - half`) with no
+  # transform, because `translateX` has no logical form and its sign would
+  # depend on the direction, which only the browser knows when inherited.
+  defp thumb_style("inset-inline-" <> _ = edge, pct) do
+    shift = Float.round(@thumb_size * pct / 100, 4)
+    "#{edge}: calc(#{format_number(pct)}% - #{format_number(shift)}px);"
+  end
+
   defp thumb_style(edge, pct) do
     half = @thumb_size / 2
     offset = Float.round(half * (1 - pct / 50), 4)
@@ -326,8 +339,6 @@ defmodule SaladUI.Slider do
     "#{edge}: calc(#{format_number(pct)}% + #{format_number(offset)}px); transform: #{thumb_transform(edge)};"
   end
 
-  defp thumb_transform("left"), do: "translateX(-50%)"
-  defp thumb_transform("right"), do: "translateX(50%)"
   defp thumb_transform("bottom"), do: "translateY(50%)"
   defp thumb_transform("top"), do: "translateY(-50%)"
 

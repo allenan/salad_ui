@@ -758,7 +758,7 @@ defmodule SaladUI.DataTable do
       <.dropdown_menu id={@id}>
         <.dropdown_menu_trigger
           as={&button/1}
-          class="-ml-3 h-8 data-[state=open]:bg-accent"
+          class="-ms-3 h-8 data-[state=open]:bg-accent"
           {%{variant: "ghost", size: "sm"}}
         >
           <span>{@title}</span>
@@ -811,7 +811,7 @@ defmodule SaladUI.DataTable do
         on-visibility-change="toggle_column"
         label={nil}
         size="default"
-        class="ml-auto"
+        class="ms-auto"
       >
         Columns <.icon name="hero-chevron-down" />
       </.data_table_view_options>
@@ -828,7 +828,7 @@ defmodule SaladUI.DataTable do
   attr :target, :any, default: nil, doc: "`phx-target` for the event, such as `@myself`"
   attr :variant, :string, default: "outline", doc: "trigger button variant"
   attr :size, :string, default: "sm", doc: "trigger button size"
-  attr :class, :string, default: "ml-auto hidden h-8 lg:flex", doc: "trigger button classes"
+  attr :class, :string, default: "ms-auto hidden h-8 lg:flex", doc: "trigger button classes"
   attr :rest, :global
   slot :inner_block, doc: "trigger content. Defaults to a settings icon and \"View\"."
 
@@ -1033,6 +1033,7 @@ defmodule SaladUI.DataTable do
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"
+      class={if String.ends_with?(@name, ["-left", "-right"]), do: "rtl:rotate-180"}
       aria-hidden="true"
     >
       {@paths}

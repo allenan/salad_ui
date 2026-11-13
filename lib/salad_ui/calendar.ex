@@ -395,7 +395,7 @@ defmodule SaladUI.Calendar.LiveComponent do
           {%{variant: "outline", disabled: @o.disabled == true}}
           class={
             classes([
-              "w-[240px] justify-start text-left font-normal data-[empty=true]:text-muted-foreground",
+              "w-[240px] justify-start text-start font-normal data-[empty=true]:text-muted-foreground",
               @o.icon == "chevron" && "justify-between",
               @o.trigger_class
             ])
@@ -661,7 +661,7 @@ defmodule SaladUI.Calendar.LiveComponent do
           </select>
           <span
             aria-hidden="true"
-            class="flex h-8 items-center gap-1 rounded-md pr-1 pl-2 text-sm font-medium select-none [&>svg]:size-3.5 [&>svg]:text-muted-foreground"
+            class="flex h-8 items-center gap-1 rounded-md pe-1 ps-2 text-sm font-medium select-none [&>svg]:size-3.5 [&>svg]:text-muted-foreground"
           >
             {dropdown_month(@month.month, @o)}<.chevron_icon direction="down" />
           </span>
@@ -686,7 +686,7 @@ defmodule SaladUI.Calendar.LiveComponent do
           </select>
           <span
             aria-hidden="true"
-            class="flex h-8 items-center gap-1 rounded-md pr-1 pl-2 text-sm font-medium select-none [&>svg]:size-3.5 [&>svg]:text-muted-foreground"
+            class="flex h-8 items-center gap-1 rounded-md pe-1 ps-2 text-sm font-medium select-none [&>svg]:size-3.5 [&>svg]:text-muted-foreground"
           >
             {@month.year}<.chevron_icon direction="down" />
           </span>

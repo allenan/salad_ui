@@ -129,7 +129,7 @@ defmodule SaladUI.Typography do
 
   def typography_blockquote(assigns) do
     ~H"""
-    <blockquote class={classes(["mt-6 border-l-2 pl-6 italic", @class])} {@rest}>
+    <blockquote class={classes(["mt-6 border-s-2 ps-6 italic", @class])} {@rest}>
       {render_slot(@inner_block)}
     </blockquote>
     """
@@ -164,8 +164,8 @@ defmodule SaladUI.Typography do
           classes([
             "w-full",
             "[&_tr]:m-0 [&_tr]:border-t [&_tr]:p-0 [&_tr:nth-child(even)]:bg-muted",
-            "[&_th]:border [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:font-bold [&_th[align=center]]:text-center [&_th[align=right]]:text-right",
-            "[&_td]:border [&_td]:px-4 [&_td]:py-2 [&_td]:text-left [&_td[align=center]]:text-center [&_td[align=right]]:text-right",
+            "[&_th]:border [&_th]:px-4 [&_th]:py-2 [&_th]:text-start [&_th]:font-bold [&_th[align=center]]:text-center [&_th[align=right]]:text-right",
+            "[&_td]:border [&_td]:px-4 [&_td]:py-2 [&_td]:text-start [&_td[align=center]]:text-center [&_td[align=right]]:text-right",
             @class
           ])
         }
@@ -187,7 +187,7 @@ defmodule SaladUI.Typography do
 
   def typography_list(%{ordered: true} = assigns) do
     ~H"""
-    <ol class={classes(["my-6 ml-6 list-decimal [&>li]:mt-2", @class])} {@rest}>
+    <ol class={classes(["my-6 ms-6 list-decimal [&>li]:mt-2", @class])} {@rest}>
       {render_slot(@inner_block)}
     </ol>
     """
@@ -195,7 +195,7 @@ defmodule SaladUI.Typography do
 
   def typography_list(assigns) do
     ~H"""
-    <ul class={classes(["my-6 ml-6 list-disc [&>li]:mt-2", @class])} {@rest}>
+    <ul class={classes(["my-6 ms-6 list-disc [&>li]:mt-2", @class])} {@rest}>
       {render_slot(@inner_block)}
     </ul>
     """

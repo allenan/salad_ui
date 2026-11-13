@@ -149,9 +149,11 @@ class ChartComponent extends Component {
             _all: {
               keyEventTarget: "canvas",
               keyMap: {
-                ArrowRight: "focusNext",
+                // Left/right follow the reading direction (the x axis runs
+                // right to left under RTL, see buildScales()).
+                ArrowRight: "focusRight",
                 ArrowDown: "focusNext",
-                ArrowLeft: "focusPrevious",
+                ArrowLeft: "focusLeft",
                 ArrowUp: "focusPrevious",
                 Home: "focusFirst",
                 End: "focusLast",
@@ -378,9 +380,19 @@ class ChartComponent extends Component {
     const config = this.chartConfig;
     const indexScale = o.horizontal ? "y" : "x";
     const valueScale = o.horizontal ? "x" : "y";
+    // Under RTL the x axis runs right to left and the y axis sits on the
+    // right, as shadcn's chart-rtl example does (XAxis reversed, YAxis
+    // orientation="right"). Re-read on every refresh, so a LiveView patch
+    // after a direction change picks it up.
+    const rtl = this.isRtl();
+    const direction = {
+      x: { reverse: rtl },
+      y: { position: rtl ? "right" : "left" },
+    };
 
     return {
       [indexScale]: {
+        ...direction[indexScale],
         stacked: !!o.stacked,
         grid: { display: false, drawTicks: false },
         border: { display: false },
@@ -401,6 +413,7 @@ class ChartComponent extends Component {
         },
       },
       [valueScale]: {
+        ...direction[valueScale],
         stacked: !!o.stacked,
         beginAtZero: true,
         grid: {
@@ -806,6 +819,17 @@ class ChartComponent extends Component {
 
   focusPrevious() {
     this.activate(this.activeIndex == null ? -1 : this.activeIndex - 1);
+  }
+
+  // ArrowRight moves forward in LTR and back in RTL; ArrowLeft the opposite.
+  focusRight() {
+    if (this.isRtl()) this.focusPrevious();
+    else this.focusNext();
+  }
+
+  focusLeft() {
+    if (this.isRtl()) this.focusNext();
+    else this.focusPrevious();
   }
 
   focusFirst() {
