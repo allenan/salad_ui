@@ -23,3 +23,6 @@ config :phoenix,
 
 # Stream Sprout's replies quickly in tests
 config :salad_chat, :sprout, step_ms: 5, token_ms: 1
+
+# No simulated activity in tests; activity_test.exs drives it directly
+config :salad_chat, SaladChat.Activity, enabled: false

@@ -15,6 +15,13 @@ SaladUI component, wired to a realistic, real-time workspace.
   @mentioned. It is canned (no model): it shows its reasoning, a real
   `search_messages` tool call against the store, its sources, and then streams
   the answer token by token.
+- **Simulated activity.** `SaladChat.Activity` has the seeded people post in
+  the public channels, react, reply in threads and send the odd DM every
+  6-20 seconds, with a typing indicator first, so the real-time parts move
+  even when you are alone. Anyone with a tab open is left alone, simulated
+  people show as online while active, and only the newest 200 simulated
+  messages per conversation are kept. Turn it off with
+  `SALAD_CHAT_ACTIVITY=off mix phx.server`; it is always off in tests.
 
 ## Run it
 
@@ -106,6 +113,7 @@ lib/salad_chat/
   chat/store.ex           # GenServer owning the ETS tables (single writer)
   chat/seed.ex            # deterministic seed data
   sprout.ex, sprout/*     # the assistant: reminders + one streaming responder per reply
+  activity.ex, activity/* # simulated people chatting on a timer
 lib/salad_chat_web/
   live/chat_live.ex       # the chat page (streams, PubSub, presence, typing)
   live/landing_live.ex    # pick a user

@@ -18,6 +18,8 @@ defmodule SaladChat.Application do
       # Sprout, the AI assistant: reminders plus one responder per reply
       SaladChat.Sprout,
       {DynamicSupervisor, name: SaladChat.Sprout.Supervisor, strategy: :one_for_one},
+      # Simulated people chatting, so the demo is alive (off in test)
+      SaladChat.Activity,
       # Start to serve requests, typically the last entry
       SaladChatWeb.Endpoint
     ]
