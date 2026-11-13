@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title default="Salad Chat" suffix=" · Salad Chat" phx-no-format>{assigns[:page_title]}</.live_title>
+    <link rel="icon" type="image/svg+xml" href={~p"/images/seed/avatars/sprout.svg"} />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+    <script>
+      // Apply the saved theme before first paint (see assets/js/chat.js).
+      (() => {
+        const saved = localStorage.getItem("salad-chat:theme") || "system";
+        const dark = saved === "dark" ||
+          (saved === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        const root = document.documentElement;
+        root.classList.toggle("dark", dark);
+        root.setAttribute("data-theme", dark ? "dark" : "light");
+        root.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
+  </head>
+  <body class="h-full bg-background text-foreground antialiased">
+    {@inner_content}
+  </body>
+</html>

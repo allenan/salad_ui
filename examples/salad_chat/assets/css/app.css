@@ -1,0 +1,231 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+@import "tailwindcss" source(none);
+@import "phoenix-colocated/salad_chat/colocated.css";
+@import "./salad_ui.css";
+@source "../css";
+@source "../js";
+@source "../../lib/salad_chat_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../_build/dev/phoenix-colocated/salad_chat/*/";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by your mix.exs */
+@plugin "../vendor/heroicons";
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+/* Use the data attribute for dark mode  */
+@custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* This file is for your main application CSS */
+
+@layer base {
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.129 0.027 261.671);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.129 0.027 261.671);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.129 0.027 261.671);
+    --primary: oklch(0.21 0.032 264.652);
+    --primary-foreground: oklch(0.984 0.002 247.839);
+    --secondary: oklch(0.967 0.003 264.542);
+    --secondary-foreground: oklch(0.21 0.032 264.652);
+    --muted: oklch(0.967 0.003 264.542);
+    --muted-foreground: oklch(0.551 0.023 264.365);
+    --accent: oklch(0.967 0.003 264.542);
+    --accent-foreground: oklch(0.21 0.032 264.652);
+    --destructive: oklch(0.637 0.208 25.326);
+    --destructive-foreground: oklch(0.984 0.002 247.839);
+    --border: oklch(0.928 0.006 264.531);
+    --input: oklch(0.928 0.006 264.531);
+    --ring: oklch(0.129 0.027 261.671);
+    --radius: 1rem;
+    --chart-1: oklch(0.677 0.157 35.19);
+    --chart-2: oklch(0.631 0.101 183.491);
+    --chart-3: oklch(0.379 0.044 225.539);
+    --chart-4: oklch(0.834 0.119 88.146);
+    --chart-5: oklch(0.783 0.126 58.749);
+    --sidebar-background: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.37 0.012 285.801);
+    --sidebar-primary: oklch(0.21 0.006 285.884);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.968 0.001 286.375);
+    --sidebar-accent-foreground: oklch(0.21 0.006 285.884);
+    --sidebar-border: oklch(0.928 0.006 264.531);
+    --sidebar-ring: oklch(0.623 0.188 259.796);
+}
+
+.dark,
+[data-theme="dark"] {
+    --background: oklch(0.129 0.027 261.671);
+    --foreground: oklch(0.984 0.002 247.839);
+    --card: oklch(0.129 0.027 261.671);
+    --card-foreground: oklch(0.984 0.002 247.839);
+    --popover: oklch(0.129 0.027 261.671);
+    --popover-foreground: oklch(0.984 0.002 247.839);
+    --primary: oklch(0.984 0.002 247.839);
+    --primary-foreground: oklch(0.21 0.032 264.652);
+    --secondary: oklch(0.278 0.03 256.848);
+    --secondary-foreground: oklch(0.984 0.002 247.839);
+    --muted: oklch(0.278 0.03 256.848);
+    --muted-foreground: oklch(0.714 0.019 261.333);
+    --accent: oklch(0.278 0.03 256.848);
+    --accent-foreground: oklch(0.984 0.002 247.839);
+    --destructive: oklch(0.396 0.133 25.721);
+    --destructive-foreground: oklch(0.984 0.002 247.839);
+    --border: oklch(0.278 0.03 256.848);
+    --input: oklch(0.278 0.03 256.848);
+    --ring: oklch(0.872 0.009 258.338);
+    --chart-1: oklch(0.529 0.193 262.129);
+    --chart-2: oklch(0.698 0.134 165.463);
+    --chart-3: oklch(0.723 0.15 60.631);
+    --chart-4: oklch(0.619 0.204 312.728);
+    --chart-5: oklch(0.612 0.209 6.386);
+    --sidebar-background: oklch(0.21 0.006 285.884);
+    --sidebar-foreground: oklch(0.968 0.001 286.375);
+    --sidebar-primary: oklch(0.488 0.217 264.388);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.274 0.005 286.033);
+    --sidebar-accent-foreground: oklch(0.968 0.001 286.375);
+    --sidebar-border: oklch(0.274 0.005 286.033);
+    --sidebar-ring: oklch(0.623 0.188 259.796);
+}
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-background: var(--background);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-foreground: var(--foreground);
+  --color-input: var(--input);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@source "../../lib";
+
+@source "../../../../lib";
+
+@source "../../../../assets/salad_ui";
+
+@plugin "@tailwindcss/typography";
+
+@import "../vendor/tw-animate.css";
+
+/* ---------------------------------------------------------------------------
+   Salad Chat theme: a fresh green primary on SaladUI's gray scheme.
+   ------------------------------------------------------------------------- */
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    --primary: oklch(0.52 0.14 152);
+    --primary-foreground: oklch(0.985 0.01 150);
+    --ring: oklch(0.62 0.15 152);
+    --sidebar-background: oklch(0.975 0.008 150);
+    --sidebar-accent: oklch(0.93 0.03 152);
+    --sidebar-accent-foreground: oklch(0.3 0.08 152);
+    --sidebar-primary: oklch(0.52 0.14 152);
+    --sidebar-border: oklch(0.92 0.01 150);
+    --sidebar-ring: oklch(0.62 0.15 152);
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    --background: oklch(0.17 0.01 160);
+    --card: oklch(0.19 0.012 160);
+    --popover: oklch(0.2 0.012 160);
+    --muted: oklch(0.25 0.012 160);
+    --accent: oklch(0.27 0.02 160);
+    --secondary: oklch(0.26 0.015 160);
+    --border: oklch(0.29 0.012 160);
+    --input: oklch(0.31 0.012 160);
+    --primary: oklch(0.72 0.16 152);
+    --primary-foreground: oklch(0.2 0.04 152);
+    --ring: oklch(0.6 0.13 152);
+    --sidebar-background: oklch(0.14 0.012 160);
+    --sidebar-foreground: oklch(0.9 0.01 150);
+    --sidebar-accent: oklch(0.25 0.04 155);
+    --sidebar-accent-foreground: oklch(0.95 0.02 150);
+    --sidebar-primary: oklch(0.72 0.16 152);
+    --sidebar-border: oklch(0.24 0.012 160);
+  }
+
+  body {
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+/* Message text size follows the "Font size" setting. */
+.chat-text {
+  font-size: var(--chat-font-size, 15px);
+  line-height: 1.5;
+}
+
+/* Mentions inside message text. */
+.mention {
+  @apply rounded px-0.5 font-medium text-primary bg-primary/10;
+}
+
+.mention-me {
+  @apply bg-amber-200/60 text-amber-900 dark:bg-amber-400/20 dark:text-amber-200;
+}
+
+/* Animated dots for the typing indicator. */
+@keyframes typing-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+.typing-dots > span {
+  animation: typing-dot 1.2s infinite ease-in-out;
+}
+
+.typing-dots > span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots > span:nth-child(3) { animation-delay: 0.3s; }
+
+/* Blinking caret while Sprout streams. */
+@keyframes caret-blink { 50% { opacity: 0; } }
+
+.stream-caret::after {
+  content: "▍";
+  margin-left: 1px;
+  color: var(--primary);
+  animation: caret-blink 1s steps(1) infinite;
+}

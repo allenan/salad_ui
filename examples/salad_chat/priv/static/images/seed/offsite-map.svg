@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" width="480" height="280">
+  <rect width="480" height="280" fill="#ecfccb"/>
+  <path d="M0 200c80-30 140 20 220-10s150-60 260-20v110H0z" fill="#bef264"/>
+  <path d="M300 0c-20 60 30 90 10 140s-60 80-40 140" stroke="#60a5fa" stroke-width="18" fill="none" opacity=".7"/>
+  <g fill="#15803d"><circle cx="70" cy="80" r="18"/><circle cx="100" cy="66" r="14"/><circle cx="410" cy="90" r="20"/><circle cx="380" cy="70" r="14"/><circle cx="160" cy="230" r="16"/></g>
+  <path d="M60 240 C120 180 200 150 250 120 S 380 100 420 60" stroke="#78350f" stroke-width="3" stroke-dasharray="8 6" fill="none"/>
+  <g font-family="ui-sans-serif, system-ui" font-size="13" font-weight="600" fill="#1c1917">
+    <circle cx="60" cy="240" r="8" fill="#dc2626"/><text x="74" y="245">Station</text>
+    <circle cx="250" cy="120" r="8" fill="#dc2626"/><text x="138" y="114">Lodge &amp; lunch</text>
+    <circle cx="420" cy="60" r="8" fill="#dc2626"/><text x="350" y="40">Lookout hike</text>
+  </g>
+</svg>
