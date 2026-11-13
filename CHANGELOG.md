@@ -210,8 +210,10 @@ for status and known gaps. Every new JS-backed component is registered in
   skip files that already exist instead of aborting.
 
 **Fixes**
-- `use SaladUI` imports `SaladUI.Command`, and `mix salad.setup` / `mix salad.install`
-  import `command.js`; a test now checks every registered JS component is imported.
+- `mix salad.setup` / `mix salad.install` import `command.js`; a test now checks
+  every registered JS component is imported. (`use SaladUI` still leaves out
+  `SaladUI.Command`, whose `command/1` collides with the Lucide icon; the docs now
+  say to `import SaladUI.Command`.)
 - `command_input` accepts `placeholder`, `name`, `value` and other input attributes
   without undefined-attribute warnings.
 - Trigger and close parts (`popover_trigger`, `dropdown_menu_trigger`,

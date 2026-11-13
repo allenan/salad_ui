@@ -105,7 +105,8 @@ defmodule SaladUI do
   ### Utility
   - `toggle/1`, `toggle_group/1` - Toggle controls and groups
   - `collapsible/1` - Expandable content areas
-  - `command/1` - Command palette interfaces
+  - `command/1` - Command palette interfaces (not imported by `use SaladUI`;
+    `import SaladUI.Command`, since `command/1` collides with the Lucide icon)
   - `direction_provider/1` - Right-to-left (`dir="rtl"`) support for a subtree
 
   ## Architecture
@@ -226,7 +227,8 @@ defmodule SaladUI do
       import SaladUI.CodeBlock
       import SaladUI.Collapsible
       import SaladUI.Combobox
-      import SaladUI.Command
+      # SaladUI.Command is not imported: its command/1 collides with the
+      # Lucide `command` icon. Add `import SaladUI.Command` where needed.
       import SaladUI.ContextMenu
 
       import SaladUI.DataTable,
