@@ -7,9 +7,11 @@ defmodule SaladUI.Mix.JSImportListTest do
   use ExUnit.Case, async: true
 
   @opt_in ~w(chart)
+  @root Path.expand("../../..", __DIR__)
 
   defp registered_components do
-    "assets/salad_ui/components/*.js"
+    @root
+    |> Path.join("assets/salad_ui/components/*.js")
     |> Path.wildcard()
     |> Enum.filter(&(File.read!(&1) =~ ~r/SaladUI\.register\(/))
     |> Enum.map(&Path.basename(&1, ".js"))
@@ -27,7 +29,7 @@ defmodule SaladUI.Mix.JSImportListTest do
         {"lib/mix/tasks/salad.install.ex", ~s(import "./ui/components/NAME.js";)}
       ] do
     test "#{task} imports every registered component" do
-      source = File.read!(unquote(task))
+      source = File.read!(Path.join(@root, unquote(task)))
 
       missing =
         Enum.reject(registered_components(), fn name ->
