@@ -37,7 +37,7 @@ of it (tailnet only, not the public internet):
 this in a separate checkout:
 
 ```bash
-git worktree add ../salad_ui-host main
+git worktree add --detach ../salad_ui-host main
 cd ../salad_ui-host/examples/salad_chat
 export MIX_ENV=prod PHX_SERVER=true PHX_IP=127.0.0.1 PORT=4100
 export SECRET_KEY_BASE=$(mix phx.gen.secret)
@@ -47,7 +47,9 @@ mix phx.server &
 tailscale serve --bg 4100
 ```
 
-Then open `https://$PHX_HOST` on any device in the tailnet.
+Then open `https://$PHX_HOST` on any device in the tailnet. The first
+`tailscale serve` on a tailnet prints a link to enable Serve (and HTTPS
+certificates) in the admin console; it finishes once that is done.
 `tailscale serve reset` stops serving.
 
 Try:
