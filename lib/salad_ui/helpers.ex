@@ -378,13 +378,18 @@ defmodule SaladUI.Helpers do
   """
   # Atom keys, like literal attributes: a trigger rendered through another
   # component (`as={&button/1}`) hands them on as that component's assigns.
-  def trigger_attrs(nil, _context), do: %{"data-part": "trigger"}
+  #
+  # `state: false` leaves `data-state` out: a tooltip does not own its
+  # trigger's state (the same button is often a menu trigger).
+  def trigger_attrs(for_id, context, opts \\ [])
 
-  def trigger_attrs(for_id, context) when is_binary(for_id) do
+  def trigger_attrs(nil, _context, _opts), do: %{"data-part": "trigger"}
+
+  def trigger_attrs(for_id, context, opts) when is_binary(for_id) do
     %{
       "data-salad-for": for_id,
       "data-salad-context": if(context in [nil, %{}], do: nil, else: json(context)),
-      "data-state": "closed"
+      "data-state": if(Keyword.get(opts, :state, true), do: "closed")
     }
   end
 

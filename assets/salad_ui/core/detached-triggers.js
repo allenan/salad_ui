@@ -106,20 +106,59 @@ function elementOf(node) {
   return node.nodeType === 1 ? node : node.parentElement || null;
 }
 
-function dispatch(event) {
-  const byId = subscriptions.get(event.type);
-  if (!byId || byId.size === 0) return;
+// Subscription keys: an instance id (the triggers naming it in
+// `data-salad-for`), or ATTR_KEY + an attribute name (every element carrying
+// that attribute, e.g. a text tooltip's `data-salad-tooltip`).
+const ATTR_KEY = "@";
 
-  // Walk up from the target like the event bubbles; each instance hears only
-  // about its innermost trigger.
+function dispatch(event) {
+  const byKey = subscriptions.get(event.type);
+  if (!byKey || byKey.size === 0) return;
+
+  const attributes = [];
+  byKey.forEach((_handlers, key) => {
+    if (key.startsWith(ATTR_KEY)) attributes.push(key.slice(ATTR_KEY.length));
+  });
+
+  // Walk up from the target like the event bubbles; each subscription hears
+  // only about its innermost trigger.
   const seen = new Set();
+  const notify = (key, el) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    byKey.get(key)?.forEach((handler) => handler(event, el));
+  };
   for (let el = elementOf(event.target); el; el = el.parentElement) {
-    for (const id of triggerIds(el)) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      byId.get(id)?.forEach((handler) => handler(event, el));
+    for (const id of triggerIds(el)) notify(id, el);
+    for (const name of attributes) {
+      if (el.hasAttribute(name)) notify(ATTR_KEY + name, el);
     }
   }
+}
+
+function subscribe(key, type, handler) {
+  if (typeof document === "undefined") return () => {};
+
+  if (!subscriptions.has(type)) subscriptions.set(type, new Map());
+  const byKey = subscriptions.get(type);
+  if (!byKey.has(key)) byKey.set(key, new Set());
+  byKey.get(key).add(handler);
+
+  if (!documentListeners.has(type)) {
+    document.addEventListener(type, dispatch);
+    documentListeners.set(type, document);
+  }
+
+  return () => {
+    const handlers = byKey.get(key);
+    handlers?.delete(handler);
+    if (handlers?.size === 0) byKey.delete(key);
+    if (byKey.size === 0) {
+      documentListeners.get(type)?.removeEventListener(type, dispatch);
+      documentListeners.delete(type);
+      subscriptions.delete(type);
+    }
+  };
 }
 
 /**
@@ -129,28 +168,18 @@ function dispatch(event) {
  * every subscription. Returns the unsubscribe function.
  */
 export function listen(id, type, handler) {
-  if (!id || typeof document === "undefined") return () => {};
+  if (!id) return () => {};
+  return subscribe(id, type, handler);
+}
 
-  if (!subscriptions.has(type)) subscriptions.set(type, new Map());
-  const byId = subscriptions.get(type);
-  if (!byId.has(id)) byId.set(id, new Set());
-  byId.get(id).add(handler);
-
-  if (!documentListeners.has(type)) {
-    document.addEventListener(type, dispatch);
-    documentListeners.set(type, document);
-  }
-
-  return () => {
-    const handlers = byId.get(id);
-    handlers?.delete(handler);
-    if (handlers?.size === 0) byId.delete(id);
-    if (byId.size === 0) {
-      documentListeners.get(type)?.removeEventListener(type, dispatch);
-      documentListeners.delete(type);
-      subscriptions.delete(type);
-    }
-  };
+/**
+ * Like listen(), for every element carrying the attribute `name` instead of
+ * the triggers of one instance (e.g. the text tooltips of a tooltip
+ * provider: `data-salad-tooltip="Reply"`).
+ */
+export function listenAttribute(name, type, handler) {
+  if (!name) return () => {};
+  return subscribe(ATTR_KEY + name, type, handler);
 }
 
 /** Number of document listeners the delegation holds (for tests). */
@@ -196,14 +225,15 @@ export function focusFallback(path = []) {
 export function setTriggerState(
   trigger,
   open,
-  { expanded = true, controls = null } = {},
+  { expanded = true, controls = null, state = true, describedBy = null } = {},
 ) {
   if (!trigger) return;
 
-  const state = open ? "open" : "closed";
-  if (trigger.getAttribute("data-state") !== state) {
-    trigger.setAttribute("data-state", state);
+  const value = open ? "open" : "closed";
+  if (state && trigger.getAttribute("data-state") !== value) {
+    trigger.setAttribute("data-state", value);
   }
+  if (describedBy) toggleToken(trigger, "aria-describedby", describedBy, open);
   if (!expanded) return;
 
   if (trigger.getAttribute("aria-expanded") !== String(open)) {
@@ -216,6 +246,18 @@ export function setTriggerState(
   } else if (!open && trigger.hasAttribute("aria-controls")) {
     trigger.removeAttribute("aria-controls");
   }
+}
+
+/** Adds or removes `token` in a space-separated attribute (aria-describedby). */
+export function toggleToken(el, name, token, present) {
+  const tokens = (el.getAttribute(name) || "").split(/\s+/).filter(Boolean);
+  if (present === tokens.includes(token)) return;
+
+  const next = present
+    ? [...tokens, token]
+    : tokens.filter((existing) => existing !== token);
+  if (next.length > 0) el.setAttribute(name, next.join(" "));
+  else el.removeAttribute(name);
 }
 
 /**
@@ -244,7 +286,7 @@ export function watchTrigger(trigger, { onRemoved, onPatched } = {}) {
   });
   observer.observe(trigger, {
     attributes: true,
-    attributeFilter: ["data-state", "aria-expanded"],
+    attributeFilter: ["data-state", "aria-expanded", "aria-describedby"],
   });
   return () => observer.disconnect();
 }
@@ -317,6 +359,10 @@ export class ContextValues {
  * - `expanded`: also set `aria-expanded`/`aria-controls` (not for a
  *   context menu area);
  * - `controls()`: the id `aria-controls` names;
+ * - `state`: mirror `data-state` (off for tooltips: their trigger is often a
+ *   menu trigger too, whose `data-state` the menu owns);
+ * - `describedBy()`: an id added to the trigger's `aria-describedby` while
+ *   active (a tooltip's content);
  * - `targets()`: the elements that get the `phx-value-*`;
  * - `onRemoved()`: the trigger left the page while active.
  */
@@ -324,10 +370,19 @@ export class DetachedAnchor {
   constructor({
     expanded = true,
     controls = () => null,
+    state = true,
+    describedBy = () => null,
     targets = () => [],
     onRemoved = () => {},
   } = {}) {
-    this.options = { expanded, controls, targets, onRemoved };
+    this.options = {
+      expanded,
+      controls,
+      state,
+      describedBy,
+      targets,
+      onRemoved,
+    };
     this.trigger = null;
     this.path = null;
     this.context = null;
@@ -358,6 +413,8 @@ export class DetachedAnchor {
     setTriggerState(this.trigger, open, {
       expanded: this.options.expanded,
       controls: this.options.controls(),
+      state: this.options.state,
+      describedBy: this.options.describedBy(),
     });
   }
 

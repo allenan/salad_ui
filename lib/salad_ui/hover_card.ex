@@ -40,6 +40,49 @@ defmodule SaladUI.HoverCard do
   A LiveView re-render keeps an open hover card open and positioned, and a
   pending open or close still runs. Changing the options rebuilds it from the
   new markup.
+
+  ## Shared hover cards for long lists
+
+  A hover card per row costs a hook and the card's markup per row. A hover
+  card with no nested trigger can instead serve many *detached* triggers:
+  `hover_card_trigger/1` with `for` (the card's id), rendered anywhere
+  outside it. The card listens on the document (no hook per trigger), opens
+  at the hovered or focused trigger with the usual delays, and gives that
+  trigger `aria-expanded="true"` and `data-state="open"` while open. If the
+  trigger leaves the page, the card closes. The content stays server
+  rendered; two patterns:
+
+  **One card per entity** (preferred when entities are far fewer than rows,
+  e.g. a chat's authors against its messages): render each card once, and
+  point every row's trigger at its entity's card.
+
+      <.hover_card :for={user <- @authors} id={"user-card-\#{user.id}"}>
+        <.hover_card_content><.profile user={user} /></.hover_card_content>
+      </.hover_card>
+
+      <.hover_card_trigger as="button" type="button" for={"user-card-\#{msg.user_id}"}>
+        {msg.author}
+      </.hover_card_trigger>
+
+  **One card for everything**: the server fills the card from the trigger's
+  `context` in `on-open`. With a server event, the card pushes `open` with
+  the context when the open delay ends and shows once the reply (and the
+  content LiveView patched in for it) has arrived, so it never flashes the
+  previous trigger's content:
+
+      <.hover_card id="profile-card" on-open="show_profile">
+        <.hover_card_content><.profile :if={@profile} user={@profile} /></.hover_card_content>
+      </.hover_card>
+
+      <.hover_card_trigger as="button" type="button" for="profile-card" context={%{id: user.id}}>
+        {user.name}
+      </.hover_card_trigger>
+
+      def handle_event("show_profile", %{"id" => id}, socket),
+        do: {:noreply, assign(socket, :profile, Accounts.get_user!(id))}
+
+  Detached triggers are an opt-in SaladUI extension with no Radix
+  equivalent; see "Shared menus" in `SaladUI.DropdownMenu`.
   """
   use SaladUI, :component
 
@@ -51,7 +94,8 @@ defmodule SaladUI.HoverCard do
   * `:id` - Required unique identifier for the hover card.
   * `:open-delay` - Delay in milliseconds before opening the hover card. Defaults to `300`.
   * `:close-delay` - Delay in milliseconds before closing the hover card. Defaults to `200`.
-  * `:on-open` - Handler for hover card open event.
+  * `:on-open` - Handler for hover card open event; with detached triggers it receives the
+    trigger's `context` (see "Shared hover cards for long lists").
   * `:on-close` - Handler for hover card close event.
   * `:class` - Additional CSS classes.
 
@@ -105,16 +149,42 @@ defmodule SaladUI.HoverCard do
 
   @doc """
   The trigger element that activates the hover card when hovered.
+
+  With `for`, it is a detached trigger of the shared `hover_card/1` with that
+  id, rendered anywhere outside it (see "Shared hover cards for long lists").
+
+  ## Options
+
+  * `:as` - Tag or function component to render. Defaults to `"div"`.
+  * `:for` - The id of a shared `hover_card/1` this trigger opens. Defaults to `nil` (nested).
+  * `:context` - With `for`: a map the card's `on-open` receives.
+  * `:class` - Additional CSS classes.
   """
+  attr :as, :any, default: "div"
+  attr :for, :string, default: nil, doc: "id of the shared hover card this detached trigger opens"
+  attr :context, :map, default: nil, doc: "with `for`: the map `on-open` receives"
   attr :class, :any, default: nil
-  attr :rest, :global
+  attr :rest, :global, include: ~w(type variant size)
   slot :inner_block, required: true
 
   def hover_card_trigger(assigns) do
+    assigns =
+      assigns
+      |> drop_button_props()
+      |> assign(:trigger_attrs, trigger_attrs(assigns.for, assigns.context))
+      |> assign(:detached_aria, if(assigns.for, do: %{"aria-haspopup": "dialog", "aria-expanded": "false"}, else: %{}))
+
     ~H"""
-    <div data-slot="hover-card-trigger" data-part="trigger" class={classes(["", @class])} {@rest}>
+    <.dynamic
+      tag={@as}
+      data-slot={@rest[:"data-slot"] || "hover-card-trigger"}
+      class={classes(["", @class])}
+      {@trigger_attrs}
+      {@detached_aria}
+      {Map.delete(@rest, :"data-slot")}
+    >
       {render_slot(@inner_block)}
-    </div>
+    </.dynamic>
     """
   end
 
