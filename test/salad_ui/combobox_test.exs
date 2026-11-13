@@ -111,6 +111,24 @@ defmodule SaladUI.ComboboxTest do
       assert html =~ ~s(data-disabled="true")
       assert %{"disabled" => true} = options(html)
     end
+
+    test "use-portal and portal-container are passed to the JS component" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.combobox id="fw"><.combobox_input /></.combobox>
+        """)
+
+      assert %{"usePortal" => false, "portalContainer" => nil} = options(html)
+
+      html =
+        rendered_to_string(~H"""
+        <.combobox id="fw" use-portal portal-container="#portal-root"><.combobox_input /></.combobox>
+        """)
+
+      assert %{"usePortal" => true, "portalContainer" => "#portal-root"} = options(html)
+    end
   end
 
   describe "combobox_input/1" do

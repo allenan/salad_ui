@@ -116,3 +116,82 @@ test("updateScrollableContainer() stops descending once it finds a scrollable an
   assert.equal(outer.style.pointerEvents, "auto");
   assert.equal(inner.style.pointerEvents, ""); // traversal stopped at outer
 });
+
+test("restore() puts the element back in its original spot among its siblings", () => {
+  const container = document.getElementById("container");
+  container.innerHTML = `<span id="before"></span><div id="portal-el"></div><span id="after"></span>`;
+  const el = document.getElementById("portal-el");
+
+  Portal.move(el);
+  assert.equal(
+    container.childNodes.length,
+    3,
+    "a placeholder holds its spot meanwhile",
+  );
+  // Siblings added at the end while it is away (e.g. hidden inputs).
+  container.appendChild(document.createElement("input"));
+  Portal.restore(el);
+
+  assert.deepEqual(
+    Array.from(container.children).map((node) => node.id || node.tagName),
+    ["before", "portal-el", "after", "INPUT"],
+  );
+  assert.equal(
+    Array.from(container.childNodes).some(
+      (node) => node.nodeType === Node.COMMENT_NODE,
+    ),
+    false,
+    "the placeholder is removed",
+  );
+});
+
+test("restore() falls back to the next sibling when the placeholder is gone", () => {
+  const container = document.getElementById("container");
+  container.innerHTML = `<span id="before"></span><div id="portal-el"></div><span id="after"></span>`;
+  const el = document.getElementById("portal-el");
+
+  Portal.move(el);
+  // e.g. a patch that dropped the comment node.
+  Array.from(container.childNodes)
+    .filter((node) => node.nodeType === Node.COMMENT_NODE)
+    .forEach((node) => node.remove());
+  Portal.restore(el);
+
+  assert.deepEqual(
+    Array.from(container.children).map((node) => node.id),
+    ["before", "portal-el", "after"],
+  );
+});
+
+test("restore() appends to the old parent when neither anchor is left", () => {
+  const container = document.getElementById("container");
+  container.innerHTML = `<div id="portal-el"></div><span id="after"></span>`;
+  const el = document.getElementById("portal-el");
+
+  Portal.move(el);
+  container.innerHTML = `<span id="other"></span>`;
+  Portal.restore(el);
+
+  assert.deepEqual(
+    Array.from(container.children).map((node) => node.id),
+    ["other", "portal-el"],
+  );
+});
+
+test("move() twice keeps the original spot", () => {
+  const container = document.getElementById("container");
+  container.innerHTML = `<div id="portal-el"></div><span id="after"></span>`;
+  const el = document.getElementById("portal-el");
+  const other = document.createElement("div");
+  document.body.appendChild(other);
+
+  Portal.move(el);
+  Portal.move(el, other);
+  assert.equal(el.parentElement, other);
+  Portal.restore(el);
+
+  assert.deepEqual(
+    Array.from(container.childNodes).map((node) => node.id),
+    ["portal-el", "after"],
+  );
+});

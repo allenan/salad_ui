@@ -14,6 +14,11 @@ defmodule Storybook.Examples.ComboboxServer do
     (`phx-update="stream"`, reset on every search). The selection is a
     form field: submitting without picking a language shows the field error,
     and the picked value is submitted with the form.
+
+    After a pick the input shows the language while the server still holds the
+    last query, so `on-open` resets the results: its payload carries the query
+    the list opened with (`""` unless typing opened it), and reopening lists
+    every language again.
     """
   end
 
@@ -44,7 +49,13 @@ defmodule Storybook.Examples.ComboboxServer do
       >
         <.field field={@form[:language]}>
           <.field_label for="project_language-input">Language</.field_label>
-          <.combobox id="project_language" field={@form[:language]} filter={false} auto-highlight>
+          <.combobox
+            id="project_language"
+            field={@form[:language]}
+            filter={false}
+            auto-highlight
+            on-open="search_opened"
+          >
             <.combobox_input
               id="project_language-input"
               name="query"
@@ -82,12 +93,11 @@ defmodule Storybook.Examples.ComboboxServer do
     query = params |> Map.get("query", socket.assigns.query) |> String.trim()
     project = Map.get(params, "project", %{})
 
-    socket =
-      if query == socket.assigns.query,
-        do: socket,
-        else: stream(socket, :languages, entries(filter(query)), reset: true)
+    {:noreply, socket |> search(query) |> assign(form: to_form(project, as: :project))}
+  end
 
-    {:noreply, assign(socket, query: query, form: to_form(project, as: :project))}
+  def handle_event("search_opened", %{"query" => query}, socket) do
+    {:noreply, search(socket, String.trim(query))}
   end
 
   def handle_event("save", params, socket) do
@@ -99,6 +109,16 @@ defmodule Storybook.Examples.ComboboxServer do
 
       language ->
         {:noreply, assign(socket, submitted: language, form: to_form(project, as: :project))}
+    end
+  end
+
+  defp search(socket, query) do
+    if query == socket.assigns.query do
+      socket
+    else
+      socket
+      |> stream(:languages, entries(filter(query)), reset: true)
+      |> assign(query: query)
     end
   end
 
