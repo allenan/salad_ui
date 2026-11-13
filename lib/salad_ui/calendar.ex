@@ -235,7 +235,7 @@ defmodule SaladUI.Calendar.LiveComponent do
 
   defp weekday_name(dow), do: Enum.at(@weekday_names, dow)
 
-  defp classes(input), do: TwMerge.merge(List.flatten(input))
+  defp classes(input), do: SaladUI.ClassMerge.merge(input)
 
   # -- lifecycle ---------------------------------------------------------------
 

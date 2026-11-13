@@ -19,6 +19,19 @@ defmodule SaladUI.SeparatorTest do
       end
     end
 
+    test "a caller's class replaces the matching default" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.separator orientation="vertical" class="self-stretch data-[orientation=vertical]:h-auto" />
+        """)
+
+      assert html =~ "self-stretch data-[orientation=vertical]:h-auto"
+      refute html =~ "data-[orientation=vertical]:h-full"
+      assert html =~ "data-[orientation=vertical]:w-px"
+    end
+
     test "renders data-orientation for vertical separators" do
       assigns = %{}
       html = rendered_to_string(~H(<.separator orientation="vertical" />))

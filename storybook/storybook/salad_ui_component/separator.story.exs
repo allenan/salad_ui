@@ -38,19 +38,19 @@ defmodule Storybook.SaladUIComponents.Separator do
       %Variation{
         id: :separator_menu,
         description:
-          "shadcn separator-menu. The row is `items-center`, so the vertical separators add `self-stretch` to span its height.",
+          "shadcn separator-menu. The row is `items-center` with no fixed height, so `h-full` has nothing to fill: the vertical separators swap it for `self-stretch` (built into shadcn's radix-nova separator).",
         template: """
         <div class="flex items-center gap-2 text-sm md:gap-4">
           <div class="flex flex-col gap-1">
             <span class="font-medium">Settings</span>
             <span class="text-xs text-muted-foreground">Manage preferences</span>
           </div>
-          <.separator orientation="vertical" class="self-stretch" />
+          <.separator orientation="vertical" class="self-stretch data-[orientation=vertical]:h-auto" />
           <div class="flex flex-col gap-1">
             <span class="font-medium">Account</span>
             <span class="text-xs text-muted-foreground">Profile & security</span>
           </div>
-          <.separator orientation="vertical" class="hidden self-stretch md:block" />
+          <.separator orientation="vertical" class="hidden self-stretch data-[orientation=vertical]:h-auto md:block" />
           <div class="hidden flex-col gap-1 md:flex">
             <span class="font-medium">Help</span>
             <span class="text-xs text-muted-foreground">Support & docs</span>

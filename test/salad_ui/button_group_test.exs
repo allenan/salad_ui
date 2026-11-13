@@ -126,6 +126,8 @@ defmodule SaladUI.ButtonGroupTest do
       assert html =~ "self-stretch"
       assert html =~ "bg-input"
       assert html =~ "data-[orientation=vertical]:h-auto"
+      # the override replaces the separator's h-full, which would stop self-stretch
+      refute html =~ "data-[orientation=vertical]:h-full"
     end
 
     test "horizontal orientation" do

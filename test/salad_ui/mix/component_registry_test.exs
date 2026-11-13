@@ -42,6 +42,7 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistryTest do
 
         assert "#{name}.ex" in plan.ex_files
         assert "helpers.ex" in plan.ex_files
+        assert "class_merge.ex" in plan.ex_files
 
         for entry <- plan.js_entries do
           assert entry in plan.js_files
@@ -60,8 +61,8 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistryTest do
     test "pure markup components need no JavaScript", %{registry: registry} do
       plan = resolve!(registry, "button")
 
-      assert plan.ex_files == ["button.ex", "helpers.ex"]
-      assert plan.modules == ["SaladUI.Button", "SaladUI.Helpers"]
+      assert plan.ex_files == ["button.ex", "class_merge.ex", "helpers.ex"]
+      assert plan.modules == ["SaladUI.Button", "SaladUI.ClassMerge", "SaladUI.Helpers"]
       assert plan.js_entries == []
       assert plan.js_files == []
     end

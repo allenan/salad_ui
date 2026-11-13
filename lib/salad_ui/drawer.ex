@@ -218,7 +218,7 @@ defmodule SaladUI.Drawer do
         data-slot="drawer-content"
         data-part="content-panel"
         class={
-          merge_classes([
+          classes([
             "group/drawer-content fixed z-50 flex h-auto touch-none flex-col bg-background outline-none",
             "duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards data-[state=open]:animate-in",
             "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b data-[vaul-drawer-direction=top]:data-[state=open]:slide-in-from-top data-[vaul-drawer-direction=top]:data-[state=closed]:slide-out-to-top",
@@ -255,7 +255,7 @@ defmodule SaladUI.Drawer do
     <div
       data-slot="drawer-header"
       class={
-        merge_classes([
+        classes([
           "flex flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-1.5 md:text-left",
           @class
         ])
@@ -354,17 +354,5 @@ defmodule SaladUI.Drawer do
       {render_slot(@inner_block)}
     </.dynamic>
     """
-  end
-
-  # TwMerge 0.1 cannot parse `=` inside arbitrary variants, so it never lets a
-  # caller's `data-[vaul-drawer-direction=bottom]:max-h-[50vh]` replace the
-  # default `...:max-h-[80vh]`. Mask `=` while merging so those overrides work.
-  defp merge_classes(list) do
-    list
-    |> List.flatten()
-    |> Enum.reject(&is_nil/1)
-    |> Enum.map(&String.replace(&1, "=", "__eq__"))
-    |> classes()
-    |> String.replace("__eq__", "=")
   end
 end

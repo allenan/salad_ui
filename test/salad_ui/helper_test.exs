@@ -123,7 +123,8 @@ defmodule SaladUI.HelperTest do
     end
 
     test "keeps not-* opt-out classes TwMerge cannot parse instead of crashing" do
-      assert Helpers.tw_merge(["flex px-2", "not-typeset px-4", nil]) == "flex px-4 not-typeset"
+      # kept where it was, like any class TwMerge has no group for
+      assert Helpers.tw_merge(["flex px-2", "not-typeset px-4", nil]) == "flex not-typeset px-4"
       assert Helpers.tw_merge(["not-prose"]) == "not-prose"
       assert Helpers.tw_merge(["not-italic"]) == "not-italic"
     end

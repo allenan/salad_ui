@@ -73,6 +73,13 @@ defmodule Mix.Tasks.Salad.AddTest do
       assert content(igniter, "lib/demo_ui.ex") =~ "defmodule DemoUi do"
     end
 
+    test "copies the class merger classes/1 calls", %{registry: registry} do
+      igniter = add(project(), registry, ["button"])
+
+      assert content(igniter, "#{@ui}/class_merge.ex") =~ "defmodule DemoUi.ClassMerge do"
+      assert content(igniter, "#{@ui}/helpers.ex") =~ "DemoUi.ClassMerge.merge(classes)"
+    end
+
     test "ui.ex imports only the copied modules", %{registry: registry} do
       igniter = add(project(), registry, ["dropdown_menu"], prefix: "DemoWeb.UI")
       ui = content(igniter, "lib/demo_web/ui.ex")

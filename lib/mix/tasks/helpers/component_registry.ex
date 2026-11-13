@@ -8,8 +8,9 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
   #
   #   * Elixir deps: every `SaladUI.*` module a component file references in
   #     code or HEEx (docs are stripped first), resolved to the file that
-  #     defines it, transitively. `helpers.ex` is always included because
-  #     `use SaladUI, :component` imports it.
+  #     defines it, transitively. `helpers.ex` and `class_merge.ex` are always
+  #     included because `use SaladUI, :component` imports the helpers and its
+  #     `classes/1` calls `SaladUI.ClassMerge`.
   #   * JS entries: every `data-component` name a selected Elixir file emits,
   #     resolved to the `assets/salad_ui` file that calls
   #     `SaladUI.register("<name>", ...)`.
@@ -23,7 +24,7 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
 
   @lib_dir "lib/salad_ui"
   @js_dir "assets/salad_ui"
-  @always_ex ["helpers.ex"]
+  @always_ex ["class_merge.ex", "helpers.ex"]
   # shadcn names that map onto a differently named SaladUI component.
   @aliases %{"sonner" => "toast"}
 
