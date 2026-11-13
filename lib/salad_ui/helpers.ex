@@ -10,8 +10,8 @@ defmodule SaladUI.Helpers do
   Merges Tailwind classes, later classes winning conflicts. This is what
   `classes/1` calls; see `SaladUI.ClassMerge` for the Tailwind v4 handling.
 
-  Classes TwMerge 0.1 crashes on, such as typeset's `not-typeset` or
-  typography's `not-prose`, are kept in place instead of failing the render.
+  Classes that aren't Tailwind utilities, such as typeset's `not-typeset` or
+  typography's `not-prose`, are kept in place.
   """
   def tw_merge(classes), do: SaladUI.ClassMerge.merge(classes)
 
