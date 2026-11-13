@@ -20,7 +20,7 @@ step() { echo; echo "==> $*"; }
 # in menu.js; the rest of the library must stay out).
 ADD_COMPONENTS=(button badge card avatar dialog tabs select dropdown-menu tooltip)
 # then a second run without --prefix (it is reused) whose components pull in
-# other modules: sidebar -> tooltip/input/separator/skeleton (+ sidebar.js),
+# other modules: sidebar -> input/separator/skeleton (+ sidebar.js),
 # date_picker -> calendar/popover/button.
 ADD_MORE=(sidebar date_picker)
 

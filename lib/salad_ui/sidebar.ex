@@ -154,7 +154,6 @@ defmodule SaladUI.Sidebar do
   import SaladUI.Input
   import SaladUI.Separator
   import SaladUI.Skeleton
-  import SaladUI.Tooltip
 
   @sidebar_width "16rem"
   @sidebar_width_mobile "18rem"
@@ -802,9 +801,13 @@ defmodule SaladUI.Sidebar do
   @doc """
   The button of a `sidebar_menu_item`.
 
-  With `tooltip`, the label shows on hover only while the sidebar is
-  collapsed (`group-data-[state=collapsed]`), so it follows client-side
-  toggles, and never on the mobile sheet.
+  With `tooltip`, the label is rendered after the button (hidden), and the
+  provider's hook shows it on hover or focus only if the sidebar is collapsed
+  and not mobile when it opens, so it follows client-side toggles. It is a
+  sibling rather than a wrapper, so `sidebar_menu_action` /
+  `sidebar_menu_badge` (styled through `peer/menu-button`) and an outer
+  component's trigger (`as_child` with `collapsible_trigger` or
+  `dropdown_menu_trigger`) keep working on the button.
   """
   attr :variant, :string, values: ~w(default outline), default: "default"
   attr :size, :string, values: ~w(default sm lg), default: "default"
@@ -828,7 +831,7 @@ defmodule SaladUI.Sidebar do
   slot(:inner_block, required: true)
 
   def sidebar_menu_button(assigns) do
-    button = ~H"""
+    ~H"""
     <.dynamic
       data-slot="sidebar-menu-button"
       tag={@as}
@@ -840,27 +843,33 @@ defmodule SaladUI.Sidebar do
     >
       {render_slot(@inner_block)}
     </.dynamic>
+    <div
+      :if={@tooltip && !@is_mobile}
+      data-slot="tooltip-content"
+      data-sidebar="menu-tooltip"
+      role="tooltip"
+      data-state="closed"
+      data-side={@tooltip_side}
+      data-align="center"
+      data-side-offset="8"
+      class="group/tooltip z-50 w-fit animate-in rounded-md bg-foreground px-3 py-1.5 text-xs text-balance text-background fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+      hidden
+    >
+      {@tooltip}
+      <span
+        aria-hidden="true"
+        class={[
+          "pointer-events-none absolute",
+          "group-data-[side=top]/tooltip:top-full group-data-[side=top]/tooltip:left-1/2 group-data-[side=top]/tooltip:-translate-x-1/2",
+          "group-data-[side=bottom]/tooltip:bottom-full group-data-[side=bottom]/tooltip:left-1/2 group-data-[side=bottom]/tooltip:-translate-x-1/2 group-data-[side=bottom]/tooltip:rotate-180",
+          "group-data-[side=left]/tooltip:top-1/2 group-data-[side=left]/tooltip:left-full group-data-[side=left]/tooltip:-translate-y-1/2 group-data-[side=left]/tooltip:-rotate-90",
+          "group-data-[side=right]/tooltip:top-1/2 group-data-[side=right]/tooltip:right-full group-data-[side=right]/tooltip:-translate-y-1/2 group-data-[side=right]/tooltip:rotate-90"
+        ]}
+      >
+        <span class="z-50 block size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground"></span>
+      </span>
+    </div>
     """
-
-    assigns = assign(assigns, :button, button)
-
-    if assigns.tooltip && !assigns.is_mobile do
-      ~H"""
-      <.tooltip class="block">
-        <.tooltip_trigger>
-          {@button}
-        </.tooltip_trigger>
-        <.tooltip_content
-          side={@tooltip_side}
-          class="hidden group-data-[state=collapsed]:block group-data-[mobile=true]:hidden"
-        >
-          {@tooltip}
-        </.tooltip_content>
-      </.tooltip>
-      """
-    else
-      button
-    end
   end
 
   @doc """

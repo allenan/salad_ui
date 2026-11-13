@@ -10,10 +10,12 @@
 //     with overlay, Escape / outside click to close and a focus trap;
 //   * the Cmd/Ctrl+B shortcut (SIDEBAR_KEYBOARD_SHORTCUT);
 //   * the `sidebar_state` cookie, so the server can render the last state;
-//   * `on-open-change` and the open/close/toggle commands.
+//   * `on-open-change` and the open/close/toggle commands;
+//   * sidebar_menu_button tooltips, shown only while collapsed on desktop.
 import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import FocusTrap from "../core/focus-trap.js";
+import PositionedElement from "../core/positioned-element.js";
 
 export const SIDEBAR_COOKIE_NAME = "sidebar_state";
 export const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -22,6 +24,15 @@ export const MOBILE_BREAKPOINT = 768;
 
 const SIDEBAR_SELECTOR = '[data-slot="sidebar"][data-collapsible-mode]';
 const TRIGGER_SELECTOR = '[data-sidebar="trigger"]';
+// Only the sidebar's own controls act on it: the provider wraps the whole
+// layout, so any other `data-action` inside it belongs to someone else.
+const ACTION_SELECTOR = [
+  '[data-sidebar="trigger"][data-action]',
+  '[data-sidebar="rail"][data-action]',
+  '[data-sidebar="overlay"][data-action]',
+].join(", ");
+const MENU_BUTTON_SELECTOR = '[data-sidebar="menu-button"]';
+const MENU_TOOLTIP_SELECTOR = '[data-sidebar="menu-tooltip"]';
 
 class SidebarComponent extends Component {
   constructor(el, hookContext) {
@@ -34,6 +45,11 @@ class SidebarComponent extends Component {
     this.onSidebarCommand = this.onSidebarCommand.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onMediaChange = this.onMediaChange.bind(this);
+    this.onTooltipEnter = this.onTooltipEnter.bind(this);
+    this.onTooltipLeave = this.onTooltipLeave.bind(this);
+    this.hideTooltip = this.hideTooltip.bind(this);
+    this.activeTooltip = null;
+    this.tooltipSides = new WeakMap();
 
     const breakpoint = this.options.mobileBreakpoint || MOBILE_BREAKPOINT;
     this.mediaQuery =
@@ -112,12 +128,22 @@ class SidebarComponent extends Component {
     } else {
       this.mediaQuery?.addListener?.(this.onMediaChange);
     }
+    this.el.addEventListener("mouseover", this.onTooltipEnter);
+    this.el.addEventListener("focusin", this.onTooltipEnter);
+    this.el.addEventListener("mouseout", this.onTooltipLeave);
+    this.el.addEventListener("focusout", this.onTooltipLeave);
+    this.el.addEventListener("pointerdown", this.hideTooltip);
     this.bindCommandTargets();
   }
 
   teardownComponentEvents() {
     super.teardownComponentEvents();
 
+    this.el.removeEventListener("mouseover", this.onTooltipEnter);
+    this.el.removeEventListener("focusin", this.onTooltipEnter);
+    this.el.removeEventListener("mouseout", this.onTooltipLeave);
+    this.el.removeEventListener("focusout", this.onTooltipLeave);
+    this.el.removeEventListener("pointerdown", this.hideTooltip);
     document.removeEventListener("keydown", this.onKeyDown);
     if (this.mediaQuery?.removeEventListener) {
       this.mediaQuery.removeEventListener("change", this.onMediaChange);
@@ -155,6 +181,105 @@ class SidebarComponent extends Component {
 
     event.stopPropagation();
     this.handleCommand(command, params ?? {});
+  }
+
+  /**
+   * The trigger, the rail and the overlay act through `data-action`. Only
+   * they do: the provider wraps the whole layout, so other `data-action`
+   * elements in it (a collapsible menu button, app markup) are not ours. A
+   * trigger counts even inside another component (e.g. a tooltip), as long
+   * as this is its nearest provider.
+   */
+  handleActionClick(event) {
+    const actionElement = event.target.closest?.(ACTION_SELECTOR);
+    if (!actionElement || !this.owns(actionElement)) return;
+
+    this.transition(actionElement.getAttribute("data-action"), {
+      originalEvent: event,
+      target: actionElement,
+    });
+  }
+
+  owns(node) {
+    return node.closest('[data-component="sidebar"]') === this.el;
+  }
+
+  // --- Menu button tooltips ----------------------------------------------
+  //
+  // sidebar_menu_button renders its tooltip as the button's next sibling
+  // (hidden), so it never wraps the button. As in shadcn (TooltipProvider
+  // delayDuration={0}, `hidden={state !== "collapsed" || isMobile}`), it
+  // opens at once on hover or focus, but only if the button's sidebar is
+  // collapsed and the layout is not mobile at that moment.
+
+  tooltipFor(button) {
+    const next = button?.nextElementSibling;
+    return next?.matches(MENU_TOOLTIP_SELECTOR) ? next : null;
+  }
+
+  canShowTooltip(button) {
+    if (this.isMobile || !button?.isConnected || !this.owns(button)) {
+      return false;
+    }
+    const sidebar = button.closest('[data-slot="sidebar"]');
+    return sidebar?.getAttribute("data-state") === "collapsed";
+  }
+
+  onTooltipEnter(event) {
+    const button = event.target.closest?.(MENU_BUTTON_SELECTOR);
+    if (button) this.showTooltip(button);
+  }
+
+  onTooltipLeave(event) {
+    const active = this.activeTooltip;
+    if (!active || !active.button.contains(event.target)) return;
+    if (event.relatedTarget && active.button.contains(event.relatedTarget)) {
+      return;
+    }
+    this.hideTooltip();
+  }
+
+  showTooltip(button) {
+    const tooltip = this.tooltipFor(button);
+    if (!tooltip || !this.canShowTooltip(button)) return;
+    if (this.activeTooltip?.tooltip === tooltip && !tooltip.hidden) return;
+
+    this.hideTooltip();
+
+    // data-side follows a flip; remember the side the server asked for.
+    if (!this.tooltipSides.has(tooltip)) {
+      this.tooltipSides.set(tooltip, tooltip.dataset.side || "right");
+    }
+    const offset = parseInt(tooltip.dataset.sideOffset, 10);
+    const positioned = new PositionedElement(tooltip, button, {
+      placement: this.tooltipSides.get(tooltip),
+      alignment: tooltip.dataset.align || "center",
+      sideOffset: Number.isNaN(offset) ? 8 : offset,
+      alignOffset: 0,
+      flip: true,
+      usePortal: false,
+      trapFocus: false,
+      onPosition: ({ placement }) =>
+        tooltip.setAttribute("data-side", placement),
+    });
+
+    tooltip.hidden = false;
+    tooltip.setAttribute("data-state", "open");
+    positioned.activate();
+    const index = Array.from(
+      this.el.querySelectorAll(MENU_BUTTON_SELECTOR),
+    ).indexOf(button);
+    this.activeTooltip = { button, tooltip, positioned, index };
+  }
+
+  hideTooltip() {
+    const active = this.activeTooltip;
+    if (!active) return;
+
+    this.activeTooltip = null;
+    active.positioned.destroy();
+    active.tooltip.hidden = true;
+    active.tooltip.setAttribute("data-state", "closed");
   }
 
   afterMount() {
@@ -203,6 +328,17 @@ class SidebarComponent extends Component {
     this.triggers.forEach((trigger) =>
       js.ignoreAttributes(trigger, ["aria-expanded"]),
     );
+    // An open menu tooltip stays open and placed across a patch.
+    this.el.querySelectorAll(MENU_TOOLTIP_SELECTOR).forEach((tooltip) => {
+      if (this.owns(tooltip)) {
+        js.ignoreAttributes(tooltip, [
+          "hidden",
+          "style",
+          "data-state",
+          "data-side",
+        ]);
+      }
+    });
   }
 
   /**
@@ -220,6 +356,7 @@ class SidebarComponent extends Component {
     }
 
     const previousContainer = this.mobileContainer;
+    const activeTooltip = this.activeTooltip;
     this.collectElements();
     this.bindCommandTargets();
     this.protectAttributes();
@@ -233,6 +370,21 @@ class SidebarComponent extends Component {
     }
 
     this.updateUI();
+
+    // A tooltip the patch replaced (or reset) is shown again on its button,
+    // or on the button that took its place.
+    if (
+      activeTooltip &&
+      (this.activeTooltip !== activeTooltip ||
+        this.tooltipFor(activeTooltip.button) !== activeTooltip.tooltip ||
+        activeTooltip.tooltip.hidden)
+    ) {
+      if (this.activeTooltip === activeTooltip) this.hideTooltip();
+      const button = activeTooltip.button.isConnected
+        ? activeTooltip.button
+        : this.el.querySelectorAll(MENU_BUTTON_SELECTOR)[activeTooltip.index];
+      if (button) this.showTooltip(button);
+    }
 
     if (this.isMobile && this.openMobile) {
       const container = this.containerOf(this.sidebars[0]);
@@ -311,6 +463,11 @@ class SidebarComponent extends Component {
     this.triggers.forEach((trigger) =>
       trigger.setAttribute("aria-expanded", String(open)),
     );
+
+    // Expanding (or going mobile) hides an open menu tooltip.
+    if (this.activeTooltip && !this.canShowTooltip(this.activeTooltip.button)) {
+      this.hideTooltip();
+    }
   }
 
   /**
@@ -438,6 +595,8 @@ class SidebarComponent extends Component {
       return;
     }
 
+    if (event.key === "Escape") this.hideTooltip();
+
     if (
       event.key === "Escape" &&
       !event.defaultPrevented &&
@@ -463,6 +622,7 @@ class SidebarComponent extends Component {
   }
 
   beforeDestroy() {
+    this.hideTooltip();
     this.focusTrap?.destroy?.();
     this.focusTrap = null;
     this.mobileContainer = null;

@@ -69,12 +69,14 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistryTest do
     test "follows module references transitively", %{registry: registry} do
       plan = resolve!(registry, "sidebar")
 
-      for file <- ~w(sidebar.ex tooltip.ex input.ex separator.ex skeleton.ex) do
+      for file <- ~w(sidebar.ex input.ex separator.ex skeleton.ex) do
         assert file in plan.ex_files
       end
 
       refute "dropdown_menu.ex" in plan.ex_files
-      assert plan.js_entries == ["components/sidebar.js", "components/tooltip.js"]
+      refute "tooltip.ex" in plan.ex_files
+      assert plan.js_entries == ["components/sidebar.js"]
+      assert "core/positioned-element.js" in plan.js_files
     end
 
     test "includes nested modules in subdirectories", %{registry: registry} do

@@ -66,7 +66,17 @@ function sidebarMarkup({
       <div data-slot="sidebar-gap"></div>
       <div data-slot="sidebar-container" data-side="left">
         <div data-slot="sidebar-inner" data-sidebar="sidebar">
-          <a href="#home" id="home-link">Home</a>
+          <ul>
+            <li data-sidebar="menu-item">
+              <a href="#home" id="home-link" data-sidebar="menu-button"><span>Home</span></a>
+              <div data-sidebar="menu-tooltip" role="tooltip" data-state="closed"
+                   data-side="right" data-side-offset="8" hidden>Home tip</div>
+            </li>
+            <li data-sidebar="menu-item" data-component="collapsible">
+              <button type="button" id="collapsible-button" data-sidebar="menu-button"
+                      data-part="trigger" data-action="toggle">Projects</button>
+            </li>
+          </ul>
           <button type="button" data-sidebar="rail" data-action="toggle">Rail</button>
         </div>
       </div>
@@ -90,6 +100,10 @@ function buildSidebar({
       ${sidebarMarkup({ state, ...sidebar })}
       <main data-slot="sidebar-inset">
         <button type="button" id="trigger" data-sidebar="trigger" data-action="toggle">Toggle</button>
+        <button type="button" id="app-action" data-action="close">App action</button>
+        <div data-component="tooltip">
+          <button type="button" id="nested-trigger" data-sidebar="trigger" data-action="toggle">Toggle</button>
+        </div>
       </main>
     </div>`;
 
@@ -192,6 +206,119 @@ test("the trigger and the rail toggle through data-action", () => {
 
   click(el.querySelector('[data-sidebar="rail"]'));
   assert.equal(sidebar().dataset.state, "expanded");
+});
+
+test("only the sidebar's own controls act on it", () => {
+  const { el, sidebar } = buildSidebar();
+  mountHook(el);
+
+  // App markup and a nested component's trigger (a collapsible menu button)
+  // carry data-action too; the provider wraps them but leaves them alone.
+  click(document.getElementById("app-action"));
+  assert.equal(sidebar().dataset.state, "expanded");
+  click(document.getElementById("collapsible-button"));
+  assert.equal(sidebar().dataset.state, "expanded");
+
+  // A trigger inside another component still toggles its provider.
+  click(document.getElementById("nested-trigger"));
+  assert.equal(sidebar().dataset.state, "collapsed");
+});
+
+function hover(el) {
+  el.dispatchEvent(new window.MouseEvent("mouseover", { bubbles: true }));
+}
+
+function unhover(el, relatedTarget = document.body) {
+  el.dispatchEvent(
+    new window.MouseEvent("mouseout", { bubbles: true, relatedTarget }),
+  );
+}
+
+test("menu tooltips show only while collapsed, following client toggles", () => {
+  const { el, trigger } = buildSidebar();
+  mountHook(el);
+  const button = document.getElementById("home-link");
+  const tooltip = el.querySelector('[data-sidebar="menu-tooltip"]');
+
+  // Expanded: the label is visible already, no tooltip.
+  hover(button);
+  assert.equal(tooltip.hidden, true);
+  unhover(button);
+
+  // Collapsed on the client (no server round trip): hover opens it at once.
+  click(trigger());
+  hover(button.querySelector("span"));
+  assert.equal(tooltip.hidden, false);
+  assert.equal(tooltip.dataset.state, "open");
+  assert.equal(tooltip.style.position, "fixed");
+
+  // Moving within the button keeps it; leaving closes it.
+  unhover(button.querySelector("span"), button);
+  assert.equal(tooltip.hidden, false);
+  unhover(button);
+  assert.equal(tooltip.hidden, true);
+  assert.equal(tooltip.dataset.state, "closed");
+
+  // Focus opens it too, Escape dismisses it.
+  button.focus();
+  assert.equal(tooltip.hidden, false);
+  keydown("Escape");
+  assert.equal(tooltip.hidden, true);
+
+  // Expanding while it is open hides it.
+  hover(button);
+  assert.equal(tooltip.hidden, false);
+  keydown("b", { metaKey: true });
+  assert.equal(tooltip.hidden, true);
+});
+
+test("menu tooltips never show on the mobile sheet", () => {
+  installMatchMedia(true);
+  const { el, trigger } = buildSidebar({ state: "collapsed" });
+  mountHook(el);
+  const button = document.getElementById("home-link");
+  const tooltip = el.querySelector('[data-sidebar="menu-tooltip"]');
+
+  click(trigger());
+  hover(button);
+  assert.equal(tooltip.hidden, true);
+
+  // Back on desktop, the collapsed sidebar shows it.
+  media.set(false);
+  hover(button);
+  assert.equal(tooltip.hidden, false);
+  // Going mobile hides it.
+  media.set(true);
+  assert.equal(tooltip.hidden, true);
+});
+
+test("an open menu tooltip survives a patch", () => {
+  const ignored = new Map();
+  const { el } = buildSidebar({ state: "collapsed" });
+  const { hook } = mountHook(el, { ignored });
+  const tooltip = () => el.querySelector('[data-sidebar="menu-tooltip"]');
+
+  assert.deepEqual(ignored.get(tooltip()), [
+    "hidden",
+    "style",
+    "data-state",
+    "data-side",
+  ]);
+
+  hover(document.getElementById("home-link"));
+  assert.equal(tooltip().hidden, false);
+
+  // The patch re-renders the sidebar: a new, hidden tooltip element.
+  hook.beforeUpdate();
+  el.querySelector('[data-slot="sidebar"]').outerHTML = sidebarMarkup({
+    state: "collapsed",
+  });
+  hook.updated();
+
+  assert.equal(tooltip().hidden, false);
+  assert.equal(tooltip().dataset.state, "open");
+  unhover(document.getElementById("home-link"));
+  assert.equal(tooltip().hidden, true);
 });
 
 test("a toggle writes the sidebar_state cookie and fires on-open-change", () => {

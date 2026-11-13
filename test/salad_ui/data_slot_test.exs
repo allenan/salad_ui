@@ -649,7 +649,7 @@ defmodule SaladUI.DataSlotTest do
              ~w(sidebar-wrapper sidebar sidebar-gap sidebar-container sidebar-inner sidebar-header
                 sidebar-input sidebar-separator sidebar-content sidebar-group sidebar-group-label
                 sidebar-group-action sidebar-group-content sidebar-menu sidebar-menu-item
-                sidebar-menu-button tooltip tooltip-trigger tooltip-content sidebar-menu-action
+                sidebar-menu-button tooltip-content sidebar-menu-action
                 sidebar-menu-badge sidebar-menu-sub sidebar-menu-sub-item sidebar-menu-sub-button
                 sidebar-menu-skeleton skeleton sidebar-footer sidebar-rail sidebar-inset
                 sidebar-trigger sidebar sidebar sidebar-overlay)

@@ -353,17 +353,45 @@ defmodule SaladUI.SidebarTest do
       assert html =~ "group-data-[mobile=true]:hidden"
     end
 
-    test "menu button tooltips are always rendered and shown only while collapsed" do
+    test "menu button tooltips are a hidden sibling of the button, for the hook to show" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.sidebar_menu_button tooltip="Home">Home</.sidebar_menu_button>
+        <li>
+          <.sidebar_menu_button tooltip="Home" size="sm">Home</.sidebar_menu_button>
+          <.sidebar_menu_badge>3</.sidebar_menu_badge>
+        </li>
         """)
 
-      assert html =~ ~s(data-slot="tooltip-content")
-      assert html =~ "hidden group-data-[state=collapsed]:block group-data-[mobile=true]:hidden"
+      # The button is not wrapped (the badge/action `peer/menu-button`
+      # selectors and an outer component's trigger need it as a direct child).
+      assert html =~ ~r/<li>\s*<button[^>]*data-sidebar="menu-button"/
+      assert html =~ ~r/<\/button>\s*<div[^>]*data-sidebar="menu-tooltip"/
+      refute html =~ ~s(data-component="tooltip")
+      assert html =~ ~s(role="tooltip")
       assert html =~ ~s(data-side="right")
+      assert html =~ ~r/data-sidebar="menu-tooltip"[^>]*hidden/
+    end
+
+    test "as_child keeps an outer trigger on the menu button itself" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <SaladUI.Helpers.as_child
+          tag={&SaladUI.Collapsible.collapsible_trigger/1}
+          child={&sidebar_menu_button/1}
+          tooltip="Projects"
+        >
+          Projects
+        </SaladUI.Helpers.as_child>
+        """)
+
+      assert html =~
+               ~r/<button[^>]*data-action="toggle"[^>]*data-sidebar="menu-button"|<button[^>]*data-sidebar="menu-button"[^>]*data-action="toggle"/
+
+      assert html =~ ~s(data-sidebar="menu-tooltip")
     end
 
     test "is_mobile on the menu button skips the tooltip" do

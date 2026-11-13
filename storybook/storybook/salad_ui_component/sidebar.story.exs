@@ -340,7 +340,7 @@ defmodule Storybook.SaladUIComponents.Sidebar do
                   <.sidebar_group_content>
                     <.sidebar_menu>
                       <.sidebar_menu_item>
-                        <.sidebar_menu_button as="a" href="#">
+                        <.sidebar_menu_button as="a" href="#" tooltip="Home">
                           <Lucideicons.home /> <span>Home</span>
                         </.sidebar_menu_button>
                         <.sidebar_menu_action show_on_hover>
@@ -348,7 +348,7 @@ defmodule Storybook.SaladUIComponents.Sidebar do
                         </.sidebar_menu_action>
                       </.sidebar_menu_item>
                       <.sidebar_menu_item>
-                        <.sidebar_menu_button as="a" href="#">
+                        <.sidebar_menu_button as="a" href="#" tooltip="Inbox">
                           <Lucideicons.inbox /> <span>Inbox</span>
                         </.sidebar_menu_button>
                         <.sidebar_menu_badge>24</.sidebar_menu_badge>
