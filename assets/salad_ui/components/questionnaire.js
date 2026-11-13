@@ -1,5 +1,5 @@
 // saladui/components/questionnaire.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import SaladUI from "../index.js";
 
 /**
@@ -892,8 +892,7 @@ class QuestionnaireComponent extends Component {
     const base = item.id || `${this.el.id}-${item.dataset.name}`;
     return Array.from(item.querySelectorAll(`[data-part="${part}"]`)).map(
       (node, index) => {
-        if (!node.id) node.id = `${base}-${part}${index ? `-${index}` : ""}`;
-        return node.id;
+        return assignId(node, `${base}-${part}${index ? `-${index}` : ""}`);
       },
     );
   }

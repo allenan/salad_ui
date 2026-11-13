@@ -1,5 +1,5 @@
 // saladui/components/radio_group.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import SaladUI from "../index.js";
 import { CollectionRegistry, Selection } from "../core/collection.js";
 
@@ -83,10 +83,7 @@ class RadioGroupComponent extends Component {
       this.selection.initializeItem(collectionItem);
 
       // Set initial ID if not present
-      if (!item.id) {
-        const value = item.getAttribute("data-value");
-        item.id = `${this.el.id}-item-${value}`;
-      }
+      assignId(item, `${this.el.id}-item-${item.getAttribute("data-value")}`);
 
       this.syncItemAccessibleLabel(item);
     });
@@ -115,11 +112,7 @@ class RadioGroupComponent extends Component {
     if (labels.length === 0) return;
 
     const labelIds = labels.map((label, index) => {
-      if (!label.id) {
-        label.id = `${item.id}-label-${index}`;
-      }
-
-      return label.id;
+      return assignId(label, `${item.id}-label-${index}`);
     });
 
     item.setAttribute("aria-labelledby", labelIds.join(" "));

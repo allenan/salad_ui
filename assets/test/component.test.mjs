@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import Component from "../salad_ui/core/component.js";
+import Component, { assignId } from "../salad_ui/core/component.js";
 import { installDom, uninstallDom, wait } from "./helpers/dom.mjs";
 
 before(() => installDom());
@@ -454,4 +454,26 @@ test("destroy() detaches key handlers of every state bound to the same element (
   );
 
   assert.deepEqual(calls, []);
+});
+
+test("clearGeneratedIds() drops the component's own generated ids, not a nested component's", () => {
+  const { component, el, elements } = buildComponent();
+  const label = document.createElement("label");
+  el.appendChild(label);
+  assignId(elements.content, "test-1-content");
+  assignId(label, "test-1-label");
+  assignId(elements.innerPart, "nested-part");
+  elements.trigger.id = "server-trigger";
+
+  component.clearGeneratedIds();
+
+  assert.equal(elements.content.hasAttribute("id"), false);
+  assert.equal(label.hasAttribute("id"), false, "non-part descendants too");
+  assert.equal(
+    elements.innerPart.id,
+    "nested-part",
+    "nested component untouched",
+  );
+  assert.equal(elements.trigger.id, "server-trigger", "server ids kept");
+  assert.equal(el.id, "test-1");
 });

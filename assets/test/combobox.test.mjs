@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
+import { SaladUIHook } from "../salad_ui/core/hook.js";
 import "../salad_ui/components/combobox.js"; // self-registers "combobox"
 import { installDom, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
@@ -807,4 +808,36 @@ test("destroy removes listeners", () => {
 
   click(c.input);
   assert.ok(c.content.hidden);
+});
+
+test("generated ids are dropped before a patch and restored after it", () => {
+  // LiveView keys nodes by id: an id the server never rendered makes morphdom
+  // replace the node, which loses a skipped (unchanged) list's items.
+  const { component, el, list, item } = buildCombobox({
+    groups: [{ label: "Frameworks", items: ["Next.js", "Remix"] }],
+  });
+  const label = el.querySelector('[data-part="label"]');
+
+  assert.equal(list.id, "cb-list");
+  assert.equal(item("Next.js").id, "cb-option-0");
+  assert.equal(label.id, "cb-group-0-label");
+
+  const hook = { ...SaladUIHook, el, component };
+  hook.beforeUpdate();
+
+  assert.equal(list.hasAttribute("id"), false);
+  assert.equal(item("Next.js").hasAttribute("id"), false);
+  assert.equal(label.hasAttribute("id"), false);
+  assert.equal(el.id, "cb", "server-rendered ids are kept");
+
+  hook.updated();
+
+  assert.equal(hook.component, component, "the instance is kept");
+  assert.equal(list.id, "cb-list");
+  assert.equal(item("Next.js").id, "cb-option-0");
+  assert.equal(label.id, "cb-group-0-label");
+  assert.equal(
+    el.querySelector('[data-part="input"]').getAttribute("aria-controls"),
+    "cb-list",
+  );
 });
