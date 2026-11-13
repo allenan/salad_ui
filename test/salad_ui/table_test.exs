@@ -67,7 +67,7 @@ defmodule SaladUI.TableTest do
       html = rendered_to_string(~H(<.table_head class="w-[100px]">Invoice</.table_head>))
 
       for class <-
-            ~w|h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&amp;:has([role=checkbox])]:pr-0 [&amp;&gt;[role=checkbox]]:translate-y-[2px] w-[100px]| do
+            ~w|h-10 px-2 text-start align-middle font-medium whitespace-nowrap text-foreground [&amp;:has([role=checkbox])]:pe-0 [&amp;&gt;[role=checkbox]]:translate-y-[2px] w-[100px]| do
         assert html =~ class
       end
 
@@ -82,7 +82,7 @@ defmodule SaladUI.TableTest do
       html = rendered_to_string(~H(<.table_cell class="font-medium">INV001</.table_cell>))
 
       for class <-
-            ~w|p-2 align-middle whitespace-nowrap [&amp;:has([role=checkbox])]:pr-0 [&amp;&gt;[role=checkbox]]:translate-y-[2px] font-medium| do
+            ~w|p-2 align-middle whitespace-nowrap [&amp;:has([role=checkbox])]:pe-0 [&amp;&gt;[role=checkbox]]:translate-y-[2px] font-medium| do
         assert html =~ class
       end
 
@@ -101,7 +101,7 @@ defmodule SaladUI.TableTest do
       # [role=checkbox] selectors alone would never match it.
       assert html =~ ~s(type="checkbox")
       refute html =~ ~s(role="checkbox")
-      assert html =~ "[&amp;:has([type=checkbox])]:pr-0"
+      assert html =~ "[&amp;:has([type=checkbox])]:pe-0"
       assert html =~ "[&amp;&gt;[type=checkbox]]:translate-y-[2px]"
     end
   end

@@ -501,7 +501,7 @@ defmodule SaladUI.Field do
         <% match?([_], @messages) -> %>
           {hd(@messages)}
         <% true -> %>
-          <ul class="ml-4 flex list-disc flex-col gap-1">
+          <ul class="ms-4 flex list-disc flex-col gap-1">
             <li :for={message <- @messages}>{message}</li>
           </ul>
       <% end %>

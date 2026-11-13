@@ -200,7 +200,7 @@ defmodule SaladUI.FieldTest do
         ]} />
         """)
 
-      assert many =~ ~s(<ul class="ml-4 flex list-disc flex-col gap-1">)
+      assert many =~ ~s(<ul class="ms-4 flex list-disc flex-col gap-1">)
       assert count_substring(many, "<li>") == 3
       assert many =~ "Needs a digit"
       assert many =~ "max 3"

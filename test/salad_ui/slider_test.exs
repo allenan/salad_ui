@@ -75,9 +75,11 @@ defmodule SaladUI.SliderTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ "left: 0%; right: 70%;"
-      # 16px thumb: offset = 8 * (1 - 30 / 50) = 3.2px
-      assert html =~ "left: calc(30% + 3.2px); transform: translateX(-50%);"
+      assert html =~ "inset-inline-start: 0%; inset-inline-end: 70%;"
+      # 16px thumb: centre at 30% + 8 * (1 - 30 / 50) = 30% + 3.2px, so the
+      # start edge sits at 30% - 4.8px (no transform: it would need the dir).
+      assert html =~ "inset-inline-start: calc(30% - 4.8px);"
+      refute html =~ "translateX"
     end
 
     test "renders disabled state on root and thumbs" do
@@ -124,7 +126,7 @@ defmodule SaladUI.SliderTest do
       assert i1 =~ ~s(name="price[]")
       assert i1 =~ ~s(value="50")
 
-      assert html =~ "left: 25%; right: 50%;"
+      assert html =~ "inset-inline-start: 25%; inset-inline-end: 50%;"
     end
 
     test "labels three or more thumbs as Value i of n, overridable" do
@@ -228,8 +230,9 @@ defmodule SaladUI.SliderTest do
         |> rendered_to_string()
         |> clean_string()
 
+      # The root carries `dir`, which the logical inset properties resolve against.
       assert html =~ ~s(dir="rtl")
-      assert html =~ "right: 0%; left: 25%;"
+      assert html =~ "inset-inline-start: 0%; inset-inline-end: 25%;"
       assert html =~ "top: 0%; bottom: 50%;"
       assert html =~ "&quot;dir&quot;:&quot;rtl&quot;"
       assert html =~ "&quot;inverted&quot;:true"
@@ -249,6 +252,24 @@ defmodule SaladUI.SliderTest do
       # ancestor's `dir` (e.g. `<html dir="rtl">`) instead of forcing ltr.
       refute html =~ ~s(dir=")
       assert html =~ "&quot;dir&quot;:null"
+      # Logical insets: an inherited RTL direction is right before the hook mounts.
+      assert html =~ "inset-inline-start: 0%; inset-inline-end: 50%;"
+      assert html =~ "inset-inline-start: calc(50% - 8px);"
+      refute html =~ ~r/[;"]\s*(left|right):/
+    end
+
+    test "inverted horizontal grows from the inline-end edge" do
+      assigns = %{}
+
+      html =
+        ~H"""
+        <.slider id="inv-h" value={25} inverted />
+        """
+        |> rendered_to_string()
+        |> clean_string()
+
+      assert html =~ "inset-inline-end: 0%; inset-inline-start: 75%;"
+      assert html =~ "inset-inline-end: calc(25% - 4px);"
     end
   end
 end

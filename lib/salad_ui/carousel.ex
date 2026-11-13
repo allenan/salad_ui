@@ -45,8 +45,8 @@ defmodule SaladUI.Carousel do
   to change the gap; the defaults have zero specificity, so any utility you
   pass wins:
 
-      <.carousel_content class="-ml-2 md:-ml-4">
-        <.carousel_item class="pl-2 md:pl-4">...</.carousel_item>
+      <.carousel_content class="-ms-2 md:-ms-4">
+        <.carousel_item class="ps-2 md:ps-4">...</.carousel_item>
       </.carousel_content>
 
   ## Orientation
@@ -93,8 +93,9 @@ defmodule SaladUI.Carousel do
 
   ## RTL
 
-  Set `dir="rtl"` on the carousel; the arrows can be flipped with
-  `class="rtl:rotate-180"` on `carousel_previous/1` and `carousel_next/1`.
+  Set `dir="rtl"` on the carousel (or inherit it from the page). The previous
+  button sits on the inline-start side and the default arrows flip on a
+  horizontal carousel; flip custom icons with `class="rtl:rotate-180"`.
 
   ## Component events
 
@@ -120,13 +121,13 @@ defmodule SaladUI.Carousel do
   # (the shadcn way to change the gap) always wins over them.
   @viewport_class "overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [:where([data-slot=carousel][data-orientation=horizontal]>&)]:snap-x [:where([data-slot=carousel][data-orientation=horizontal]>&)]:snap-mandatory [:where([data-slot=carousel][data-orientation=horizontal]>&)]:overflow-x-auto [:where([data-slot=carousel][data-orientation=horizontal]>&)]:overflow-y-hidden [:where([data-slot=carousel][data-orientation=vertical]>&)]:snap-y [:where([data-slot=carousel][data-orientation=vertical]>&)]:snap-mandatory [:where([data-slot=carousel][data-orientation=vertical]>&)]:overflow-x-hidden [:where([data-slot=carousel][data-orientation=vertical]>&)]:overflow-y-auto"
 
-  @container_class "flex [:where([data-slot=carousel][data-orientation=horizontal]>[data-slot=carousel-content]>&)]:-ml-4 [:where([data-slot=carousel][data-orientation=vertical]>[data-slot=carousel-content]>&)]:-mt-4 [:where([data-slot=carousel][data-orientation=vertical]>[data-slot=carousel-content]>&)]:flex-col"
+  @container_class "flex [:where([data-slot=carousel][data-orientation=horizontal]>[data-slot=carousel-content]>&)]:-ms-4 [:where([data-slot=carousel][data-orientation=vertical]>[data-slot=carousel-content]>&)]:-mt-4 [:where([data-slot=carousel][data-orientation=vertical]>[data-slot=carousel-content]>&)]:flex-col"
 
-  @item_class "min-w-0 shrink-0 grow-0 basis-full [:where([data-slot=carousel][data-orientation=horizontal]>[data-slot=carousel-content]>*>&)]:pl-4 [:where([data-slot=carousel][data-orientation=vertical]>[data-slot=carousel-content]>*>&)]:pt-4 [:where([data-slot=carousel][data-align=start]>[data-slot=carousel-content]>*>&)]:snap-start [:where([data-slot=carousel][data-align=center]>[data-slot=carousel-content]>*>&)]:snap-center [:where([data-slot=carousel][data-align=end]>[data-slot=carousel-content]>*>&)]:snap-end"
+  @item_class "min-w-0 shrink-0 grow-0 basis-full [:where([data-slot=carousel][data-orientation=horizontal]>[data-slot=carousel-content]>*>&)]:ps-4 [:where([data-slot=carousel][data-orientation=vertical]>[data-slot=carousel-content]>*>&)]:pt-4 [:where([data-slot=carousel][data-align=start]>[data-slot=carousel-content]>*>&)]:snap-start [:where([data-slot=carousel][data-align=center]>[data-slot=carousel-content]>*>&)]:snap-center [:where([data-slot=carousel][data-align=end]>[data-slot=carousel-content]>*>&)]:snap-end"
 
-  @previous_class "absolute size-8 rounded-full [:where([data-slot=carousel][data-orientation=horizontal]_&)]:top-1/2 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-left-12 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-translate-y-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-top-12 [:where([data-slot=carousel][data-orientation=vertical]_&)]:left-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-translate-x-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:rotate-90"
+  @previous_class "absolute size-8 rounded-full [:where([data-slot=carousel][data-orientation=horizontal]_&)]:top-1/2 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-start-12 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-translate-y-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-top-12 [:where([data-slot=carousel][data-orientation=vertical]_&)]:left-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-translate-x-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:rotate-90"
 
-  @next_class "absolute size-8 rounded-full [:where([data-slot=carousel][data-orientation=horizontal]_&)]:top-1/2 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-right-12 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-translate-y-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-bottom-12 [:where([data-slot=carousel][data-orientation=vertical]_&)]:left-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-translate-x-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:rotate-90"
+  @next_class "absolute size-8 rounded-full [:where([data-slot=carousel][data-orientation=horizontal]_&)]:top-1/2 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-end-12 [:where([data-slot=carousel][data-orientation=horizontal]_&)]:-translate-y-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-bottom-12 [:where([data-slot=carousel][data-orientation=vertical]_&)]:left-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:-translate-x-1/2 [:where([data-slot=carousel][data-orientation=vertical]_&)]:rotate-90"
 
   @doc """
   Root of the carousel. Holds the options and wires up the JS component.
@@ -281,6 +282,7 @@ defmodule SaladUI.Carousel do
       <% else %>
         <svg
           xmlns="http://www.w3.org/2000/svg"
+          class="[:where([data-slot=carousel][data-orientation=horizontal]_&)]:rtl:rotate-180"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -334,6 +336,7 @@ defmodule SaladUI.Carousel do
       <% else %>
         <svg
           xmlns="http://www.w3.org/2000/svg"
+          class="[:where([data-slot=carousel][data-orientation=horizontal]_&)]:rtl:rotate-180"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

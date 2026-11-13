@@ -12,7 +12,7 @@ defmodule SaladUI.Table do
              <.table_head class="w-[100px]">Invoice</.table_head>
              <.table_head>Status</.table_head>
              <.table_head>Method</.table_head>
-             <.table_head class="text-right">Amount</.table_head>
+             <.table_head class="text-end">Amount</.table_head>
            </.table_row>
          </.table_header>
          <.table_body>
@@ -20,7 +20,7 @@ defmodule SaladUI.Table do
              <.table_cell class="font-medium"><%= invoice.number %></.table_cell>
              <.table_cell><%= invoice.status %></.table_cell>
              <.table_cell><%= invoice.method %></.table_cell>
-             <.table_cell class="text-right"><%= invoice.amount %></.table_cell>
+             <.table_cell class="text-end"><%= invoice.amount %></.table_cell>
            </.table_row>
          </.table_body>
       </.table>
@@ -33,7 +33,7 @@ defmodule SaladUI.Table do
   # shadcn's `[role=checkbox]` selectors target Radix's `<button role="checkbox">`.
   # SaladUI's `checkbox/1` is a native `<input type="checkbox">`, which has no
   # `role` attribute, so the same tweaks are repeated for `[type=checkbox]`.
-  @native_checkbox_class "[&:has([type=checkbox])]:pr-0 [&>[type=checkbox]]:translate-y-[2px]"
+  @native_checkbox_class "[&:has([type=checkbox])]:pe-0 [&>[type=checkbox]]:translate-y-[2px]"
 
   @doc """
   Renders a data table.
@@ -143,7 +143,7 @@ defmodule SaladUI.Table do
       data-slot="table-head"
       class={
         classes([
-          "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+          "h-10 px-2 text-start align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]",
           @checkbox_class,
           @class
         ])
@@ -192,7 +192,7 @@ defmodule SaladUI.Table do
       data-slot="table-cell"
       class={
         classes([
-          "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+          "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-[2px]",
           @checkbox_class,
           @class
         ])

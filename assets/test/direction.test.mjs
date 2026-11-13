@@ -338,7 +338,12 @@ test("slider: inherits rtl from an ancestor when no dir option is set", () => {
 
   assert.equal(slider.dir, "rtl");
   assert.equal(slider.startEdge, "right");
-  assert.equal(thumb.style.right, "calc(50% + 0px)");
+  // Placed with logical insets, which the browser resolves to the right.
+  assert.equal(
+    thumb.style.getPropertyValue("inset-inline-start"),
+    "calc(50% - 10px)",
+  );
+  assert.equal(thumb.style.right, "");
 
   keydown(thumb, "ArrowLeft");
   assert.equal(slider.value, 51);
@@ -359,6 +364,12 @@ test("slider: picks up a direction change on the next update", () => {
   document.getElementById("wrapper").setAttribute("dir", "rtl");
   slider.updatePosition();
   assert.equal(slider.startEdge, "right");
-  assert.equal(thumb.style.right, "calc(50% + 0px)");
+  // The styles are logical either way; only keys and pointer math flip.
+  assert.equal(
+    thumb.style.getPropertyValue("inset-inline-start"),
+    "calc(50% - 10px)",
+  );
   assert.equal(thumb.style.left, "");
+  keydown(thumb, "ArrowLeft");
+  assert.equal(slider.value, 51);
 });

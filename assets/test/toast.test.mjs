@@ -954,6 +954,120 @@ test("swiping in a disallowed direction rubber-bands and never dismisses, even p
   component.destroy();
 });
 
+// A slow horizontal drag of `dx` px (slow enough that only distance counts).
+async function swipeX(card, dx) {
+  card.dispatchEvent(
+    new window.MouseEvent("pointerdown", {
+      clientX: 300,
+      clientY: 0,
+      bubbles: true,
+    }),
+  );
+  card.dispatchEvent(
+    new window.MouseEvent("pointermove", {
+      clientX: 300 + dx,
+      clientY: 0,
+      bubbles: true,
+    }),
+  );
+  await wait(50);
+  card.dispatchEvent(
+    new window.MouseEvent("pointerup", {
+      clientX: 300 + dx,
+      clientY: 0,
+      bubbles: true,
+    }),
+  );
+}
+
+test("swipe-direction end dismisses towards the left under RTL", async () => {
+  const { component, el, viewport } = buildToaster({
+    options: { swipeDirection: "end" },
+  });
+  el.setAttribute("dir", "rtl");
+
+  const id = component.handleCommand("add", { title: "مرحبا" });
+  await wait(10);
+  const card = cardFor(viewport, id);
+
+  // Towards the right is the start side under RTL: rubber-bands back.
+  await swipeX(card, 200);
+  await wait(10);
+  assert.ok(cardFor(viewport, id));
+  assert.notEqual(card.dataset.state, "dismissing");
+
+  // Towards the left is the end side: dismisses, exiting to the left.
+  await swipeX(card, -200);
+  assert.equal(card.dataset.state, "dismissing");
+  assert.equal(card.dataset.swipeOut, "left");
+  await wait(550);
+  assert.equal(cardFor(viewport, id), null);
+
+  component.destroy();
+});
+
+test("swipe-direction end dismisses towards the right under LTR, start towards the left", async () => {
+  const end = buildToaster({ options: { swipeDirection: "end" } });
+  const endId = end.component.handleCommand("add", { title: "End" });
+  await wait(10);
+  const endCard = cardFor(end.viewport, endId);
+  await swipeX(endCard, -200);
+  assert.notEqual(endCard.dataset.state, "dismissing");
+  await swipeX(endCard, 200);
+  assert.equal(endCard.dataset.swipeOut, "right");
+  end.component.destroy();
+
+  const start = buildToaster({ options: { swipeDirection: "start" } });
+  const startId = start.component.handleCommand("add", { title: "Start" });
+  await wait(10);
+  const startCard = cardFor(start.viewport, startId);
+  await swipeX(startCard, -200);
+  assert.equal(startCard.dataset.swipeOut, "left");
+  start.component.destroy();
+});
+
+test("a direction switched after the toast appeared is honoured on the next swipe", async () => {
+  const { component, el, viewport } = buildToaster({
+    options: { swipeDirection: "end" },
+  });
+
+  const id = component.handleCommand("add", { title: "Flip" });
+  await wait(10);
+  el.setAttribute("dir", "rtl");
+
+  const card = cardFor(viewport, id);
+  await swipeX(card, -200);
+  assert.equal(card.dataset.swipeOut, "left");
+
+  component.destroy();
+});
+
+test("physical positions keep their physical swipe directions under RTL", async () => {
+  const { component, el, viewport } = buildToaster();
+  el.setAttribute("dir", "rtl");
+
+  // bottom-right still dismisses on a swipe to the right, as in Sonner.
+  const id = component.handleCommand("add", { title: "Right" });
+  await wait(10);
+  const card = cardFor(viewport, id);
+  await swipeX(card, 200);
+  assert.equal(card.dataset.swipeOut, "right");
+
+  component.destroy();
+});
+
+test("the close button sits on the inline-end corner in both directions", () => {
+  const { component } = buildToaster();
+
+  const classes = component.buildCloseTrigger("t1").className.split(/\s+/);
+  assert.ok(classes.includes("end-0"));
+  assert.ok(classes.includes("translate-x-1/2"));
+  assert.ok(classes.includes("rtl:-translate-x-1/2"));
+  assert.ok(!classes.includes("right-0"));
+
+  component.destroy();
+});
+
 test("a fast flick under the distance threshold still dismisses via velocity", async () => {
   const { component, viewport } = buildToaster();
 

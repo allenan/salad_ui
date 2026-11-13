@@ -28,7 +28,7 @@ defmodule SaladUI.TypographyTest do
              ~s{<p class="leading-7 [&amp;:not(:first-child)]:mt-6"}
 
     assert rendered_to_string(~H|<.typography_blockquote>T</.typography_blockquote>|) =~
-             ~s(<blockquote class="mt-6 border-l-2 pl-6 italic")
+             ~s(<blockquote class="mt-6 border-s-2 ps-6 italic")
 
     assert rendered_to_string(~H|<.typography_inline_code>x</.typography_inline_code>|) =~
              ~s(<code class="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">x</code>)
@@ -56,7 +56,7 @@ defmodule SaladUI.TypographyTest do
       </.typography_list>
       """)
 
-    assert ul =~ ~s(<ul class="my-6 ml-6 list-disc [&amp;&gt;li]:mt-2")
+    assert ul =~ ~s(<ul class="my-6 ms-6 list-disc [&amp;&gt;li]:mt-2")
 
     ol =
       rendered_to_string(~H"""
@@ -65,7 +65,7 @@ defmodule SaladUI.TypographyTest do
       </.typography_list>
       """)
 
-    assert ol =~ ~s(<ol class="my-6 ml-6 list-decimal)
+    assert ol =~ ~s(<ol class="my-6 ms-6 list-decimal)
   end
 
   test "table styles descendant cells" do

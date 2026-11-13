@@ -311,7 +311,7 @@ defmodule SaladUI.DataTableTest do
       assert html =~ ~s(data-slot="data-table-column-header")
       assert html =~ ~s(id="email-header")
       assert html =~ ~s(data-slot="dropdown-menu-trigger")
-      assert html =~ "-ml-3 h-8 data-[state=open]:bg-accent"
+      assert html =~ "-ms-3 h-8 data-[state=open]:bg-accent"
       assert html =~ "Email"
       assert html =~ "Asc"
       assert html =~ "Desc"
@@ -364,7 +364,7 @@ defmodule SaladUI.DataTableTest do
       assert length(Regex.scan(~r/data-slot="dropdown-menu-checkbox-item"/, html)) == 2
       assert html =~ ~r/data-value="status"[^>]*data-state="checked"/
       assert html =~ ~r/data-value="amount"[^>]*data-state="unchecked"/
-      assert html =~ "ml-auto hidden h-8 lg:flex"
+      assert html =~ "ms-auto hidden h-8 lg:flex"
     end
 
     test "custom trigger content, no label" do

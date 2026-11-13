@@ -270,7 +270,7 @@ defmodule SaladUI.ToggleGroup do
           @variant_class,
           "w-auto min-w-0 shrink-0 px-3 focus:z-10 focus-visible:z-10",
           "data-[spacing=0]:rounded-none data-[spacing=0]:shadow-none",
-          "data-[spacing=0]:data-[orientation=horizontal]:first:rounded-l-md data-[spacing=0]:data-[orientation=horizontal]:last:rounded-r-md data-[spacing=0]:data-[orientation=horizontal]:data-[variant=outline]:border-l-0 data-[spacing=0]:data-[orientation=horizontal]:data-[variant=outline]:first:border-l",
+          "data-[spacing=0]:data-[orientation=horizontal]:first:rounded-s-md data-[spacing=0]:data-[orientation=horizontal]:last:rounded-e-md data-[spacing=0]:data-[orientation=horizontal]:data-[variant=outline]:border-s-0 data-[spacing=0]:data-[orientation=horizontal]:data-[variant=outline]:first:border-s",
           "data-[spacing=0]:data-[orientation=vertical]:first:rounded-t-md data-[spacing=0]:data-[orientation=vertical]:last:rounded-b-md data-[spacing=0]:data-[orientation=vertical]:data-[variant=outline]:border-t-0 data-[spacing=0]:data-[orientation=vertical]:data-[variant=outline]:first:border-t",
           @class
         ])

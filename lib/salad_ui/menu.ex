@@ -38,7 +38,7 @@ defmodule SaladUI.Menu do
       </.menu>
   """
 
-  attr :class, :string, default: "top-0 left-full"
+  attr :class, :string, default: "top-0 start-full"
   slot :inner_block, required: true
   attr :rest, :global
 

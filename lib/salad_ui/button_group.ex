@@ -48,12 +48,12 @@ defmodule SaladUI.ButtonGroup do
   """
   use SaladUI, :component
 
-  @base_class "flex w-fit items-stretch has-[>[data-slot=button-group]]:gap-2 [&>*]:focus-visible:relative [&>*]:focus-visible:z-10 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1"
+  @base_class "flex w-fit items-stretch has-[>[data-slot=button-group]]:gap-2 [&>*]:focus-visible:relative [&>*]:focus-visible:z-10 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-e-md [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1"
 
   @orientation_class %{
     "horizontal" =>
-      "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none " <>
-        "[&>[data-component]:not(:first-child)>[data-part=trigger]]:rounded-l-none [&>[data-component]:not(:first-child)>[data-part=trigger]]:border-l-0 [&>[data-component]:not(:last-child)>[data-part=trigger]]:rounded-r-none",
+      "[&>*:not(:first-child)]:rounded-s-none [&>*:not(:first-child)]:border-s-0 [&>*:not(:last-child)]:rounded-e-none " <>
+        "[&>[data-component]:not(:first-child)>[data-part=trigger]]:rounded-s-none [&>[data-component]:not(:first-child)>[data-part=trigger]]:border-s-0 [&>[data-component]:not(:last-child)>[data-part=trigger]]:rounded-e-none",
     "vertical" =>
       "flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:border-t-0 [&>*:not(:last-child)]:rounded-b-none " <>
         "[&>[data-component]:not(:first-child)>[data-part=trigger]]:rounded-t-none [&>[data-component]:not(:first-child)>[data-part=trigger]]:border-t-0 [&>[data-component]:not(:last-child)>[data-part=trigger]]:rounded-b-none"

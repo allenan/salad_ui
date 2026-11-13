@@ -223,9 +223,9 @@ defmodule SaladUI.ToggleGroupTest do
       assert a =~ "h-10"
       refute a =~ "min-w-10"
       assert a =~ "data-[spacing=0]:rounded-none data-[spacing=0]:shadow-none"
-      assert a =~ "data-[spacing=0]:data-[orientation=horizontal]:first:rounded-l-md"
+      assert a =~ "data-[spacing=0]:data-[orientation=horizontal]:first:rounded-s-md"
       assert a =~ "data-[spacing=0]:data-[orientation=vertical]:last:rounded-b-md"
-      assert a =~ "data-[spacing=0]:data-[orientation=horizontal]:data-[variant=outline]:border-l-0"
+      assert a =~ "data-[spacing=0]:data-[orientation=horizontal]:data-[variant=outline]:border-s-0"
       assert a =~ "data-[state=on]:bg-accent"
       assert a =~ "aria-invalid:border-destructive"
     end

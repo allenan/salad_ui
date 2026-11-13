@@ -81,7 +81,7 @@ defmodule SaladUI.TraceTest do
 
     assert html =~ ~s(data-slot="trace-collapsible-content" data-part="content" hidden)
     assert html =~ ~s(data-slot="trace-collapsible-content-inner")
-    assert html =~ "border-l"
+    assert html =~ "border-s"
     assert html =~ "whitespace-pre-wrap"
   end
 

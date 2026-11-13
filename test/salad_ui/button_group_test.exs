@@ -21,8 +21,8 @@ defmodule SaladUI.ButtonGroupTest do
       assert html =~ ~s(data-slot="button-group")
       assert html =~ ~s(data-orientation="horizontal")
       assert html =~ ~s(aria-label="Actions")
-      assert html =~ "[&amp;&gt;*:not(:first-child)]:rounded-l-none"
-      assert html =~ "[&amp;&gt;*:not(:last-child)]:rounded-r-none"
+      assert html =~ "[&amp;&gt;*:not(:first-child)]:rounded-s-none"
+      assert html =~ "[&amp;&gt;*:not(:last-child)]:rounded-e-none"
       assert html =~ "hidden sm:flex"
       refute html =~ "flex-col"
     end
@@ -42,7 +42,7 @@ defmodule SaladUI.ButtonGroupTest do
       assert html =~ "flex-col"
       assert html =~ "[&amp;&gt;*:not(:first-child)]:rounded-t-none"
       assert html =~ "[&amp;&gt;*:not(:first-child)]:border-t-0"
-      refute html =~ "rounded-l-none"
+      refute html =~ "rounded-s-none"
     end
 
     test "joins triggers wrapped by SaladUI component roots" do
@@ -56,7 +56,7 @@ defmodule SaladUI.ButtonGroupTest do
         """)
 
       assert html =~
-               "[&amp;&gt;[data-component]:not(:first-child)&gt;[data-part=trigger]]:rounded-l-none"
+               "[&amp;&gt;[data-component]:not(:first-child)&gt;[data-part=trigger]]:rounded-s-none"
     end
 
     test "supports nested groups" do

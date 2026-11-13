@@ -69,9 +69,9 @@ defmodule SaladUI.CarouselTest do
     end
 
     test "class goes on the inner track alongside the default gutter" do
-      html = demo(%{}, "-ml-1 h-[200px]")
+      html = demo(%{}, "-ms-1 h-[200px]")
 
-      assert html =~ ~r/data-part="content" class="flex [^"]*:-ml-4 [^"]*-ml-1 h-\[200px\]"/
+      assert html =~ ~r/data-part="content" class="flex [^"]*:-ms-4 [^"]*-ms-1 h-\[200px\]"/
     end
   end
 
@@ -83,7 +83,7 @@ defmodule SaladUI.CarouselTest do
       assert html =~ ~s(role="group")
       assert html =~ ~s(aria-roledescription="slide")
       assert html =~ "min-w-0 shrink-0 grow-0 basis-full"
-      assert html =~ ":pl-4"
+      assert html =~ ":ps-4"
       assert html =~ ":pt-4"
       assert html =~ ":snap-start"
       assert html =~ "md:basis-1/2 lg:basis-1/3"
@@ -106,8 +106,8 @@ defmodule SaladUI.CarouselTest do
       assert html =~ ~s(<span class="sr-only">Next slide</span>)
       assert html =~ "absolute size-8 rounded-full"
       refute html =~ "size-9"
-      assert html =~ ":-left-12"
-      assert html =~ ":-right-12"
+      assert html =~ ":-start-12"
+      assert html =~ ":-end-12"
       assert html =~ ":rotate-90"
     end
 

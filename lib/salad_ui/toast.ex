@@ -149,6 +149,14 @@ defmodule SaladUI.Toast do
   ## Component events
 
   * `:on-dismiss` - Fired whenever a toast is removed, with `%{id:, reason:}` in the payload.
+
+  ## Right-to-left
+
+  Positions are physical, as in Sonner: `bottom-right` stays bottom-right on
+  an RTL page, and its toasts swipe away down or to the right. To dismiss
+  towards the end of the line whatever the direction, set
+  `swipe-direction="end"` (left under RTL). The close button sits on the
+  card's inline-end corner.
   """
   attr :id, :string, default: "toaster"
 
@@ -159,7 +167,14 @@ defmodule SaladUI.Toast do
   attr :expand, :boolean, default: false, doc: "Stack fully expanded instead of collapsed"
   attr :"visible-toasts", :integer, default: 3, doc: "Max stacked cards before overflow is collapsed"
   attr :gap, :integer, default: 14, doc: "px gap between stacked toasts when expanded"
-  attr :"swipe-direction", :string, values: ~w(up down left right) ++ [nil], default: nil
+
+  attr :"swipe-direction", :string,
+    values: ~w(up down left right start end) ++ [nil],
+    default: nil,
+    doc:
+      "Only direction a swipe dismisses in. Defaults to the position's edges (bottom-right: down or right). " <>
+        "`start`/`end` are logical: `end` is right in LTR and left in RTL"
+
   attr :width, :integer, default: 356, doc: "Fixed card width in px"
   attr :offset, :any, default: 24, doc: "px gap from the viewport edge, or a %{top:, right:, bottom:, left:} map"
   attr :"mobile-offset", :any, default: 16, doc: "Same as :offset, applied below the 600px breakpoint"
@@ -598,10 +613,10 @@ defmodule SaladUI.Toast do
   defp horizontal_class(position) do
     cond do
       String.ends_with?(position, "left") ->
-        "left-[var(--offset-l)] items-start max-[600px]:left-[var(--mobile-offset-l)]"
+        "left-[var(--offset-l)] items-start rtl:items-end max-[600px]:left-[var(--mobile-offset-l)]"
 
       String.ends_with?(position, "right") ->
-        "right-[var(--offset-r)] items-end max-[600px]:right-[var(--mobile-offset-r)]"
+        "right-[var(--offset-r)] items-end rtl:items-start max-[600px]:right-[var(--mobile-offset-r)]"
 
       true ->
         "left-1/2 -translate-x-1/2 items-center"

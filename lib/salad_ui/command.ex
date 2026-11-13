@@ -392,7 +392,7 @@ defmodule SaladUI.Command do
         classes([
           "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
           # SaladUI items are <button>s: fill the row, show hover, hide when filtered out
-          "w-full text-left hover:bg-accent/75 data-[visible=false]:hidden",
+          "w-full text-start hover:bg-accent/75 data-[visible=false]:hidden",
           @class
         ])
       }

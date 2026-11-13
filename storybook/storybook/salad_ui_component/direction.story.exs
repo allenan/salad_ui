@@ -47,7 +47,74 @@ defmodule Storybook.SaladUIComponents.Direction do
       {SaladUI.Tabs, [tabs: 1, tabs_list: 1, tabs_trigger: 1, tabs_content: 1]},
       {SaladUI.RadioGroup, [radio_group: 1, radio_group_item: 1]},
       {SaladUI.Slider, [slider: 1]},
-      {SaladUI.Helpers, [as_child: 1]}
+      {SaladUI.Switch, [switch: 1]},
+      {SaladUI.Helpers, [as_child: 1]},
+      {SaladUI.Dialog,
+       [
+         dialog: 1,
+         dialog_trigger: 1,
+         dialog_content: 1,
+         dialog_header: 1,
+         dialog_title: 1,
+         dialog_description: 1,
+         dialog_footer: 1,
+         dialog_close: 1
+       ]},
+      {SaladUI.Sheet,
+       [
+         sheet: 1,
+         sheet_trigger: 1,
+         sheet_content: 1,
+         sheet_header: 1,
+         sheet_title: 1,
+         sheet_description: 1,
+         sheet_footer: 1,
+         sheet_close: 1
+       ]},
+      {SaladUI.InputGroup,
+       [input_group: 1, input_group_input: 1, input_group_addon: 1, input_group_text: 1, input_group_button: 1]},
+      {SaladUI.NavigationMenu,
+       [
+         navigation_menu: 1,
+         navigation_menu_list: 1,
+         navigation_menu_item: 1,
+         navigation_menu_trigger: 1,
+         navigation_menu_content: 1,
+         navigation_menu_link: 1,
+         navigation_menu_trigger_style: 0
+       ]},
+      {SaladUI.Sidebar,
+       [
+         sidebar_provider: 1,
+         sidebar: 1,
+         sidebar_content: 1,
+         sidebar_group: 1,
+         sidebar_group_label: 1,
+         sidebar_group_action: 1,
+         sidebar_group_content: 1,
+         sidebar_menu: 1,
+         sidebar_menu_item: 1,
+         sidebar_menu_button: 1,
+         sidebar_menu_action: 1,
+         sidebar_menu_badge: 1,
+         sidebar_menu_sub: 1,
+         sidebar_menu_sub_item: 1,
+         sidebar_menu_sub_button: 1,
+         sidebar_rail: 1,
+         sidebar_inset: 1,
+         sidebar_trigger: 1
+       ]},
+      {SaladUI.Pagination,
+       [
+         pagination: 1,
+         pagination_content: 1,
+         pagination_item: 1,
+         pagination_link: 1,
+         pagination_previous: 1,
+         pagination_next: 1,
+         pagination_ellipsis: 1
+       ]},
+      {SaladUI.Toast, [toaster: 1]}
     ]
 
   def descriptions do
@@ -206,6 +273,260 @@ defmodule Storybook.SaladUIComponents.Direction do
             </.radio_group>
             <.slider id="slider-rtl" value={[25, 75]} max={100} step={1} name="slider-rtl" />
           </div>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :dialog_sheet_rtl,
+        description:
+          "Dialog and sheet: the close button sits at the top-left (inline end) and text aligns to the right. " <>
+            "The sheet's `side` is physical, so an RTL page picks `side=\"left\"`, as shadcn's sheet-rtl does.",
+        template: """
+        <.direction_provider direction="rtl">
+          <div class="flex justify-center gap-2">
+            <.dialog id="dialog-rtl">
+              <.dialog_trigger>
+                <.button variant="outline">مشاركة</.button>
+              </.dialog_trigger>
+              <.dialog_content class="sm:max-w-md">
+                <.dialog_header>
+                  <.dialog_title>مشاركة الرابط</.dialog_title>
+                  <.dialog_description>يمكن لأي شخص لديه هذا الرابط عرض هذا المحتوى.</.dialog_description>
+                </.dialog_header>
+                <.input id="dialog-rtl-link" value="https://ui.shadcn.com/docs/installation" readonly />
+                <.dialog_footer>
+                  <.dialog_close>
+                    <.button type="button" variant="outline">إغلاق</.button>
+                  </.dialog_close>
+                </.dialog_footer>
+              </.dialog_content>
+            </.dialog>
+            <.sheet id="sheet-rtl">
+              <.sheet_trigger>
+                <.button variant="outline">فتح</.button>
+              </.sheet_trigger>
+              <.sheet_content side="left">
+                <.sheet_header>
+                  <.sheet_title>تعديل الملف الشخصي</.sheet_title>
+                  <.sheet_description>قم بإجراء تغييرات على ملفك الشخصي هنا.</.sheet_description>
+                </.sheet_header>
+                <div class="grid flex-1 auto-rows-min gap-6 px-4">
+                  <div class="grid gap-3">
+                    <.label for="sheet-rtl-name">الاسم</.label>
+                    <.input id="sheet-rtl-name" value="بيدرو دوارتي" />
+                  </div>
+                </div>
+                <.sheet_footer>
+                  <.button type="submit">حفظ التغييرات</.button>
+                  <.sheet_close>
+                    <.button variant="outline" class="w-full">إغلاق</.button>
+                  </.sheet_close>
+                </.sheet_footer>
+              </.sheet_content>
+            </.sheet>
+          </div>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :input_group_rtl,
+        description:
+          "Input group: `inline-start` addons sit on the right, `inline-end` on the left; the input's padding follows.",
+        template: """
+        <.direction_provider direction="rtl">
+          <div class="mx-auto grid w-full max-w-sm gap-6">
+            <.input_group id="ig-rtl-search">
+              <.input_group_input placeholder="بحث..." />
+              <.input_group_addon>
+                <Lucideicons.search />
+              </.input_group_addon>
+              <.input_group_addon align="inline-end">١٢ نتيجة</.input_group_addon>
+            </.input_group>
+            <.input_group id="ig-rtl-copy">
+              <.input_group_input value="https://example.com" readonly />
+              <.input_group_addon align="inline-end">
+                <.input_group_button size="icon-xs" aria-label="نسخ">
+                  <Lucideicons.copy />
+                </.input_group_button>
+              </.input_group_addon>
+            </.input_group>
+            <div class="flex items-center gap-2">
+              <.switch id="switch-rtl" checked />
+              <.label for="switch-rtl">وضع الطيران</.label>
+            </div>
+          </div>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :navigation_menu_rtl,
+        description:
+          "Navigation menu: ArrowLeft moves to the next item; the shared viewport lines up with the right edge.",
+        template: """
+        <.direction_provider direction="rtl">
+          <div class="flex h-80 justify-center p-4">
+            <.navigation_menu id="navigation-menu-rtl">
+              <.navigation_menu_list>
+                <.navigation_menu_item value="start">
+                  <.navigation_menu_trigger>البداية</.navigation_menu_trigger>
+                  <.navigation_menu_content>
+                    <ul class="grid w-[300px] gap-2">
+                      <li :for={{title, text} <- [{"مقدمة", "مكونات قابلة لإعادة الاستخدام."}, {"التثبيت", "كيفية تثبيت التبعيات."}]}>
+                        <.navigation_menu_link href="#">
+                          <div class="text-sm leading-none font-medium">{title}</div>
+                          <p class="line-clamp-2 text-sm leading-snug text-muted-foreground">{text}</p>
+                        </.navigation_menu_link>
+                      </li>
+                    </ul>
+                  </.navigation_menu_content>
+                </.navigation_menu_item>
+                <.navigation_menu_item value="components">
+                  <.navigation_menu_trigger>المكونات</.navigation_menu_trigger>
+                  <.navigation_menu_content>
+                    <ul class="grid w-[400px] grid-cols-2 gap-2">
+                      <li :for={title <- ["حوار التنبيه", "بطاقة التمرير", "التقدم", "منطقة التمرير"]}>
+                        <.navigation_menu_link href="#">
+                          <div class="text-sm leading-none font-medium">{title}</div>
+                        </.navigation_menu_link>
+                      </li>
+                    </ul>
+                  </.navigation_menu_content>
+                </.navigation_menu_item>
+                <.navigation_menu_item>
+                  <.navigation_menu_link href="#" class={navigation_menu_trigger_style()}>الوثائق</.navigation_menu_link>
+                </.navigation_menu_item>
+              </.navigation_menu_list>
+            </.navigation_menu>
+          </div>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :sidebar_rtl,
+        description:
+          "Sidebar: `side` is physical, so an RTL page uses `side=\"right\"`. Badges, actions and the " <>
+            "sub-menu line sit on the inline end/start; the trigger icon flips.",
+        template: """
+        <.direction_provider direction="rtl">
+          <div class="relative h-[420px] w-full overflow-hidden rounded-lg border [transform:translateZ(0)]">
+            <.sidebar_provider id="sidebar-rtl" class="h-full min-h-0" keyboard_shortcut={false} cookie={nil}>
+              <.sidebar id="sidebar-rtl-sb" side="right" collapsible="icon" class="h-full">
+                <.sidebar_content>
+                  <.sidebar_group>
+                    <.sidebar_group_label>التطبيق</.sidebar_group_label>
+                    <.sidebar_group_action title="إضافة مشروع"><Lucideicons.plus /></.sidebar_group_action>
+                    <.sidebar_group_content>
+                      <.sidebar_menu>
+                        <.sidebar_menu_item>
+                          <.sidebar_menu_button as="a" href="#" is_active tooltip="الرئيسية">
+                            <Lucideicons.home /> <span>الرئيسية</span>
+                          </.sidebar_menu_button>
+                          <.sidebar_menu_badge>٢٤</.sidebar_menu_badge>
+                        </.sidebar_menu_item>
+                        <.sidebar_menu_item>
+                          <.sidebar_menu_button as="a" href="#" tooltip="البريد">
+                            <Lucideicons.inbox /> <span>البريد</span>
+                          </.sidebar_menu_button>
+                          <.sidebar_menu_action><Lucideicons.ellipsis /></.sidebar_menu_action>
+                          <.sidebar_menu_sub>
+                            <.sidebar_menu_sub_item>
+                              <.sidebar_menu_sub_button href="#">الوارد</.sidebar_menu_sub_button>
+                            </.sidebar_menu_sub_item>
+                            <.sidebar_menu_sub_item>
+                              <.sidebar_menu_sub_button href="#">المؤرشف</.sidebar_menu_sub_button>
+                            </.sidebar_menu_sub_item>
+                          </.sidebar_menu_sub>
+                        </.sidebar_menu_item>
+                        <.sidebar_menu_item>
+                          <.sidebar_menu_button as="a" href="#" tooltip="الإعدادات">
+                            <Lucideicons.settings /> <span>الإعدادات</span>
+                          </.sidebar_menu_button>
+                        </.sidebar_menu_item>
+                      </.sidebar_menu>
+                    </.sidebar_group_content>
+                  </.sidebar_group>
+                </.sidebar_content>
+                <.sidebar_rail />
+              </.sidebar>
+              <.sidebar_inset class="min-h-0">
+                <header class="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+                  <.sidebar_trigger class="-ms-1" />
+                  <span class="text-sm text-muted-foreground">لوحة التحكم</span>
+                </header>
+              </.sidebar_inset>
+            </.sidebar_provider>
+          </div>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :slider_rtl,
+        description:
+          "Sliders that only inherit RTL: the server-rendered thumbs already start at the right " <>
+            "(logical insets), so nothing jumps when the hook mounts.",
+        template: """
+        <.direction_provider direction="rtl">
+          <div class="mx-auto grid w-full max-w-sm gap-8">
+            <.slider id="slider-rtl-single" value={30} max={100} step={1} aria-label="الصوت" />
+            <.slider id="slider-rtl-range" value={[20, 60]} max={100} step={5} />
+            <.slider id="slider-rtl-inverted" value={30} max={100} step={1} inverted aria-label="معكوس" />
+          </div>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :toast_rtl,
+        description:
+          "Toast: positions stay physical, as in Sonner. `swipe-direction=\"end\"` dismisses towards the end of " <>
+            "the line: to the left here. The close button sits on the card's inline-end corner.",
+        template: """
+        <.direction_provider direction="rtl">
+          <.toaster id="toaster-rtl" position="bottom-center" swipe-direction="end" />
+          <.button
+            variant="outline"
+            phx-click={
+              SaladUI.JS.dispatch_command("add",
+                to: "#toaster-rtl",
+                detail: %{
+                  title: "تم إنشاء الحدث",
+                  description: "الأحد، ٣ ديسمبر ٢٠٢٣ الساعة ٩:٠٠ صباحًا",
+                  action: %{label: "تراجع"}
+                }
+              )
+            }
+          >
+            إظهار الإشعار
+          </.button>
+        </.direction_provider>
+        """
+      },
+      %Variation{
+        id: :pagination_rtl,
+        description: "Pagination: previous sits on the right and the chevrons flip.",
+        template: """
+        <.direction_provider direction="rtl">
+          <.pagination>
+            <.pagination_content>
+              <.pagination_item>
+                <.pagination_previous href="#" text="السابق" />
+              </.pagination_item>
+              <.pagination_item>
+                <.pagination_link href="#">١</.pagination_link>
+              </.pagination_item>
+              <.pagination_item>
+                <.pagination_link href="#" is-active="true">٢</.pagination_link>
+              </.pagination_item>
+              <.pagination_item>
+                <.pagination_link href="#">٣</.pagination_link>
+              </.pagination_item>
+              <.pagination_item>
+                <.pagination_ellipsis />
+              </.pagination_item>
+              <.pagination_item>
+                <.pagination_next href="#" text="التالي" />
+              </.pagination_item>
+            </.pagination_content>
+          </.pagination>
         </.direction_provider>
         """
       }
