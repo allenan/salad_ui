@@ -61,12 +61,14 @@ import "salad_ui/components/toggle";
 import "salad_ui/components/toggle_group";
 import "salad_ui/components/tooltip";
 import {Hooks as ChatHooks, currentTheme} from "./chat";
+// /bench only (see bench.js): timing wrappers and the redesign prototype.
+import {BenchHooks, benchSaladHook, markConnect} from "./bench";
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: () => ({_csrf_token: csrfToken, theme: currentTheme()}),
-  hooks: {...colocatedHooks, ...ChatHooks, SaladUI: SaladUI.SaladUIHook},
+  hooks: {...colocatedHooks, ...ChatHooks, ...BenchHooks, SaladUI: benchSaladHook(SaladUI.SaladUIHook)},
 })
 
 // Show progress bar on live navigation and form submits
@@ -75,6 +77,7 @@ window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
+markConnect(liveSocket)
 liveSocket.connect()
 
 // expose liveSocket on window for web console debug logs and latency simulation:
