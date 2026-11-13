@@ -525,6 +525,21 @@ defmodule SaladChatWeb.ChatLive do
     end
   end
 
+  # The header's jump-to combobox
+  def handle_event("jump", %{"value" => "channel:" <> id}, socket) do
+    {:noreply,
+     socket
+     |> SaladUI.LiveView.send_command("jump-to", "clear")
+     |> push_patch(to: Paths.channel_path(socket.assigns.me.handle, id))}
+  end
+
+  def handle_event("jump", %{"value" => "person:" <> handle}, socket) do
+    socket = SaladUI.LiveView.send_command(socket, "jump-to", "clear")
+    handle_event("open_dm", %{"handle" => handle}, socket)
+  end
+
+  def handle_event("jump", _, socket), do: {:noreply, socket}
+
   def handle_event("view_message", %{"channel" => channel_id}, socket) do
     {:noreply, push_patch(socket, to: Paths.channel_path(socket.assigns.me.handle, channel_id))}
   end
@@ -847,6 +862,7 @@ defmodule SaladChatWeb.ChatLive do
             pinned={@pinned}
             ctx={@ctx}
             theme={@theme}
+            channels={@channels}
           />
           <.resizable_panel_group id="chat-panels" class="min-h-0 flex-1">
             <.resizable_panel

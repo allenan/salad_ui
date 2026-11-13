@@ -7,7 +7,7 @@ defmodule SaladChatWeb.NewChannelComponent do
   alias SaladChat.Chat
   alias SaladChatWeb.Paths
 
-  @empty %{"name" => "", "description" => "", "private" => "false", "members" => %{}}
+  @empty %{"name" => "", "description" => "", "private" => "false", "members" => []}
 
   @impl true
   def mount(socket), do: {:ok, assign_form(socket, @empty, [])}
@@ -26,8 +26,9 @@ defmodule SaladChatWeb.NewChannelComponent do
     %{params | "name" => Chat.slugify(params["name"])}
   end
 
+  # The member combobox submits `channel[members][]`, one handle per chip.
   defp selected(params) do
-    for {handle, "true"} <- params["members"] || %{}, do: handle
+    params["members"] |> List.wrap() |> Enum.reject(&(&1 == ""))
   end
 
   @impl true
@@ -74,7 +75,12 @@ defmodule SaladChatWeb.NewChannelComponent do
     ~H"""
     <div>
       <.dialog id="create-channel-dialog" on-close={JS.push("reset", target: @myself)}>
-        <.dialog_content class="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+        <%!-- SALAD-BUG: the combobox list can't be portaled (usePortal: false in
+             assets/salad_ui/components/combobox.js:1016) and is fixed-positioned, so
+             dialog_content's centering translate (lib/salad_ui/dialog.ex:190) makes the
+             dialog its containing block: the list opens offset and is clipped by the
+             dialog's overflow. Center the dialog with inset-0 + m-auto instead. --%>
+        <.dialog_content class="inset-0 m-auto h-fit max-h-[90svh] translate-none! overflow-y-auto sm:max-w-lg">
           <.dialog_header>
             <.dialog_title>Create a channel</.dialog_title>
             <.dialog_description>
@@ -137,32 +143,38 @@ defmodule SaladChatWeb.NewChannelComponent do
                 <.field_description>
                   {MapSet.size(@chosen)} selected. Sprout joins every channel.
                 </.field_description>
-                <%!-- TODO(salad-pass-2): use combobox (multi-select with search) for the member picker --%>
-                <.scroll_area class="max-h-56 rounded-md border">
-                  <.item_group>
-                    <.item :for={u <- @people} size="sm" class="rounded-none">
-                      <.item_media>
-                        <.user_avatar user={u} size="sm" />
-                      </.item_media>
-                      <.item_content>
-                        <.item_title>
-                          <label for={"new-channel-member-#{u.handle}"} class="cursor-pointer">
-                            {u.name}
-                          </label>
-                        </.item_title>
-                        <.item_description>{u.title}</.item_description>
-                      </.item_content>
-                      <.item_actions>
-                        <.checkbox
-                          id={"new-channel-member-#{u.handle}"}
-                          name={"channel[members][#{u.handle}]"}
-                          value={MapSet.member?(@chosen, u.handle)}
-                          aria-label={"Add #{u.name}"}
-                        />
-                      </.item_actions>
-                    </.item>
-                  </.item_group>
-                </.scroll_area>
+                <.combobox
+                  id="new-channel-members"
+                  name={@form[:members].name}
+                  value={MapSet.to_list(@chosen)}
+                  multiple
+                  auto-highlight
+                >
+                  <.combobox_chips>
+                    <.combobox_chip
+                      :for={u <- @people}
+                      :if={MapSet.member?(@chosen, u.handle)}
+                      value={u.handle}
+                    >
+                      {u.name}
+                    </.combobox_chip>
+                    <.combobox_chips_input
+                      id="new-channel-members-input"
+                      placeholder={if MapSet.size(@chosen) == 0, do: "Search people…"}
+                      aria-label="Add people"
+                    />
+                  </.combobox_chips>
+                  <.combobox_content>
+                    <.combobox_empty>Nobody by that name.</.combobox_empty>
+                    <.combobox_list>
+                      <.combobox_item :for={u <- @people} value={u.handle} label={u.name}>
+                        <.user_avatar user={u} size="sm" class="size-5" />
+                        <span class="truncate">{u.name}</span>
+                        <span class="truncate text-xs text-muted-foreground">{u.title}</span>
+                      </.combobox_item>
+                    </.combobox_list>
+                  </.combobox_content>
+                </.combobox>
               </.field_set>
             </.field_group>
             <.dialog_footer class="mt-6">

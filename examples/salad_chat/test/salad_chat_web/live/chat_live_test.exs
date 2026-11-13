@@ -205,19 +205,41 @@ defmodule SaladChatWeb.ChatLiveTest do
 
       assert has_element?(view, "#create-channel-form", "a channel with that name already exists")
 
+      # The member combobox renders the picked people as chips...
+      view
+      |> form("#create-channel-form", %{"channel" => %{"name" => "Offsite Planning"}})
+      |> render_change(%{"channel" => %{"members" => ["leo", "kai"]}})
+
+      assert has_element?(view, "#new-channel-members [data-slot=combobox-chip]", "Leo Brandt")
+      assert has_element?(view, "#create-channel-form", "2 selected")
+
+      # ...and submits them as channel[members][] (its JS keeps hidden inputs in sync)
       view
       |> form("#create-channel-form", %{
-        "channel" => %{
-          "name" => "Offsite Planning",
-          "description" => "Tents!",
-          "members" => %{"leo" => "true"}
-        }
+        "channel" => %{"name" => "Offsite Planning", "description" => "Tents!"}
       })
-      |> render_submit()
+      |> render_submit(%{"channel" => %{"members" => ["leo"]}})
 
       assert_patch(view, ~p"/as/maya/c/offsite-planning")
       assert has_element?(view, "#app-sidebar", "offsite-planning")
       assert Enum.sort(Chat.get_channel("offsite-planning").members) == ~w(leo maya sprout)
+    end
+  end
+
+  describe "jump to" do
+    test "the header combobox opens a channel or a DM", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/general")
+
+      assert has_element?(view, "#jump-to[data-component=combobox]")
+      assert has_element?(view, "#jump-to [data-slot=combobox-item][data-value='channel:random']")
+
+      render_hook(view, "jump", %{"value" => "channel:random"})
+      assert_patch(view, ~p"/as/maya/c/random")
+      assert_push_event(view, "saladui:command", %{command: "clear", target: "jump-to"})
+
+      render_hook(view, "jump", %{"value" => "person:leo"})
+      {:ok, dm} = Chat.ensure_dm("maya", "leo")
+      assert_patch(view, ~p"/as/maya/c/#{dm.id}")
     end
   end
 

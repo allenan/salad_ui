@@ -63,10 +63,11 @@ Try:
 | `resizable` | Main list \| thread pane on desktop |
 | `input_group`, `textarea` | The composer (attach, emoji, commands, send), topic editor |
 | `command`, `command_dialog` | ⌘K quick switcher, slash command suggestions |
+| `combobox` (single, and multiple with chips) | "Jump to…" channel/people search in the header, member picker when creating a channel |
 | `alert_dialog` | Delete confirmation |
 | `dialog` | Settings, create channel, "Remind me about this" |
 | `field` family, `input`, `native_select`, `select`, `switch`, `radio_group`, `slider`, `checkbox` | Settings and create-channel forms, validated with `to_form/2` of a map |
-| `item` | Landing page people, pinned messages, members, member picker |
+| `item` | Landing page people, pinned messages, members |
 | `empty` | Empty channel, no search results, no thread selected, nothing pinned |
 | `scroll_area`, `separator` | Popovers, member lists, header dividers |
 | `toaster` / `SaladUI.Toast` | Mentions, DMs, confirmations, errors and flash messages |
@@ -94,7 +95,7 @@ and `assets/salad_ui`, and the JS resolved through npm (`"salad_ui":
 package's `exports`.
 
 Some pieces wait on components SaladUI doesn't ship yet; look for
-`TODO(salad-pass-2)` (combobox, date picker).
+`TODO(salad-pass-2)` (date picker).
 
 ## Tests
 

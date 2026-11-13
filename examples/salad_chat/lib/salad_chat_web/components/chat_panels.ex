@@ -22,6 +22,7 @@ defmodule SaladChatWeb.ChatPanels do
   attr :pinned, :list, required: true
   attr :ctx, :map, required: true
   attr :theme, :string, required: true
+  attr :channels, :list, default: [], doc: "channels for the jump-to combobox"
 
   def channel_header(assigns) do
     assigns =
@@ -32,9 +33,18 @@ defmodule SaladChatWeb.ChatPanels do
           assigns.users[Channel.dm_peer(assigns.channel, assigns.me.handle)]
       )
       |> assign(:members, Enum.map(assigns.channel.members, &assigns.users[&1]))
+      |> assign(
+        :people,
+        assigns.users
+        |> Map.values()
+        |> Enum.reject(&(&1.handle == assigns.me.handle))
+        |> Enum.sort_by(&{&1.bot?, &1.name})
+      )
 
+    # No backdrop-filter on the header: it would make the header the containing
+    # block of the fixed-positioned popovers and the combobox list inside it.
     ~H"""
-    <header class="flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur sm:px-4">
+    <header class="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 sm:px-4">
       <.tooltip class="hidden md:block">
         <.tooltip_trigger>
           <.sidebar_trigger target="app-sidebar" class="-ml-1" />
@@ -149,29 +159,9 @@ defmodule SaladChatWeb.ChatPanels do
             </.tooltip_trigger>
             <.tooltip_content side="bottom">Details</.tooltip_content>
           </.tooltip>
-          <.tooltip>
-            <.tooltip_trigger>
-              <.button
-                variant="outline"
-                size="sm"
-                class="hidden sm:inline-flex"
-                aria-label="Search"
-                phx-click={SaladUI.JS.dispatch_command("open", to: "#quick-switcher_dialog")}
-              >
-                <.icon name="hero-magnifying-glass" />
-                <.kbd_group>
-                  <.kbd>⌘</.kbd><.kbd>K</.kbd>
-                </.kbd_group>
-              </.button>
-            </.tooltip_trigger>
-            <.tooltip_content side="bottom">
-              Jump to a conversation
-              <.kbd_group>
-                <.kbd>⌘</.kbd><.kbd>K</.kbd>
-              </.kbd_group>
-            </.tooltip_content>
-          </.tooltip>
         </.button_group>
+
+        <.jump_to channels={@channels} people={@people} online={@online} />
 
         <.tooltip>
           <.tooltip_trigger>
@@ -189,6 +179,57 @@ defmodule SaladChatWeb.ChatPanels do
         </.tooltip>
       </div>
     </header>
+    """
+  end
+
+  attr :channels, :list, required: true
+  attr :people, :list, required: true
+  attr :online, :any, required: true
+
+  # Channel and people search in the header. Picking an item pushes "jump"
+  # with "channel:<id>" or "person:<handle>"; the server navigates and clears it.
+  defp jump_to(assigns) do
+    ~H"""
+    <div class="hidden w-56 md:block lg:w-64">
+      <.combobox id="jump-to" auto-highlight on-value-changed="jump">
+        <.combobox_input
+          id="jump-to-input"
+          placeholder="Jump to…"
+          aria-label="Jump to a channel or person"
+          class="h-8 w-full"
+        >
+          <.input_group_addon>
+            <.icon name="hero-magnifying-glass" />
+          </.input_group_addon>
+        </.combobox_input>
+        <.combobox_content align="end" class="w-72">
+          <.combobox_empty>No channels or people match.</.combobox_empty>
+          <.combobox_list>
+            <.combobox_group :if={@channels != []}>
+              <.combobox_label>Channels</.combobox_label>
+              <.combobox_item :for={ch <- @channels} value={"channel:#{ch.id}"} label={ch.name}>
+                <.icon name={if ch.private?, do: "hero-lock-closed", else: "hero-hashtag"} />
+                {ch.name}
+              </.combobox_item>
+              <.combobox_separator />
+            </.combobox_group>
+            <.combobox_group>
+              <.combobox_label>People</.combobox_label>
+              <.combobox_item :for={u <- @people} value={"person:#{u.handle}"} label={u.name}>
+                <.user_avatar
+                  user={u}
+                  size="sm"
+                  online={u.bot? or MapSet.member?(@online, u.handle)}
+                  class="size-5"
+                />
+                <span class="truncate">{u.name}</span>
+                <span class="truncate text-xs text-muted-foreground">{u.title}</span>
+              </.combobox_item>
+            </.combobox_group>
+          </.combobox_list>
+        </.combobox_content>
+      </.combobox>
+    </div>
     """
   end
 
@@ -314,7 +355,6 @@ defmodule SaladChatWeb.ChatPanels do
     <.command_dialog id="quick-switcher">
       <.command_input {%{placeholder: "Jump to a channel, person or action…"}} />
       <.command_list class="max-h-[60vh]">
-        <%!-- TODO(salad-pass-2): use combobox for channel/people search --%>
         <.command_empty>
           <.empty class="p-6">
             <.empty_header>
