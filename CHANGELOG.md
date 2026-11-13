@@ -146,6 +146,12 @@ for status and known gaps. Every new JS-backed component is registered in
   changed server `open`/`value` is still applied.
 - Dropdown menu fires `on-close` and returns focus as soon as closing starts, not
   after the exit animation.
+- Dialog, sheet, alert dialog, drawer and the sidebar's mobile sheet lock page
+  scrolling while open, as Radix and vaul do: `<html>`/`<body>` get
+  `overflow: hidden` and `<body>` is padded by the scrollbar width (exposed as
+  `--removed-body-scroll-bar-size`, with `data-scroll-locked` on `<body>`). Locks
+  are counted, so nested modals unlock the page only when the last one closes;
+  the page's inline styles are restored afterwards.
 - **Toggle (breaking)**: `id` now goes on the button (the checkbox gets
   `"<id>-input"`), global attributes land on the button instead of the hidden
   input, and styling uses `data-[state=on]` instead of `has-[:checked]`. Apps that

@@ -16,8 +16,13 @@
  *
  * Inline styles the page already had on <html>/<body> (including
  * `!important` ones) are saved and put back exactly. While locked, <body>
- * carries `data-scroll-locked` (the lock count), as react-remove-scroll
- * does, for CSS that needs to compensate fixed elements.
+ * carries `data-scroll-locked` (the lock count) and the
+ * `--removed-body-scroll-bar-size` custom property (the padding added), as
+ * react-remove-scroll does, for CSS that needs to compensate fixed elements:
+ *
+ *   body[data-scroll-locked] .fixed-header {
+ *     padding-right: var(--removed-body-scroll-bar-size);
+ *   }
  */
 
 let count = 0;
@@ -26,6 +31,8 @@ let saved = null;
 let generation = 0;
 
 const LOCK_ATTRIBUTE = "data-scroll-locked";
+// react-remove-scroll-bar's variable: the width the lock padded <body> by.
+const GAP_VARIABLE = "--removed-body-scroll-bar-size";
 
 function readInline(el, property) {
   return {
@@ -39,6 +46,27 @@ function writeInline(el, property, { value, priority }) {
     el.style.setProperty(property, value, priority);
   } else {
     el.style.removeProperty(property);
+  }
+}
+
+// `overflow` is a shorthand: with only `overflow-y` inline (a common
+// "always show the scrollbar" fix), its value reads as "" and removing it on
+// restore would also drop the longhand. Save the longhands too.
+function readOverflow(el) {
+  return {
+    shorthand: readInline(el, "overflow"),
+    x: readInline(el, "overflow-x"),
+    y: readInline(el, "overflow-y"),
+  };
+}
+
+function writeOverflow(el, { shorthand, x, y }) {
+  el.style.removeProperty("overflow");
+  if (shorthand.value) {
+    writeInline(el, "overflow", shorthand);
+  } else {
+    writeInline(el, "overflow-x", x);
+    writeInline(el, "overflow-y", y);
   }
 }
 
@@ -71,13 +99,15 @@ function apply() {
   saved = {
     html,
     body,
-    htmlOverflow: readInline(html, "overflow"),
-    bodyOverflow: readInline(body, "overflow"),
+    htmlOverflow: readOverflow(html),
+    bodyOverflow: readOverflow(body),
     bodyPaddingRight: readInline(body, "padding-right"),
+    bodyGapVar: readInline(body, GAP_VARIABLE),
   };
 
   html.style.setProperty("overflow", "hidden", "important");
   body.style.setProperty("overflow", "hidden", "important");
+  body.style.setProperty(GAP_VARIABLE, `${gap}px`);
   if (gap > 0) {
     body.style.setProperty(
       "padding-right",
@@ -91,9 +121,10 @@ function restore() {
   if (!saved) return;
   const { html, body } = saved;
 
-  writeInline(html, "overflow", saved.htmlOverflow);
-  writeInline(body, "overflow", saved.bodyOverflow);
+  writeOverflow(html, saved.htmlOverflow);
+  writeOverflow(body, saved.bodyOverflow);
   writeInline(body, "padding-right", saved.bodyPaddingRight);
+  writeInline(body, GAP_VARIABLE, saved.bodyGapVar);
   if (html.getAttribute("style") === "") html.removeAttribute("style");
   if (body.getAttribute("style") === "") body.removeAttribute("style");
   body.removeAttribute(LOCK_ATTRIBUTE);

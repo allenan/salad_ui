@@ -100,6 +100,10 @@ test("lock hides overflow and pads the scrollbar; release restores", () => {
   assert.equal(body().style.getPropertyPriority("overflow"), "important");
   assert.equal(body().style.paddingRight, "15px");
   assert.equal(body().getAttribute("data-scroll-locked"), "1");
+  assert.equal(
+    body().style.getPropertyValue("--removed-body-scroll-bar-size"),
+    "15px",
+  );
 
   release();
   assert.equal(isScrollLocked(), false);
@@ -126,6 +130,19 @@ test("existing inline styles are kept and put back exactly", () => {
   assert.equal(body().style.paddingRight, "10px");
   assert.equal(body().style.color, "red");
   assert.equal(html().style.overflow, "scroll");
+});
+
+test("overflow longhands set inline survive the lock", () => {
+  html().style.overflowY = "scroll";
+  body().style.setProperty("overflow-x", "clip", "important");
+
+  const release = lockScroll();
+  assert.equal(html().style.overflow, "hidden");
+  release();
+
+  assert.equal(html().style.overflowY, "scroll");
+  assert.equal(body().style.overflowX, "clip");
+  assert.equal(body().style.getPropertyPriority("overflow-x"), "important");
 });
 
 test("no padding without a scrollbar or with scrollbar-gutter: stable", () => {
@@ -333,16 +350,21 @@ test("modal: false does not lock", () => {
 
 // --- drawer --------------------------------------------------------------
 
-test("a drawer locks while open and releases on close and destroy", () => {
+function buildDrawer({ open = false } = {}) {
   body().innerHTML = `
-    <div id="dr" data-component="drawer" data-open="false"
+    <div id="dr" data-component="drawer" data-open="${open}"
          data-options='{"closeOnOutsideClick":true}' data-event-mappings='{}' data-part="root">
       <div data-part="content" hidden>
         <div data-part="overlay"></div>
         <div data-part="content-panel"><div data-part="handle"></div><button type="button">Go</button></div>
       </div>
     </div>`;
-  const component = mount("drawer", document.getElementById("dr"));
+  const el = document.getElementById("dr");
+  return { el, component: mount("drawer", el) };
+}
+
+test("a drawer locks while open and releases on close and destroy", () => {
+  const { component } = buildDrawer();
 
   component.transition("open");
   assert.equal(scrollLockCount(), 1);
@@ -351,6 +373,31 @@ test("a drawer locks while open and releases on close and destroy", () => {
 
   component.transition("open");
   component.destroy();
+  assert.equal(isScrollLocked(), false);
+});
+
+test("a patch keeps an open drawer's single lock; a server close releases it", () => {
+  const { el, component } = buildDrawer();
+  component.transition("open");
+
+  assert.equal(patch(el, component), component);
+  assert.equal(component.state, "open");
+  assert.equal(scrollLockCount(), 1);
+
+  patch(el, component, (node) => node.setAttribute("data-open", "true"));
+  assert.equal(scrollLockCount(), 1);
+
+  patch(el, component, (node) => node.setAttribute("data-open", "false"));
+  assert.equal(component.state, "closed");
+  assert.equal(isScrollLocked(), false);
+});
+
+test("a drawer dismissed by dragging releases its lock", () => {
+  const { component } = buildDrawer({ open: true });
+  assert.equal(scrollLockCount(), 1);
+
+  component.dismiss();
+  assert.equal(component.state, "closed");
   assert.equal(isScrollLocked(), false);
 });
 

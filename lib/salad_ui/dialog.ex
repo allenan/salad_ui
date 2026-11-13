@@ -44,7 +44,10 @@ defmodule SaladUI.Dialog do
   `scrollbar-gutter: stable`). The page's own inline styles come back when the
   dialog has finished closing. Locks are counted, so a dialog opened from
   another dialog, sheet or drawer keeps the page locked until the last one
-  closes. While locked, `<body>` carries `data-scroll-locked`.
+  closes. While locked, `<body>` carries `data-scroll-locked` and the
+  `--removed-body-scroll-bar-size` custom property (the padding added), which
+  fixed-position elements can use to avoid shifting:
+  `body[data-scroll-locked] .my-header { padding-right: var(--removed-body-scroll-bar-size) }`.
   """
   use SaladUI, :component
 
