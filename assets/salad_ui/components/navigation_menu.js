@@ -1,5 +1,5 @@
 // saladui/components/navigation_menu.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
 import SaladUI from "../index.js";
 
@@ -109,12 +109,8 @@ class NavigationMenuComponent extends Component {
         const trigger = partOf(element, "trigger");
         const content = partOf(element, "content");
 
-        if (trigger && !trigger.id) {
-          trigger.id = `${this.el.id}-trigger-${value}`;
-        }
-        if (content && !content.id) {
-          content.id = `${this.el.id}-content-${value}`;
-        }
+        if (trigger) assignId(trigger, `${this.el.id}-trigger-${value}`);
+        if (content) assignId(content, `${this.el.id}-content-${value}`);
         if (trigger && content) {
           trigger.setAttribute("aria-controls", content.id);
           content.setAttribute("aria-labelledby", trigger.id);

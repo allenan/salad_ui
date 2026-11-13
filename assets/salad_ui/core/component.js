@@ -235,7 +235,14 @@ class Component {
    * (or the rebuilt instance) assigns them again.
    */
   clearGeneratedIds() {
-    this.queryParts().forEach((node) => {
+    // Parts (which may be portaled) plus this component's own descendants
+    // that are not parts, e.g. a radio label. A nested component's nodes are
+    // left alone: it re-assigns its ids only when it is patched itself.
+    const owned = [...(this.el?.querySelectorAll("[id]") ?? [])].filter(
+      (node) => node.closest("[data-component], [phx-hook]") === this.el,
+    );
+    const nodes = new Set([...this.queryParts(), ...owned]);
+    nodes.forEach((node) => {
       if (!generatedIds.has(node)) return;
       node.removeAttribute("id");
       generatedIds.delete(node);

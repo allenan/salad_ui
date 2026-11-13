@@ -1,5 +1,5 @@
 // saladui/components/combobox.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
@@ -756,7 +756,7 @@ class ComboboxComponent extends Component {
     const query = this.filterEnabled ? this.query.trim().toLowerCase() : "";
     const items = this.getItems();
     const list = this.own("[data-part='list']")[0] || null;
-    if (list && !list.id) list.id = `${this.el.id}-list`;
+    if (list) assignId(list, `${this.el.id}-list`);
 
     let visibleCount = 0;
     items.forEach((item, index) => {
@@ -768,7 +768,7 @@ class ComboboxComponent extends Component {
       item.hidden = !visible;
       if (visible) visibleCount += 1;
 
-      if (!item.id) item.id = `${this.el.id}-option-${index}`;
+      assignId(item, `${this.el.id}-option-${index}`);
       const selected = this.values.includes(value);
       item.setAttribute("aria-selected", selected ? "true" : "false");
       item.toggleAttribute("data-selected", selected);
@@ -795,7 +795,7 @@ class ComboboxComponent extends Component {
 
       const label = group.querySelector("[data-part='label']");
       if (label) {
-        if (!label.id) label.id = `${this.el.id}-group-${index}-label`;
+        assignId(label, `${this.el.id}-group-${index}-label`);
         group.setAttribute("aria-labelledby", label.id);
       }
     });

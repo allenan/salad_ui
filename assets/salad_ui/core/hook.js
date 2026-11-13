@@ -36,6 +36,10 @@ const SaladUIHook = {
 
   beforeUpdate() {
     this.component?.beforeUpdate?.();
+    // Ids the client made up must go before morphdom keys the incoming nodes,
+    // or it replaces those nodes (and drops LiveView's skipped subtrees,
+    // e.g. a combobox's unchanged list) instead of patching them in place.
+    this.component?.clearGeneratedIds?.();
   },
 
   updated() {
