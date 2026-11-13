@@ -350,4 +350,22 @@ defmodule SaladUI.ComboboxTest do
 
     assert duplicated == []
   end
+
+  describe "open" do
+    test "open is passed to the JS in data-options" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.combobox id="c" open>
+          <.combobox_input />
+          <.combobox_content>
+            <.combobox_list></.combobox_list>
+          </.combobox_content>
+        </.combobox>
+        """)
+
+      assert html =~ ~s(&quot;open&quot;:true)
+    end
+  end
 end

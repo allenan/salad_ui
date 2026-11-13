@@ -53,9 +53,19 @@ defmodule SaladUI.ToggleGroup do
   Toggle group does not support `SaladUI.LiveView.send_command/4`. To change the
   pressed items from the server, update the `value` assign and let LiveView re-render.
 
-  The pressed items survive unrelated LiveView re-renders: while the server
-  keeps rendering the same `value`, the hook keeps what the user pressed; a
-  new `value` from the server replaces it.
+  ## Controlled and uncontrolled
+
+  As with Radix's `value` and `defaultValue`:
+
+  * With `value` (or a `field`) the group is controlled: every LiveView
+    re-render shows the server's value, and once the server has handled the
+    `on-value-changed` event (mapped to an event name) the group shows the
+    server's value again even if it did not change. So the server can refuse
+    a change, e.g. keep a `type="single"` group from being emptied by
+    re-rendering the same value.
+  * With only `default-value` the group is uncontrolled: the pressed items
+    survive unrelated re-renders; while the server keeps rendering the same
+    value the hook keeps what the user pressed.
   """
   use SaladUI, :component
 
@@ -106,6 +116,9 @@ defmodule SaladUI.ToggleGroup do
 
   def toggle_group(assigns) do
     multiple = assigns.type == "multiple" or assigns.multiple in [true, "true"]
+    # Like Radix's `value` prop: a group given `value` (or a form field) shows
+    # the server's value; one given only `default-value` keeps its own.
+    controlled = not is_nil(assigns.value) or not is_nil(assigns[:field])
 
     assigns =
       assigns
@@ -147,7 +160,8 @@ defmodule SaladUI.ToggleGroup do
             type: builder.type,
             orientation: assigns.orientation,
             loop: assigns.loop,
-            disabled: assigns.disabled
+            disabled: assigns.disabled,
+            controlled: controlled
           })
       )
 

@@ -56,8 +56,12 @@ class FocusTrap {
     this.element.removeEventListener("keydown", this.handleKeyDown);
 
     const previouslyFocused = this.previouslyFocused;
+    const container = this.element;
 
-    // Restore focus if possible
+    // Restore focus if possible, but only while focus is still in the closed
+    // content or nowhere (on <body>): a close handler, or the click outside
+    // that closed it, may have moved focus on purpose, and that wins (as
+    // Radix's FocusScope only returns focus that is still inside).
     if (
       previouslyFocused &&
       previouslyFocused.focus &&
@@ -65,11 +69,19 @@ class FocusTrap {
     ) {
       setTimeout(() => {
         if (
-          typeof document !== "undefined" &&
-          document.body.contains(previouslyFocused)
+          typeof document === "undefined" ||
+          !document.body.contains(previouslyFocused)
         ) {
-          previouslyFocused.focus();
+          return;
         }
+        const active = document.activeElement;
+        const focusLost =
+          !active ||
+          active === document.body ||
+          active === document.documentElement ||
+          !active.isConnected ||
+          container?.contains(active);
+        if (focusLost) previouslyFocused.focus();
       }, 0);
     }
 

@@ -329,3 +329,55 @@ test("changed tabs options rebuild them", () => {
   assert.equal(component.destroyed, true);
   hook.destroyed();
 });
+
+test("arrow keys, Home and End click the tab they select", () => {
+  const { component, list, getTrigger, getContent, pushed } = buildTabs({
+    defaultValue: "account",
+  });
+  const clicked = [];
+  ["account", "password", "billing"].forEach((value) =>
+    getTrigger(value).addEventListener("click", () => clicked.push(value)),
+  );
+
+  keydown(list, "ArrowRight");
+  keydown(list, "End");
+  keydown(list, "End");
+  keydown(list, "Home");
+
+  // A trigger's phx-click runs for the keyboard: it gets a click each time
+  // it is selected, and none when the key does not move the selection.
+  assert.deepEqual(clicked, ["password", "billing", "account"]);
+  assert.equal(getContent("account").hidden, false);
+  assert.equal(document.activeElement, getTrigger("account"));
+  assert.deepEqual(
+    pushed.map(({ payload }) => payload.value),
+    ["password", "billing", "account"],
+  );
+  component.destroy();
+});
+
+test("server-rendered active state is kept on mount", () => {
+  document.body.innerHTML = `
+    <div id="srv" data-component="tabs" data-state="idle" data-part="root"
+         data-options='{"value":"b","defaultValue":null}'>
+      <div data-part="list" role="tablist" aria-orientation="horizontal">
+        <button type="button" id="srv-trigger-a" role="tab" aria-selected="false" aria-controls="srv-content-a" tabindex="-1" data-part="trigger" data-value="a" data-state="inactive" data-disabled="false">A</button>
+        <button type="button" id="srv-trigger-b" role="tab" aria-selected="true" aria-controls="srv-content-b" tabindex="0" data-part="trigger" data-value="b" data-state="active" data-disabled="false">B</button>
+      </div>
+      <div id="srv-content-a" role="tabpanel" aria-labelledby="srv-trigger-a" tabindex="0" data-part="content" data-value="a" data-state="inactive" hidden>a</div>
+      <div id="srv-content-b" role="tabpanel" aria-labelledby="srv-trigger-b" tabindex="0" data-part="content" data-value="b" data-state="active">b</div>
+    </div>`;
+  const el = document.getElementById("srv");
+  const component = registry.create("tabs", el, {
+    pushEventTo() {},
+    liveSocket: { execJS() {} },
+  });
+
+  const b = document.getElementById("srv-trigger-b");
+  assert.equal(b.getAttribute("data-state"), "active");
+  assert.equal(b.getAttribute("aria-controls"), "srv-content-b");
+  assert.equal(b.tabIndex, 0);
+  assert.equal(document.getElementById("srv-content-b").hidden, false);
+  assert.equal(document.getElementById("srv-content-a").hidden, true);
+  component.destroy();
+});

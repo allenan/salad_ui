@@ -54,7 +54,31 @@ defmodule SaladUI.Resizable do
     (vertical groups) - resize by `keyboard-resize-by` percent.
   * `Home` / `End` - shrink / grow the panel before the handle as far as the
     constraints allow.
+  * `Enter` - collapse the panel before the handle, or expand it to its
+    `min-size`, when it is `collapsible`.
   * `F6` / `Shift+F6` - move focus to the next / previous handle in the group.
+
+  ## Collapsible panels
+
+  As in react-resizable-panels, a `collapsible` panel can shrink below its
+  `min-size` to its `collapsed-size` (default 0): dragged past halfway between
+  the two it snaps closed, otherwise it stays at `min-size`. A collapsed panel
+  gets `data-collapsed`. The arrow keys collapse a panel at its min size and
+  expand a collapsed one to its min size in one step.
+
+      <.resizable_panel_group id="layout" auto-save-id="layout">
+        <.resizable_panel default-size={75}>Main</.resizable_panel>
+        <.resizable_handle />
+        <.resizable_panel id="side-pane" default-size={25} min-size={15} collapsible>
+          Side
+        </.resizable_panel>
+      </.resizable_panel_group>
+
+  `collapse` and `expand` commands take the panel's `id` (or its index) as
+  `panel`; `expand` restores the size the panel had before `collapse`, or its
+  `min-size`:
+
+      SaladUI.LiveView.send_command(socket, "layout", "collapse", %{panel: "side-pane"})
 
   ## Persistence
 
@@ -71,6 +95,8 @@ defmodule SaladUI.Resizable do
 
   * `"setLayout"` - Sets the layout. Requires a `:layout` param: a list of
     percentages, one per panel (e.g. `%{layout: [30, 70]}`).
+  * `"collapse"` / `"expand"` - Collapse or expand a `collapsible` panel.
+    Requires a `:panel` param: the panel's `id` (or its index).
   """
   use SaladUI, :component
 
@@ -158,12 +184,17 @@ defmodule SaladUI.Resizable do
   * `:default-size` - Initial size in percent (`50` or `"50%"`).
   * `:min-size` - Minimum size in percent (default 0).
   * `:max-size` - Maximum size in percent (default 100).
+  * `:collapsible` - Whether the panel can collapse below `min-size` to
+    `collapsed-size` (see "Collapsible panels").
+  * `:collapsed-size` - Size in percent of the collapsed panel (default 0).
   * `:class` - Additional CSS classes.
   """
   attr :id, :string, default: nil
   attr :"default-size", :any, default: nil, doc: "Initial size in percent, e.g. 50 or \"50%\""
   attr :"min-size", :any, default: nil, doc: "Minimum size in percent"
   attr :"max-size", :any, default: nil, doc: "Maximum size in percent"
+  attr :collapsible, :boolean, default: false, doc: "Whether the panel can collapse below its min size"
+  attr :"collapsed-size", :any, default: nil, doc: "Size in percent when collapsed (default 0)"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block
@@ -176,6 +207,7 @@ defmodule SaladUI.Resizable do
       |> assign(:default_size, default_size)
       |> assign(:min_size, parse_size(assigns[:"min-size"]))
       |> assign(:max_size, parse_size(assigns[:"max-size"]))
+      |> assign(:collapsed_size, parse_size(assigns[:"collapsed-size"]))
       # Pre-JS approximation of the layout; the JS component takes over on mount.
       # `overflow: clip` (not a scroll container) with `hidden` as the fallback.
       |> assign(:style, "flex: #{default_size || 1} 1 0px; overflow: hidden; overflow: clip;")
@@ -188,6 +220,8 @@ defmodule SaladUI.Resizable do
       data-default-size={@default_size}
       data-min-size={@min_size}
       data-max-size={@max_size}
+      data-collapsible={@collapsible && "true"}
+      data-collapsed-size={@collapsed_size}
       style={@style}
       class={@class}
       {@rest}

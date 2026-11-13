@@ -89,6 +89,7 @@ function buildCombobox({
   groups = null,
   inForm = false,
   usePortal = false,
+  open,
 } = {}) {
   const options = {
     name,
@@ -98,6 +99,7 @@ function buildCombobox({
     filter,
     disabled,
     usePortal,
+    ...(open === undefined ? {} : { open }),
   };
 
   const control =
@@ -1178,4 +1180,35 @@ test("use-portal: destroying an open combobox takes the content out of the body"
   assert.equal(c.content.parentElement, document.body);
   c.component.destroy();
   assert.equal(c.content.parentElement, c.el);
+});
+
+test("open renders the list open on mount", () => {
+  const c = buildCombobox({ open: true });
+  assert.ok(isOpen(c));
+  c.component.destroy();
+});
+
+test("a changed server open opens and closes the list", () => {
+  const c = buildCombobox({ open: false });
+  const base = { name: "framework", multiple: false, value: null };
+  const options = (open) => ({
+    ...base,
+    autoHighlight: false,
+    filter: true,
+    disabled: false,
+    usePortal: false,
+    open,
+  });
+
+  assert.equal(patch(c, { options: options(true) }), true);
+  assert.ok(isOpen(c));
+
+  assert.equal(patch(c, { options: options(false) }), true);
+  assert.ok(isClosed(c));
+
+  // The same open again leaves the user's state alone.
+  c.component.handleCommand("open");
+  assert.equal(patch(c, { options: options(false) }), true);
+  assert.ok(isOpen(c));
+  c.component.destroy();
 });

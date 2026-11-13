@@ -6,9 +6,19 @@ defmodule SaladUI.Toggle do
 
   The `<button>` carries Radix's `data-state="on|off"` and `aria-pressed`, and the
   `toggle` JS component keeps both in sync with a hidden checkbox when it is
-  clicked, so the toggle submits like a checkbox inside a form. The pressed
-  state survives unrelated LiveView re-renders: while the server keeps
-  rendering the same `value`, the hook keeps the user's choice.
+  clicked, so the toggle submits like a checkbox inside a form.
+
+  ## Controlled and uncontrolled
+
+  As with Radix's `pressed` and `defaultPressed`:
+
+  * With `value` (or a `field`) the toggle is controlled: every LiveView
+    re-render shows the server's state, and once the server has handled the
+    `on-pressed-changed` event (mapped to an event name) the toggle shows the
+    server's state again even if it did not change.
+  * With only `default-value` it is uncontrolled: the pressed state survives
+    unrelated re-renders; while the server keeps rendering the same state the
+    hook keeps the user's choice.
 
   ## Examples:
 
@@ -63,8 +73,13 @@ defmodule SaladUI.Toggle do
   slot :inner_block, required: true
 
   def toggle(assigns) do
+    # Like Radix's `pressed` prop: a toggle given `value` (or a form field)
+    # shows the server's state; one given only `default-value` keeps its own.
+    controlled = not is_nil(assigns.value) or not is_nil(assigns[:field])
+
     assigns =
       assigns
+      |> assign(:options, json(%{controlled: controlled}))
       |> prepare_assign()
       |> put_aria_invalid()
 
@@ -86,6 +101,7 @@ defmodule SaladUI.Toggle do
       data-state={if @checked, do: "on", else: "off"}
       data-disabled={@disabled && ""}
       data-event-mappings={@event_map}
+      data-options={@options}
       aria-pressed={to_string(@checked)}
       phx-hook="SaladUI"
       class={classes([@variant_class, @class])}

@@ -26,9 +26,11 @@ function buildGroup({
   orientation = "horizontal",
   loop = true,
   dir,
+  controlled,
   items = [{ value: "bold" }, { value: "italic" }, { value: "underline" }],
 } = {}) {
   const options = { type, orientation, loop, disabled: false };
+  if (controlled) options.controlled = true;
   const eventMappings = { "value-changed": "style_changed" };
 
   document.body.innerHTML = `
@@ -45,8 +47,8 @@ function buildGroup({
   const el = document.getElementById(id);
   const pushed = [];
   const hookContext = {
-    pushEventTo: (target, event, payload) =>
-      pushed.push({ target, event, payload }),
+    pushEventTo: (target, event, payload, onReply) =>
+      pushed.push({ target, event, payload, ...(onReply && { onReply }) }),
     liveSocket: { execJS: () => {} },
   };
 
@@ -384,4 +386,57 @@ test("arrow keys from a nested toggle group do not move the outer focus", () => 
 
   assert.equal(document.activeElement, y);
   assert.deepEqual(tabIndexes(el).slice(0, 3), [0, -1, -1]);
+});
+
+test("controlled: a patch with the same server value puts it back", () => {
+  const { el, component, getItem } = buildGroup({
+    controlled: true,
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+
+  // Radix lets a single group be emptied; the server renders "bold" again.
+  click(getItem("bold"));
+  assert.equal(getItem("bold").getAttribute("data-state"), "off");
+  patchFromServer(el, ["bold"]);
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(getItem("bold").getAttribute("data-state"), "on");
+  assert.equal(getItem("bold").getAttribute("aria-checked"), "true");
+  assert.equal(getItem("bold").querySelector("input").checked, true);
+});
+
+test("controlled: a patch with a new server value is applied in place", () => {
+  const { el, component, getItem } = buildGroup({
+    controlled: true,
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+
+  patchFromServer(el, ["italic"]);
+
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(getItem("italic").getAttribute("data-state"), "on");
+  assert.equal(getItem("bold").getAttribute("data-state"), "off");
+});
+
+test("controlled: the server's reply without a patch puts its value back", () => {
+  const { component, getItem, pushed } = buildGroup({
+    controlled: true,
+    items: [{ value: "bold", pressed: true }, { value: "italic" }],
+  });
+
+  click(getItem("bold"));
+  assert.equal(getItem("bold").getAttribute("data-state"), "off");
+  assert.deepEqual(pushed[0].payload.value, "");
+  assert.equal(typeof pushed[0].onReply, "function");
+
+  pushed[0].onReply({});
+  assert.equal(getItem("bold").getAttribute("data-state"), "on");
+  assert.equal(component.getValue(), "bold");
+});
+
+test("uncontrolled: the push expects no reply", () => {
+  const { getItem, pushed } = buildGroup();
+
+  click(getItem("bold"));
+  assert.equal(pushed[0].onReply, undefined);
 });

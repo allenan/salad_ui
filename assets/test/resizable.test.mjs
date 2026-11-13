@@ -3,6 +3,7 @@ import { after, before, beforeEach, test } from "node:test";
 
 import ResizableComponent, {
   adjustLayout,
+  resizePanel,
   validateLayout,
 } from "../salad_ui/components/resizable.js";
 import { installDom, setRect, uninstallDom } from "./helpers/dom.mjs";
@@ -11,12 +12,14 @@ before(() => installDom());
 after(() => uninstallDom());
 beforeEach(() => window.localStorage.clear());
 
-function panel({ id, size, min, max } = {}) {
+function panel({ id, size, min, max, collapsible, collapsedSize } = {}) {
   const attrs = [
     id ? `id="${id}"` : "",
     size !== undefined ? `data-default-size="${size}"` : "",
     min !== undefined ? `data-min-size="${min}"` : "",
     max !== undefined ? `data-max-size="${max}"` : "",
+    collapsible ? 'data-collapsible="true"' : "",
+    collapsedSize !== undefined ? `data-collapsed-size="${collapsedSize}"` : "",
   ].join(" ");
   return `<div data-part="panel" ${attrs}>panel</div>`;
 }
@@ -391,4 +394,123 @@ test("setLayout command validates and applies a layout", () => {
 
   component.handleCommand("setLayout", { layout: [1, 2, 3] });
   assert.deepEqual(component.layout, [60, 40], "wrong length is ignored");
+});
+
+const collapsible = { min: 20, max: 100, collapsible: true, collapsedSize: 0 };
+const free = { min: 0, max: 100 };
+
+test("resizePanel snaps a collapsible panel at the halfway point", () => {
+  assert.equal(resizePanel(collapsible, 15), 20);
+  assert.equal(resizePanel(collapsible, 10), 20);
+  assert.equal(resizePanel(collapsible, 9), 0);
+  assert.equal(resizePanel({ min: 20, max: 100 }, 5), 20);
+  assert.equal(resizePanel(collapsible, 120), 100);
+});
+
+test("adjustLayout collapses past halfway and opens at min, like react-resizable-panels", () => {
+  const constraints = [collapsible, free];
+  // Dragged from 30 to 15: above halfway, it stops at its min.
+  assert.deepEqual(adjustLayout([30, 70], constraints, 0, -15), [20, 80]);
+  // Dragged to 9: below halfway, it collapses.
+  assert.deepEqual(adjustLayout([30, 70], constraints, 0, -21), [0, 100]);
+  // A collapsed panel opens once the drag reaches its min.
+  assert.deepEqual(adjustLayout([0, 100], constraints, 0, 12), [0, 100]);
+  assert.deepEqual(adjustLayout([0, 100], constraints, 0, 25), [25, 75]);
+  // The keyboard expands a collapsed panel to its min, and collapses a panel
+  // at its min, in one step.
+  const keyboard = { trigger: "keyboard" };
+  assert.deepEqual(
+    adjustLayout([0, 100], constraints, 0, 10, keyboard),
+    [20, 80],
+  );
+  assert.deepEqual(
+    adjustLayout([20, 80], constraints, 0, -10, keyboard),
+    [0, 100],
+  );
+});
+
+test("validateLayout snaps collapsible panels", () => {
+  assert.deepEqual(validateLayout([5, 95], [collapsible, free]), [0, 100]);
+  assert.deepEqual(validateLayout([15, 85], [collapsible, free]), [20, 80]);
+});
+
+test("collapse and expand commands resize a collapsible panel by id", () => {
+  const { el, component, pushed } = mount(
+    panel({ id: "main", size: 70 }) +
+      handle() +
+      panel({ id: "side", size: 30, min: 20, collapsible: true }),
+    { options: { autoSaveId: "collapse-test" } },
+  );
+  const [, side] = panelsOf(el);
+
+  assert.equal(side.hasAttribute("data-collapsed"), false);
+  component.handleCommand("collapse", { panel: "side" });
+  assert.deepEqual(component.layout, [100, 0]);
+  assert.equal(side.hasAttribute("data-collapsed"), true);
+  assert.deepEqual(pushed.at(-1).payload.layout, [100, 0]);
+  assert.equal(
+    window.localStorage.getItem("salad-ui:resizable:collapse-test"),
+    "[100,0]",
+  );
+
+  // Expand restores the size it had before collapsing.
+  component.handleCommand("expand", { panel: "side" });
+  assert.deepEqual(component.layout, [70, 30]);
+  assert.equal(side.hasAttribute("data-collapsed"), false);
+
+  assert.equal(component.handleCommand("expand", { panel: "side" }), false);
+  assert.equal(component.handleCommand("collapse", { panel: "main" }), false);
+  assert.equal(component.handleCommand("collapse", { panel: "nope" }), false);
+});
+
+test("expand without a remembered size opens to the min size", () => {
+  const { component } = mount(
+    panel({ id: "nav", size: 0, min: 15, collapsible: true }) +
+      handle() +
+      panel({ size: 100 }),
+  );
+  assert.deepEqual(component.layout, [0, 100]);
+  component.handleCommand("expand", { panel: 0 });
+  assert.deepEqual(component.layout, [15, 85]);
+});
+
+test("Enter on a handle collapses and expands the panel before it", () => {
+  const { el, component, pushed } = mount(
+    panel({ size: 40, min: 25, collapsible: true }) +
+      handle() +
+      panel({ size: 60 }),
+  );
+  const [h] = handlesOf(el);
+
+  key(h, "Enter");
+  assert.deepEqual(component.layout, [0, 100]);
+  assert.equal(h.getAttribute("aria-valuenow"), "0");
+  assert.equal(h.getAttribute("aria-valuemin"), "0");
+  assert.deepEqual(pushed.at(-1).payload.layout, [0, 100]);
+
+  key(h, "Enter");
+  assert.deepEqual(component.layout, [25, 75]);
+
+  // Not collapsible: Enter does nothing.
+  const other = mount(panel({ size: 40, min: 25 }) + handle() + panel());
+  key(handlesOf(other.el)[0], "Enter");
+  assert.deepEqual(other.component.layout, [40, 60]);
+});
+
+test("dragging a collapsible panel past halfway collapses it", () => {
+  const { el, component } = mount(
+    panel({ size: 30, min: 20, collapsible: true }) +
+      handle() +
+      panel({ size: 70 }),
+  );
+  const [h] = handlesOf(el);
+  setRect(el, { width: 100, height: 100 });
+  setRect(h, { width: 0 });
+
+  pointer(h, "pointerdown", { clientX: 30 });
+  pointer(document, "pointermove", { clientX: 15 });
+  assert.deepEqual(component.layout, [20, 80]);
+  pointer(document, "pointermove", { clientX: 8 });
+  assert.deepEqual(component.layout, [0, 100]);
+  pointer(document, "pointerup", { clientX: 8 });
 });

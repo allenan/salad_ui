@@ -16,11 +16,20 @@ class ToggleComponent extends Component {
   }
 
   /**
+   * Controlled (the server renders `value` or a form field): the server's
+   * state is the truth, as with Radix's `pressed` prop. Uncontrolled
+   * (`default-value` only): the pressed state lives on the client.
+   */
+  isControlled() {
+    return this.options?.controlled === true;
+  }
+
+  /**
    * A LiveView patch reverts data-state, aria-pressed and the checkbox to what
-   * the server rendered. When that is still what it rendered last time (it
-   * never stored the user's click, e.g. a static `value` and an unrelated
-   * re-render), keep this instance and re-apply the current state. A new
-   * server state rebuilds the toggle from the server.
+   * the server rendered. Uncontrolled, while that is still what it rendered
+   * last time (an unrelated re-render), keep this instance and re-apply the
+   * current state. Controlled, take the server's state, even when it is the
+   * one it rendered before. A new server state rebuilds from the server.
    */
   skipReinitialize(el) {
     if (el !== this.el) return false;
@@ -28,12 +37,20 @@ class ToggleComponent extends Component {
     if (el.getAttribute("data-event-mappings") !== this._eventMappingsRaw) {
       return false;
     }
-    if (el.getAttribute("data-state") !== this._serverState) return false;
+    const serverState = el.getAttribute("data-state");
+    if (serverState !== this._serverState) return false;
 
+    this.setStateQuietly(this.isControlled() ? serverState : this.state);
+    return true;
+  }
+
+  /** Show `state` without pushing an event or firing the form events. */
+  setStateQuietly(state) {
+    if (state !== "on" && state !== "off") return;
+    this.stateMachine.state = state;
     this.updateUI();
     const input = this.getInput();
-    if (input) input.checked = this.state === "on";
-    return true;
+    if (input) input.checked = state === "on";
   }
 
   getInput() {
@@ -86,7 +103,15 @@ class ToggleComponent extends Component {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    this.pushEvent("pressed-changed", { pressed });
+    // A controlled toggle whose server answers without changing its state
+    // gets no patch; once the server has handled the event, show its state
+    // again (a patch with a new state has been applied by then).
+    const onReply = this.isControlled()
+      ? () => {
+          if (!this.destroyed) this.setStateQuietly(this._serverState);
+        }
+      : undefined;
+    this.pushEvent("pressed-changed", { pressed }, undefined, onReply);
   }
 }
 

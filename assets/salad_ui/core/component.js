@@ -681,8 +681,13 @@ class Component {
     return insideView ? this.el : this.hook?.el || this.el;
   }
 
-  // Push event to server (for frameworks like Phoenix LiveView)
-  pushEvent(clientEvent, payload = {}, context) {
+  /**
+   * Push a component event to the server (for frameworks like Phoenix
+   * LiveView). `onReply` runs once the server has handled an event mapped to
+   * an event name, after LiveView applied the diff it answered with (if any);
+   * an event mapped to a JS command gets no reply.
+   */
+  pushEvent(clientEvent, payload = {}, context, onReply) {
     if (!this.hook || !this.hook.pushEventTo) return;
 
     const eventHandler = this.eventMappings[clientEvent];
@@ -696,7 +701,16 @@ class Component {
           component: el.getAttribute("data-component"),
         };
 
-        this.hook.pushEventTo(this.eventSource(), eventHandler, fullPayload);
+        if (onReply) {
+          this.hook.pushEventTo(
+            this.eventSource(),
+            eventHandler,
+            fullPayload,
+            onReply,
+          );
+        } else {
+          this.hook.pushEventTo(this.eventSource(), eventHandler, fullPayload);
+        }
       } else {
         this.hook.liveSocket.execJS(
           this.eventSource(),

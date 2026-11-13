@@ -296,6 +296,21 @@ Execute multiple commands in sequence:
 </.button>
 ```
 
+### From plain JavaScript: `SaladUI.command/3`
+
+Hooks and other scripts run the same commands with `SaladUI.command(target,
+command, params)`. `target` is the component's root element or a selector; it
+dispatches the same non-bubbling `salad_ui:command` event and returns `false`
+when nothing matches.
+
+```javascript
+import SaladUI from "salad_ui";
+
+SaladUI.command("#emoji-popover", "close");
+SaladUI.command(this.el.querySelector("[data-component=toggle]"), "toggle");
+SaladUI.command("#layout", "collapse", { panel: "side-pane" });
+```
+
 ### Handling Commands in Components
 
 Components receive commands through their `handleCommand` method the same way it handle server command:

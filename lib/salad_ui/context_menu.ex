@@ -181,21 +181,30 @@ defmodule SaladUI.ContextMenu do
   * `:side` - Which side of the pointer the menu opens on (`top`, `right`,
     `bottom`, `left`). Defaults to `"right"`, i.e. below and to the right of the
     pointer; mirrored under `dir="rtl"`. It flips when it would overflow.
+  * `:collision-padding` - Distance in pixels kept from the viewport edges when
+    the content flips or shifts to stay visible. Defaults to `0`, as in Radix.
   * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
     first (and back). Defaults to `false`, as in Radix.
   * `:class` - Additional CSS classes.
   """
   attr :side, :string, values: ~w(top right bottom left), default: "right"
+  attr :"collision-padding", :integer, default: 0, doc: "Distance kept from the viewport edges"
   attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
   def context_menu_content(assigns) do
-    assigns = assign(assigns, :base, @content_class)
+    assigns = assign(assigns, base: @content_class, collision_padding: assigns[:"collision-padding"])
 
     ~H"""
-    <div data-part="positioner" data-side={@side} class="fixed top-0 left-0 z-50" hidden>
+    <div
+      data-part="positioner"
+      data-side={@side}
+      data-collision-padding={@collision_padding}
+      class="fixed top-0 left-0 z-50"
+      hidden
+    >
       <div
         data-slot="context-menu-content"
         data-part="content"
