@@ -26,7 +26,8 @@ defmodule SaladUI.Toast do
 
   Every helper also takes `description:`, `position:` (any of the toaster's
   six positions, per toast), `duration:` (ms or `:infinity`), `id:`,
-  `action:`/`cancel:`, `icon:`, `color:`, `class:`, `dismissible:` and
+  `action:`/`cancel:`, `icon:`, `color:`, `class:`, `dismissible:`,
+  `close_button:` (overrides the toaster's `close-button`) and
   `toaster:` (target a `<.toaster>` other than `"toaster"`):
 
       toast(socket, "Event has been created",
@@ -135,6 +136,15 @@ defmodule SaladUI.Toast do
 
       <.toaster id="toaster" flash={@flash} />
 
+  ## Accessibility
+
+  As in Sonner, the toaster is a `<section>` landmark named "Notifications"
+  plus the hotkey (`aria-label="Notifications Alt+T"`) and is the polite live
+  region that announces new toasts; its lists and cards carry no role.
+  `important: true` on a toast makes that card an assertive live region.
+  The hotkey (default `Alt+T`, Option+T on a Mac) moves focus to the front
+  toast; it is matched on the physical key (`KeyboardEvent.code`).
+
   ## Modals
 
   Toasts stay clickable and announced while a modal dialog, sheet, drawer or
@@ -184,7 +194,20 @@ defmodule SaladUI.Toast do
   attr :width, :integer, default: 356, doc: "Fixed card width in px"
   attr :offset, :any, default: 24, doc: "px gap from the viewport edge, or a %{top:, right:, bottom:, left:} map"
   attr :"mobile-offset", :any, default: 16, doc: "Same as :offset, applied below the 600px breakpoint"
-  attr :hotkey, :string, default: "Alt+T", doc: "Keyboard shortcut that moves focus into the front toast"
+
+  attr :hotkey, :string,
+    default: "Alt+T",
+    doc:
+      "Keyboard shortcut that moves focus into the front toast: modifiers (Alt, Shift, Ctrl, Meta) and a key, " <>
+        "matched on the physical key so Option+T works on macOS. `nil` turns it off"
+
+  attr :duration, :any,
+    default: nil,
+    doc: "Default time in ms before a toast closes (Sonner's 4000 when nil), or `:infinity`"
+
+  attr :"close-button", :boolean,
+    default: false,
+    doc: "Show a close button on every toast (Sonner's `closeButton`); a toast's `close_button:` overrides it"
 
   attr :icons, :map,
     default: %{},
@@ -229,7 +252,9 @@ defmodule SaladUI.Toast do
       icons: assigns.icons,
       colors: assigns.colors,
       class: assigns.class,
-      hotkey: assigns.hotkey
+      hotkey: assigns.hotkey,
+      duration: if(assigns.duration == :infinity, do: "infinity", else: assigns.duration),
+      closeButton: assigns[:"close-button"]
     }
 
     assigns =
@@ -238,9 +263,10 @@ defmodule SaladUI.Toast do
       |> assign(:options, json(options))
       |> assign(:viewport_class, viewport_class(assigns.position))
       |> assign(:viewport_style, viewport_style(assigns.width, offset, mobile_offset, assigns.gap))
+      |> assign(:label, String.trim("Notifications #{assigns.hotkey}"))
 
     ~H"""
-    <div
+    <section
       id={@id}
       data-component="toast"
       data-options={@options}
@@ -248,13 +274,16 @@ defmodule SaladUI.Toast do
       phx-hook="SaladUI"
       phx-update="ignore"
       data-part="root"
+      aria-label={@label}
+      tabindex="-1"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-atomic="false"
     >
       <ol
         data-part="viewport"
         data-salad-layer-branch
         data-position={@position}
-        role="region"
-        aria-label="Notifications"
         style={@viewport_style}
         class={@viewport_class}
       >
@@ -263,7 +292,7 @@ defmodule SaladUI.Toast do
       <template :for={tpl <- @template} data-part="toast-template" data-name={tpl.name}>{render_slot(
         tpl
       )}</template>
-    </div>
+    </section>
 
     <.toast_flash
       :if={@flash}

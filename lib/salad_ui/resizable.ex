@@ -161,12 +161,11 @@ defmodule SaladUI.Resizable do
       data-part="root"
       data-state="idle"
       data-orientation={@orientation}
-      aria-orientation={@orientation}
       data-disabled={@disabled}
       data-options={@options}
       data-event-mappings={@event_map}
       phx-hook="SaladUI"
-      class={classes(["flex h-full w-full aria-[orientation=vertical]:flex-col", @class])}
+      class={classes(["flex h-full w-full data-[orientation=vertical]:flex-col", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

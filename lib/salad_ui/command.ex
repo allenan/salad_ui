@@ -346,10 +346,15 @@ defmodule SaladUI.Command do
   Like cmdk, the separator is hidden while the input has a search query, so
   filtered results don't show stray dividers. Pass `always_render` to keep it.
 
+  It is decorative (`role="none"`): the list is a `listbox`, which may only
+  contain options and groups (cmdk's `role="separator"` fails axe's
+  `aria-required-children` there).
+
   ## Attributes
 
     * `:class` - Additional classes to apply.
     * `:always_render` - Keep the separator visible while filtering.
+    * `:role` - Defaults to `"none"`; pass `"separator"` for one outside the list.
 
   ## Example
 
@@ -359,6 +364,7 @@ defmodule SaladUI.Command do
   """
   attr :class, :any, default: nil
   attr :always_render, :boolean, default: false
+  attr :role, :string, default: "none", doc: "decorative inside the listbox"
   attr :rest, :global
 
   def command_separator(assigns) do
@@ -367,7 +373,7 @@ defmodule SaladUI.Command do
       data-slot="command-separator"
       data-part="separator"
       data-always-render={@always_render && "true"}
-      role="separator"
+      role={@role}
       class={classes(["-mx-1 h-px bg-border data-[visible=false]:hidden", @class])}
       {@rest}
     />

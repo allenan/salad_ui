@@ -169,7 +169,7 @@ defmodule SaladUI.Attachment do
         as: if(link? and assigns.as == "div", do: &Phoenix.Component.link/1, else: assigns.as),
         root_class:
           classes([
-            "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-colors focus-within:ring-1 focus-within:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
+            "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-[color,background-color,border-color,box-shadow] outline-none has-focus-visible:border-ring has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
             # the card itself is the link (`href`/`navigate`/`patch`)
             link? && "outline-none hover:bg-muted/50",
             @sizes[assigns.size],

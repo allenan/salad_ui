@@ -174,6 +174,25 @@ test("ARIA attributes are (re)applied on every state change", () => {
   assert.equal(elements.trigger.getAttribute("aria-expanded"), "true");
 });
 
+test("ariaConfig writes role and tabindex as-is and prefixes the rest with aria-", () => {
+  const { component, elements } = buildComponent();
+  const write = (attr, value) =>
+    component.ariaManager.applyAriaAttribute(elements.content, attr, value);
+
+  write("role", "tabpanel");
+  write("tabindex", "0");
+  write("labelledby", "t1");
+
+  assert.equal(elements.content.getAttribute("role"), "tabpanel");
+  assert.equal(elements.content.getAttribute("tabindex"), "0");
+  // Never the invalid aria-tabindex (axe: aria-valid-attr).
+  assert.equal(elements.content.hasAttribute("aria-tabindex"), false);
+  assert.equal(elements.content.getAttribute("aria-labelledby"), "t1");
+
+  write("tabindex", null);
+  assert.equal(elements.content.hasAttribute("tabindex"), false);
+});
+
 test("handleActionClick(): clicking a [data-action] element triggers the matching transition", () => {
   const { component, elements } = buildComponent();
   component.setupEvents();

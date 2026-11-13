@@ -253,6 +253,77 @@ test("click on link item preserves native link behavior", () => {
   menu.destroy();
 });
 
+test("an item click bubbles to the window, so LiveView runs its phx-click", () => {
+  const { menu, pushed, selected, settings } = buildMenu();
+  // LiveView handles phx-click from one bubbling click listener on window.
+  const seen = [];
+  const onWindowClick = (event) => seen.push(event.target);
+  window.addEventListener("click", onWindowClick);
+
+  settings.dispatchEvent(
+    new window.MouseEvent("click", { bubbles: true, cancelable: true }),
+  );
+
+  window.removeEventListener("click", onWindowClick);
+  assert.deepEqual(seen, [settings]);
+  // The menu still selects (on-select) and closes.
+  assert.deepEqual(selected, ["settings"]);
+  assert.equal(pushed.length, 1);
+
+  menu.destroy();
+});
+
+test("Enter and Space activate an item by clicking it, as in Radix", () => {
+  const { menu, pushed, selected, settings, disabled } = buildMenu();
+  const clicks = [];
+  const onWindowClick = (event) => clicks.push(event.target);
+  window.addEventListener("click", onWindowClick);
+
+  keydown(settings, "Enter");
+  keydown(settings, " ");
+  keydown(disabled, "Enter");
+
+  window.removeEventListener("click", onWindowClick);
+  assert.deepEqual(clicks, [settings, settings]);
+  assert.deepEqual(selected, ["settings", "settings"]);
+  assert.equal(pushed.length, 2);
+
+  menu.destroy();
+});
+
+test("a disabled item's click never reaches its phx-click", () => {
+  const { menu, pushed, selected, disabled } = buildMenu();
+  let reachedWindow = false;
+  const onWindowClick = () => (reachedWindow = true);
+  window.addEventListener("click", onWindowClick);
+
+  disabled.dispatchEvent(
+    new window.MouseEvent("click", { bubbles: true, cancelable: true }),
+  );
+
+  window.removeEventListener("click", onWindowClick);
+  assert.equal(reachedWindow, false);
+  assert.deepEqual(selected, []);
+  assert.equal(pushed.length, 0);
+
+  menu.destroy();
+});
+
+test("a checkbox item toggles once per click, and the click still bubbles", () => {
+  const { checkbox, content, menu } = buildMenu();
+  let bubbled = 0;
+  content.addEventListener("click", () => (bubbled += 1));
+
+  checkbox.dispatchEvent(
+    new window.MouseEvent("click", { bubbles: true, cancelable: true }),
+  );
+
+  assert.equal(checkbox.getAttribute("aria-checked"), "false");
+  assert.equal(bubbled, 1);
+
+  menu.destroy();
+});
+
 function buildTypeaheadMenu() {
   document.body.innerHTML = `
     <div id="menu-root" data-component="dropdown-menu">

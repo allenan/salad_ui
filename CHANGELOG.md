@@ -322,6 +322,31 @@ for status and known gaps. Every new JS-backed component is registered in
 - The focus trap no longer pulls focus back to the opener when a close handler
   (or the click that closed it) moved focus elsewhere.
 
+**Fixes from downstream use: accessibility and overlays**
+- `ariaConfig` writes `role` and `tabindex` as-is: tab panels get a real
+  `tabindex="0"`, not the invalid `aria-tabindex`.
+- Resizable: the panel group no longer carries `aria-orientation` (it has no
+  role); only the handles do, as in react-resizable-panels.
+- Toaster follows Sonner's markup: a `<section aria-label="Notifications Alt+T">`
+  landmark that is the polite live region, with role-less `<ol>`/`<li>`. Error
+  toasts are no longer assertive alerts; `important: true` opts a toast in.
+- Toaster: `close-button` (per toast `close_button:`), a toaster-wide
+  `duration`, and the hotkey matches the physical key, so Option+T works on macOS.
+- Alert dialog closes on Escape, as Radix's does. Escape in a nested dialog,
+  menu or select closes only that layer (key handlers skip a key a nested
+  component already handled).
+- A dialog opened by the server returns focus to its trigger on close.
+- Dialog overlay is `z-50`; dialog, alert dialog and drawer roots drop
+  `relative z-50`, so an open dialog no longer paints under a later dialog's trigger.
+- Modal layers also make the hidden page `inert`, so it is out of the tab order.
+- Menu items: a click bubbles again, so `phx-click` on dropdown, context and
+  menubar items fires; Enter and Space click the item, as in Radix. Clicks in
+  content portaled out of a popover or dialog count as inside it.
+- `command_separator` is `role="none"` inside the listbox (overridable with `role`).
+- Attachment: shadcn's 3px focus ring when the card's trigger has keyboard focus.
+- `salad_ui.css`: the scroll area thumb uses `var(--border)`, not `#c2c2c2`.
+- `select.js` no longer contains a comment Tailwind reads as a broken utility.
+
 **API fixes from downstream use**
 - `command`, `command_list`, `command_group`, `command_empty`,
   `command_shortcut` and every `dialog` part take global attributes;

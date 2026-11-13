@@ -20,8 +20,10 @@ defmodule SaladUI.ResizableTest do
       assert html =~ ~s(data-slot="resizable-panel-group")
       assert html =~ ~s(data-component="resizable")
       assert html =~ ~s(phx-hook="SaladUI")
-      assert html =~ ~s(aria-orientation="horizontal")
-      assert html =~ "flex h-full w-full aria-[orientation=vertical]:flex-col rounded-lg border"
+      assert html =~ ~s(data-orientation="horizontal")
+      # The group has no role, so no aria-orientation (axe: aria-allowed-attr).
+      refute html =~ ~s(aria-orientation=)
+      assert html =~ "flex h-full w-full data-[orientation=vertical]:flex-col rounded-lg border"
       assert html =~ ~s(&quot;orientation&quot;:&quot;horizontal&quot;)
       assert html =~ ~s(&quot;keyboardResizeBy&quot;:10)
       refute html =~ "data-disabled"
@@ -44,7 +46,7 @@ defmodule SaladUI.ResizableTest do
         </.resizable_panel_group>
         """)
 
-      assert html =~ ~s(aria-orientation="vertical")
+      refute html =~ ~s(aria-orientation=)
       assert html =~ ~s(data-orientation="vertical")
       assert html =~ ~s(&quot;autoSaveId&quot;:&quot;layout&quot;)
       assert html =~ ~s(&quot;keyboardResizeBy&quot;:5)
@@ -63,7 +65,7 @@ defmodule SaladUI.ResizableTest do
         </.resizable_panel_group>
         """)
 
-      assert html =~ ~s(aria-orientation="vertical")
+      assert html =~ ~s(data-orientation="vertical")
     end
   end
 

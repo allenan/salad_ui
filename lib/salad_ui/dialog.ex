@@ -44,11 +44,15 @@ defmodule SaladUI.Dialog do
   * Clicks outside it never reach the page. `<body>` gets
     `pointer-events: none` and the dialog's content `pointer-events: auto`, so
     a click outside can only dismiss the dialog (through its overlay).
-  * Everything outside it is hidden from assistive technology: the siblings
-    of the dialog's content and of each of its ancestors get
-    `aria-hidden="true"` (and a `data-aria-hidden` marker). `aria-live`
-    regions are left alone, and elements the page already hid stay hidden
-    after the dialog closes.
+  * Everything outside it is hidden from assistive technology and taken out
+    of the tab order: the siblings of the dialog's content and of each of its
+    ancestors get `aria-hidden="true"` and `inert` (and a `data-aria-hidden`
+    marker). `aria-live` regions are left alone, and elements the page
+    already hid stay hidden after the dialog closes.
+  * Escape closes only the topmost layer: in a dialog opened from a dialog
+    (or a menu or select open inside one) it closes just that one.
+  * On close, focus returns to the element focused when it opened, or, when
+    that was nothing (a dialog the server opened), to the dialog's trigger.
   * Wheel and touch scrolling outside it are cancelled, so the page behind
     (including a scrollable app layout) cannot scroll through the overlay.
     Scrollable areas inside the dialog still scroll, without chaining to the
@@ -173,7 +177,7 @@ defmodule SaladUI.Dialog do
     <div
       data-slot="dialog"
       id={@id}
-      class="relative z-50 group/dialog"
+      class="group/dialog"
       data-component="dialog"
       data-options={@options}
       data-open={to_string(@open)}
@@ -233,7 +237,7 @@ defmodule SaladUI.Dialog do
       <div
         data-slot="dialog-overlay"
         data-part="overlay"
-        class="fixed inset-0 bg-black/50 data-[state=open]/dialog:animate-in data-[state=closed]/dialog:animate-out data-[state=closed]/dialog:fade-out-0 data-[state=open]/dialog:fade-in-0"
+        class="fixed inset-0 z-50 bg-black/50 data-[state=open]/dialog:animate-in data-[state=closed]/dialog:animate-out data-[state=closed]/dialog:fade-out-0 data-[state=open]/dialog:fade-in-0"
       />
 
       <div
