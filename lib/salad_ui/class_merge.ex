@@ -27,6 +27,29 @@ defmodule SaladUI.ClassMerge do
   image here, so it doesn't remove a `bg-<color>` (tailwind-merge reads it as a
   color).
 
+  ## Your theme's scales
+
+  Like tailwind-merge, it only knows Tailwind's default scales. A theme
+  variable such as `--text-panel` makes `text-panel` a font size, but the
+  merge reads it as a colour and drops the component's `text-*` colour. Name
+  your own scale values in config, as with tailwind-merge's
+  `extendTailwindMerge({extend: {theme}})`:
+
+      # config/config.exs
+      config :salad_ui, :class_merge,
+        theme: [
+          text: ~w(panel meta body label),
+          color: ~w(star ok),
+          radius: ~w(control card)
+        ]
+
+  The keys are tailwind-merge's theme scales: `color`, `font`, `text`,
+  `font_weight`, `tracking`, `leading`, `breakpoint`, `container`, `spacing`,
+  `radius`, `shadow`, `inset_shadow`, `text_shadow`, `drop_shadow`, `blur`,
+  `perspective`, `aspect`, `ease` and `animate`.
+  The setting is read at compile time, so recompile SaladUI after changing it
+  (`mix deps.compile salad_ui --force`).
+
   Classes it doesn't recognise are kept as they are, in place. Results are
   cached in the `TwMerge.Cache` table, so `TwMerge.Cache` must be in your
   supervision tree, as before.
@@ -46,25 +69,42 @@ defmodule SaladUI.ClassMerge do
 
     @vv [:arbitrary_variable, :arbitrary_value]
 
-    @theme_color [:any]
-    @theme_font [:any_non_arbitrary]
-    @theme_text [:tshirt_size]
-    @theme_font_weight ~w(thin extralight light normal medium semibold bold extrabold black)
-    @theme_tracking ~w(tighter tight normal wide wider widest)
-    @theme_leading ~w(none tight snug normal relaxed loose)
-    @theme_breakpoint [:tshirt_size]
-    @theme_container [:tshirt_size]
-    @theme_spacing ["px", :number]
-    @theme_radius [:tshirt_size]
-    @theme_shadow [:tshirt_size]
-    @theme_inset_shadow [:tshirt_size]
-    @theme_text_shadow [:tshirt_size]
-    @theme_drop_shadow [:tshirt_size]
-    @theme_blur [:tshirt_size]
-    @theme_perspective ~w(dramatic near normal midrange distant none)
-    @theme_aspect ["video"]
-    @theme_ease ~w(in out in-out)
-    @theme_animate ~w(spin ping pulse bounce)
+    # An app's own theme scales (`--text-panel`, `--radius-card`, ...), from
+    # `config :salad_ui, :class_merge, theme: [...]`: tailwind-merge's
+    # `extendTailwindMerge({extend: {theme}})`. Each name is added to the scale.
+    @theme_keys ~w(color font text font_weight tracking leading breakpoint container spacing radius shadow inset_shadow text_shadow drop_shadow blur perspective aspect ease animate)a
+    @extend_theme :salad_ui |> Application.compile_env(:class_merge, []) |> Keyword.get(:theme, [])
+
+    @unknown_theme_keys Keyword.keys(@extend_theme) -- @theme_keys
+
+    if @unknown_theme_keys != [] do
+      raise ArgumentError,
+            "unknown theme scales #{inspect(@unknown_theme_keys)} in config :salad_ui, :class_merge; " <>
+              "expected any of #{inspect(@theme_keys)}"
+    end
+
+    @extend_theme Map.new(@extend_theme, fn {key, names} -> {key, Enum.map(List.wrap(names), &to_string/1)} end)
+
+    @theme_color [:any] ++ Map.get(@extend_theme, :color, [])
+    @theme_font [:any_non_arbitrary] ++ Map.get(@extend_theme, :font, [])
+    @theme_text [:tshirt_size] ++ Map.get(@extend_theme, :text, [])
+    @theme_font_weight ~w(thin extralight light normal medium semibold bold extrabold black) ++
+                         Map.get(@extend_theme, :font_weight, [])
+    @theme_tracking ~w(tighter tight normal wide wider widest) ++ Map.get(@extend_theme, :tracking, [])
+    @theme_leading ~w(none tight snug normal relaxed loose) ++ Map.get(@extend_theme, :leading, [])
+    @theme_breakpoint [:tshirt_size] ++ Map.get(@extend_theme, :breakpoint, [])
+    @theme_container [:tshirt_size] ++ Map.get(@extend_theme, :container, [])
+    @theme_spacing ["px", :number] ++ Map.get(@extend_theme, :spacing, [])
+    @theme_radius [:tshirt_size] ++ Map.get(@extend_theme, :radius, [])
+    @theme_shadow [:tshirt_size] ++ Map.get(@extend_theme, :shadow, [])
+    @theme_inset_shadow [:tshirt_size] ++ Map.get(@extend_theme, :inset_shadow, [])
+    @theme_text_shadow [:tshirt_size] ++ Map.get(@extend_theme, :text_shadow, [])
+    @theme_drop_shadow [:tshirt_size] ++ Map.get(@extend_theme, :drop_shadow, [])
+    @theme_blur [:tshirt_size] ++ Map.get(@extend_theme, :blur, [])
+    @theme_perspective ~w(dramatic near normal midrange distant none) ++ Map.get(@extend_theme, :perspective, [])
+    @theme_aspect ["video"] ++ Map.get(@extend_theme, :aspect, [])
+    @theme_ease ~w(in out in-out) ++ Map.get(@extend_theme, :ease, [])
+    @theme_animate ~w(spin ping pulse bounce) ++ Map.get(@extend_theme, :animate, [])
 
     @scale_break ~w(auto avoid all avoid-page page left right column)
     @scale_position ~w(center top bottom left right top-left left-top top-right right-top bottom-right right-bottom bottom-left left-bottom)

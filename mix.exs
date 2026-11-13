@@ -107,8 +107,9 @@ defmodule SaladUI.MixProject do
       {:ex_doc, "~> 0.24", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.10", only: [:dev, :test], runtime: false},
       {:tailwind, "~> 0.5", only: [:dev, :test], runtime: Mix.env() == :dev},
-      {:igniter, "~> 0.6"},
-      {:sourceror, "~> 1.9"}
+      # Optional: only the installer tasks (mix salad.setup/install/add) use them
+      {:igniter, "~> 0.6", optional: true},
+      {:sourceror, "~> 1.9", optional: true}
     ]
   end
 

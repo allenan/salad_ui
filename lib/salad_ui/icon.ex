@@ -13,19 +13,24 @@ defmodule SaladUI.Icon do
   Icons are extracted from your `assets/vendor/heroicons` directory and bundled
   within your compiled app.css by the icon plugin in your Tailwind config.
 
+  Other attributes (`aria-hidden`, `aria-label`, `role`, `data-*`, ...) are
+  rendered on the `<span>`.
+
   ## Examples
       <.icon name="hero-x-mark-solid" />
       <.icon name="hero-arrow-path" class="ms-1 size-3 animate-spin" />
+      <.icon name="hero-star" aria-hidden="true" />
   """
 
   use SaladUI, :component
 
   attr :name, :string, required: true
-  attr :class, :string, default: ""
+  attr :class, :any, default: nil
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={["shrink-0", @name, @class]}></span>
+    <span class={classes(["shrink-0", @name, @class])} {@rest}></span>
     """
   end
 end

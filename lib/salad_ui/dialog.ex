@@ -150,6 +150,7 @@ defmodule SaladUI.Dialog do
     default: nil,
     doc: "Handler for dialog closed event. Support both server event handler and JS command struct"
 
+  attr :rest, :global
   slot :inner_block, required: true
 
   def dialog(assigns) do
@@ -179,19 +180,28 @@ defmodule SaladUI.Dialog do
       data-event-mappings={@event_map}
       phx-hook="SaladUI"
       data-part="root"
+      {@rest}
     >
       {render_slot(@inner_block)}
     </div>
     """
   end
 
+  @doc """
+  Opens the dialog when clicked. Renders a `div` by default; pass `as` to
+  render a tag or function component in its place (shadcn's `asChild`).
+
+  With `as={&button/1}` (or `as="button"`) it gets `type="button"`, so it
+  never submits an enclosing form; pass `type` to override.
+  """
   attr :class, :string, default: nil
   attr :as, :any, default: "div"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   slot :inner_block, required: true
   attr :rest, :global, include: ~w(variant size)
 
   def dialog_trigger(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -199,6 +209,7 @@ defmodule SaladUI.Dialog do
       data-part="trigger"
       data-action="open"
       tag={@as}
+      type={@type}
       class={classes(["", @class])}
       {@rest}
     >
@@ -213,6 +224,7 @@ defmodule SaladUI.Dialog do
     default: true,
     doc: "render the close button in the top-right corner"
 
+  attr :rest, :global, doc: "rendered on the content panel (`data-slot=\"dialog-content\"`)"
   slot :inner_block, required: true
 
   def dialog_content(assigns) do
@@ -233,6 +245,7 @@ defmodule SaladUI.Dialog do
             @class
           ])
         }
+        {@rest}
       >
         {render_slot(@inner_block)}
 
@@ -267,6 +280,7 @@ defmodule SaladUI.Dialog do
   end
 
   attr :class, :string, default: nil
+  attr :rest, :global
   slot :inner_block, required: true
 
   def dialog_header(assigns) do
@@ -274,6 +288,7 @@ defmodule SaladUI.Dialog do
     <div
       data-slot="dialog-header"
       class={classes(["flex flex-col gap-2 text-center sm:text-start", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
     </div>
@@ -281,6 +296,7 @@ defmodule SaladUI.Dialog do
   end
 
   attr :class, :string, default: nil
+  attr :rest, :global
   slot :inner_block, required: true
 
   def dialog_title(assigns) do
@@ -289,6 +305,7 @@ defmodule SaladUI.Dialog do
       data-slot="dialog-title"
       data-part="title"
       class={classes(["text-lg leading-none font-semibold", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
     </h3>
@@ -296,6 +313,7 @@ defmodule SaladUI.Dialog do
   end
 
   attr :class, :string, default: nil
+  attr :rest, :global
   slot :inner_block, required: true
 
   def dialog_description(assigns) do
@@ -304,6 +322,7 @@ defmodule SaladUI.Dialog do
       data-slot="dialog-description"
       data-part="description"
       class={classes(["text-sm text-muted-foreground", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
     </p>
@@ -316,6 +335,7 @@ defmodule SaladUI.Dialog do
     default: false,
     doc: "append an outline \"Close\" button that closes the dialog"
 
+  attr :rest, :global
   slot :inner_block
 
   def dialog_footer(assigns) do
@@ -326,6 +346,7 @@ defmodule SaladUI.Dialog do
     <div
       data-slot="dialog-footer"
       class={classes(["flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", @class])}
+      {@rest}
     >
       {render_slot(@inner_block)}
       <button
@@ -359,11 +380,12 @@ defmodule SaladUI.Dialog do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def dialog_close(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -371,6 +393,7 @@ defmodule SaladUI.Dialog do
       data-part="close"
       data-action="close"
       tag={@as}
+      type={@type}
       class={@class}
       {@rest}
     >

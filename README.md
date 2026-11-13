@@ -43,6 +43,8 @@
 def deps do
   [
     {:salad_ui, "~> 1.0.0-beta.3"},
+    # the installer tasks below need igniter (an optional dependency)
+    {:igniter, "~> 0.6", only: [:dev, :test]}
   ]
 end
 ```

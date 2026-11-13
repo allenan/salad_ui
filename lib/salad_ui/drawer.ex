@@ -195,11 +195,12 @@ defmodule SaladUI.Drawer do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def drawer_trigger(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -207,6 +208,7 @@ defmodule SaladUI.Drawer do
       data-part="trigger"
       data-action="open"
       tag={@as}
+      type={@type}
       class={@class}
       {@rest}
     >
@@ -358,11 +360,12 @@ defmodule SaladUI.Drawer do
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def drawer_close(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -370,6 +373,7 @@ defmodule SaladUI.Drawer do
       data-part="close"
       data-action="close"
       tag={@as}
+      type={@type}
       class={@class}
       {@rest}
     >

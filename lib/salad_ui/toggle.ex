@@ -22,8 +22,8 @@ defmodule SaladUI.Toggle do
 
   ## Examples:
 
-      <.toggle aria-label="Toggle bold">B</.toggle>
-      <.toggle value={true} size="sm" variant="outline">Bold</.toggle>
+      <.toggle id="bold" aria-label="Toggle bold">B</.toggle>
+      <.toggle id="bold-sm" value={true} size="sm" variant="outline">Bold</.toggle>
       <.toggle field={@form[:bold]}>Bold</.toggle>
 
   ## Component events
@@ -43,8 +43,9 @@ defmodule SaladUI.Toggle do
 
   ## Attributes
 
-  * `:id` - id of the toggle `<button>` (generated when omitted; the hook needs
-    one). The hidden checkbox gets `"<id>-input"`.
+  * `:id` - id of the toggle `<button>`. Required unless `field` gives one:
+    the hook needs an id that stays the same across renders. The hidden
+    checkbox gets `"<id>-input"`.
   * `:name` - form name; the toggle submits `"true"` when on and `"false"` when off
   * `:value` / `:default-value` - whether the toggle starts on
   * `:field` - a Phoenix form field; when it has errors (and the user has
@@ -57,7 +58,7 @@ defmodule SaladUI.Toggle do
 
   Every other global attribute (e.g. `aria-label`) is rendered on the `<button>`.
   """
-  attr :id, :any, default: nil
+  attr :id, :any, default: nil, doc: "required unless `field` is given (the hook needs a stable id)"
   attr :name, :any, default: nil
   attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
@@ -82,10 +83,10 @@ defmodule SaladUI.Toggle do
       |> assign(:options, json(%{controlled: controlled}))
       |> prepare_assign()
       |> put_aria_invalid()
+      |> require_id!("toggle/1")
 
     assigns =
       assigns
-      |> assign(:id, assigns.id || "toggle-#{System.unique_integer([:positive])}")
       |> assign_new(:checked, fn -> Phoenix.HTML.Form.normalize_value("checkbox", assigns.value) end)
       |> assign(:variant_class, toggle_variants(assigns))
       |> assign(:event_map, json(event_mappings(assigns)))

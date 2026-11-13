@@ -531,7 +531,7 @@ defmodule SaladUI.DataSlotTest do
 
     assert check(
              ~H"""
-             <.radio_group name="r">
+             <.radio_group id="r" name="r">
                <.radio_group_item id="r1" value="a" />
              </.radio_group>
              """,
@@ -726,7 +726,7 @@ defmodule SaladUI.DataSlotTest do
 
   test "toggle" do
     assigns = %{}
-    assert check(~H"<.toggle>B</.toggle>", ~w(toggle)) == {[], []}
+    assert check(~H|<.toggle id="t">B</.toggle>|, ~w(toggle)) == {[], []}
   end
 
   test "toggle group" do
@@ -734,7 +734,7 @@ defmodule SaladUI.DataSlotTest do
 
     assert check(
              ~H"""
-             <.toggle_group :let={builder} name="tg" value="a">
+             <.toggle_group :let={builder} id="tg" name="tg" value="a">
                <.toggle_group_item value="a" builder={builder}>A</.toggle_group_item>
              </.toggle_group>
              """,
@@ -747,7 +747,7 @@ defmodule SaladUI.DataSlotTest do
 
     assert check(
              ~H"""
-             <.tooltip>
+             <.tooltip id="tip">
                <.tooltip_trigger>T</.tooltip_trigger>
                <.tooltip_content>C</.tooltip_content>
              </.tooltip>

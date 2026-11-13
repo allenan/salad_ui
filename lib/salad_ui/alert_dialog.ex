@@ -151,15 +151,20 @@ defmodule SaladUI.AlertDialog do
   end
 
   @doc """
-  The trigger element that opens the alert dialog.
+  The trigger element that opens the alert dialog. Renders a `div` by
+  default; pass `as` to render a tag or function component in its place.
+
+  With `as={&button/1}` (or `as="button"`) it gets `type="button"`, so it
+  never submits an enclosing form; pass `type` to override.
   """
   attr :class, :string, default: nil
   attr :as, :any, default: "div"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   slot :inner_block, required: true
   attr :rest, :global, include: ~w(variant size)
 
   def alert_dialog_trigger(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -167,6 +172,7 @@ defmodule SaladUI.AlertDialog do
       data-part="trigger"
       data-action="open"
       tag={@as}
+      type={@type}
       class={classes(["", @class])}
       {@rest}
     >

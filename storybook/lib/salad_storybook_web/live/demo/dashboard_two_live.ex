@@ -37,7 +37,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               Acme Inc
             </span>
           </.link>
-          <.tooltip>
+          <.tooltip id="dashboard-two-nav-tooltip-1">
             <.tooltip_trigger>
               <.link
                 href="#"
@@ -53,7 +53,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               Dashboard
             </.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-two-nav-tooltip-2">
             <.tooltip_trigger>
               <.link
                 href="#"
@@ -69,7 +69,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               Orders
             </.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-two-nav-tooltip-3">
             <.tooltip_trigger>
               <.link
                 href="#"
@@ -85,7 +85,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               Products
             </.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-two-nav-tooltip-4">
             <.tooltip_trigger>
               <.link
                 href="#"
@@ -101,7 +101,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
               Customers
             </.tooltip_content>
           </.tooltip>
-          <.tooltip>
+          <.tooltip id="dashboard-two-nav-tooltip-5">
             <.tooltip_trigger>
               <.link
                 href="#"
@@ -119,7 +119,7 @@ defmodule SaladStorybookWeb.Demo.DashboardTwo do
           </.tooltip>
         </nav>
         <nav class="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-          <.tooltip>
+          <.tooltip id="dashboard-two-nav-tooltip-6">
             <.tooltip_trigger>
               <.link
                 href="#"

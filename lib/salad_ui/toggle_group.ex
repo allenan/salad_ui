@@ -86,7 +86,7 @@ defmodule SaladUI.ToggleGroup do
   * `:loop` - whether keyboard focus wraps around (default `true`)
   * `:disabled` - disables every item
   """
-  attr :id, :string, default: nil, doc: "the hook needs an id; one is generated when omitted"
+  attr :id, :string, default: nil, doc: "required unless `field` is given (the hook needs a stable id)"
   attr :name, :string, default: nil
   attr :type, :string, values: [nil, "single", "multiple"], default: nil, doc: ~s{"single" (default) or "multiple"}
 
@@ -125,9 +125,10 @@ defmodule SaladUI.ToggleGroup do
       |> assign(:multiple, multiple)
       |> prepare_assign()
       |> put_aria_invalid()
+      |> require_id!("toggle_group/1")
 
     value = normalize_value!(assigns.value, multiple)
-    id = assigns.id || "toggle-group-#{System.unique_integer([:positive])}"
+    id = assigns.id
 
     name = input_name(assigns.name, multiple)
 

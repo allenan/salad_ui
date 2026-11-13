@@ -1,228 +1,245 @@
-defmodule Mix.Tasks.Salad.Setup do
-  @moduledoc """
-  Set up SaladUI in a Phoenix LiveView project.
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Tasks.Salad.Setup do
+    @moduledoc """
+    Set up SaladUI in a Phoenix LiveView project.
 
-  This task configures the complete SaladUI development environment by:
+    This task configures the complete SaladUI development environment by:
 
-  * Adding TwMerge.Cache to the application supervision tree
-  * Configuring CSS color scheme variables (default: gray)
-  * Copying SaladUI CSS files to assets/css/
-  * Patching Tailwind CSS entrypoint with SaladUI-specific settings
-  * Installing tw-animate-css utilities
-  * Setting up JavaScript imports and LiveView hooks
+    * Adding TwMerge.Cache to the application supervision tree
+    * Configuring CSS color scheme variables (default: gray)
+    * Copying SaladUI CSS files to assets/css/
+    * Patching Tailwind CSS entrypoint with SaladUI-specific settings
+    * Installing tw-animate-css utilities
+    * Setting up JavaScript imports and LiveView hooks
 
-  ## Usage
+    ## Usage
 
-      mix salad.setup
-      mix salad.setup --color-scheme slate
-      mix salad.setup -c blue
+        mix salad.setup
+        mix salad.setup --color-scheme slate
+        mix salad.setup -c blue
 
-  ## Options
+    ## Options
 
-    * `--color-scheme` (or `-c`) - Color scheme to use (default: "gray")
-      Available schemes: gray, slate, stone, neutral, red, orange, amber,
-      yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet,
-      purple, fuchsia, pink, rose
+      * `--color-scheme` (or `-c`) - Color scheme to use (default: "gray")
+        Available schemes: gray, slate, stone, neutral, red, orange, amber,
+        yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet,
+        purple, fuchsia, pink, rose
 
-  ## What it does
+    ## What it does
 
-  1. **TwMerge Integration** - Adds TwMerge.Cache as a supervised process for
-     CSS class merging functionality
+    1. **TwMerge Integration** - Adds TwMerge.Cache as a supervised process for
+       CSS class merging functionality
 
-  2. **CSS Setup**
-     - Copies salad_ui.css to assets/css/
-     - Adds color scheme variables to app.css
-     - Imports SaladUI styles into the main CSS file
+    2. **CSS Setup**
+       - Copies salad_ui.css to assets/css/
+       - Adds color scheme variables to app.css
+       - Imports SaladUI styles into the main CSS file
 
-  3. **Tailwind Configuration**
-     - Patches app.css with SaladUI-specific sources and theme tokens
-     - Copies tailwind.colors.json with design tokens for compatibility
-     - Adds @tailwindcss/typography and tw-animate-css utilities
+    3. **Tailwind Configuration**
+       - Patches app.css with SaladUI-specific sources and theme tokens
+       - Copies tailwind.colors.json with design tokens for compatibility
+       - Adds @tailwindcss/typography and tw-animate-css utilities
 
-  4. **JavaScript Setup**
-     - Downloads tw-animate-css
-     - Patches app.js to import SaladUI components and hooks
-     - Registers SaladUIHook with LiveView
+    4. **JavaScript Setup**
+       - Downloads tw-animate-css
+       - Patches app.js to import SaladUI components and hooks
+       - Registers SaladUIHook with LiveView
 
-  ## After running this task
+    ## After running this task
 
-  You can immediately start using SaladUI components in your templates:
+    You can immediately start using SaladUI components in your templates:
 
-      <.button>Click me</.button>
-      <.dialog id="my-dialog">
-        <.dialog_content>
-          <p>Hello world!</p>
-        </.dialog_content>
-      </.dialog>
+        <.button>Click me</.button>
+        <.dialog id="my-dialog">
+          <.dialog_content>
+            <p>Hello world!</p>
+          </.dialog_content>
+        </.dialog>
 
-  ## Files modified
+    ## Files modified
 
-  * `lib/[app]/application.ex` - Adds TwMerge.Cache
-  * `assets/css/app.css` - Adds color scheme and imports
-  * `assets/css/salad_ui.css` - Created
-  * `assets/css/app.css` - Updated with Tailwind v4 sources, plugins, and theme tokens
-  * `assets/tailwind.colors.json` - Created for compatibility
-  * `assets/js/app.js` - Adds SaladUI imports and hooks
-  * `assets/vendor/tw-animate.css` - Downloaded
+    * `lib/[app]/application.ex` - Adds TwMerge.Cache
+    * `assets/css/app.css` - Adds color scheme and imports
+    * `assets/css/salad_ui.css` - Created
+    * `assets/css/app.css` - Updated with Tailwind v4 sources, plugins, and theme tokens
+    * `assets/tailwind.colors.json` - Created for compatibility
+    * `assets/js/app.js` - Adds SaladUI imports and hooks
+    * `assets/vendor/tw-animate.css` - Downloaded
 
-  ## Example
+    ## Example
 
-      # Use default gray color scheme
-      mix salad.setup
+        # Use default gray color scheme
+        mix salad.setup
 
-      # Use slate color scheme
-      mix salad.setup --color-scheme slate
+        # Use slate color scheme
+        mix salad.setup --color-scheme slate
 
-      # Short form
-      mix salad.setup -c blue
-  """
-  use Igniter.Mix.Task
+        # Short form
+        mix salad.setup -c blue
+    """
+    use Igniter.Mix.Task
 
-  alias SaladUI.Patcher.TailwindPatcher
+    alias SaladUI.Patcher.TailwindPatcher
 
-  @impl Igniter.Mix.Task
-  def igniter(igniter) do
-    {opts, _args} =
-      OptionParser.parse!(igniter.args.argv,
-        strict: [color_scheme: :string, yes: :boolean],
-        aliases: [c: :color_scheme, y: :yes]
-      )
+    @impl Igniter.Mix.Task
+    def igniter(igniter) do
+      {opts, _args} =
+        OptionParser.parse!(igniter.args.argv,
+          strict: [color_scheme: :string, yes: :boolean],
+          aliases: [c: :color_scheme, y: :yes]
+        )
 
-    color_scheme = opts[:color_scheme] || "gray"
+      color_scheme = opts[:color_scheme] || "gray"
 
-    igniter
-    |> patch_tw_merge()
-    |> patch_css_color_scheme(color_scheme)
-    |> copy_salad_ui_css()
-    |> patch_css_import_salad_ui()
-    |> patch_tailwind_config()
-    |> copy_tailwind_colors()
-    |> SaladUI.Mix.Tasks.TwAnimateInstaller.install()
-    |> patch_app_js()
-  end
-
-  defp patch_tw_merge(igniter) do
-    Igniter.Project.Application.add_new_child(igniter, TwMerge.Cache)
-  end
-
-  defp patch_css_color_scheme(igniter, color_scheme) do
-    css_file = "./assets/css/app.css"
-    IO.puts("Patching #{css_file}")
-
-    scheme_css = "colors/#{color_scheme}.css" |> assets_path() |> File.read!()
-    TailwindPatcher.patch_color_scheme(css_file, scheme_css)
-
-    igniter
-  end
-
-  defp copy_salad_ui_css(igniter) do
-    source_file = assets_path("salad_ui.css")
-    target_file = "./assets/css/salad_ui.css"
-
-    Igniter.copy_template(igniter, source_file, target_file, [])
-  end
-
-  defp patch_css_import_salad_ui(igniter) do
-    css_file = "./assets/css/app.css"
-    content = File.read!(css_file)
-    import_snippet = "@import \"./salad_ui.css\";\n"
-
-    IO.puts("Patching #{css_file}")
-    IO.puts("Add:  #{import_snippet}")
-
-    if !String.contains?(content, import_snippet) do
-      import_regex = ~r/(@import.*?;\n)/
-      imports = Regex.scan(import_regex, content)
-
-      updated_content =
-        case imports do
-          [] ->
-            # No imports found, return original content
-            import_snippet <> "\n" <> content
-
-          _ ->
-            # Get the last import statement
-            last_import = imports |> List.last() |> List.first()
-
-            # Replace only the last occurrence
-            # First, split the string at the last import
-            [before_last_import, after_last_import] = String.split(content, last_import, parts: 2)
-
-            # Reconstruct the string with the inserted content after the last import
-            before_last_import <> last_import <> import_snippet <> after_last_import
-        end
-
-      File.write(css_file, updated_content)
+      igniter
+      |> patch_tw_merge()
+      |> patch_css_color_scheme(color_scheme)
+      |> copy_salad_ui_css()
+      |> patch_css_import_salad_ui()
+      |> patch_tailwind_config()
+      |> copy_tailwind_colors()
+      |> SaladUI.Mix.Tasks.TwAnimateInstaller.install()
+      |> patch_app_js()
     end
 
-    igniter
+    defp patch_tw_merge(igniter) do
+      Igniter.Project.Application.add_new_child(igniter, TwMerge.Cache)
+    end
+
+    defp patch_css_color_scheme(igniter, color_scheme) do
+      css_file = "./assets/css/app.css"
+      IO.puts("Patching #{css_file}")
+
+      scheme_css = "colors/#{color_scheme}.css" |> assets_path() |> File.read!()
+      TailwindPatcher.patch_color_scheme(css_file, scheme_css)
+
+      igniter
+    end
+
+    defp copy_salad_ui_css(igniter) do
+      source_file = assets_path("salad_ui.css")
+      target_file = "./assets/css/salad_ui.css"
+
+      Igniter.copy_template(igniter, source_file, target_file, [])
+    end
+
+    defp patch_css_import_salad_ui(igniter) do
+      css_file = "./assets/css/app.css"
+      content = File.read!(css_file)
+      import_snippet = "@import \"./salad_ui.css\";\n"
+
+      IO.puts("Patching #{css_file}")
+      IO.puts("Add:  #{import_snippet}")
+
+      if !String.contains?(content, import_snippet) do
+        import_regex = ~r/(@import.*?;\n)/
+        imports = Regex.scan(import_regex, content)
+
+        updated_content =
+          case imports do
+            [] ->
+              # No imports found, return original content
+              import_snippet <> "\n" <> content
+
+            _ ->
+              # Get the last import statement
+              last_import = imports |> List.last() |> List.first()
+
+              # Replace only the last occurrence
+              # First, split the string at the last import
+              [before_last_import, after_last_import] = String.split(content, last_import, parts: 2)
+
+              # Reconstruct the string with the inserted content after the last import
+              before_last_import <> last_import <> import_snippet <> after_last_import
+          end
+
+        File.write(css_file, updated_content)
+      end
+
+      igniter
+    end
+
+    defp copy_tailwind_colors(igniter) do
+      source_file = assets_path("tailwind.colors.json")
+      target_file = "./assets/tailwind.colors.json"
+
+      Igniter.copy_template(igniter, source_file, target_file, [])
+    end
+
+    defp patch_tailwind_config(igniter) do
+      css_path = "./assets/css/app.css"
+      TailwindPatcher.patch(css_path)
+
+      igniter
+    end
+
+    defp assets_path(directory) do
+      Path.join([:code.priv_dir(:salad_ui), "static/assets", directory])
+    end
+
+    # Patch app.js to import library JavaScript
+    @js_import """
+    import SaladUI from "salad_ui";
+    import "salad_ui/components/dialog";
+    import "salad_ui/components/drawer";
+    import "salad_ui/components/select";
+    import "salad_ui/components/combobox";
+    import "salad_ui/components/command";
+    import "salad_ui/components/tabs";
+    import "salad_ui/components/carousel";
+    import "salad_ui/components/radio_group";
+    import "salad_ui/components/popover";
+    import "salad_ui/components/hover-card";
+    import "salad_ui/components/collapsible";
+    import "salad_ui/components/tooltip";
+    import "salad_ui/components/accordion";
+    import "salad_ui/components/slider";
+    import "salad_ui/components/resizable";
+    import "salad_ui/components/input_otp";
+    import "salad_ui/components/checkbox";
+    import "salad_ui/components/switch";
+    import "salad_ui/components/dropdown_menu";
+    import "salad_ui/components/context_menu";
+    import "salad_ui/components/menubar";
+    import "salad_ui/components/navigation_menu";
+    import "salad_ui/components/toast";
+    import "salad_ui/components/toast-flash";
+    import "salad_ui/components/input_group";
+    import "salad_ui/components/code_block";
+    import "salad_ui/components/calendar";
+    import "salad_ui/components/questionnaire";
+    import "salad_ui/components/message_scroller";
+    import "salad_ui/components/toggle";
+    import "salad_ui/components/toggle_group";
+    import "salad_ui/components/sidebar";
+    """
+    @js_hooks "SaladUI: SaladUI.SaladUIHook"
+    defp patch_app_js(igniter) do
+      app_js_path = "./assets/js/app.js"
+
+      js_content =
+        app_js_path
+        |> File.read!()
+        |> SaladUI.Patcher.JSPatcher.patch_js(@js_import, @js_hooks)
+
+      File.write!(app_js_path, js_content)
+
+      igniter
+    end
   end
+else
+  defmodule Mix.Tasks.Salad.Setup do
+    @shortdoc "Sets up SaladUI as a library in a Phoenix app | Install `igniter` to use"
+    @moduledoc """
+    Sets up SaladUI as a library in a Phoenix app.
 
-  defp copy_tailwind_colors(igniter) do
-    source_file = assets_path("tailwind.colors.json")
-    target_file = "./assets/tailwind.colors.json"
+    This task needs the `igniter` package, which SaladUI lists as an optional
+    dependency. Add `{:igniter, "~> 0.6", only: [:dev, :test]}` to your deps
+    (or run `mix igniter.install salad_ui`) and try again.
+    """
+    use Mix.Task
 
-    Igniter.copy_template(igniter, source_file, target_file, [])
-  end
-
-  defp patch_tailwind_config(igniter) do
-    css_path = "./assets/css/app.css"
-    TailwindPatcher.patch(css_path)
-
-    igniter
-  end
-
-  defp assets_path(directory) do
-    Path.join([:code.priv_dir(:salad_ui), "static/assets", directory])
-  end
-
-  # Patch app.js to import library JavaScript
-  @js_import """
-  import SaladUI from "salad_ui";
-  import "salad_ui/components/dialog";
-  import "salad_ui/components/drawer";
-  import "salad_ui/components/select";
-  import "salad_ui/components/combobox";
-  import "salad_ui/components/command";
-  import "salad_ui/components/tabs";
-  import "salad_ui/components/carousel";
-  import "salad_ui/components/radio_group";
-  import "salad_ui/components/popover";
-  import "salad_ui/components/hover-card";
-  import "salad_ui/components/collapsible";
-  import "salad_ui/components/tooltip";
-  import "salad_ui/components/accordion";
-  import "salad_ui/components/slider";
-  import "salad_ui/components/resizable";
-  import "salad_ui/components/input_otp";
-  import "salad_ui/components/checkbox";
-  import "salad_ui/components/switch";
-  import "salad_ui/components/dropdown_menu";
-  import "salad_ui/components/context_menu";
-  import "salad_ui/components/menubar";
-  import "salad_ui/components/navigation_menu";
-  import "salad_ui/components/toast";
-  import "salad_ui/components/toast-flash";
-  import "salad_ui/components/input_group";
-  import "salad_ui/components/code_block";
-  import "salad_ui/components/calendar";
-  import "salad_ui/components/questionnaire";
-  import "salad_ui/components/message_scroller";
-  import "salad_ui/components/toggle";
-  import "salad_ui/components/toggle_group";
-  import "salad_ui/components/sidebar";
-  """
-  @js_hooks "SaladUI: SaladUI.SaladUIHook"
-  defp patch_app_js(igniter) do
-    app_js_path = "./assets/js/app.js"
-
-    js_content =
-      app_js_path
-      |> File.read!()
-      |> SaladUI.Patcher.JSPatcher.patch_js(@js_import, @js_hooks)
-
-    File.write!(app_js_path, js_content)
-
-    igniter
+    @impl Mix.Task
+    def run(_argv), do: SaladUI.Mix.Tasks.IgniterMissing.run("salad.setup")
   end
 end
