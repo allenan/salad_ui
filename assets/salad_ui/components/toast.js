@@ -362,7 +362,10 @@ class ToastComponent extends Component {
   }
 
   createMobileQuery() {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function")
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
       return null;
     return window.matchMedia(`(max-width: ${this.getBreakpoint()}px)`);
   }

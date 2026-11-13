@@ -455,7 +455,9 @@ for (const controlled of [false, true]) {
     });
     const bold = getItem("bold");
     const changes = [];
-    bold.querySelector("input").addEventListener("change", () => changes.push(1));
+    bold
+      .querySelector("input")
+      .addEventListener("change", () => changes.push(1));
 
     click(bold);
 
@@ -504,7 +506,10 @@ test("required multiple: the last pressed item cannot be released", () => {
   const { component, getItem, pushed } = buildGroup({
     type: "multiple",
     required: true,
-    items: [{ value: "bold", pressed: true }, { value: "italic", pressed: true }],
+    items: [
+      { value: "bold", pressed: true },
+      { value: "italic", pressed: true },
+    ],
   });
 
   click(getItem("bold"));

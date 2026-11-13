@@ -1781,7 +1781,10 @@ test("breakpoint moves the phone layout's media query", () => {
     assert.equal(viewport.dataset.mobile, "true");
 
     // A per-toast position's viewport gets the layout too, and follows it.
-    component.handleCommand("add", { title: "Elsewhere", position: "top-left" });
+    component.handleCommand("add", {
+      title: "Elsewhere",
+      position: "top-left",
+    });
     const topLeft = document.querySelector(
       '[data-part="viewport"][data-position="top-left"]',
     );
