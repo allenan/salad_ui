@@ -321,6 +321,21 @@ class PositionedElement {
       this.clickOutsideMonitor.updateElements([this.element, this.reference]);
     }
 
+    // While active, follow the new reference's scroll containers and size
+    // (a shared menu moving from one row's trigger to another's).
+    if (this.active) {
+      this.scrollManager.stop();
+      this.scrollManager.start(this.reference, this.element);
+      this.element.style.setProperty(
+        "--salad-reference-width",
+        this.reference.offsetWidth + "px",
+      );
+      this.element.style.setProperty(
+        "--salad-reference-height",
+        this.reference.offsetHeight + "px",
+      );
+    }
+
     this.update();
     return this;
   }

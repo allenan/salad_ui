@@ -6,6 +6,15 @@ import Component, {
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
 import { ModalLayer } from "../core/modal-layer.js";
+import {
+  CONTEXT_TARGETS,
+  DetachedAnchor,
+  focusFallback,
+  isTriggerDisabled,
+  listen,
+  readContext,
+  resolveAnchor,
+} from "../core/detached-triggers.js";
 import Menu from "./menu.js";
 
 // Open sub-menus and focus, handed from the instance torn down by a LiveView
@@ -16,6 +25,9 @@ const pendingRestores = new WeakMap();
 // Radix's --radix-dropdown-menu-content-available-height, so a long menu near
 // the viewport edge scrolls instead of running off-screen.
 const AVAILABLE_HEIGHT_VAR = "--dropdown-menu-content-available-height";
+
+// Keys that open a closed menu from its trigger (focusing the first item).
+const OPEN_KEYS = ["ArrowDown", " ", "Enter"];
 
 /**
  * DropdownMenuComponent class for SaladUI framework
@@ -32,6 +44,23 @@ class DropdownMenuComponent extends Component {
     this.handleTriggerClick = this.handleTriggerClick.bind(this);
     this.handleTriggerKeydown = this.handleTriggerKeydown.bind(this);
 
+    // Shared menus: the detached trigger (`data-salad-for`, outside the
+    // root) the open menu is anchored to, and the context map it carries.
+    this.detached = new DetachedAnchor({
+      controls: () => this.content?.id,
+      // The root runs an item's JS command when the content is portaled
+      // out of the LiveView.
+      targets: () => [
+        this.el,
+        ...(this.positioner?.querySelectorAll(CONTEXT_TARGETS) ?? []),
+      ],
+      onRemoved: () => {
+        if (this.state === "open" && !this.destroyed) {
+          this.transition("close", { anchorRemoved: true });
+        }
+      },
+    });
+
     // The content is labelled by the trigger (aria-labelledby), as in Radix.
     // Generated ids are stripped again in beforeUpdate().
     assignId(this.trigger, `${this.el.id}-trigger`);
@@ -47,6 +76,7 @@ class DropdownMenuComponent extends Component {
           hookContext,
           rootEl: this.el,
           onItemSelect: this.onItemSelect.bind(this),
+          getContext: () => this.context,
         })
       : null;
 
@@ -110,7 +140,8 @@ class DropdownMenuComponent extends Component {
             controls: () => this.content?.id || null,
           },
           open: {
-            expanded: "true",
+            // Open at a detached trigger, the nested trigger stays collapsed.
+            expanded: () => (this.activeTrigger ? "false" : "true"),
           },
           closed: {
             expanded: "false",
@@ -119,7 +150,7 @@ class DropdownMenuComponent extends Component {
         content: {
           all: {
             role: "menu",
-            labelledby: () => this.trigger?.id || null,
+            labelledby: () => this.anchorEl?.id || null,
           },
         },
       },
@@ -135,8 +166,34 @@ class DropdownMenuComponent extends Component {
       .filter((part) => !part.closest("[data-part='sub']"));
   }
 
+  /**
+   * What the open menu is positioned against and returns focus to: the
+   * detached trigger it was opened from, else the nested trigger.
+   */
+  get anchorEl() {
+    return this.activeTrigger || this.trigger;
+  }
+
+  // The detached trigger the menu is open for (null: the nested one).
+  get activeTrigger() {
+    return this.detached?.trigger || null;
+  }
+
+  // The open menu's context map, for the items' event payloads.
+  get context() {
+    return this.detached?.context || null;
+  }
+
   initializePositionedElement() {
-    if (this.positioner && this.trigger && !this.positionedElement) {
+    const anchor = this.anchorEl;
+    if (this.positionedElement && anchor) {
+      if (this.positionedElement.reference !== anchor) {
+        this.positionedElement.updateReference(anchor);
+      }
+      return;
+    }
+
+    if (this.positioner && anchor && !this.positionedElement) {
       const side = this.positioner.getAttribute("data-side") || "bottom";
       const align = this.positioner.getAttribute("data-align") || "center";
       const sideOffset = parseInt(
@@ -155,32 +212,27 @@ class DropdownMenuComponent extends Component {
         portalContainer = document.querySelector(this.options.portalContainer);
       }
 
-      this.positionedElement = new PositionedElement(
-        this.positioner,
-        this.trigger,
-        {
-          placement: side,
-          alignment: align,
-          sideOffset,
-          alignOffset,
-          flip: true,
-          usePortal,
-          portalContainer: portalContainer || document.body,
-          trapFocus: false,
-          onOutsideClick: () =>
-            this.transition("close", { restoreFocus: false }),
-          // The side the content actually opened on, after a flip, so the
-          // slide-in animation comes from the trigger.
-          onPosition: ({ placement }) =>
-            this.content?.setAttribute("data-side", placement),
-          // Not a custom placement (returns null): it caps the content
-          // height before every position pass (open, scroll, resize).
-          computePosition: () => {
-            this.updateAvailableHeight(side, align, sideOffset);
-            return null;
-          },
+      this.positionedElement = new PositionedElement(this.positioner, anchor, {
+        placement: side,
+        alignment: align,
+        sideOffset,
+        alignOffset,
+        flip: true,
+        usePortal,
+        portalContainer: portalContainer || document.body,
+        trapFocus: false,
+        onOutsideClick: () => this.transition("close", { restoreFocus: false }),
+        // The side the content actually opened on, after a flip, so the
+        // slide-in animation comes from the trigger.
+        onPosition: ({ placement }) =>
+          this.content?.setAttribute("data-side", placement),
+        // Not a custom placement (returns null): it caps the content
+        // height before every position pass (open, scroll, resize).
+        computePosition: () => {
+          this.updateAvailableHeight(side, align, sideOffset);
+          return null;
         },
-      );
+      });
     }
   }
 
@@ -192,9 +244,10 @@ class DropdownMenuComponent extends Component {
    * or right), the room in the direction the content grows from its `align`.
    */
   updateAvailableHeight(side, align, sideOffset) {
-    if (!this.content || !this.trigger) return;
+    const anchor = this.anchorEl;
+    if (!this.content || !anchor) return;
 
-    const rect = this.trigger.getBoundingClientRect();
+    const rect = anchor.getBoundingClientRect();
     const height = window.innerHeight;
     let room;
     if (side === "left" || side === "right") {
@@ -217,10 +270,23 @@ class DropdownMenuComponent extends Component {
   afterMount() {
     const restore = pendingRestores.get(this.el);
     pendingRestores.delete(this.el);
+    if (this.state !== "open") return;
 
-    if (this.state === "open") {
-      this.activateOpenState(false, restore);
+    this.detached.restore(restore?.detached);
+    // The patch that rebuilt the menu also removed its trigger.
+    if (this.activeTrigger && !this.activeTrigger.isConnected) {
+      this.previousFocusEl = restore.previousFocusEl;
+      this.transition("close", { anchorRemoved: true });
+      return;
     }
+
+    // Rendered open with only detached triggers: nothing to anchor to.
+    if (!this.anchorEl) {
+      this.transition("close", { restoreFocus: false });
+      return;
+    }
+
+    this.activateOpenState(false, restore);
   }
 
   // Runs right before LiveView patches this element; updated() then rebuilds
@@ -230,8 +296,13 @@ class DropdownMenuComponent extends Component {
       pendingRestores.set(this.el, {
         menu: this.menu?.snapshot(),
         previousFocusEl: this.previousFocusEl,
+        detached: this.detached.snapshot(),
       });
     }
+
+    // The patch reverts the items to the server's markup; the rebuilt
+    // instance writes the context back (activateOpenState()).
+    this.detached.clearValues();
 
     // With `use-portal` the content lives outside the root; LiveView can
     // only patch it back inside. The rebuilt instance portals it again
@@ -246,6 +317,12 @@ class DropdownMenuComponent extends Component {
     this.trigger?.addEventListener("click", this.handleTriggerClick);
     this.trigger?.addEventListener("keydown", this.handleTriggerKeydown);
     this.positioner?.addEventListener("keydown", this.handleContentKeydown);
+    // Detached triggers anywhere on the page, through one document listener
+    // per event type shared by every instance.
+    this.unlisten = [
+      listen(this.el.id, "click", this.handleDetachedClick),
+      listen(this.el.id, "keydown", this.handleDetachedKeydown),
+    ];
   }
 
   teardownComponentEvents() {
@@ -253,6 +330,88 @@ class DropdownMenuComponent extends Component {
     this.trigger?.removeEventListener("click", this.handleTriggerClick);
     this.trigger?.removeEventListener("keydown", this.handleTriggerKeydown);
     this.positioner?.removeEventListener("keydown", this.handleContentKeydown);
+    this.unlisten?.forEach((off) => off());
+    this.unlisten = null;
+  }
+
+  // A detached trigger belongs outside the root; inside it, it would act as
+  // a nested trigger too.
+  ownsDetached(trigger) {
+    return !this.el.contains(trigger) && !isTriggerDisabled(trigger);
+  }
+
+  handleDetachedClick = (_event, trigger) => {
+    if (!this.ownsDetached(trigger)) return;
+
+    if (this.state === "open" && trigger === this.activeTrigger) {
+      this.previousFocusEl = trigger;
+      this.transition("close");
+      return;
+    }
+
+    this.openAt(trigger, readContext(trigger));
+  };
+
+  handleDetachedKeydown = (event, trigger) => {
+    if (event.defaultPrevented || !this.ownsDetached(trigger)) return;
+
+    if (this.state === "open" && trigger === this.activeTrigger) {
+      this.handleTriggerKeydown(event);
+      return;
+    }
+    if (!OPEN_KEYS.includes(event.key)) return;
+
+    event.preventDefault();
+    this.openAt(trigger, readContext(trigger), { originalEvent: event });
+  };
+
+  /**
+   * Opens the menu at `trigger` (a detached trigger or any element; null for
+   * the nested trigger) with `context`, or moves it there when it is open
+   * elsewhere. Focus returns to `trigger` on close.
+   */
+  openAt(trigger, context = null, params = {}) {
+    if (this.state === "open") {
+      this.transition("close", { restoreFocus: false });
+    }
+
+    this.detached.set(
+      trigger && trigger !== this.trigger ? trigger : null,
+      context,
+    );
+    if (trigger) this.previousFocusEl = trigger;
+    return this.transition("open", params);
+  }
+
+  /**
+   * `open` and `toggle` take two optional params: `anchor`, an element or
+   * selector to open at instead of the nested trigger, and `context`, a map
+   * for the items (read from the anchor's `data-salad-context` when
+   * omitted). A shared menu without a nested trigger needs an `anchor`.
+   */
+  handleCommand(command, params = {}) {
+    const opening =
+      command === "open" || (command === "toggle" && this.state !== "open");
+    if (!opening) return super.handleCommand(command, params);
+
+    const { anchor, context } = params || {};
+    const target = resolveAnchor(anchor);
+    if (anchor && !target) {
+      console.warn("SaladUI: dropdown menu anchor not found:", anchor);
+      return false;
+    }
+    if (!target && !this.anchorEl) {
+      console.warn("SaladUI: a shared dropdown menu needs an anchor to open");
+      return false;
+    }
+    if (!target && context === undefined) {
+      return super.handleCommand(command, params);
+    }
+
+    return this.openAt(
+      target,
+      context === undefined ? readContext(target) : context,
+    );
   }
 
   // Escape inside the content closes the menu; Tab does nothing, so focus
@@ -274,6 +433,12 @@ class DropdownMenuComponent extends Component {
   };
 
   handleTriggerClick() {
+    // Open at a detached trigger: move to the nested one.
+    if (this.state === "open" && this.activeTrigger) {
+      this.openAt(this.trigger);
+      return;
+    }
+
     if (this.state === "open") {
       this.previousFocusEl = this.trigger;
     }
@@ -320,11 +485,12 @@ class DropdownMenuComponent extends Component {
       activeElement !== document.body &&
       !this.positioner?.contains(activeElement)
         ? activeElement
-        : this.trigger);
+        : this.anchorEl);
 
     this.initializePositionedElement();
     this.positionedElement?.activate();
     this.modalLayer.activate();
+    this.detached.activate();
 
     // After a LiveView patch: reopen the same sub-menus and refocus the same
     // item; a menu that had only the content focused gets that back.
@@ -348,7 +514,7 @@ class DropdownMenuComponent extends Component {
     });
 
     if (pushEvent) {
-      this.pushEvent("open");
+      this.pushEvent("open", { ...this.context });
     }
   }
 
@@ -379,13 +545,31 @@ class DropdownMenuComponent extends Component {
     // exit animation ends (onClosedEnter).
     this.modalLayer.releaseInteraction();
     this.menu?.closeSubmenus();
-    this.pushEvent("close");
+    this.pushEvent("close", { ...this.context });
 
+    const anchor = this.anchorEl;
     const focusTarget = this.previousFocusEl?.isConnected
       ? this.previousFocusEl
-      : this.trigger;
+      : anchor?.isConnected
+        ? anchor
+        : null;
+    const path = this.detached.path;
     this.previousFocusEl = null;
-    if (restoreFocus) focusTarget?.focus();
+    this.detached.release();
+    if (!restoreFocus) return;
+
+    if (focusTarget) {
+      focusTarget.focus();
+      return;
+    }
+    // The trigger is gone (its row was deleted): focus what held it, and
+    // never leave focus in the hidden menu.
+    if (
+      !focusFallback(path) &&
+      this.positioner?.contains(document.activeElement)
+    ) {
+      document.activeElement.blur();
+    }
   }
 
   // After the exit animation.
@@ -403,6 +587,8 @@ class DropdownMenuComponent extends Component {
     this.el.dataset.state = this.state;
     // A rebuild that stays open activates a new layer from afterMount().
     this.modalLayer.deactivate();
+    // A rebuild that stays open re-applies these from afterMount().
+    this.detached.teardown();
 
     // Clean up the positioned element
     if (this.positionedElement) {

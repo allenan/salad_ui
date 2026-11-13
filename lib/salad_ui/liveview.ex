@@ -112,6 +112,17 @@ defmodule SaladUI.LiveView do
   ```elixir
   socket = SaladUI.LiveView.send_command(socket, "chart", "update", %{series: data})
   ```
+
+  A shared menu (see "Shared menus" in `SaladUI.DropdownMenu`) opens at an
+  `anchor` (a CSS selector) for a `context`:
+
+  ```elixir
+  socket =
+    SaladUI.LiveView.send_command(socket, "msg-more", "open", %{
+      anchor: "#messages-42 [data-salad-for]",
+      context: %{id: 42}
+    })
+  ```
   """
   def send_command(socket, component_id, command, params \\ %{}) do
     Phoenix.LiveView.push_event(socket, "saladui:command", %{

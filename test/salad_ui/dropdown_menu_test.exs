@@ -450,4 +450,55 @@ defmodule SaladUI.DropdownMenuTest do
 
     assert html =~ ~s(data-collision-padding="6")
   end
+
+  describe "shared menus" do
+    test "a trigger with `for` renders a detached trigger, not a part" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_trigger for="msg-more" context={%{id: 42}} aria-label="More">
+          ⋮
+        </.dropdown_menu_trigger>
+        """)
+
+      assert html =~ ~s(data-salad-for="msg-more")
+      assert html =~ ~s(data-salad-context="{&quot;id&quot;:42}")
+      assert html =~ ~s(data-state="closed")
+      assert html =~ ~s(aria-haspopup="menu")
+      assert html =~ ~s(aria-expanded="false")
+      assert html =~ ~s(type="button")
+      assert html =~ ~s(data-slot="dropdown-menu-trigger")
+      refute html =~ ~s(data-part="trigger")
+    end
+
+    test "a detached trigger rendered through `as` keeps its button props" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_trigger for="msg-more" as={&button/1} variant="ghost" size="icon-sm">
+          ⋮
+        </.dropdown_menu_trigger>
+        """)
+
+      assert html =~ ~s(data-salad-for="msg-more")
+      assert html =~ ~s(type="button")
+      refute html =~ ~s(data-salad-context)
+      refute html =~ ~s(data-part="trigger")
+    end
+
+    test "a nested trigger renders as before" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_trigger>Open</.dropdown_menu_trigger>
+        """)
+
+      assert html =~ ~s(data-part="trigger")
+      refute html =~ "data-salad-for"
+      refute html =~ "data-state"
+    end
+  end
 end

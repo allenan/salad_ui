@@ -174,4 +174,37 @@ defmodule SaladUI.ContextMenuTest do
 
     assert html =~ ~s(data-collision-padding="6")
   end
+
+  describe "shared menus" do
+    test "a trigger with `for` renders a detached trigger, not a part" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.context_menu_trigger id="row-7" as="div" for="msg-context" context={%{id: 7, thread: "t1"}}>
+          Row
+        </.context_menu_trigger>
+        """)
+
+      assert html =~ ~s(id="row-7")
+      assert html =~ ~s(data-salad-for="msg-context")
+      assert html =~ ~s(data-salad-context="{&quot;id&quot;:7,&quot;thread&quot;:&quot;t1&quot;}")
+      assert html =~ ~s(data-state="closed")
+      assert html =~ ~s(data-slot="context-menu-trigger")
+      refute html =~ ~s(data-part="trigger")
+      refute html =~ "aria-expanded"
+    end
+
+    test "a nested trigger renders as before" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.context_menu_trigger>Area</.context_menu_trigger>
+        """)
+
+      assert html =~ ~s(data-part="trigger")
+      refute html =~ "data-salad-for"
+    end
+  end
 end

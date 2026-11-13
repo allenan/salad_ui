@@ -181,9 +181,7 @@ class MenuItemBase extends Component {
 
     this.pushEvent(
       "select",
-      {
-        value: this.value,
-      },
+      { ...this.parent.context(), value: this.value },
       this.parent.rootEl || this.parent.el,
     );
 
@@ -300,6 +298,7 @@ class MenuCheckboxItem extends MenuItemBase {
     this.pushEvent(
       "checked-change",
       {
+        ...this.parent.context(),
         value: this.value,
         checked: this.state == "checked",
       },
@@ -315,9 +314,10 @@ class MenuCheckboxItem extends MenuItemBase {
  * (mapped from the group's `on-value-changed`) when it changes.
  */
 class MenuRadioGroup extends Component {
-  constructor(el, { hookContext, rootEl }) {
+  constructor(el, { hookContext, rootEl, getContext }) {
     super(el, { hookContext });
     this.rootEl = rootEl;
+    this.getContext = getContext;
     this.value = el.getAttribute("data-value");
     this.items = [];
   }
@@ -346,7 +346,11 @@ class MenuRadioGroup extends Component {
       radio.transition(radio === item ? "check" : "uncheck"),
     );
 
-    this.pushEvent("value-changed", { value: item.value }, this.rootEl);
+    this.pushEvent(
+      "value-changed",
+      { ...this.getContext?.(), value: item.value },
+      this.rootEl,
+    );
     return true;
   }
 
@@ -413,6 +417,7 @@ class MenuSubTrigger extends MenuItemBase {
           hookContext: parentComponent.hook,
           rootEl: parentComponent.rootEl,
           onItemSelect: parentComponent.onItemSelect,
+          getContext: parentComponent.getContext,
           subTrigger: this,
         })
       : null;
@@ -649,11 +654,17 @@ class MenuSubTrigger extends MenuItemBase {
  * nested sub-menu belong to that sub-menu's own Menu.
  */
 class Menu extends Component {
-  constructor(el, { hookContext, onItemSelect, rootEl, subTrigger = null }) {
+  constructor(
+    el,
+    { hookContext, onItemSelect, rootEl, getContext = null, subTrigger = null },
+  ) {
     super(el, { hookContext });
 
     // callback for item selection
     this.onItemSelect = onItemSelect || (() => {});
+    // The open menu's context map (a shared menu's detached trigger, or the
+    // `context` of an `open` command), merged into item event payloads.
+    this.getContext = getContext;
     this.rootEl = rootEl;
     this.subTrigger = subTrigger;
     this.menuItems = [];
@@ -784,6 +795,7 @@ class Menu extends Component {
         new MenuRadioGroup(groupEl, {
           hookContext: this.hook,
           rootEl: this.rootEl,
+          getContext: this.getContext,
         }),
       );
     }
@@ -804,6 +816,11 @@ class Menu extends Component {
     this.menuItems.forEach((item) => {
       this.registry.add(item);
     });
+  }
+
+  /** The open menu's context map ({} when there is none). */
+  context() {
+    return this.getContext?.() || {};
   }
 
   // Forget the roving-focus pointer without moving focus, so the next

@@ -76,9 +76,54 @@ defmodule SaladUI.ContextMenu do
 
   ## Server commands
 
-  * `"open"` - Opens the menu, anchored at the trigger.
+  * `"open"` - Opens the menu, anchored at the trigger. Optional params:
+    `anchor` (an element or CSS selector to open at instead), `x` and `y`
+    (a viewport point to open at instead) and `context` (see below).
   * `"close"` - Closes the menu.
   * `"toggle"` - Toggles the menu.
+
+  ## Shared menus
+
+  For long lists, render one context menu for the whole list and make each
+  row a *detached trigger*: a `context_menu_trigger/1` with `for` (the menu's
+  id) and `context` (what the row stands for). Rows then carry no hook and
+  no menu markup:
+
+      <%!-- once per page --%>
+      <.context_menu id="msg-context">
+        <.context_menu_content class="w-48">
+          <.context_menu_item phx-click="reply">Reply</.context_menu_item>
+          <.context_menu_item on-select="pin">Pin</.context_menu_item>
+        </.context_menu_content>
+      </.context_menu>
+
+      <%!-- per row --%>
+      <.context_menu_trigger
+        :for={{dom_id, msg} <- @streams.messages}
+        id={dom_id}
+        as="div"
+        for="msg-context"
+        context={%{id: msg.id}}
+        class="data-[state=open]:bg-muted"
+      >
+        {msg.body}
+      </.context_menu_trigger>
+
+  The menu listens on the document for right clicks and long presses on its
+  detached triggers. It opens at the pointer as usual; the row gets
+  `data-state="open"` while the menu is open for it, and a right click on
+  another row moves the menu there. The row's `context` reaches the items as
+  in `SaladUI.DropdownMenu` (see "Shared menus" there): `phx-value-*` on the
+  items for `phx-click` and `JS.push/2`, and merged into the payload of
+  string event handlers. If the row leaves the page while the menu is open,
+  the menu closes.
+
+  From the server: `send_command(socket, "msg-context", "open", %{anchor:
+  "#messages-42", context: %{id: 42}})` opens it at the row's bottom-left
+  corner.
+
+  Detached triggers are a SaladUI extension with no Radix equivalent; use
+  them for lists, and the nested trigger everywhere else.
   """
   use SaladUI, :component
 
@@ -149,23 +194,32 @@ defmodule SaladUI.ContextMenu do
   * `:disabled` - Ignore right clicks and long presses (the browser's own
     context menu shows instead). Defaults to `false`.
   * `:as` - The tag or function component to render. Defaults to `"span"`, like Radix.
+  * `:for` - The id of a shared `context_menu/1` this area opens. Defaults to `nil` (the trigger
+    is nested in its `context_menu/1`). See "Shared menus" in the module docs.
+  * `:context` - With `for`: a map handed to the menu's items while the menu is open from this
+    area, e.g. `%{id: @message.id}`.
   """
   attr :as, :any, default: "span"
   attr :disabled, :boolean, default: false
+  attr :for, :string, default: nil, doc: "id of the shared context menu this detached trigger opens"
+  attr :context, :map, default: nil, doc: "with `for`: the map the menu's items receive while open from this trigger"
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def context_menu_trigger(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns =
+      assigns
+      |> drop_button_props()
+      |> assign(:trigger_attrs, trigger_attrs(assigns.for, assigns.context))
 
     ~H"""
     <.dynamic
       tag={@as}
       data-slot={@rest[:"data-slot"] || "context-menu-trigger"}
-      data-part="trigger"
       data-disabled={@disabled}
       class={classes(["[-webkit-touch-callout:none]", @class])}
+      {@trigger_attrs}
       {@rest}
     >
       {render_slot(@inner_block)}
