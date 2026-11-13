@@ -21,8 +21,14 @@
  * react-remove-scroll does, for CSS that needs to compensate fixed elements:
  *
  *   body[data-scroll-locked] .fixed-header {
- *     padding-right: var(--removed-body-scroll-bar-size);
+ *     padding-right: var(--removed-body-scroll-bar-size, 0px);
  *   }
+ *
+ * The property is only written when the lock pads <body> (or the page set it
+ * to something else): a custom property on <body> is inherited, so changing
+ * it restyles every element of the page (~130 ms for 40k nodes). With no
+ * scrollbar to remove (overlay scrollbars, an app that scrolls an inner
+ * container) it stays unset, so read it with a `0px` fallback.
  *
  * salad_ui.css ships react-remove-scroll-bar's opt-in classes on top of
  * that: `right-scroll-bar-position` (a fixed element pinned with `right: 0`
@@ -103,8 +109,12 @@ function apply() {
 
   const gap = scrollbarWidth();
   const view = document.defaultView || window;
-  const basePadding =
-    parseFloat(view.getComputedStyle?.(body)?.paddingRight) || 0;
+  const bodyStyle = view.getComputedStyle?.(body);
+  const basePadding = parseFloat(bodyStyle?.paddingRight) || 0;
+  // Unset or already right reads the same as the value we would write (see
+  // the header), and skipping the write spares a restyle of the whole page.
+  const currentGap = bodyStyle?.getPropertyValue(GAP_VARIABLE).trim() || "";
+  const writeGap = gap > 0 || (currentGap !== "" && currentGap !== "0px");
 
   saved = {
     html,
@@ -112,12 +122,12 @@ function apply() {
     htmlOverflow: readOverflow(html),
     bodyOverflow: readOverflow(body),
     bodyPaddingRight: readInline(body, "padding-right"),
-    bodyGapVar: readInline(body, GAP_VARIABLE),
+    bodyGapVar: writeGap ? readInline(body, GAP_VARIABLE) : null,
   };
 
   html.style.setProperty("overflow", "hidden", "important");
   body.style.setProperty("overflow", "hidden", "important");
-  body.style.setProperty(GAP_VARIABLE, `${gap}px`);
+  if (writeGap) body.style.setProperty(GAP_VARIABLE, `${gap}px`);
   if (gap > 0) {
     body.style.setProperty(
       "padding-right",
@@ -134,7 +144,7 @@ function restore() {
   writeOverflow(html, saved.htmlOverflow);
   writeOverflow(body, saved.bodyOverflow);
   writeInline(body, "padding-right", saved.bodyPaddingRight);
-  writeInline(body, GAP_VARIABLE, saved.bodyGapVar);
+  if (saved.bodyGapVar) writeInline(body, GAP_VARIABLE, saved.bodyGapVar);
   if (html.getAttribute("style") === "") html.removeAttribute("style");
   if (body.getAttribute("style") === "") body.removeAttribute("style");
   body.removeAttribute(LOCK_ATTRIBUTE);

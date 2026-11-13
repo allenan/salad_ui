@@ -70,7 +70,7 @@ defmodule SaladUI.AlertDialog do
 
   An alert dialog is always modal, as Radix's is (it takes no `modal`
   option): while it is open, clicks outside it never reach the page (and do
-  not close it either), everything outside it is `aria-hidden` and `inert`,
+  not close it either), everything outside it is `aria-hidden`, focus stays inside it,
   and wheel and touch scrolling outside it are cancelled. See "Modal
   behaviour" in `SaladUI.Dialog`.
 

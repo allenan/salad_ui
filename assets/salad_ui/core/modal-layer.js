@@ -9,15 +9,21 @@
  *   and the layer's elements `pointer-events: auto`, so a click outside the
  *   layer can only dismiss it (via its overlay, or a click that lands on
  *   `<html>`), never activate what is underneath.
- * - Everything outside the layer is hidden from assistive technology and
- *   taken out of the tab order, as the `aria-hidden` package's `hideOthers()`
- *   does for Radix: the siblings of the layer and of each of its ancestors
- *   up to `<body>` get `aria-hidden="true"` and `inert` (and a
- *   `data-aria-hidden` marker). `inert` keeps a focusable control in the
- *   hidden page from being reached (axe `aria-hidden-focus`). The layer and
+ * - Everything outside the layer is hidden from assistive technology, as
+ *   the `aria-hidden` package's `hideOthers()` does for Radix: the siblings
+ *   of the layer and of each of its ancestors up to `<body>` get
+ *   `aria-hidden="true"` (and a `data-aria-hidden` marker). The layer and
  *   its ancestors are never hidden, nor is content portaled out of it.
  *   `aria-live` regions and scripts are left alone. Elements that already
- *   carried `aria-hidden` (or `inert`) keep it after the layer closes.
+ *   carried `aria-hidden` keep it after the layer closes.
+ * - Focus stays inside the layer, as Radix's FocusScope keeps it: when
+ *   something outside gets focus (Tab from `<body>`, a script's focus()),
+ *   it goes back to the element last focused in the layer. The hidden page
+ *   is not made `inert`, as in Radix: on a large page `inert` costs a style
+ *   recalc of every element outside the layer on open and again on close
+ *   (~130 ms for 40k nodes), where aria-hidden costs nothing. axe's
+ *   `aria-hidden-focus` rule therefore flags the hidden page while a modal
+ *   is open, as it does for Radix.
  * - Wheel and touch scrolling outside the layer is cancelled, as
  *   react-remove-scroll does, so the page behind (including an inner scroll
  *   container of the app's layout) cannot scroll through the overlay. Inside
@@ -45,7 +51,7 @@
  * only takes its place in the stack.
  *
  * LiveView patches put the server-rendered attributes back, which drops the
- * `aria-hidden`, `inert` and inline `pointer-events` written here. While any layer
+ * `aria-hidden` and inline `pointer-events` written here. While any layer
  * blocks, a MutationObserver on `<body>` re-applies them after every patch,
  * and recomputes which elements to hide when nodes are added or removed.
  * `refresh()` re-applies synchronously.
@@ -65,12 +71,16 @@ const stack = [];
 let savedBody = null;
 // Layer elements given `pointer-events: auto` -> their own inline value.
 const pointerOwned = new Map();
-// Nodes outside the layer -> { uncontrolled, wasInert } (aria-hidden or
-// inert before we came).
+// Nodes outside the layer -> { uncontrolled } (aria-hidden before we came).
 const hiddenOwned = new Map();
 // Elements interactive while blocking: the topmost modal layer, the layers
 // above it, and whatever was portaled out of them.
 let allowed = [];
+// The topmost modal layer's own elements, where focus goes when nothing in
+// it was focused yet.
+let topElements = [];
+// The element last focused inside `allowed`.
+let lastFocused = null;
 
 let observer = null;
 let syncScheduled = false;
@@ -197,9 +207,8 @@ function nodesToHide(body) {
   return hide;
 }
 
-function unhide(node, { uncontrolled, wasInert }) {
+function unhide(node, { uncontrolled }) {
   if (!uncontrolled) node.removeAttribute("aria-hidden");
-  if (!wasInert) node.removeAttribute("inert");
   node.removeAttribute(MARKER);
 }
 
@@ -216,18 +225,54 @@ function applyAriaHidden(body) {
     let state = hiddenOwned.get(node);
     if (!state) {
       const current = node.getAttribute("aria-hidden");
-      state = {
-        uncontrolled: current !== null && current !== "false",
-        wasInert: node.hasAttribute("inert"),
-      };
+      state = { uncontrolled: current !== null && current !== "false" };
       hiddenOwned.set(node, state);
     }
     if (!state.uncontrolled && node.getAttribute("aria-hidden") !== "true") {
       node.setAttribute("aria-hidden", "true");
     }
-    if (!node.hasAttribute("inert")) node.setAttribute("inert", "");
     if (!node.hasAttribute(MARKER)) node.setAttribute(MARKER, "true");
   }
+}
+
+// --- focus -------------------------------------------------------------------
+
+const FOCUSABLE =
+  "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]";
+
+const insideAllowed = (node) => allowed.some((el) => el.contains(node));
+
+function focusFallback() {
+  if (lastFocused?.isConnected && insideAllowed(lastFocused)) {
+    return lastFocused;
+  }
+  for (const el of topElements) {
+    const target = el.matches(FOCUSABLE) ? el : el.querySelector(FOCUSABLE);
+    if (target) return target;
+  }
+  return null;
+}
+
+// Checked a microtask later: a component that focuses its content before
+// activating its layer (a dialog's focus trap) is in `allowed` by then.
+function onFocusIn(event) {
+  const target = event.target;
+  if (!target || target.nodeType !== 1) return;
+  if (insideAllowed(target)) {
+    lastFocused = target;
+    return;
+  }
+  queueMicrotask(() => {
+    if (!allowed.length || target.ownerDocument.activeElement !== target) {
+      return;
+    }
+    if (insideAllowed(target)) {
+      lastFocused = target;
+      return;
+    }
+    focusFallback()?.focus({ preventScroll: true });
+    if (target.ownerDocument.activeElement === target) target.blur();
+  });
 }
 
 // --- wheel / touch ---------------------------------------------------------
@@ -319,6 +364,7 @@ function startListening(doc) {
   doc.addEventListener("wheel", onScrollGesture, NON_PASSIVE);
   doc.addEventListener("touchmove", onScrollGesture, NON_PASSIVE);
   doc.addEventListener("touchstart", onTouchStart, NON_PASSIVE);
+  doc.addEventListener("focusin", onFocusIn, true);
   listeningDocument = doc;
 }
 
@@ -335,6 +381,7 @@ function stopListening() {
     onTouchStart,
     NON_PASSIVE,
   );
+  listeningDocument.removeEventListener("focusin", onFocusIn, true);
   listeningDocument = null;
 }
 
@@ -371,7 +418,7 @@ function startObserving(body) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["aria-hidden", "inert", "style"],
+    attributeFilter: ["aria-hidden", "style"],
   });
   observer = { instance, body };
 }
@@ -391,6 +438,8 @@ function restoreAll() {
   hiddenOwned.clear();
   restoreBody();
   allowed = [];
+  topElements = [];
+  lastFocused = null;
   stopObserving();
   stopListening();
 }
@@ -410,6 +459,9 @@ export function sync() {
   }
 
   allowed = computeAllowed(index);
+  topElements = layerElements(stack[index]);
+  const active = document.activeElement;
+  if (active && active !== body && insideAllowed(active)) lastFocused = active;
   applyPointerEvents(body);
   applyAriaHidden(body);
   startObserving(body);

@@ -44,11 +44,16 @@ defmodule SaladUI.Dialog do
   * Clicks outside it never reach the page. `<body>` gets
     `pointer-events: none` and the dialog's content `pointer-events: auto`, so
     a click outside can only dismiss the dialog (through its overlay).
-  * Everything outside it is hidden from assistive technology and taken out
-    of the tab order: the siblings of the dialog's content and of each of its
-    ancestors get `aria-hidden="true"` and `inert` (and a `data-aria-hidden`
-    marker). `aria-live` regions are left alone, and elements the page
-    already hid stay hidden after the dialog closes.
+  * Everything outside it is hidden from assistive technology: the siblings
+    of the dialog's content and of each of its ancestors get
+    `aria-hidden="true"` (and a `data-aria-hidden` marker), as Radix does.
+    `aria-live` regions are left alone, and elements the page already hid
+    stay hidden after the dialog closes.
+  * Focus stays inside it: Tab loops within the dialog, and focus that lands
+    outside (Tab from `<body>`, a script's `focus()`) goes back in. As in
+    Radix the hidden page is not made `inert` (on a large page that restyles
+    every element on open and close), so axe's `aria-hidden-focus` rule
+    reports the focusable controls behind an open dialog.
   * Escape closes only the topmost layer: in a dialog opened from a dialog
     (or a menu or select open inside one) it closes just that one.
   * On close, focus returns to the element focused when it opened, or, when
@@ -92,7 +97,8 @@ defmodule SaladUI.Dialog do
     right margin of the scrollbar's width.
 
   Or use the custom property directly:
-  `body[data-scroll-locked] .my-header { padding-right: var(--removed-body-scroll-bar-size) }`.
+  `body[data-scroll-locked] .my-header { padding-right: var(--removed-body-scroll-bar-size, 0px) }`
+  (the property is only set when the lock padded `<body>`).
   """
   use SaladUI, :component
 

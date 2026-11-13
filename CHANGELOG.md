@@ -345,7 +345,8 @@ for status and known gaps. Every new JS-backed component is registered in
 - A dialog opened by the server returns focus to its trigger on close.
 - Dialog overlay is `z-50`; dialog, alert dialog and drawer roots drop
   `relative z-50`, so an open dialog no longer paints under a later dialog's trigger.
-- Modal layers also make the hidden page `inert`, so it is out of the tab order.
+- Focus cannot leave an open modal layer: focus that lands on the hidden page
+  (Tab from `<body>`, a script's `focus()`) goes back into the layer.
 - Menu items: a click bubbles again, so `phx-click` on dropdown, context and
   menubar items fires; Enter and Space click the item, as in Radix. Clicks in
   content portaled out of a popover or dialog count as inside it.
@@ -438,6 +439,23 @@ for status and known gaps. Every new JS-backed component is registered in
   container) a panel could not shrink below its content's min-content size,
   so a collapsed panel with content still showed, and small sizes were wider
   than their percentage.
+
+**Modal layers are cheap on large pages**
+- Opening a modal dropdown menu, context menu, dialog or sheet no longer
+  restyles every element of the page on open and on close. On a page of 40k
+  elements (2000 chat rows) a dropdown opens in ~120 ms instead of ~180 ms, a
+  context menu in ~95 ms instead of ~160 ms and a dialog in ~90 ms instead of
+  ~175 ms. Two writes each forced that full style recalc (~130 ms):
+  - the hidden page was made `inert`. It is now `aria-hidden` only, as in
+    Radix, and focus that lands outside the layer goes back in. axe's
+    `aria-hidden-focus` rule reports the focusable controls behind an open
+    modal again, as it does for Radix.
+  - the scroll lock set `--removed-body-scroll-bar-size` on `<body>` even when
+    there was no scrollbar to remove. It is now set only when `<body>` is
+    padded (or the page had set it); read it as
+    `var(--removed-body-scroll-bar-size, 0px)`, as `salad_ui.css` does.
+- What remains is `pointer-events: none` on `<body>` (~50 ms at 40k
+  elements), which Radix sets too.
 
 **Extensions from downstream use** (not in shadcn/Radix/Sonner; defaults unchanged)
 - Toggle group takes `required`: in a `type="single"` group pressing the
