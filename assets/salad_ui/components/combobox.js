@@ -3,6 +3,7 @@ import Component, { assignId } from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
+import Portal from "../core/portal.js";
 
 // Matches the `var(--salad-combobox-available-height, 24rem)` caps on
 // combobox_content and combobox_list.
@@ -10,6 +11,8 @@ const AVAILABLE_HEIGHT_VAR = "--salad-combobox-available-height";
 const REFERENCE_WIDTH_VAR = "--salad-reference-width";
 // sideOffset plus a little breathing room from the window edge.
 const COLLISION_MARGIN = 12;
+// PageUp/PageDown move the highlight this many items.
+const PAGE_SIZE = 10;
 
 // Clicks on these inside the input group or the chips box keep their own
 // behaviour instead of focusing the input.
@@ -41,6 +44,11 @@ const sameList = (a, b) =>
  * Supports single selection (the input shows the selected label), multiple
  * selection rendered as chips (combobox_chips), and a popup mode where a
  * standalone trigger opens the content and the input lives inside it.
+ *
+ * With `usePortal` the content is moved to the body (or `portalContainer`)
+ * while open, so it escapes `overflow` and `transform` ancestors. Its events
+ * are then listened to on the content itself, and it is handed back to the
+ * root before every LiveView patch (see beforeUpdate()).
  */
 class ComboboxComponent extends Component {
   constructor(el, hookContext) {
@@ -72,6 +80,8 @@ class ComboboxComponent extends Component {
     this.multiple = !!this.options.multiple;
     this.filterEnabled = this.options.filter !== false;
     this.autoHighlight = !!this.options.autoHighlight;
+    this.usePortal = this.options.usePortal === true;
+    this.portalContainer = this.options.portalContainer || null;
   }
 
   normalizeValue(value) {
@@ -119,12 +129,32 @@ class ComboboxComponent extends Component {
 
   // ---- Parts ---------------------------------------------------------------
 
+  /** The root, plus the content while it is portaled out of it. */
+  roots() {
+    if (!this.el) return [];
+    const portaled = this.content && !this.el.contains(this.content);
+    return portaled ? [this.el, this.content] : [this.el];
+  }
+
+  /** Whether `node` is part of this combobox, not of a nested component. */
+  owns(node) {
+    for (let current = node; current; current = current.parentElement) {
+      if (current === this.el || current === this.content) return true;
+      if (current.hasAttribute("data-component")) return false;
+    }
+    return false;
+  }
+
+  /** Inside the root or the (possibly portaled) content. */
+  contains(node) {
+    return !!(node && this.roots().some((root) => root.contains(node)));
+  }
+
   /** Elements matching `selector` that belong to this combobox. */
   own(selector) {
-    if (!this.el) return [];
-    return Array.from(this.el.querySelectorAll(selector)).filter(
-      (node) => node.closest("[data-component]") === this.el,
-    );
+    return this.roots()
+      .flatMap((root) => Array.from(root.querySelectorAll(selector)))
+      .filter((node) => this.owns(node));
   }
 
   inContent(node) {
@@ -216,32 +246,59 @@ class ComboboxComponent extends Component {
 
   // ---- Events --------------------------------------------------------------
 
+  listeners() {
+    return [
+      ["click", this.onClick],
+      ["mousedown", this.onMouseDown],
+      ["mousemove", this.onMouseMove],
+      ["input", this.onInput],
+      ["keydown", this.onKeyDown],
+      ["focusout", this.onFocusOut],
+    ];
+  }
+
+  // The content gets its own listeners, since a portaled content's events do
+  // not bubble through the root (see handles()).
+  listen(node, on) {
+    if (!node) return;
+    this.listeners().forEach(([type, handler]) => {
+      if (on) {
+        node.addEventListener(type, handler);
+      } else {
+        node.removeEventListener(type, handler);
+      }
+    });
+  }
+
   setupComponentEvents() {
     super.setupComponentEvents();
 
-    this.el.addEventListener("click", this.onClick);
-    this.el.addEventListener("mousedown", this.onMouseDown);
-    this.el.addEventListener("mousemove", this.onMouseMove);
-    this.el.addEventListener("input", this.onInput);
-    this.el.addEventListener("keydown", this.onKeyDown);
-    this.el.addEventListener("focusout", this.onFocusOut);
+    this.listen(this.el, true);
+    this.listen(this.content, true);
+    this.listenedContent = this.content;
   }
 
   teardownComponentEvents() {
     super.teardownComponentEvents();
 
-    this.el.removeEventListener("click", this.onClick);
-    this.el.removeEventListener("mousedown", this.onMouseDown);
-    this.el.removeEventListener("mousemove", this.onMouseMove);
-    this.el.removeEventListener("input", this.onInput);
-    this.el.removeEventListener("keydown", this.onKeyDown);
-    this.el.removeEventListener("focusout", this.onFocusOut);
+    this.listen(this.el, false);
+    this.listen(this.listenedContent, false);
+    this.listenedContent = null;
+  }
+
+  /**
+   * Events inside the content reach the content's listener and, while it is
+   * not portaled, the root's too: only the content's one handles them.
+   */
+  handles(event) {
+    return !(event.currentTarget === this.el && this.inContent(event.target));
   }
 
   ownTarget(event) {
+    if (!this.handles(event)) return null;
     const target = event.target;
     if (!(target instanceof Element)) return null;
-    if (target.closest("[data-component]") !== this.el) return null;
+    if (!this.owns(target)) return null;
     return target;
   }
 
@@ -386,6 +443,27 @@ class ComboboxComponent extends Component {
         }
         break;
       }
+      case "Home":
+      case "End": {
+        // While the list is open they jump to the first / last item, like
+        // PageUp/PageDown. Closed, or with a modifier (Shift+Home selects
+        // text), they move the caret as in any text input.
+        if (!open || this.hasModifier(event)) return;
+        if (this.navigableItems().length === 0) return;
+        event.preventDefault();
+        this.highlightEdge(event.key === "Home" ? "first" : "last");
+        break;
+      }
+      case "PageUp":
+      case "PageDown": {
+        if (!open || this.hasModifier(event)) return;
+        if (this.navigableItems().length === 0) return;
+        event.preventDefault();
+        this.moveHighlight(event.key === "PageDown" ? PAGE_SIZE : -PAGE_SIZE, {
+          clamp: true,
+        });
+        break;
+      }
       case "ArrowLeft":
       case "ArrowRight": {
         // From the start of the chips input, the "back" arrow moves focus
@@ -489,6 +567,10 @@ class ComboboxComponent extends Component {
     }
   }
 
+  hasModifier(event) {
+    return event.shiftKey || event.ctrlKey || event.metaKey || event.altKey;
+  }
+
   /** The arrow key pointing towards the chips, by text direction. */
   backKey(node) {
     return isRtl(node) ? "ArrowRight" : "ArrowLeft";
@@ -503,12 +585,12 @@ class ComboboxComponent extends Component {
   }
 
   onFocusOut(event) {
-    if (this.state !== "open") return;
+    if (this.state !== "open" || !this.handles(event)) return;
 
     // A null relatedTarget is a click on something unfocusable (handled by
     // the outside-click monitor) or the window losing focus: keep it open.
     const next = event.relatedTarget;
-    if (!next || this.el.contains(next)) return;
+    if (!next || this.contains(next)) return;
 
     this.close();
   }
@@ -572,7 +654,9 @@ class ComboboxComponent extends Component {
       input?.focus({ preventScroll: true });
     }
 
-    this.pushEvent("open");
+    // `query` is "" unless typing opened the list. With server filtering
+    // the server can reset its results from it (see SaladUI.Combobox docs).
+    this.pushEvent("open", { query: this.query });
   }
 
   onOpenExit() {
@@ -719,7 +803,11 @@ class ComboboxComponent extends Component {
     this.render();
   }
 
-  moveHighlight(step) {
+  /**
+   * Move the highlight `step` items. The arrows wrap around; with `clamp`
+   * (PageUp/PageDown) it stops at the first / last item instead.
+   */
+  moveHighlight(step, { clamp = false } = {}) {
     const items = this.navigableItems();
     if (items.length === 0) return;
 
@@ -729,11 +817,23 @@ class ComboboxComponent extends Component {
     let next;
     if (index === -1) {
       next = step > 0 ? 0 : items.length - 1;
+    } else if (clamp) {
+      next = Math.min(items.length - 1, Math.max(0, index + step));
     } else {
-      next = (index + step + items.length) % items.length;
+      next = (((index + step) % items.length) + items.length) % items.length;
     }
 
     this.highlighted = items[next].dataset.value;
+    this.render();
+    this.scrollToHighlighted();
+  }
+
+  highlightEdge(which) {
+    const items = this.navigableItems();
+    const item = which === "last" ? items[items.length - 1] : items[0];
+    if (!item) return;
+
+    this.highlighted = item.dataset.value;
     this.render();
     this.scrollToHighlighted();
   }
@@ -873,6 +973,7 @@ class ComboboxComponent extends Component {
       if (list) input.setAttribute("aria-controls", list.id);
       if (rootDisabled) input.disabled = true;
     });
+    this.nameList(list);
 
     this.own("[data-part='trigger']").forEach((trigger) => {
       if (list) trigger.setAttribute("aria-controls", list.id);
@@ -895,6 +996,77 @@ class ComboboxComponent extends Component {
     }
 
     this.syncInvalidState();
+  }
+
+  /**
+   * Give the listbox an accessible name, unless the markup gave it one: the
+   * control's label (through `aria-labelledby` when the label has an id, its
+   * text otherwise), else the control's own `aria-labelledby` /
+   * `aria-label`, else its placeholder. `data-name-synced` tells the
+   * attribute set here apart from one in the markup.
+   */
+  nameList(list) {
+    if (!list) return;
+
+    const synced = list.getAttribute("data-name-synced");
+    if (
+      !synced &&
+      (list.hasAttribute("aria-labelledby") || list.hasAttribute("aria-label"))
+    ) {
+      return;
+    }
+
+    const [attr, value] = this.listName() || [];
+    if (synced && synced !== attr) list.removeAttribute(synced);
+
+    if (attr) {
+      list.setAttribute(attr, value);
+      list.setAttribute("data-name-synced", attr);
+    } else {
+      list.removeAttribute("data-name-synced");
+    }
+  }
+
+  /** `[attribute, value]` naming the listbox, or null. */
+  listName() {
+    const controls = [
+      this.mainInput(),
+      this.standaloneTrigger(),
+      this.contentInput(),
+    ].filter(Boolean);
+
+    for (const control of controls) {
+      const label = Array.from(control.labels || []).find((node) =>
+        node.textContent.trim(),
+      );
+      if (label) {
+        // A label of our own may get an id (cleared before each patch); one
+        // outside the combobox is never touched.
+        if (!label.id && this.owns(label)) {
+          assignId(label, `${this.el.id}-label`);
+        }
+        return label.id
+          ? ["aria-labelledby", label.id]
+          : ["aria-label", label.textContent.replace(/\s+/g, " ").trim()];
+      }
+
+      const labelledBy = control.getAttribute("aria-labelledby");
+      if (labelledBy) return ["aria-labelledby", labelledBy];
+
+      const ariaLabel = control.getAttribute("aria-label");
+      if (ariaLabel) return ["aria-label", ariaLabel];
+    }
+
+    const placeholder = controls
+      .map(
+        (control) =>
+          control.getAttribute("placeholder") ||
+          control
+            .querySelector("[data-part='value']")
+            ?.getAttribute("data-placeholder"),
+      )
+      .find(Boolean);
+    return placeholder ? ["aria-label", placeholder] : null;
   }
 
   /**
@@ -1013,12 +1185,16 @@ class ComboboxComponent extends Component {
       sideOffset: parseInt(data.sideOffset || "6", 10),
       alignOffset: parseInt(data.alignOffset || "0", 10),
       flip: true,
-      usePortal: false,
+      usePortal: this.usePortal,
+      portalContainer:
+        (this.portalContainer &&
+          document.querySelector(this.portalContainer)) ||
+        document.body,
       trapFocus: false,
       onOutsideClick: (event) => {
         const target = event?.target;
         // Chips removed by this click are detached by now; they were inside.
-        if (target && (!target.isConnected || this.el?.contains(target))) {
+        if (target && (!target.isConnected || this.contains(target))) {
           return;
         }
         this.close();
@@ -1095,6 +1271,46 @@ class ComboboxComponent extends Component {
   // ---- LiveView patches ----------------------------------------------------
 
   /**
+   * LiveView can only patch the content inside the root: hand a portaled
+   * content back (to its original spot, see Portal.restore) before the patch
+   * and portal it again in refresh(). The hook then clears the generated ids,
+   * which needs the content back inside the root too.
+   */
+  beforeUpdate() {
+    this.focusBeforePatch = null;
+    if (!this.content || !Portal.isInPortal(this.content)) return;
+
+    const active = document.activeElement;
+    if (active && this.content.contains(active)) {
+      this.focusBeforePatch = {
+        element: active,
+        start: active.selectionStart ?? null,
+        end: active.selectionEnd ?? null,
+      };
+    }
+    this.positionedElement?.deactivate();
+  }
+
+  restoreFocusAfterPatch() {
+    const saved = this.focusBeforePatch;
+    this.focusBeforePatch = null;
+    if (!saved || this.state !== "open") return;
+
+    const { element, start, end } = saved;
+    if (!element.isConnected || !this.inContent(element)) return;
+    if (document.activeElement !== element) {
+      element.focus({ preventScroll: true });
+    }
+    if (start !== null && typeof element.setSelectionRange === "function") {
+      try {
+        element.setSelectionRange(start, end ?? start);
+      } catch {
+        // Not a text input.
+      }
+    }
+  }
+
+  /**
    * Keep this instance across LiveView patches (server filtering re-renders
    * the items while the list is open) and re-apply its state to the patched
    * DOM. A new server `value` replaces the selection.
@@ -1114,6 +1330,14 @@ class ComboboxComponent extends Component {
       this.options = next;
       this._optionsRaw = optionsRaw;
       this.readOptions();
+
+      if (
+        previous.usePortal !== next.usePortal ||
+        previous.portalContainer !== next.portalContainer
+      ) {
+        this.positionedElement?.destroy();
+        this.positionedElement = null;
+      }
 
       if (JSON.stringify(previous.value) !== JSON.stringify(next.value)) {
         this.values = this.normalizeValue(next.value);
@@ -1147,6 +1371,11 @@ class ComboboxComponent extends Component {
       this.positionedElement = null;
       this.content = content;
     }
+    if (this.listenedContent !== this.content && this.eventSetupCompleted) {
+      this.listen(this.listenedContent, false);
+      this.listen(this.content, true);
+      this.listenedContent = this.content;
+    }
 
     this.updateUI();
     this.updatePartsVisibility();
@@ -1154,13 +1383,16 @@ class ComboboxComponent extends Component {
     // The patch reset the inputs the user is not typing in.
     const main = this.mainInput();
     if (main && main !== document.activeElement) {
-      const text =
-        this.state === "open"
-          ? this.query
-          : this.multiple || this.values.length === 0
-            ? main.value
-            : this.labelFor(this.values[0]);
-      main.value = text;
+      // A single combobox shows the selected label until something is typed.
+      const label =
+        this.multiple || this.values.length === 0
+          ? null
+          : this.labelFor(this.values[0]);
+      if (this.state === "open") {
+        main.value = this.query !== "" ? this.query : (label ?? "");
+      } else if (label !== null) {
+        main.value = label;
+      }
     }
 
     this.learnChipLabels();
@@ -1172,6 +1404,7 @@ class ComboboxComponent extends Component {
       this.positionedElement?.activate();
       this.reposition();
     }
+    this.restoreFocusAfterPatch();
   }
 
   beforeDestroy() {

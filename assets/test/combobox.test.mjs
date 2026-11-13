@@ -88,6 +88,7 @@ function buildCombobox({
   items = FRAMEWORKS,
   groups = null,
   inForm = false,
+  usePortal = false,
 } = {}) {
   const options = {
     name,
@@ -96,6 +97,7 @@ function buildCombobox({
     autoHighlight,
     filter,
     disabled,
+    usePortal,
   };
 
   const control =
@@ -840,4 +842,340 @@ test("generated ids are dropped before a patch and restored after it", () => {
     el.querySelector('[data-part="input"]').getAttribute("aria-controls"),
     "cb-list",
   );
+});
+
+// ---- Paging keys -----------------------------------------------------------
+
+const MANY = Array.from({ length: 25 }, (_, index) => `Item ${index + 1}`);
+
+function keydownWith(el, key, init = {}) {
+  const event = new window.KeyboardEvent("keydown", {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  });
+  el.dispatchEvent(event);
+  return event;
+}
+
+test("PageDown/PageUp move the highlight 10 items, stopping at the ends", () => {
+  const c = buildCombobox({ items: MANY });
+
+  keydown(c.input, "ArrowDown");
+  assert.equal(c.highlighted(), "Item 1");
+
+  assert.ok(keydown(c.input, "PageDown").defaultPrevented);
+  assert.equal(c.highlighted(), "Item 11");
+  keydown(c.input, "PageDown");
+  assert.equal(c.highlighted(), "Item 21");
+  keydown(c.input, "PageDown");
+  assert.equal(c.highlighted(), "Item 25", "stops at the last item");
+  keydown(c.input, "PageDown");
+  assert.equal(c.highlighted(), "Item 25", "does not wrap");
+
+  keydown(c.input, "PageUp");
+  assert.equal(c.highlighted(), "Item 15");
+  keydown(c.input, "PageUp");
+  keydown(c.input, "PageUp");
+  assert.equal(c.highlighted(), "Item 1", "stops at the first item");
+});
+
+test("PageDown/PageUp only count visible, enabled items", () => {
+  const c = buildCombobox({
+    items: [
+      ...MANY.slice(0, 3),
+      { value: "Off", disabled: true },
+      ...MANY.slice(3, 12),
+    ],
+  });
+
+  type(c.input, "item 1");
+  assert.deepEqual(c.visibleValues(), [
+    "Item 1",
+    "Item 10",
+    "Item 11",
+    "Item 12",
+  ]);
+  keydown(c.input, "PageDown");
+  assert.equal(c.highlighted(), "Item 1", "starts from the first match");
+  keydown(c.input, "PageDown");
+  assert.equal(c.highlighted(), "Item 12", "clamps to the last match");
+  keydown(c.input, "PageUp");
+  assert.equal(c.highlighted(), "Item 1");
+});
+
+test("Home/End highlight the first/last item while the list is open", () => {
+  const c = buildCombobox();
+
+  keydown(c.input, "ArrowDown");
+  keydown(c.input, "ArrowDown");
+  assert.equal(c.highlighted(), "SvelteKit");
+
+  const end = keydown(c.input, "End");
+  assert.ok(end.defaultPrevented, "the caret does not move");
+  assert.equal(c.highlighted(), "Astro");
+  assert.equal(
+    c.input.getAttribute("aria-activedescendant"),
+    c.item("Astro").id,
+  );
+
+  keydown(c.input, "Home");
+  assert.equal(c.highlighted(), "Next.js");
+});
+
+test("Home/End/PageUp/PageDown leave the caret alone while the list is closed", () => {
+  const c = buildCombobox({ value: "Astro" });
+
+  for (const key of ["Home", "End", "PageUp", "PageDown"]) {
+    const event = keydown(c.input, key);
+    assert.equal(event.defaultPrevented, false, `${key} is native`);
+    assert.ok(isClosed(c), `${key} does not open the list`);
+  }
+
+  // Shift+Home selects text even while the list is open.
+  keydown(c.input, "ArrowDown");
+  const shiftHome = keydownWith(c.input, "Home", { shiftKey: true });
+  assert.equal(shiftHome.defaultPrevented, false);
+  assert.equal(c.highlighted(), "Astro");
+});
+
+// ---- Listbox name ----------------------------------------------------------
+
+test("the listbox is named after the input's label", () => {
+  const c = buildCombobox({ inputAttrs: 'id="cb-input"' });
+  const label = document.createElement("label");
+  label.htmlFor = "cb-input";
+  label.textContent = "Framework";
+  document.body.prepend(label);
+  c.component.render();
+
+  assert.equal(c.list.getAttribute("aria-label"), "Framework");
+  assert.equal(
+    label.hasAttribute("id"),
+    false,
+    "a label outside the combobox gets no client id",
+  );
+
+  label.id = "framework-label";
+  c.component.render();
+  assert.equal(c.list.getAttribute("aria-labelledby"), "framework-label");
+  assert.equal(c.list.hasAttribute("aria-label"), false);
+});
+
+test("the listbox name falls back to aria-label, then the placeholder", () => {
+  let c = buildCombobox({ inputAttrs: 'aria-label="Pick a framework"' });
+  assert.equal(c.list.getAttribute("aria-label"), "Pick a framework");
+
+  c = buildCombobox({ inputAttrs: 'placeholder="Select a framework"' });
+  assert.equal(c.list.getAttribute("aria-label"), "Select a framework");
+
+  c = buildCombobox({ mode: "popup" });
+  assert.equal(c.list.getAttribute("aria-label"), "Select a country");
+});
+
+test("a listbox name in the markup wins", () => {
+  const c = buildCombobox({ inputAttrs: 'aria-label="Input name"' });
+  c.list.removeAttribute("aria-label");
+  c.list.removeAttribute("data-name-synced");
+  c.list.setAttribute("aria-labelledby", "custom");
+  c.component.render();
+
+  assert.equal(c.list.getAttribute("aria-labelledby"), "custom");
+  assert.equal(c.list.hasAttribute("aria-label"), false);
+});
+
+test("aria-controls and aria-activedescendant point at the list and option", () => {
+  const c = buildCombobox();
+
+  keydown(c.input, "ArrowDown");
+  const active = c.input.getAttribute("aria-activedescendant");
+  assert.equal(document.getElementById(active), c.item("Next.js"));
+  assert.equal(
+    document.getElementById(c.input.getAttribute("aria-controls")),
+    c.list,
+  );
+  assert.equal(
+    document.getElementById(c.trigger.getAttribute("aria-controls")),
+    c.list,
+  );
+});
+
+// ---- Server filtering: reopening -----------------------------------------
+
+test("server filtering: the open event carries the query to reset to", async () => {
+  const c = buildCombobox({ filter: false });
+  const opened = () =>
+    c.pushed.filter((p) => p.event === "opened").map((p) => p.payload.query);
+
+  type(c.input, "re");
+  assert.deepEqual(opened(), ["re"], "typing opens with the typed query");
+
+  patch(c, { items: ["Remix"] });
+  keydown(c.input, "ArrowDown");
+  keydown(c.input, "Enter");
+  await waitFor(() => isClosed(c));
+  assert.equal(c.input.value, "Remix");
+
+  // Reopening asks the server for the unfiltered list.
+  click(c.input);
+  assert.deepEqual(opened(), ["re", ""]);
+  patch(c, { items: FRAMEWORKS });
+  assert.ok(isOpen(c));
+  assert.equal(c.visibleValues().length, FRAMEWORKS.length);
+  assert.equal(c.input.value, "Remix", "the input keeps the selected label");
+});
+
+// ---- use-portal ------------------------------------------------------------
+
+const portaledItem = (value) =>
+  document.querySelector(`[data-part="item"][data-value="${value}"]`);
+
+test("use-portal: the open content moves to the body and works there", async () => {
+  const c = buildCombobox({ usePortal: true, inForm: true });
+
+  click(c.input);
+  assert.ok(isOpen(c));
+  assert.equal(c.content.parentElement, document.body, "portaled");
+  assert.equal(c.el.contains(c.content), false);
+
+  // Keyboard on the input still drives the portaled list.
+  keydown(c.input, "ArrowDown");
+  assert.ok(portaledItem("Next.js").hasAttribute("data-highlighted"));
+  assert.equal(
+    c.input.getAttribute("aria-activedescendant"),
+    portaledItem("Next.js").id,
+  );
+
+  // Hover and click on the portaled items.
+  portaledItem("Remix").dispatchEvent(
+    new window.MouseEvent("mousemove", { bubbles: true }),
+  );
+  assert.ok(portaledItem("Remix").hasAttribute("data-highlighted"));
+  const down = new window.MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+  });
+  portaledItem("Remix").dispatchEvent(down);
+  assert.ok(down.defaultPrevented, "keeps focus in the input");
+  portaledItem("Remix").dispatchEvent(
+    new window.MouseEvent("click", { bubbles: true }),
+  );
+
+  await waitFor(() => isClosed(c));
+  assert.deepEqual(c.hiddenValues(), [["framework", "Remix"]]);
+  assert.equal(c.input.value, "Remix");
+  assert.ok(c.el.contains(c.content), "handed back once closed");
+});
+
+test("use-portal: clicks in the portaled content are not outside clicks", () => {
+  const c = buildCombobox({ usePortal: true });
+
+  click(c.input);
+  click(c.content.querySelector('[data-part="empty"]'));
+  assert.ok(isOpen(c));
+
+  click(document.getElementById("outside"));
+  assert.equal(c.component.state, "closed");
+});
+
+test("use-portal: a patch hands the content back in place and portals it again", () => {
+  const c = buildCombobox({
+    usePortal: true,
+    multiple: true,
+    mode: "chips",
+  });
+  const hook = { ...SaladUIHook, el: c.el, component: c.component };
+
+  click(c.input);
+  keydown(c.input, "ArrowDown");
+  keydown(c.input, "Enter"); // picks Next.js; the list stays open
+  keydown(c.input, "ArrowDown");
+  assert.equal(c.highlighted(), null, "the items live in the body now");
+  assert.ok(portaledItem("SvelteKit").hasAttribute("data-highlighted"));
+
+  // The hidden inputs were rebuilt at the end of the root meanwhile.
+  hook.beforeUpdate();
+  assert.equal(c.content.parentElement, c.el, "back in the root");
+  assert.equal(
+    c.content.previousElementSibling,
+    c.chips,
+    "in its original spot, not appended after the hidden inputs",
+  );
+  assert.equal(
+    c.content.nextElementSibling.dataset.saladUiComboboxInput,
+    "true",
+  );
+  assert.equal(
+    c.el.querySelector('[data-part="item"]').hasAttribute("id"),
+    false,
+    "generated ids are cleared for the patch",
+  );
+  assert.equal(
+    Array.from(c.el.childNodes).some(
+      (node) => node.nodeType === Node.COMMENT_NODE,
+    ),
+    false,
+    "no placeholder left behind",
+  );
+
+  // The server re-renders the content closed; the instance re-applies state.
+  c.content.hidden = true;
+  c.content.removeAttribute("style");
+  hook.updated();
+
+  assert.equal(hook.component, c.component, "the instance is kept");
+  assert.ok(isOpen(c));
+  assert.equal(c.content.parentElement, document.body, "portaled again");
+  assert.ok(portaledItem("SvelteKit").hasAttribute("data-highlighted"));
+  assert.deepEqual(c.chipValues(), ["Next.js"]);
+  assert.equal(
+    c.input.getAttribute("aria-activedescendant"),
+    portaledItem("SvelteKit").id,
+  );
+});
+
+test("use-portal: popup mode keeps the search input focused across a patch", () => {
+  const c = buildCombobox({ usePortal: true, mode: "popup" });
+  const hook = { ...SaladUIHook, el: c.el, component: c.component };
+
+  click(c.trigger);
+  assert.equal(c.content.parentElement, document.body);
+  assert.equal(document.activeElement, c.contentInput);
+
+  type(c.contentInput, "re");
+  c.contentInput.setSelectionRange(1, 1);
+  keydown(c.contentInput, "ArrowDown");
+  assert.equal(portaledItem("Remix").hasAttribute("data-highlighted"), true);
+
+  hook.beforeUpdate();
+  assert.equal(c.content.parentElement, c.el);
+  c.content.hidden = true;
+  hook.updated();
+
+  assert.ok(isOpen(c), "the focusout from moving the input does not close it");
+  assert.equal(c.content.parentElement, document.body);
+  assert.equal(document.activeElement, c.contentInput);
+  assert.equal(c.contentInput.selectionStart, 1, "the caret is kept");
+  assert.deepEqual(
+    Array.from(document.querySelectorAll('[data-part="item"]'))
+      .filter((item) => !item.hidden)
+      .map((item) => item.dataset.value),
+    ["Remix"],
+    "the query is kept",
+  );
+  assert.ok(portaledItem("Remix").hasAttribute("data-highlighted"));
+
+  // Keys in the portaled search input still work after the patch.
+  keydown(c.contentInput, "Escape");
+  assert.equal(c.component.state, "closed");
+});
+
+test("use-portal: destroying an open combobox takes the content out of the body", () => {
+  const c = buildCombobox({ usePortal: true });
+
+  click(c.input);
+  assert.equal(c.content.parentElement, document.body);
+  c.component.destroy();
+  assert.equal(c.content.parentElement, c.el);
 });
