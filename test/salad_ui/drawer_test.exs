@@ -109,7 +109,7 @@ defmodule SaladUI.DrawerTest do
       assert html =~ ~s(data-slot="drawer-trigger")
       assert html =~ ~s(data-part="trigger")
       assert html =~ ~s(data-action="open")
-      assert html =~ ~r/<button[^>]*data-slot="drawer-close"[^>]*data-action="close"/
+      assert_tag(html, "button", [{"data-slot", "drawer-close"}, {"data-action", "close"}])
     end
 
     test "content renders overlay, panel and handle with shadcn classes" do
@@ -156,9 +156,9 @@ defmodule SaladUI.DrawerTest do
       assert html =~ ~s(data-slot="drawer-header")
       assert html =~ "group-data-[vaul-drawer-direction=top]/drawer-content:text-center"
       assert html =~ "text-left"
-      assert html =~ ~r/<h2[^>]*data-slot="drawer-title"[^>]*data-part="title"/
+      assert_tag(html, "h2", [{"data-slot", "drawer-title"}, {"data-part", "title"}])
       assert html =~ "font-semibold text-foreground"
-      assert html =~ ~r/<p[^>]*data-slot="drawer-description"[^>]*data-part="description"/
+      assert_tag(html, "p", [{"data-slot", "drawer-description"}, {"data-part", "description"}])
       assert html =~ ~s(data-slot="drawer-footer")
       assert html =~ "mt-auto flex flex-col gap-2"
       assert html =~ "pt-2"

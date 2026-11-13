@@ -1,9 +1,12 @@
 // saladui/components/dropdown_menu.js
-import Component from "../core/component.js";
+import Component, {
+  assignId,
+  clearGeneratedIdsWithin,
+} from "../core/component.js";
 import SaladUI from "../index.js";
 import PositionedElement from "../core/positioned-element.js";
 import { ModalLayer } from "../core/modal-layer.js";
-import Menu, { assignId, clearGeneratedIds } from "./menu.js";
+import Menu from "./menu.js";
 
 // Open sub-menus and focus, handed from the instance torn down by a LiveView
 // patch to the one rebuilt in its place (keyed by root element).
@@ -235,7 +238,7 @@ class DropdownMenuComponent extends Component {
     // (afterMount() -> activateOpenState()).
     this.positionedElement?.deactivate();
 
-    clearGeneratedIds(this.el, this.positioner);
+    clearGeneratedIdsWithin(this.el, this.positioner);
   }
 
   setupComponentEvents() {

@@ -13,7 +13,7 @@
 //   * the `sidebar_state` cookie, so the server can render the last state;
 //   * `on-open-change` and the open/close/toggle commands;
 //   * sidebar_menu_button tooltips, shown only while collapsed on desktop.
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import SaladUI from "../index.js";
 import FocusTrap from "../core/focus-trap.js";
 import PositionedElement from "../core/positioned-element.js";
@@ -35,6 +35,9 @@ const ACTION_SELECTOR = [
 ].join(", ");
 const MENU_BUTTON_SELECTOR = '[data-sidebar="menu-button"]';
 const MENU_TOOLTIP_SELECTOR = '[data-sidebar="menu-tooltip"]';
+
+// Ids generated for menu tooltips rendered without a button id.
+let tooltipIds = 0;
 
 class SidebarComponent extends Component {
   constructor(el, hookContext) {
@@ -212,7 +215,10 @@ class SidebarComponent extends Component {
   // (hidden), so it never wraps the button. As in shadcn (TooltipProvider
   // delayDuration={0}, `hidden={state !== "collapsed" || isMobile}`), it
   // opens at once on hover or focus, but only if the button's sidebar is
-  // collapsed and the layout is not mobile at that moment.
+  // collapsed and the layout is not mobile at that moment. While it shows,
+  // the button is aria-describedby it, as in Radix: by the server-rendered
+  // `<button id>-tooltip`, or else an id generated here (stripped again
+  // before each patch by the hook, and re-assigned after it).
 
   tooltipFor(button) {
     const next = button?.nextElementSibling;
@@ -272,6 +278,23 @@ class SidebarComponent extends Component {
       this.el.querySelectorAll(MENU_BUTTON_SELECTOR),
     ).indexOf(button);
     this.activeTooltip = { button, tooltip, positioned, index };
+    this.describeButton(button, tooltip, true);
+  }
+
+  // Adds (or removes) the tooltip's id to the button's aria-describedby,
+  // keeping any description the button already had.
+  describeButton(button, tooltip, described) {
+    const tooltipId = described
+      ? assignId(tooltip, `${this.el.id || "sidebar"}-tooltip-${++tooltipIds}`)
+      : tooltip.id;
+    if (!tooltipId) return;
+    const ids = (button.getAttribute("aria-describedby") || "")
+      .split(/\s+/)
+      .filter((id) => id && id !== tooltipId);
+    if (described) ids.push(tooltipId);
+
+    if (ids.length) button.setAttribute("aria-describedby", ids.join(" "));
+    else button.removeAttribute("aria-describedby");
   }
 
   hideTooltip() {
@@ -282,6 +305,7 @@ class SidebarComponent extends Component {
     active.positioned.destroy();
     active.tooltip.hidden = true;
     active.tooltip.setAttribute("data-state", "closed");
+    this.describeButton(active.button, active.tooltip, false);
   }
 
   afterMount() {
@@ -386,6 +410,11 @@ class SidebarComponent extends Component {
         ? activeTooltip.button
         : this.el.querySelectorAll(MENU_BUTTON_SELECTOR)[activeTooltip.index];
       if (button) this.showTooltip(button);
+    }
+    // The patch drops the client-set aria-describedby of a kept button.
+    if (this.activeTooltip) {
+      const { button, tooltip } = this.activeTooltip;
+      this.describeButton(button, tooltip, true);
     }
 
     if (this.isMobile && this.openMobile) {

@@ -1,11 +1,14 @@
 // saladui/components/menubar.js
-import Component from "../core/component.js";
+import Component, {
+  assignId,
+  clearGeneratedIdsWithin,
+} from "../core/component.js";
 import { isRtl } from "../core/direction.js";
 import SaladUI from "../index.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
 import PositionedElement from "../core/positioned-element.js";
 import Portal from "../core/portal.js";
-import Menu, { assignId, clearGeneratedIds } from "./menu.js";
+import Menu from "./menu.js";
 
 // The open menu, tab stop and focus, handed from the instance a LiveView
 // patch tears down to the one rebuilt in its place (keyed by root element).
@@ -508,7 +511,7 @@ class MenubarComponent extends Component {
       menu: this.openMenu?.menu?.snapshot() || null,
     });
 
-    clearGeneratedIds(this.el, ...positioners);
+    clearGeneratedIdsWithin(this.el, ...positioners);
   }
 
   beforeDestroy() {

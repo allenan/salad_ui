@@ -139,7 +139,7 @@ defmodule SaladUI.Popover do
     </button>
     <.dynamic
       :if={@as != "button"}
-      data-slot="popover-trigger"
+      data-slot={@rest[:"data-slot"] || "popover-trigger"}
       tag={@as}
       type={@type}
       data-part="trigger"

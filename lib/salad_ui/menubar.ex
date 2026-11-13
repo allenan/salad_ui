@@ -216,11 +216,15 @@ defmodule SaladUI.Menubar do
   * `:align` - `start`, `center` or `end`. Defaults to `"start"`.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `8`.
   * `:align-offset` - Offset along the alignment axis. Defaults to `-4`.
+  * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
+    first (and back). Defaults to `false`, as in Radix. (The menubar's own `loop`, for
+    moving between triggers, defaults to `true`.)
   """
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "start"
   attr :"side-offset", :integer, default: 8
   attr :"align-offset", :integer, default: -4
+  attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -248,6 +252,7 @@ defmodule SaladUI.Menubar do
         data-part="content"
         data-side={@side}
         data-align={@align}
+        data-loop={@loop && "true"}
         data-state="closed"
         role="menu"
         tabindex="-1"
@@ -424,11 +429,14 @@ defmodule SaladUI.Menubar do
   * `:side` - `right` or `left` of the sub-trigger. Defaults to `"right"`; mirrored under `dir="rtl"`.
   * `:align` - `start`, `center` or `end`. Defaults to `"start"`.
   * `:side-offset` / `:align-offset` - Offsets in pixels. Default to `0`.
+  * `:loop` - Whether `ArrowDown`/`ArrowUp` wrap from the last item to the
+    first (and back). Defaults to `false`, as in Radix.
   """
   attr :side, :string, values: ~w(right left), default: "right"
   attr :align, :string, values: ~w(start center end), default: "start"
   attr :"side-offset", :integer, default: 0
   attr :"align-offset", :integer, default: 0
+  attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
   attr :class, :string, default: nil
   attr :rest, :global
   slot :inner_block, required: true

@@ -163,7 +163,7 @@ defmodule SaladUI.AlertDialog do
 
     ~H"""
     <.dynamic
-      data-slot="alert-dialog-trigger"
+      data-slot={@rest[:"data-slot"] || "alert-dialog-trigger"}
       data-part="trigger"
       data-action="open"
       tag={@as}

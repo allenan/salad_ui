@@ -23,6 +23,12 @@ class Portal {
   static move(element, container = document.body) {
     if (!element) return false;
 
+    // Already portaled: only change containers, keeping the original spot.
+    if (this.isInPortal(element)) {
+      if (element.parentNode !== container) container.appendChild(element);
+      return true;
+    }
+
     // A portaled element leaves the subtree it inherited `dir` from (e.g. a
     // `direction_provider/1`), so carry its direction along as an attribute
     // when the portal container reads the other way.
@@ -30,9 +36,18 @@ class Portal {
     const addedDir =
       !element.hasAttribute("dir") && dir !== getDirection(container);
 
+    // A comment holds the element's place among its siblings, so restore()
+    // puts it back exactly there (not at the end of its parent, which would
+    // reorder the children LiveView patches by position).
+    const parent = element.parentNode;
+    const marker = parent ? document.createComment("salad-ui-portal") : null;
+    if (marker) parent.insertBefore(marker, element);
+
     // Store original information for restoration
     const originalData = {
       parent: element.parentElement,
+      marker,
+      nextSibling: element.nextSibling,
       addedDir,
       styles: {
         position: element.style.position,
@@ -78,8 +93,18 @@ class Portal {
     }
 
     try {
-      // Move back to original parent
-      originalData.parent.appendChild(element);
+      // Back to its original spot: the marker's, else in front of its old
+      // next sibling, else at the end of its old parent.
+      const { parent, marker, nextSibling } = originalData;
+      if (marker?.parentNode) {
+        marker.parentNode.replaceChild(element, marker);
+      } else if (nextSibling && nextSibling.parentNode === parent) {
+        parent.insertBefore(element, nextSibling);
+      } else {
+        parent.appendChild(element);
+      }
+      originalData.marker = null;
+      originalData.nextSibling = null;
       if (originalData.addedDir) {
         element.removeAttribute("dir");
         originalData.addedDir = false;
