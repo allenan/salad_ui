@@ -36,12 +36,13 @@ defmodule Mix.Tasks.Salad.Install do
     |> patch_app_js_with_local_imports()
   end
 
-  # Copy all JavaScript files to assets/js/ui/
+  # Copy all JavaScript files to assets/js/ui/, with the data they load
+  # (the emoji picker's data.json and its DATA_LICENSE.txt).
   defp copy_javascript_files(igniter, source_root) do
     source_dir = Path.join(source_root, "assets/salad_ui")
 
     source_dir
-    |> Path.join("**/*.js")
+    |> Path.join("**/*.{js,json,txt}")
     |> Path.wildcard()
     |> Enum.reduce(igniter, fn source_file, acc_igniter ->
       relative_path = Path.relative_to(source_file, source_dir)
@@ -119,6 +120,8 @@ defmodule Mix.Tasks.Salad.Install do
     import "./ui/components/toggle.js";
     import "./ui/components/toggle_group.js";
     import "./ui/components/sidebar.js";
+    import "./ui/components/emoji_picker.js";
+    import "./ui/components/drop_zone.js";
     """
 
     js_hooks = "SaladUI: SaladUI.SaladUIHook"

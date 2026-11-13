@@ -144,6 +144,7 @@
 @source "../../../../lib";
 
 @source "../../../../assets/salad_ui";
+@source not "../../../../assets/salad_ui/components/emoji_picker";
 
 @plugin "@tailwindcss/typography";
 

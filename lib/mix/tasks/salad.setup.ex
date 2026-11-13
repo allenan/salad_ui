@@ -211,6 +211,8 @@ defmodule Mix.Tasks.Salad.Setup do
   import "salad_ui/components/toggle";
   import "salad_ui/components/toggle_group";
   import "salad_ui/components/sidebar";
+  import "salad_ui/components/emoji_picker";
+  import "salad_ui/components/drop_zone";
   """
   @js_hooks "SaladUI: SaladUI.SaladUIHook"
   defp patch_app_js(igniter) do

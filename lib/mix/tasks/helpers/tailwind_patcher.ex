@@ -63,11 +63,16 @@ defmodule SaladUI.Patcher.TailwindPatcher do
   # theme toggle (`data-theme="dark"`).
   @dark_variant ~s{@custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));}
 
+  # The emoji picker's dataset (emoji names: "ring", "uppercase", ...) is
+  # excluded from both the package (`mix salad.setup`) and the local copy
+  # (`mix salad.install`); Tailwind ignores a `not` path that doesn't exist.
   @directives [
     ~s(@source "../js";),
     ~s(@source "../../lib";),
     ~s(@source "../../deps/salad_ui/lib";),
     ~s(@source "../../deps/salad_ui/assets/salad_ui";),
+    ~s(@source not "../../deps/salad_ui/assets/salad_ui/components/emoji_picker";),
+    ~s(@source not "../js/ui/components/emoji_picker";),
     ~s(@plugin "@tailwindcss/typography";),
     ~s(@import "../vendor/tw-animate.css";)
   ]

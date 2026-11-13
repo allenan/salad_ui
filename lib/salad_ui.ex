@@ -239,6 +239,8 @@ defmodule SaladUI do
       import SaladUI.Direction
       import SaladUI.Drawer
       import SaladUI.DropdownMenu
+      import SaladUI.DropZone
+      import SaladUI.EmojiPicker
       import SaladUI.Empty
       import SaladUI.Field
       import SaladUI.Form

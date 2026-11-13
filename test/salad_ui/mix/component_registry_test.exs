@@ -105,6 +105,17 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistryTest do
       assert "core/positioned-element.js" in resolve!(registry, "popover").js_files
     end
 
+    test "copies data a component loads with import(), with its license", %{registry: registry} do
+      plan = resolve!(registry, "emoji_picker")
+
+      assert "popover.ex" in plan.ex_files
+      assert plan.js_entries == ["components/emoji_picker.js", "components/popover.js"]
+      assert "components/emoji_picker/data.json" in plan.js_files
+      assert "components/emoji_picker/DATA_LICENSE.txt" in plan.js_files
+      refute "components/emoji_picker/generate_data.exs" in plan.js_files
+      assert plan.packages == []
+    end
+
     test "reports npm packages the JS needs", %{registry: registry} do
       assert resolve!(registry, "chart").packages == ["chart.js"]
       assert resolve!(registry, "dialog").packages == []

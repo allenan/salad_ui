@@ -16,7 +16,9 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
   #     `SaladUI.register("<name>", ...)`.
   #   * JS deps: relative `import`s followed transitively from `index.js` and
   #     the entries (so only the core modules actually used are copied). Bare
-  #     specifiers (e.g. `chart.js/auto`) are reported as npm packages.
+  #     specifiers (e.g. `chart.js/auto`) are reported as npm packages. A
+  #     dynamic `import("./x.json")` counts too, and a data file brings the
+  #     license files beside it (the emoji picker's dataset).
 
   defstruct root: nil, ex: %{}, modules: %{}, js: %{}, registrations: %{}
 
@@ -34,6 +36,7 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
   # `data-component={cond && "x"}`; not `[data-component]` selectors.
   @data_component ~r/data-component"?\s*[:=]\s*\{?[^\n"]*?"([a-z][a-z0-9-]*)"/
   @js_import ~r/^\s*import\s+(?:[^'";]*?\s+from\s+)?["']([^"']+)["']/m
+  @js_dynamic_import ~r/\bimport\(\s*["'](\.[^"']+)["']\s*\)/
   @js_register ~r/SaladUI\.register\(\s*["']([^"']+)["']/
 
   @doc "Scans the SaladUI source tree at `root` (the package directory)."
@@ -59,6 +62,14 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
         rel = Path.relative_to(path, js)
         {rel, scan_js(rel, File.read!(path))}
       end)
+
+    data_files =
+      js
+      |> Path.join("**/*.{json,txt}")
+      |> Path.wildcard()
+      |> Map.new(fn path -> {Path.relative_to(path, js), scan_data(path, js)} end)
+
+    js_files = Map.merge(js_files, data_files)
 
     registrations =
       for {file, %{registers: names}} <- js_files, name <- names, into: %{}, do: {name, file}
@@ -231,7 +242,11 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
   end
 
   defp scan_js(rel, source) do
-    specs = @js_import |> Regex.scan(source, capture: :all_but_first) |> List.flatten()
+    specs =
+      [@js_import, @js_dynamic_import]
+      |> Enum.flat_map(&Regex.scan(&1, source, capture: :all_but_first))
+      |> List.flatten()
+
     {relative, packages} = Enum.split_with(specs, &String.starts_with?(&1, "."))
     dir = Path.dirname(rel)
 
@@ -240,6 +255,19 @@ defmodule SaladUI.Mix.Tasks.ComponentRegistry do
       packages: packages |> Enum.map(&package_name/1) |> Enum.uniq(),
       registers: @js_register |> Regex.scan(source, capture: :all_but_first) |> List.flatten()
     }
+  end
+
+  # A data file needs nothing but the license files next to it.
+  defp scan_data(path, js_root) do
+    licenses =
+      path
+      |> Path.dirname()
+      |> Path.join("*LICENSE*")
+      |> Path.wildcard()
+      |> Enum.reject(&(&1 == path))
+      |> Enum.map(&Path.relative_to(&1, js_root))
+
+    %{imports: licenses, packages: [], registers: []}
   end
 
   defp normalize_js_path(dir, spec) do
