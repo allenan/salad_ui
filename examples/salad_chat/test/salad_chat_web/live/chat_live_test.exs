@@ -112,6 +112,21 @@ defmodule SaladChatWeb.ChatLiveTest do
       assert render(kai) =~ ~s(aria-label="1 unread")
     end
 
+    test "reaching the top of the scroller loads older history", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general")
+      {messages, false} = Chat.list_messages("general", limit: 1_000)
+      assert length(messages) > 40, "general needs more than one page of history"
+      older = hd(messages)
+
+      refute has_element?(view, "#msg-#{older.id}")
+      # Scrollable-edge changes that don't reach the top are ignored.
+      render_hook(view, "scroll_edges", %{"start" => true, "end" => false})
+      refute has_element?(view, "#msg-#{older.id}")
+
+      render_hook(view, "scroll_edges", %{"start" => false, "end" => true})
+      assert has_element?(view, "#msg-#{older.id}")
+    end
+
     test "slash commands are expanded", %{conn: conn} do
       {:ok, view, _} = live(conn, ~p"/as/sam/c/random")
 

@@ -386,6 +386,12 @@ defmodule SaladChatWeb.ChatLive do
 
   def handle_event("load_older", _, socket), do: {:noreply, socket}
 
+  # The viewport can no longer scroll toward the start: the reader is at the top.
+  def handle_event("scroll_edges", %{"start" => false}, socket),
+    do: handle_event("load_older", %{}, socket)
+
+  def handle_event("scroll_edges", _, socket), do: {:noreply, socket}
+
   def handle_event("react", %{"id" => id, "emoji" => emoji}, socket) do
     Chat.toggle_reaction(to_int(id), socket.assigns.me.handle, emoji)
     {:noreply, socket}
@@ -871,7 +877,16 @@ defmodule SaladChatWeb.ChatLive do
               min-size={35}
               class="flex min-h-0 min-w-0 flex-col"
             >
-              <.message_scroller id="message-scroller" auto_scroll class="min-h-0 flex-1">
+              <%!-- History loads when the reader reaches the top (start: false).
+                   Not phx-viewport-top: its push locks the stream container, and
+                   LiveView merges the locked clone back with the `at: 0` rows
+                   appended at the end (LiveView 1.2.13). --%>
+              <.message_scroller
+                id="message-scroller"
+                auto_scroll
+                on-scrollable-change="scroll_edges"
+                class="min-h-0 flex-1"
+              >
                 <%!-- SALAD-BUG: message_scroller_viewport sets `contain-content` and
                      `scroll-fade-b` (lib/salad_ui/message_scroller.ex:235). Layout/paint
                      containment makes the viewport the containing block of the
@@ -897,7 +912,6 @@ defmodule SaladChatWeb.ChatLive do
                   <.message_scroller_content
                     id="messages"
                     phx-update="stream"
-                    phx-viewport-top={@has_more && "load_older"}
                     class="min-h-0 shrink-0 gap-0 pb-3"
                   >
                     <.message_row
