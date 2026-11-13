@@ -3,6 +3,13 @@
  * FocusTrap utility for SaladUI components
  * Manages focus behavior for modals, popovers, and similar components
  */
+// `element` itself when focusable, else its first focusable descendant (a
+// trigger rendered as a <div> around a <button>).
+function focusTarget(element, selector) {
+  if (!element?.isConnected) return null;
+  return element.matches(selector) ? element : element.querySelector(selector);
+}
+
 class FocusTrap {
   /**
    * Create a focus trap for a specific element
@@ -19,6 +26,11 @@ class FocusTrap {
       // which only move focus in on open and back out on close (Radix's
       // FocusScope with `trapped={false}`).
       contain: true,
+      // Where focus goes on deactivate() when nothing usable was focused at
+      // activate() (focus was on <body>, or that element left the page): an
+      // element, or a function returning one. A dialog opened by the server
+      // passes its trigger, as Radix returns focus to the trigger.
+      returnFocus: null,
       ...options,
     };
 
@@ -57,36 +69,65 @@ class FocusTrap {
 
     const previouslyFocused = this.previouslyFocused;
     const container = this.element;
+    const fallback = this.options.returnFocus;
+    // Read now: destroy() clears the options before the timer runs.
+    const selector = this.options.focusableSelector;
 
-    // Restore focus if possible, but only while focus is still in the closed
-    // content or nowhere (on <body>): a close handler, or the click outside
-    // that closed it, may have moved focus on purpose, and that wins (as
-    // Radix's FocusScope only returns focus that is still inside).
-    if (
-      previouslyFocused &&
-      previouslyFocused.focus &&
-      this.isElementInViewport(previouslyFocused)
-    ) {
+    // Return focus only while it is still in the closed content or nowhere
+    // (on <body>): a close handler, or the click outside that closed it, may
+    // have moved focus on purpose, and that wins (as Radix's FocusScope only
+    // returns focus that is still inside).
+    const focusLost = () => {
+      const active = document.activeElement;
+      return (
+        !active ||
+        active === document.body ||
+        active === document.documentElement ||
+        !active.isConnected ||
+        container?.contains(active)
+      );
+    };
+
+    if (this.isRestorable(previouslyFocused)) {
+      if (this.isElementInViewport(previouslyFocused)) {
+        setTimeout(() => {
+          if (
+            typeof document === "undefined" ||
+            !document.body.contains(previouslyFocused)
+          ) {
+            return;
+          }
+          if (focusLost()) previouslyFocused.focus();
+        }, 0);
+      }
+    } else if (fallback) {
+      // Nothing was focused at open (a dialog the server opened): go to the
+      // fallback (the dialog's trigger).
       setTimeout(() => {
-        if (
-          typeof document === "undefined" ||
-          !document.body.contains(previouslyFocused)
-        ) {
-          return;
-        }
-        const active = document.activeElement;
-        const focusLost =
-          !active ||
-          active === document.body ||
-          active === document.documentElement ||
-          !active.isConnected ||
-          container?.contains(active);
-        if (focusLost) previouslyFocused.focus();
+        if (typeof document === "undefined") return;
+        const target = focusTarget(
+          typeof fallback === "function" ? fallback() : fallback,
+          selector,
+        );
+        if (target && focusLost()) target.focus();
       }, 0);
     }
 
     this.previouslyFocused = null;
     this.active = false;
+  }
+
+  /**
+   * Whether `element` (focused at activate()) can take focus back: still on
+   * the page and not <body> (where focus sits when nothing is focused).
+   */
+  isRestorable(element) {
+    return Boolean(
+      element?.focus &&
+      element !== document.body &&
+      element !== document.documentElement &&
+      document.body.contains(element),
+    );
   }
 
   /**

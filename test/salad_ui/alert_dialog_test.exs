@@ -16,9 +16,12 @@ defmodule SaladUI.AlertDialogTest do
 
       assert html =~ ~s(id="test-dialog")
       assert html =~ "Content"
-      assert html =~ ~s(class="relative z-50 group/alert-dialog")
+      # No stacking context on the root: its fixed overlay and content stack
+      # against the page, so a later dialog's trigger never paints over them.
+      assert html =~ ~s(class="group/alert-dialog")
       assert html =~ ~s(data-component="dialog")
-      assert html =~ "closeOnEscape&quot;:false"
+      # Escape closes it, as in Radix's AlertDialog.
+      assert html =~ "closeOnEscape&quot;:true"
       assert html =~ "closeOnOutsideClick&quot;:false"
       assert html =~ "role&quot;:&quot;alertdialog"
     end

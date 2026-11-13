@@ -133,6 +133,20 @@ defmodule SaladUI.DropdownMenuTest do
         assert html =~ css_class
       end
     end
+
+    test "an item's phx-click is on the item element, where its click bubbles from" do
+      # menu.js lets an item's click bubble (and turns Enter/Space into a
+      # click), so LiveView runs this binding as well as on-select.
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu_item phx-click="delete" phx-value-id="7">Delete</.dropdown_menu_item>
+        """)
+
+      assert html =~ ~r/<div[^>]*data-part="item"[^>]*phx-click="delete"/
+      assert html =~ ~s(phx-value-id="7")
+    end
   end
 
   describe "typeahead" do

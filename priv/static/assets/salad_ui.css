@@ -7,7 +7,7 @@
 }
 
 .salad-scroll-area:hover {
-    scrollbar-color: #c2c2c2 transparent;
+    scrollbar-color: var(--border) transparent;
 }
 
 /* Chrome, Edge, and Safari */
@@ -22,7 +22,7 @@
 }
 
 .salad-scroll-area::-webkit-scrollbar-thumb {
-    background-color: #c2c2c2;
+    background-color: var(--border);
     border-radius: 14px;
 }
 

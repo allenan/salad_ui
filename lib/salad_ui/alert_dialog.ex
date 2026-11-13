@@ -70,9 +70,12 @@ defmodule SaladUI.AlertDialog do
 
   An alert dialog is always modal, as Radix's is (it takes no `modal`
   option): while it is open, clicks outside it never reach the page (and do
-  not close it either), everything outside it is `aria-hidden`, and wheel and
-  touch scrolling outside it are cancelled. See "Modal behaviour" in
-  `SaladUI.Dialog`.
+  not close it either), everything outside it is `aria-hidden` and `inert`,
+  and wheel and touch scrolling outside it are cancelled. See "Modal
+  behaviour" in `SaladUI.Dialog`.
+
+  Escape closes it, as Radix's does (firing `on-close`); opened from another
+  dialog, Escape closes only the alert dialog.
 
   ## Scroll lock
 
@@ -125,7 +128,7 @@ defmodule SaladUI.AlertDialog do
         :options,
         json(%{
           animations: get_animation_config(),
-          closeOnEscape: false,
+          closeOnEscape: true,
           closeOnOutsideClick: false,
           modal: true,
           role: "alertdialog"
@@ -136,7 +139,7 @@ defmodule SaladUI.AlertDialog do
     <div
       data-slot="alert-dialog"
       id={@id}
-      class={classes(["relative z-50 group/alert-dialog", @class])}
+      class={classes(["group/alert-dialog", @class])}
       data-component="dialog"
       data-options={@options}
       data-state={@initial_state}

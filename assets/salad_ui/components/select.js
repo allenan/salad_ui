@@ -10,7 +10,8 @@ import PositionedElement from "../core/positioned-element.js";
 import { ModalLayer } from "../core/modal-layer.js";
 import { getTextValue, typeaheadFor } from "../core/typeahead.js";
 
-// Matches the `max-h-[min(24rem,var(...))]` class on select_content.
+// The CSS variable select_content's max height class reads (capped at 24rem).
+// (Not spelled as the class: Tailwind scans this file and would emit it.)
 const AVAILABLE_HEIGHT_VAR = "--salad-select-content-available-height";
 // sideOffset (4px) plus a little breathing room from the window edge.
 const SELECT_COLLISION_MARGIN = 12;

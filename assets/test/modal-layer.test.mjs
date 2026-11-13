@@ -287,6 +287,36 @@ test("everything outside an open dialog is aria-hidden, and restored on close", 
   assert.equal($("#pre-hidden").hasAttribute("data-aria-hidden"), false);
 });
 
+test("everything hidden outside an open dialog is also inert, and restored on close", () => {
+  const dialog = buildDialog();
+  $("#pre-hidden").setAttribute("inert", "");
+
+  dialog.transition("open");
+
+  // inert takes the hidden page out of the tab order (axe aria-hidden-focus).
+  for (const id of ["#header", "#sibling", "#dialog-trigger"]) {
+    assert.ok($(id).hasAttribute("inert"), id);
+  }
+  // Never the layer, its ancestors or a live region.
+  for (const id of [
+    "#main",
+    "#dialog",
+    "#dialog-content",
+    "#dialog-panel",
+    "#live",
+  ]) {
+    assert.equal($(id).hasAttribute("inert"), false, id);
+  }
+
+  dialog.transition("close");
+
+  for (const id of ["#header", "#sibling", "#dialog-trigger"]) {
+    assert.equal($(id).hasAttribute("inert"), false, id);
+  }
+  // The app's own inert is left alone.
+  assert.ok($("#pre-hidden").hasAttribute("inert"));
+});
+
 test("stacked dialogs: the inner one hides and blocks the outer until it closes", () => {
   buildPage(dialogMarkup("outer", { panel: dialogMarkup("inner") }));
   const inner = mount("dialog", $("#inner"));
@@ -444,6 +474,7 @@ test("content portaled out of an open dialog stays interactive and exposed", asy
   assert.ok(positioner, "the popover content is portaled");
 
   await waitFor(() => !$("#portal").hasAttribute("aria-hidden"));
+  assert.equal($("#portal").hasAttribute("inert"), false);
   assert.equal(positioner.style.pointerEvents, "auto");
   assert.equal(effectivePointerEvents($("#popover-action")), "auto");
   assert.ok(hidden("#header"));
@@ -543,6 +574,8 @@ test("a layer branch (the toast viewport) stays interactive and exposed", () => 
   assert.equal(effectivePointerEvents($("#toast-close")), "auto");
   assert.equal(hidden("#toaster"), false);
   assert.equal(hidden("#toasts"), false);
+  assert.equal($("#toaster").hasAttribute("inert"), false);
+  assert.equal($("#toasts").hasAttribute("inert"), false);
   assert.ok(hidden("#tpl"));
 
   dialog.transition("close");

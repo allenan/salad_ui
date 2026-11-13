@@ -115,7 +115,8 @@ test("initial layout uses default sizes and splits the rest evenly", () => {
   assert.equal(b.style.flexGrow, "25");
   assert.equal(a.style.overflow, "clip");
 
-  assert.equal(el.getAttribute("aria-orientation"), "horizontal");
+  // Only the separators carry aria-orientation (the group has no role).
+  assert.equal(el.hasAttribute("aria-orientation"), false);
   const [first, second] = handlesOf(el);
   assert.equal(first.getAttribute("role"), "separator");
   assert.equal(first.getAttribute("aria-orientation"), "vertical");
@@ -167,7 +168,7 @@ test("vertical groups resize with ArrowUp/ArrowDown and a custom step", () => {
   );
   const [h] = handlesOf(el);
 
-  assert.equal(el.getAttribute("aria-orientation"), "vertical");
+  assert.equal(el.hasAttribute("aria-orientation"), false);
   assert.equal(h.getAttribute("aria-orientation"), "horizontal");
 
   key(h, "ArrowDown");

@@ -49,6 +49,23 @@ defmodule SaladUI.AttachmentTest do
     assert html =~ "absolute inset-0 z-10 outline-none"
   end
 
+  test "the card shows shadcn's focus ring when its trigger has keyboard focus" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.attachment>
+        <.attachment_trigger aria-label="Open report.pdf" />
+      </.attachment>
+      """)
+
+    for class <- ~w(has-focus-visible:border-ring has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50) do
+      assert html =~ class
+    end
+
+    refute html =~ "focus-within:ring-1"
+  end
+
   test "attachment state, size, orientation and image media" do
     assigns = %{}
 

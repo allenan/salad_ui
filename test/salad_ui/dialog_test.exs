@@ -23,6 +23,24 @@ defmodule SaladUI.DialogTest do
       refute html =~ "translate-x-[-50%]"
     end
 
+    test "overlay stacks at z-50 and the root makes no stacking context" do
+      # A `relative z-50` root made every dialog its own stacking context at
+      # the same level, so an open dialog painted under a later dialog's
+      # trigger; the fixed overlay and content carry the z-index instead.
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dialog id="d">
+          <.dialog_content>Body</.dialog_content>
+        </.dialog>
+        """)
+
+      assert html =~ ~r/data-slot="dialog-overlay"[^>]*class="fixed inset-0 z-50 /
+      assert html =~ ~s(class="group/dialog")
+      refute html =~ "relative z-50"
+    end
+
     test "It renders dialog header correctly" do
       assigns = %{}
 

@@ -1,8 +1,26 @@
 // saladui/core/click-outside.js
 /**
  * ClickOutsideMonitor utility for SaladUI components
- * Detects clicks outside of specified elements and triggers a callback
+ * Detects clicks outside of specified elements and triggers a callback.
+ *
+ * Content portaled out of a monitored element (a dropdown menu or select
+ * opened inside a popover or dialog, moved to <body> with `Portal.move()`)
+ * counts as inside it, as Radix's DismissableLayer treats its portaled
+ * children: picking a menu item does not dismiss the popover it sits in.
  */
+import Portal from "./portal.js";
+
+function logicallyContains(container, target) {
+  for (
+    let node = target;
+    node;
+    node = Portal.originalParent(node) || node.parentNode
+  ) {
+    if (node === container) return true;
+  }
+  return false;
+}
+
 class ClickOutsideMonitor {
   /**
    * Create a click outside monitor
@@ -91,7 +109,7 @@ class ClickOutsideMonitor {
 
     // Check if click was outside all monitored elements
     const isOutside = !this.elements.some((element) => {
-      return element && (element === target || element.contains(target));
+      return element && logicallyContains(element, target);
     });
 
     // If click was outside, call the callback
