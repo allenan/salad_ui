@@ -61,7 +61,9 @@ defmodule SaladStorybookWeb.CodeBlockStoriesTest do
       refute has_element?(view, "#markdown-code-1-copy[disabled]")
 
       view |> element("#code-block-markdown-replay") |> render_click()
-      refute has_element?(view, "#code-block-markdown-reply")
+      # The story's own 30ms chunk timer may already have streamed a word or
+      # two, so check the reply restarted (no code block yet), not that it's empty.
+      refute has_element?(view, "#markdown-code-1")
       refute has_element?(view, "#code-block-markdown-replay")
 
       chunks = length(String.split(CodeBlockMarkdown.response(), ~r/(?<=\s)/))
