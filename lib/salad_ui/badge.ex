@@ -52,7 +52,7 @@ defmodule SaladUI.Badge do
       <.badge variant="ghost">Ghost</.badge>
       <.badge variant="link" navigate="/changelog">Changelog</.badge>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :variant, :string,
     values: ~w(default secondary destructive outline ghost link),

@@ -47,7 +47,7 @@ defmodule SaladUI.Typography do
   use SaladUI, :component
 
   @doc "Renders a page title (`<h1>`)."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -63,7 +63,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders a section heading (`<h2>`) with a bottom border."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -84,7 +84,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders a sub-section heading (`<h3>`)."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -97,7 +97,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders a minor heading (`<h4>`)."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -110,7 +110,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders a paragraph. Consecutive paragraphs are spaced with `mt-6`."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -123,7 +123,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders an italic block quote with a left border."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -152,7 +152,7 @@ defmodule SaladUI.Typography do
         </tbody>
       </.typography_table>
   """
-  attr :class, :string, default: nil, doc: "classes for the `<table>`"
+  attr :class, :any, default: nil, doc: "classes for the `<table>`"
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -181,7 +181,7 @@ defmodule SaladUI.Typography do
   Renders a bulleted list (`<ul>`), or a numbered list (`<ol>`) with `ordered`.
   """
   attr :ordered, :boolean, default: false, doc: "render an `<ol>` with decimal markers"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -202,7 +202,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders inline code."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -221,7 +221,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders an introductory paragraph in larger, muted text."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -234,7 +234,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders large, semibold text."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -247,7 +247,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders small, medium-weight text (`<small>`)."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -260,7 +260,7 @@ defmodule SaladUI.Typography do
   end
 
   @doc "Renders small, muted text."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

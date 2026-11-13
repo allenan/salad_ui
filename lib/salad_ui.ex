@@ -155,6 +155,17 @@ defmodule SaladUI do
         {:noreply, socket}
       end
 
+  ## Importing components
+
+  `use SaladUI` imports every component module (except `SaladUI.Command`) and
+  the helpers. When names clash with your own (`sidebar/1`, `message/1`,
+  `json/1`, ...), narrow the imports with `only:` or `except:`. Both take
+  component modules, `name: arity` pairs and bare function names (every
+  arity):
+
+      use SaladUI, except: [SaladUI.Sidebar, :json, message: 1]
+      use SaladUI, only: [SaladUI.Button, SaladUI.Dialog, SaladUI.Command]
+
   ## Customization
 
   Components support extensive customization through:
@@ -201,12 +212,31 @@ defmodule SaladUI do
 
   @doc """
   When used, dispatch to the appropriate macro.
+
+  `use SaladUI` imports the components; `only:` and `except:` narrow the
+  imports (see "Importing components" above).
   """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end
 
-  defmacro __using__(_) do
+  defmacro __using__(opts) when is_list(opts) do
+    case Keyword.keys(opts) -- [:only, :except] do
+      [] -> :ok
+      keys -> raise ArgumentError, "unknown options #{inspect(keys)} for `use #{inspect(__MODULE__)}`"
+    end
+
+    only = expand_import_opts(opts[:only], __CALLER__)
+    except = expand_import_opts(opts[:except] || [], __CALLER__)
+
+    if is_nil(only) and except == [],
+      do: default_imports(),
+      else: filter_imports(default_imports(), only, except)
+  end
+
+  # The modules `use SaladUI` imports. `mix salad.add` rewrites this list in
+  # a local copy, so keep it a plain list of imports.
+  defp default_imports do
     quote do
       import SaladUI.Accordion
       import SaladUI.Alert
@@ -282,6 +312,105 @@ defmodule SaladUI do
       import SaladUI.Tooltip
       import SaladUI.Trace
       import SaladUI.Typography
+    end
+  end
+
+  defp expand_import_opts(nil, _env), do: nil
+
+  defp expand_import_opts(list, env) when is_list(list) do
+    Enum.map(list, fn
+      {name, arity} when is_atom(name) and is_integer(arity) -> {name, arity}
+      entry -> import_entry(Macro.expand(entry, env))
+    end)
+  end
+
+  defp expand_import_opts(other, _env) do
+    raise ArgumentError, "`only:` and `except:` take a list, got: #{Macro.to_string(other)}"
+  end
+
+  # A module (`SaladUI.Sidebar`) or a function name (`:sidebar`, any arity).
+  defp import_entry(atom) when is_atom(atom) do
+    if match?("Elixir." <> _, Atom.to_string(atom)), do: {:module, atom}, else: {atom, :any}
+  end
+
+  defp import_entry(other) do
+    raise ArgumentError,
+          "`only:` and `except:` take modules, `name: arity` pairs or function names, " <>
+            "got: #{Macro.to_string(other)}"
+  end
+
+  defp filter_imports({:__block__, _, nodes}, only, except) do
+    defaults =
+      Enum.map(nodes, fn {:import, _, [{:__aliases__, _, parts} | opts]} ->
+        {Module.concat(parts), List.first(opts, [])}
+      end)
+
+    default_modules = Enum.map(defaults, &elem(&1, 0))
+    {only_modules, only_functions} = split_import_entries(only || [])
+    {except_modules, except_functions} = split_import_entries(except)
+
+    for module <- except_modules, module not in default_modules do
+      raise ArgumentError, "`use #{inspect(__MODULE__)}, except:` names #{inspect(module)}, which it doesn't import"
+    end
+
+    selected =
+      if is_nil(only) do
+        Enum.reject(defaults, fn {module, _} -> module in except_modules end)
+      else
+        whole = Enum.filter(defaults, fn {module, _} -> module in only_modules end)
+        extra = for module <- only_modules, module not in default_modules, do: {Code.ensure_compiled!(module), []}
+
+        partial =
+          for {module, _} <- defaults,
+              module not in only_modules,
+              funs = matching_functions(module, only_functions),
+              funs != [],
+              do: {module, [only: funs]}
+
+        check_matched!(only_functions, Enum.flat_map(partial, fn {_, opts} -> opts[:only] end), :only)
+        whole ++ extra ++ partial
+      end
+
+    dropped = Map.new(selected, fn {module, _} -> {module, matching_functions(module, except_functions)} end)
+    check_matched!(except_functions, dropped |> Map.values() |> List.flatten(), :except)
+
+    imports =
+      for {module, opts} <- selected,
+          opts = drop_functions(opts, Map.fetch!(dropped, module)),
+          opts != :none,
+          do: quote(do: import(unquote(module), unquote(opts)))
+
+    {:__block__, [], imports}
+  end
+
+  defp split_import_entries(entries) do
+    {modules, functions} = Enum.split_with(entries, &match?({:module, _}, &1))
+    {Enum.map(modules, &elem(&1, 1)), functions}
+  end
+
+  defp matching_functions(_module, []), do: []
+
+  defp matching_functions(module, entries) do
+    for {name, arity} = fun <- Code.ensure_compiled!(module).__info__(:functions),
+        Enum.any?(entries, fn {n, a} -> n == name and a in [arity, :any] end),
+        do: fun
+  end
+
+  defp check_matched!(entries, found, option) do
+    for {name, arity} <- entries,
+        not Enum.any?(found, fn {n, a} -> n == name and arity in [a, :any] end) do
+      raise ArgumentError,
+            "`use #{inspect(__MODULE__)}, #{option}:` names #{name}/#{if arity == :any, do: "*", else: arity}, " <>
+              "which no imported module defines"
+    end
+  end
+
+  defp drop_functions(opts, []), do: opts
+
+  defp drop_functions(opts, funs) do
+    case Keyword.fetch(opts, :only) do
+      {:ok, only} -> if only -- funs == [], do: :none, else: [only: only -- funs]
+      :error -> Keyword.update(opts, :except, funs, &(&1 ++ funs))
     end
   end
 end

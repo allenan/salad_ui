@@ -731,7 +731,7 @@ defmodule SaladUI.DataTable do
   attr :"on-sort", :string, default: nil, doc: "event pushed when a sort direction is picked"
   attr :"on-visibility-change", :string, default: nil, doc: "event pushed when \"Hide\" is picked"
   attr :target, :any, default: nil, doc: "`phx-target` for the events, such as `@myself`"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def data_table_column_header(assigns) do
@@ -828,7 +828,7 @@ defmodule SaladUI.DataTable do
   attr :target, :any, default: nil, doc: "`phx-target` for the event, such as `@myself`"
   attr :variant, :string, default: "outline", doc: "trigger button variant"
   attr :size, :string, default: "sm", doc: "trigger button size"
-  attr :class, :string, default: "ms-auto hidden h-8 lg:flex", doc: "trigger button classes"
+  attr :class, :any, default: "ms-auto hidden h-8 lg:flex", doc: "trigger button classes"
   attr :rest, :global
   slot :inner_block, doc: "trigger content. Defaults to a settings icon and \"View\"."
 
@@ -903,7 +903,7 @@ defmodule SaladUI.DataTable do
   attr :"on-page-change", :string, required: true, doc: "event pushed with the new page"
   attr :"on-page-size-change", :string, default: nil, doc: "event pushed with the new page size"
   attr :target, :any, default: nil, doc: "`phx-target` for the events, such as `@myself`"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def data_table_pagination(assigns) do

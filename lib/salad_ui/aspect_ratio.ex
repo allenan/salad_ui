@@ -29,7 +29,7 @@ defmodule SaladUI.AspectRatio do
   * `:class` - CSS classes for the ratio element (the one with `data-slot`).
   """
   attr :ratio, :any, required: true, doc: "width / height, as a number or a \"16/9\" string"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 

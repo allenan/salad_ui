@@ -235,7 +235,7 @@ defmodule SaladUI.DropdownMenu do
 
   attr :"on-open", :any, default: nil, doc: "Handler for dropdown menu open event"
   attr :"on-close", :any, default: nil, doc: "Handler for dropdown menu close event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -291,7 +291,7 @@ defmodule SaladUI.DropdownMenu do
   """
   attr :as, :any, default: "button"
   attr :type, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
@@ -354,7 +354,7 @@ defmodule SaladUI.DropdownMenu do
     first (and back). Defaults to `false`, as in Radix.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
   attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
@@ -409,7 +409,7 @@ defmodule SaladUI.DropdownMenu do
 
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -425,7 +425,7 @@ defmodule SaladUI.DropdownMenu do
   * `:inset` - Indent to line up with checkbox/radio items (`data-inset`). Defaults to `false`.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :inset, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
@@ -448,7 +448,7 @@ defmodule SaladUI.DropdownMenu do
   * `:as` - Tag or function component to render. Defaults to `"div"`.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :value, :string, default: nil
   attr :variant, :string, values: ~w(default destructive), default: "default"
   attr :inset, :boolean, default: false
@@ -474,7 +474,7 @@ defmodule SaladUI.DropdownMenu do
   * `:disabled` - Whether the item is disabled. Defaults to `false`.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :value, :string, default: nil
   attr :variant, :string, values: ~w(default destructive), default: "default"
   attr :inset, :boolean, default: false
@@ -517,7 +517,7 @@ defmodule SaladUI.DropdownMenu do
   * `:on-select` - Handler for item selection.
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :value, :string, default: nil
   attr :checked, :boolean, default: false
   attr :disabled, :boolean, default: false
@@ -565,7 +565,7 @@ defmodule SaladUI.DropdownMenu do
     default: nil,
     doc: "Handler fired with `%{\"value\" => value}` when the selected item changes"
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -595,7 +595,7 @@ defmodule SaladUI.DropdownMenu do
   attr :disabled, :boolean, default: false
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selected event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -627,7 +627,7 @@ defmodule SaladUI.DropdownMenu do
         </.dropdown_menu_sub_content>
       </.dropdown_menu_sub>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -646,7 +646,7 @@ defmodule SaladUI.DropdownMenu do
   """
   attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -680,7 +680,7 @@ defmodule SaladUI.DropdownMenu do
   attr :"side-offset", :integer, default: 0, doc: "Distance from the sub-trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
   attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -702,7 +702,7 @@ defmodule SaladUI.DropdownMenu do
 
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def dropdown_menu_separator(assigns) do
@@ -716,7 +716,7 @@ defmodule SaladUI.DropdownMenu do
 
   * `:class` - Additional CSS classes.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

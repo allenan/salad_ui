@@ -47,7 +47,7 @@ defmodule SaladUI.Empty do
   Renders the empty state container. Add `border` for an outlined look, or
   `bg-*` / `bg-gradient-*` utilities for a background.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -71,7 +71,7 @@ defmodule SaladUI.Empty do
   @doc """
   Wraps the media, title and description.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -107,7 +107,7 @@ defmodule SaladUI.Empty do
       </.empty_media>
   """
   attr :variant, :string, values: ~w(default icon), default: "default", doc: "the media style"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -135,7 +135,7 @@ defmodule SaladUI.Empty do
   @doc """
   Renders the title of the empty state.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -154,7 +154,7 @@ defmodule SaladUI.Empty do
   @doc """
   Renders the description of the empty state. Links inside are underlined.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -178,7 +178,7 @@ defmodule SaladUI.Empty do
   @doc """
   Renders the content area: buttons, inputs or links.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

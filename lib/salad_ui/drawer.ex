@@ -139,7 +139,7 @@ defmodule SaladUI.Drawer do
     default: true,
     doc: "block, hide and scroll-lock the page while open; `false` makes a non-modal drawer"
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :"on-open", :any, default: nil, doc: "handler for the open event (server event name or JS command)"
   attr :"on-close", :any, default: nil, doc: "handler for the close event (server event name or JS command)"
@@ -193,13 +193,14 @@ defmodule SaladUI.Drawer do
   Opens the drawer when clicked. Wrap a `button/1` in it, the equivalent of
   shadcn's `<DrawerTrigger asChild>`, or render it as a tag with `as`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def drawer_trigger(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -207,6 +208,7 @@ defmodule SaladUI.Drawer do
       data-part="trigger"
       data-action="open"
       tag={@as}
+      type={@type}
       class={@class}
       {@rest}
     >
@@ -222,7 +224,7 @@ defmodule SaladUI.Drawer do
   `data-[vaul-drawer-direction=bottom]:max-h-[50vh]`) work as in shadcn: the
   direction is copied onto the panel from `drawer/1`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, doc: "extra attributes for the panel, e.g. `dir=\"rtl\"`"
   slot :inner_block, required: true
 
@@ -266,7 +268,7 @@ defmodule SaladUI.Drawer do
   Groups the title and description. Centered for top and bottom drawers on
   small screens.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -290,7 +292,7 @@ defmodule SaladUI.Drawer do
   @doc """
   Holds the drawer's actions, pinned to the bottom of the panel.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -309,7 +311,7 @@ defmodule SaladUI.Drawer do
   @doc """
   The drawer's accessible name (`aria-labelledby` of the panel).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -329,7 +331,7 @@ defmodule SaladUI.Drawer do
   @doc """
   The drawer's accessible description (`aria-describedby` of the panel).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -356,13 +358,14 @@ defmodule SaladUI.Drawer do
         <.button variant="outline" class="w-full">Cancel</.button>
       </.drawer_close>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :as, :any, default: "div", doc: "the tag (or function component) to render"
+  attr :type, :string, default: nil, doc: "the button type; defaults to \"button\" when `as` renders a button"
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
   def drawer_close(assigns) do
-    assigns = drop_button_props(assigns)
+    assigns = assigns |> drop_button_props() |> put_button_type()
 
     ~H"""
     <.dynamic
@@ -370,6 +373,7 @@ defmodule SaladUI.Drawer do
       data-part="close"
       data-action="close"
       tag={@as}
+      type={@type}
       class={@class}
       {@rest}
     >

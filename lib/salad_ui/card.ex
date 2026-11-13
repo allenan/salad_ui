@@ -51,7 +51,7 @@ defmodule SaladUI.Card do
       </.card>
   """
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :size, :string, values: ~w(default sm), default: "default", doc: "the card size"
   slot :inner_block, required: true
   attr :rest, :global
@@ -78,7 +78,7 @@ defmodule SaladUI.Card do
   Renders a card header section for title, description and an optional
   `card_action/1`, which is placed in the top-right corner.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -102,7 +102,7 @@ defmodule SaladUI.Card do
   @doc """
   Renders a card title within the header section.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -121,7 +121,7 @@ defmodule SaladUI.Card do
   @doc """
   Renders a card description within the header section.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -147,7 +147,7 @@ defmodule SaladUI.Card do
         </.card_action>
       </.card_header>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -166,7 +166,7 @@ defmodule SaladUI.Card do
   @doc """
   Renders the main content area of the card.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 
@@ -181,7 +181,7 @@ defmodule SaladUI.Card do
   @doc """
   Renders a footer section for the card, typically containing actions.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
   attr :rest, :global
 

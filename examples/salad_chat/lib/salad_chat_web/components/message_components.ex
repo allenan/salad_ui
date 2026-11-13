@@ -534,7 +534,7 @@ defmodule SaladChatWeb.MessageComponents do
         <span class="contents [@media(hover:none)]:hidden">
           <.emoji_picker id={"#{@id}-react-more"} message_id={@message.id} />
         </span>
-        <.tooltip :if={!@ctx.thread?} class="[@media(hover:none)]:hidden">
+        <.tooltip :if={!@ctx.thread?} id={"#{@id}-reply-tooltip"} class="[@media(hover:none)]:hidden">
           <.tooltip_trigger>
             <.button
               variant="ghost"

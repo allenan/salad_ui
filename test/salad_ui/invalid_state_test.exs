@@ -257,7 +257,7 @@ defmodule SaladUI.InvalidStateTest do
 
       html =
         rendered_to_string(~H"""
-        <.radio_group>
+        <.radio_group id="rg">
           <.radio_group_item value="a" id="a" />
         </.radio_group>
         """)

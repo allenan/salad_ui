@@ -80,7 +80,7 @@ defmodule SaladUI.Item do
         <.item variant="outline" role="listitem">...</.item>
       </.item_group>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -100,7 +100,7 @@ defmodule SaladUI.Item do
   @doc """
   Renders a horizontal separator between items in an `item_group/1`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def item_separator(assigns) do
@@ -146,7 +146,7 @@ defmodule SaladUI.Item do
   attr :href, :string, default: nil, doc: "renders the item as a link to this URL"
   attr :navigate, :string, default: nil, doc: "renders the item as a LiveView `navigate` link"
   attr :patch, :string, default: nil, doc: "renders the item as a LiveView `patch` link"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(method download hreflang referrerpolicy rel target replace)
   slot :inner_block, required: true
 
@@ -198,7 +198,7 @@ defmodule SaladUI.Item do
       <.item_media variant="image"><img src="/cover.png" alt="Cover" /></.item_media>
   """
   attr :variant, :string, values: ~w(default icon image), default: "default", doc: "the media style"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -216,7 +216,7 @@ defmodule SaladUI.Item do
   Wraps the title and description of an item. A second `item_content` placed
   right after the first shrinks to its content (e.g. a trailing duration).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -235,7 +235,7 @@ defmodule SaladUI.Item do
   @doc """
   Renders the title of an item.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -254,7 +254,7 @@ defmodule SaladUI.Item do
   @doc """
   Renders the description of an item, clamped to two lines. Links inside are underlined.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -279,7 +279,7 @@ defmodule SaladUI.Item do
   @doc """
   Container for buttons or other interactive elements at the end of an item.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -294,7 +294,7 @@ defmodule SaladUI.Item do
   @doc """
   Renders a full-width row above the item content (e.g. a cover image).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -313,7 +313,7 @@ defmodule SaladUI.Item do
   @doc """
   Renders a full-width row below the item content (e.g. a progress bar).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

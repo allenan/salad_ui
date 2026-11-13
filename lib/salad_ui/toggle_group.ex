@@ -86,7 +86,7 @@ defmodule SaladUI.ToggleGroup do
   * `:loop` - whether keyboard focus wraps around (default `true`)
   * `:disabled` - disables every item
   """
-  attr :id, :string, default: nil, doc: "the hook needs an id; one is generated when omitted"
+  attr :id, :string, default: nil, doc: "required unless `field` is given (the hook needs a stable id)"
   attr :name, :string, default: nil
   attr :type, :string, values: [nil, "single", "multiple"], default: nil, doc: ~s{"single" (default) or "multiple"}
 
@@ -110,7 +110,7 @@ defmodule SaladUI.ToggleGroup do
   attr :orientation, :string, values: ~w(horizontal vertical), default: "horizontal"
   attr :loop, :boolean, default: true, doc: "whether arrow-key focus wraps around"
   attr :"on-value-changed", :any, default: nil, doc: "handler for the value-changed event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -125,9 +125,10 @@ defmodule SaladUI.ToggleGroup do
       |> assign(:multiple, multiple)
       |> prepare_assign()
       |> put_aria_invalid()
+      |> require_id!("toggle_group/1")
 
     value = normalize_value!(assigns.value, multiple)
-    id = assigns.id || "toggle-group-#{System.unique_integer([:positive])}"
+    id = assigns.id
 
     name = input_name(assigns.name, multiple)
 
@@ -235,7 +236,7 @@ defmodule SaladUI.ToggleGroup do
 
   Every other global attribute (e.g. `aria-label`, `aria-invalid`) is rendered on the `<button>`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :disabled, :boolean, default: false
   attr :value, :string, default: nil
   attr :variant, :string, values: [nil, "default", "outline"], default: nil

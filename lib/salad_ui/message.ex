@@ -54,7 +54,7 @@ defmodule SaladUI.Message do
         <.message>...</.message>
       </.message_group>
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -76,7 +76,7 @@ defmodule SaladUI.Message do
   * `:class` - Additional CSS classes.
   """
   attr :align, :string, values: ~w(start end), default: "start", doc: "which side the message sits on"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -103,7 +103,7 @@ defmodule SaladUI.Message do
   indent for a grouped message whose sender is already shown. It lifts itself
   above a `message_footer/1` so it lines up with the last bubble.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -127,7 +127,7 @@ defmodule SaladUI.Message do
   @doc """
   The content column: header, bubbles, attachments and footer, stacked.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -151,7 +151,7 @@ defmodule SaladUI.Message do
   @doc """
   A small muted line above the bubbles, typically the sender's name.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -177,7 +177,7 @@ defmodule SaladUI.Message do
   action buttons (copy, like, retry). Aligns to the end in an `align="end"`
   message.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

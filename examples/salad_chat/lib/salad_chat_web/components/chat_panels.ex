@@ -45,7 +45,7 @@ defmodule SaladChatWeb.ChatPanels do
     # block of the fixed-positioned popovers and the combobox list inside it.
     ~H"""
     <header class="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 sm:px-4">
-      <.tooltip class="hidden md:block">
+      <.tooltip id="header-sidebar-tooltip" class="hidden md:block">
         <.tooltip_trigger>
           <.sidebar_trigger target="app-sidebar" class="-ml-1" />
         </.tooltip_trigger>
@@ -147,7 +147,7 @@ defmodule SaladChatWeb.ChatPanels do
               </.scroll_area>
             </.popover_content>
           </.popover>
-          <.tooltip>
+          <.tooltip id="header-details-tooltip">
             <.tooltip_trigger
               as={&button/1}
               variant="outline"
@@ -163,7 +163,7 @@ defmodule SaladChatWeb.ChatPanels do
 
         <.jump_to channels={@channels} people={@people} online={@online} />
 
-        <.tooltip>
+        <.tooltip id="header-theme-tooltip">
           <.tooltip_trigger>
             <.button
               variant="ghost"
@@ -276,7 +276,7 @@ defmodule SaladChatWeb.ChatPanels do
               else: "#" <> @channel.name}
           </p>
         </div>
-        <.tooltip :if={@closable} class="ml-auto">
+        <.tooltip :if={@closable} id="thread-close-tooltip" class="ml-auto">
           <.tooltip_trigger>
             <.button variant="ghost" size="icon-sm" phx-click="close_thread" aria-label="Close thread">
               <.icon name="hero-x-mark" />

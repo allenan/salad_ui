@@ -105,7 +105,7 @@ defmodule SaladUI.ContextMenu do
 
   attr :"on-open", :any, default: nil, doc: "Handler fired when the menu opens"
   attr :"on-close", :any, default: nil, doc: "Handler fired when the menu closes"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -152,7 +152,7 @@ defmodule SaladUI.ContextMenu do
   """
   attr :as, :any, default: "span"
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size)
   slot :inner_block, required: true
 
@@ -190,7 +190,7 @@ defmodule SaladUI.ContextMenu do
   attr :side, :string, values: ~w(top right bottom left), default: "right"
   attr :"collision-padding", :integer, default: 0, doc: "Distance kept from the viewport edges"
   attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -223,7 +223,7 @@ defmodule SaladUI.ContextMenu do
   end
 
   @doc "Groups related items (`role=\"group\"`)."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -239,7 +239,7 @@ defmodule SaladUI.ContextMenu do
   * `:inset` - Indent to line up with checkbox/radio items. Defaults to `false`.
   """
   attr :inset, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -267,7 +267,7 @@ defmodule SaladUI.ContextMenu do
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selection"
   attr :as, :any, default: "div"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch method)
   slot :inner_block, required: true
 
@@ -293,7 +293,7 @@ defmodule SaladUI.ContextMenu do
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item activation"
   attr :"on-checked-change", :any, default: nil, doc: "Handler for checked state changes"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -311,7 +311,7 @@ defmodule SaladUI.ContextMenu do
   """
   attr :value, :string, default: nil, doc: "The selected value"
   attr :"on-value-changed", :any, default: nil, doc: "Handler fired when the selected item changes"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -333,7 +333,7 @@ defmodule SaladUI.ContextMenu do
   attr :disabled, :boolean, default: false
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item activation"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -347,7 +347,7 @@ defmodule SaladUI.ContextMenu do
   Wraps a sub-menu: one `context_menu_sub_trigger/1` followed by one
   `context_menu_sub_content/1`. Sub-menus can be nested.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -366,7 +366,7 @@ defmodule SaladUI.ContextMenu do
   """
   attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -393,7 +393,7 @@ defmodule SaladUI.ContextMenu do
   attr :"side-offset", :integer, default: 0
   attr :"align-offset", :integer, default: 0
   attr :loop, :boolean, default: false, doc: "Wrap keyboard navigation from the last item to the first and back"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -409,7 +409,7 @@ defmodule SaladUI.ContextMenu do
   end
 
   @doc "A horizontal rule between groups of items."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def context_menu_separator(assigns) do
@@ -417,7 +417,7 @@ defmodule SaladUI.ContextMenu do
   end
 
   @doc "A keyboard shortcut hint, pushed to the end of an item."
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

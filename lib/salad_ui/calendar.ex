@@ -184,7 +184,7 @@ defmodule SaladUI.Calendar do
   attr :"weekday-names", :list, default: nil, doc: "7 short weekday names, Sunday first"
   attr :"button-variant", :string, default: "ghost", doc: "Variant of the navigation buttons"
   attr :"on-select", :any, default: nil, doc: "Handler for the select event"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   slot :day, doc: "Custom day content; receives the day map"
@@ -805,7 +805,7 @@ defmodule SaladUI.Calendar.LiveComponent do
   end
 
   attr :direction, :string, values: ~w(left right down)
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   defp chevron_icon(assigns) do
     assigns =

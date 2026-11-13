@@ -48,7 +48,7 @@ defmodule SaladUI.Pagination do
   @doc """
   Renders a pagination component.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch)
   slot :inner_block, required: true
 
@@ -74,7 +74,7 @@ defmodule SaladUI.Pagination do
   @doc """
   Renders pagination content wrapper.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch)
   slot :inner_block, required: true
 
@@ -98,7 +98,7 @@ defmodule SaladUI.Pagination do
   @doc """
   Renders a pagination item container.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch)
   slot :inner_block, required: true
 
@@ -130,7 +130,7 @@ defmodule SaladUI.Pagination do
   """
   attr :"is-active", :boolean, default: false
   attr :size, :string, default: "icon", values: ~w(default sm lg icon)
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(href navigate patch)
   slot :inner_block, required: true
 
@@ -164,7 +164,7 @@ defmodule SaladUI.Pagination do
   Pass `text` to translate the label (e.g. for an RTL page); the chevron
   flips under `dir="rtl"`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :text, :string, default: "Next", doc: "Visible label"
   attr :rest, :global, include: ~w(href navigate patch)
 
@@ -190,7 +190,7 @@ defmodule SaladUI.Pagination do
   it). Pass `text` to translate the label (e.g. for an RTL page); the
   chevron flips under `dir="rtl"`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :text, :string, default: "Previous", doc: "Visible label"
   attr :rest, :global, include: ~w(href navigate patch)
 
@@ -214,7 +214,7 @@ defmodule SaladUI.Pagination do
   Renders an ellipsis for page ranges. The icon is hidden from assistive
   technology; screen readers announce the `text` ("More pages") instead.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :text, :string, default: "More pages", doc: "Screen-reader label"
   attr :rest, :global, include: ~w(href navigate patch)
 
@@ -242,7 +242,7 @@ defmodule SaladUI.Pagination do
 
   # lucide-react's <svg> wrapper (ChevronLeftIcon, ChevronRightIcon,
   # MoreHorizontalIcon); decorative, so hidden from assistive technology.
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   slot :inner_block, required: true
 
   defp lucide_icon(assigns) do

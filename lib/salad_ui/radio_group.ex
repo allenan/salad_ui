@@ -5,6 +5,7 @@ defmodule SaladUI.RadioGroup do
   ## Examples:
 
       <.radio_group
+        id="subscription"
         name="subscription"
         default-value="monthly"
         on-value-changed={JS.push("plan_changed")}
@@ -53,13 +54,13 @@ defmodule SaladUI.RadioGroup do
 
   * `:on-value-changed` - Fired when the selected item changes.
   """
-  attr :id, :string, default: nil
+  attr :id, :string, default: nil, doc: "required unless `field` is given (the hook needs a stable id)"
   attr :name, :string, default: nil
   attr :value, :any, default: nil, doc: "The current value of the radio group"
   attr :"default-value", :any, default: nil, doc: "The default value of the radio group"
   attr :"on-value-changed", :any, default: nil, doc: "Handler for value changed event"
   attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -68,8 +69,7 @@ defmodule SaladUI.RadioGroup do
       assigns
       |> prepare_assign()
       |> put_aria_invalid()
-
-    assigns = assign_new(assigns, :id, fn -> "radio-group-#{System.unique_integer()}" end)
+      |> require_id!("radio_group/1")
 
     # Collect event mappings
     event_map = event_mappings(assigns)
@@ -110,7 +110,7 @@ defmodule SaladUI.RadioGroup do
   attr :id, :string, required: true
   attr :value, :string, required: true
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def radio_group_item(assigns) do

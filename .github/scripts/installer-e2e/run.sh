@@ -40,8 +40,10 @@ mix phx.new demo --no-ecto --no-mailer --no-dashboard --no-gettext --install
 cd demo
 
 step "add salad_ui (path: $REPO)"
-perl -0pi -e "s|(\{:phoenix, \"[^\"]+\"\},)|\$1\n      {:salad_ui, path: \"$REPO\"},|" mix.exs
+# igniter is an optional dependency of salad_ui: apps add it for the installers.
+perl -0pi -e "s|(\{:phoenix, \"[^\"]+\"\},)|\$1\n      {:salad_ui, path: \"$REPO\"},\n      {:igniter, \"~> 0.6\", only: [:dev, :test]},|" mix.exs
 grep -q ':salad_ui, path:' mix.exs || fail "could not add salad_ui dep to mix.exs"
+grep -q ':igniter,' mix.exs || fail "could not add igniter dep to mix.exs"
 mix deps.get
 # Path deps aren't copied into deps/; link it so the installer's
 # `@source "../../deps/salad_ui/..."` directives resolve like a Hex install.

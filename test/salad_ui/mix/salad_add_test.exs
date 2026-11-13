@@ -161,7 +161,7 @@ defmodule Mix.Tasks.Salad.AddTest do
       ui = content(igniter, "lib/demo_web/ui.ex")
       assert ui =~ "import DemoWeb.UI.DropdownMenu"
       assert ui =~ "import DemoWeb.UI.Tabs"
-      [_, using] = String.split(ui, "defmacro __using__(_)")
+      [_, using] = String.split(ui, "defp default_imports")
       assert length(Regex.scan(~r/import DemoWeb.UI.Helpers\b/, using)) == 1
       assert {:ok, _} = Code.string_to_quoted(ui)
 

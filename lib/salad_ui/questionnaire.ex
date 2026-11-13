@@ -168,7 +168,7 @@ defmodule SaladUI.Questionnaire do
     values: [nil, "letters", "numbers"],
     doc: "Assign `A`-`Z` or `1`-`9` to each enabled fixed choice"
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :"on-item-change", :any, default: nil, doc: "Handler for item change events"
   attr :"on-status-change", :any, default: nil, doc: "Handler for item status change events"
   attr :rest, :global, include: ~w(action method enctype target autocomplete accept-charset csrf_token)
@@ -240,7 +240,7 @@ defmodule SaladUI.Questionnaire do
   """
   attr :questionnaire, :map, default: nil, doc: "The root's `:let` state"
   attr :"aria-label", :string, default: "Questionnaire progress"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -303,7 +303,7 @@ defmodule SaladUI.Questionnaire do
   attr :multiple, :boolean, default: nil, doc: "Fixed choices are checkboxes"
   attr :disabled, :boolean, default: nil, doc: "Leave the item out of progress, navigation, validation and submission"
   attr :invalid, :boolean, default: false, doc: "Mark the item invalid (e.g. from an external validator)"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -343,7 +343,7 @@ defmodule SaladUI.Questionnaire do
   `aria-labelledby`.
   """
   attr :as, :string, default: "legend", doc: "Element to render"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -371,7 +371,7 @@ defmodule SaladUI.Questionnaire do
   """
   attr :item, :map, default: nil, doc: "The item's `:let` state (gives the description a stable id)"
   attr :id, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -395,7 +395,7 @@ defmodule SaladUI.Questionnaire do
   Layout container for an item's fixed choices and freeform input.
   """
   attr :item, :map, default: nil, doc: "The item's `:let` state (sets `data-shortcuts`)"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -425,7 +425,7 @@ defmodule SaladUI.Questionnaire do
   attr :value, :string, required: true, doc: "Submitted answer value"
   attr :checked, :boolean, default: nil, doc: "Checked state (default: whether `value` is among the item's answers)"
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -538,7 +538,7 @@ defmodule SaladUI.Questionnaire do
   @doc """
   Secondary text inside a `questionnaire_choice/1`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -576,7 +576,7 @@ defmodule SaladUI.Questionnaire do
     doc: "Value (default: the item's answer when it is not one of the item's `choices`)"
 
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   attr :rest, :global,
     include: ~w(placeholder autocomplete autofocus maxlength minlength pattern inputmode min max step readonly)
@@ -630,7 +630,7 @@ defmodule SaladUI.Questionnaire do
   question." (optional).
   """
   attr :item, :map, required: true, doc: "The item's `:let` state"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -668,7 +668,7 @@ defmodule SaladUI.Questionnaire do
   @doc """
   Lays out Previous, Skip and Next/Submit on one row (Previous at the start).
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -695,7 +695,7 @@ defmodule SaladUI.Questionnaire do
   attr :variant, :string, default: "outline", values: ~w(default destructive outline secondary ghost link)
   attr :size, :string, default: "default", values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg)
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -716,7 +716,7 @@ defmodule SaladUI.Questionnaire do
   attr :variant, :string, default: "outline", values: ~w(default destructive outline secondary ghost link)
   attr :size, :string, default: "default", values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg)
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -736,7 +736,7 @@ defmodule SaladUI.Questionnaire do
   attr :variant, :string, default: "default", values: ~w(default destructive outline secondary ghost link)
   attr :size, :string, default: "default", values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg)
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 
@@ -756,7 +756,7 @@ defmodule SaladUI.Questionnaire do
   attr :variant, :string, default: "default", values: ~w(default destructive outline secondary ghost link)
   attr :size, :string, default: "default", values: ~w(default xs sm lg icon icon-xs icon-sm icon-lg)
   attr :disabled, :boolean, default: false
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
 

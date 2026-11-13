@@ -137,7 +137,7 @@ defmodule SaladUI.Slider do
 
   attr :"on-value-changed", :any, default: nil, doc: "Handler for value changed event"
   attr :field, Phoenix.HTML.FormField, doc: "A form field struct retrieved from the form, for example: @form[:volume]"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def slider(assigns) do

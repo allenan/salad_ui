@@ -4,12 +4,12 @@ defmodule SaladUI.TooltipTest do
   import SaladUI.Tooltip
 
   describe "tooltip" do
-    test "renders root with generated id, hook, options, and event mappings" do
+    test "renders root with id, hook, options, and event mappings" do
       assigns = %{}
 
       html =
         ~H"""
-        <.tooltip open-delay={125} close-delay={50} on-open="opened" on-close="closed">
+        <.tooltip id="tip" open-delay={125} close-delay={50} on-open="opened" on-close="closed">
           <.tooltip_trigger>Trigger</.tooltip_trigger>
           <.tooltip_content>Content</.tooltip_content>
         </.tooltip>
@@ -17,7 +17,7 @@ defmodule SaladUI.TooltipTest do
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ ~r/id="tooltip-\d+"/
+      assert html =~ ~s(id="tip")
       assert html =~ "data-component=\"tooltip\""
       assert html =~ "data-state=\"closed\""
       assert html =~ "phx-hook=\"SaladUI\""

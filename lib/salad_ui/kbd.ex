@@ -30,7 +30,7 @@ defmodule SaladUI.Kbd do
   @doc """
   Renders a single keyboard key.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -56,7 +56,7 @@ defmodule SaladUI.Kbd do
   @doc """
   Groups keys into a combination, rendered as a nested `<kbd>`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 

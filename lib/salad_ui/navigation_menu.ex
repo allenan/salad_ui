@@ -109,7 +109,7 @@ defmodule SaladUI.NavigationMenu do
 
   attr :"on-value-changed", :any, default: nil, doc: "Handler fired when the open item changes"
   attr :"aria-label", :string, default: "Main", doc: "Accessible name of the `<nav>` landmark"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -156,7 +156,7 @@ defmodule SaladUI.NavigationMenu do
   @doc """
   The list of top-level items.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -183,7 +183,7 @@ defmodule SaladUI.NavigationMenu do
     command. Defaults to `"item-<index>"`.
   """
   attr :value, :string, default: nil, doc: "Item identifier; defaults to item-<index>"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -205,7 +205,7 @@ defmodule SaladUI.NavigationMenu do
   The button that toggles its item's content. Appends a chevron that rotates
   while open. Supports the standard `disabled` attribute.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled)
   slot :inner_block, required: true
 
@@ -247,7 +247,7 @@ defmodule SaladUI.NavigationMenu do
   is moved into the viewport while open; otherwise it is positioned below its
   trigger.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -281,7 +281,7 @@ defmodule SaladUI.NavigationMenu do
   `--navigation-menu-viewport-width` / `--navigation-menu-viewport-height`
   custom properties and animate between panels.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def navigation_menu_viewport(assigns) do
@@ -351,7 +351,7 @@ defmodule SaladUI.NavigationMenu do
   An arrow below the list that tracks the open trigger. Place it inside
   `navigation_menu/1`, after `navigation_menu_list/1`.
   """
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def navigation_menu_indicator(assigns) do
