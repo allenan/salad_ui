@@ -225,3 +225,50 @@ test("deactivate() restores focus left on <body>", async () => {
 
   assert.equal(document.activeElement.id, "outside-trigger");
 });
+
+test("deactivate() restores focus to an opener scrolled out of view", async () => {
+  document.body.innerHTML = `
+    <button id="outside-trigger">outside</button>
+    <div id="trap"><button id="first">first</button></div>
+  `;
+  const opener = document.getElementById("outside-trigger");
+  opener.getBoundingClientRect = () => ({
+    top: -500,
+    bottom: -460,
+    left: 0,
+    right: 80,
+    width: 80,
+    height: 40,
+  });
+  opener.focus();
+
+  const trap = new FocusTrap(document.getElementById("trap"));
+  trap.activate();
+  await wait(INITIAL_FOCUS_DELAY);
+
+  trap.deactivate();
+  await wait(10);
+
+  assert.equal(document.activeElement.id, "outside-trigger");
+});
+
+test("preferReturnFocus sends focus to returnFocus instead of the opener", async () => {
+  document.body.innerHTML = `
+    <button id="outside-trigger">outside</button>
+    <a id="target" href="#">target</a>
+    <div id="trap"><button id="first">first</button></div>
+  `;
+  document.getElementById("outside-trigger").focus();
+
+  const trap = new FocusTrap(document.getElementById("trap"), {
+    returnFocus: () => document.getElementById("target"),
+    preferReturnFocus: true,
+  });
+  trap.activate();
+  await wait(INITIAL_FOCUS_DELAY);
+
+  trap.deactivate();
+  await wait(10);
+
+  assert.equal(document.activeElement.id, "target");
+});

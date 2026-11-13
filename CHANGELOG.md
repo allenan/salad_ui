@@ -383,6 +383,14 @@ for status and known gaps. Every new JS-backed component is registered in
 - `igniter` and `sourceror` are optional dependencies. The installer tasks ask
   for `{:igniter, "~> 0.6", only: [:dev, :test]}` when it is missing.
 
+**More fixes from downstream use**
+- Dialog, alert dialog, sheet and drawer take `return-focus`, a selector for
+  the element that gets focus on close (Radix's `onCloseAutoFocus`).
+- Focus returns to the opener on close even when it is scrolled out of view
+  (it used to fall to `<body>`), as Radix does.
+- Toaster takes `label` (Sonner's `containerAriaLabel`, default
+  "Notifications") and global attributes.
+
 # 0.14.0
 
 **Changes**

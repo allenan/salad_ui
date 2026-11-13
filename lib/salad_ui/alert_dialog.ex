@@ -113,6 +113,12 @@ defmodule SaladUI.AlertDialog do
   attr :"on-open", :any, default: nil, doc: "Handler for alert dialog open event"
   attr :"on-close", :any, default: nil, doc: "Handler for alert dialog close event"
   attr :class, :any, default: nil
+
+  attr :"return-focus", :string,
+    default: nil,
+    doc:
+      "CSS selector of the element that gets focus when it closes (Radix's `onCloseAutoFocus`); by default focus returns to the element focused at open, or to the trigger"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -131,6 +137,7 @@ defmodule SaladUI.AlertDialog do
           closeOnEscape: true,
           closeOnOutsideClick: false,
           modal: true,
+          returnFocus: assigns[:"return-focus"],
           role: "alertdialog"
         })
       )

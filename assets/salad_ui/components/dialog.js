@@ -266,10 +266,15 @@ class DialogComponent extends Component {
     if (!this.focusTrap) {
       this.focusTrap = new FocusTrap(this.contentPanel, {
         contain: this.isModal(),
-        // A dialog the server opened was opened with focus on <body>.
+        // `return-focus` names where focus goes on close (Radix's
+        // onCloseAutoFocus). Otherwise a dialog the server opened (focus was
+        // on <body>) returns focus to its trigger.
         returnFocus: () =>
           this.el &&
-          this.queryParts().find((part) => part.dataset.part === "trigger"),
+          ((this.options.returnFocus &&
+            document.querySelector(this.options.returnFocus)) ||
+            this.queryParts().find((part) => part.dataset.part === "trigger")),
+        preferReturnFocus: Boolean(this.options.returnFocus),
       });
     }
 

@@ -148,6 +148,11 @@ defmodule SaladUI.Drawer do
     default: nil,
     doc: "handler fired when the drawer settles at another snap point"
 
+  attr :"return-focus", :string,
+    default: nil,
+    doc:
+      "CSS selector of the element that gets focus when it closes (Radix's `onCloseAutoFocus`); by default focus returns to the element focused at open, or to the trigger"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -166,6 +171,7 @@ defmodule SaladUI.Drawer do
           closeOnEscape: assigns.dismissible,
           closeOnOutsideClick: assigns.dismissible && assigns[:"close-on-outside-click"],
           modal: assigns.modal,
+          returnFocus: assigns[:"return-focus"],
           animations: %{"open_to_closed" => %{duration: 500, target_part: "content"}}
         })
       )

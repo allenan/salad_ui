@@ -234,6 +234,12 @@ defmodule SaladUI.Toast do
     default: nil,
     doc: "Handler fired when any toast is removed. Payload includes `id` and `reason`."
 
+  attr :label, :string,
+    default: "Notifications",
+    doc: "the landmark's name (Sonner's `containerAriaLabel`); the hotkey is appended, as in Sonner"
+
+  attr :rest, :global
+
   slot :template, doc: "named rich-content template, referenced from `toast(socket, template: name)`" do
     attr :name, :string, required: true
   end
@@ -263,7 +269,7 @@ defmodule SaladUI.Toast do
       |> assign(:options, json(options))
       |> assign(:viewport_class, viewport_class(assigns.position))
       |> assign(:viewport_style, viewport_style(assigns.width, offset, mobile_offset, assigns.gap))
-      |> assign(:label, String.trim("Notifications #{assigns.hotkey}"))
+      |> assign(:label, String.trim("#{assigns.label} #{assigns.hotkey}"))
 
     ~H"""
     <section
@@ -279,6 +285,7 @@ defmodule SaladUI.Toast do
       aria-live="polite"
       aria-relevant="additions text"
       aria-atomic="false"
+      {@rest}
     >
       <ol
         data-part="viewport"

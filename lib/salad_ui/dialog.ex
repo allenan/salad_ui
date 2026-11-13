@@ -154,6 +154,11 @@ defmodule SaladUI.Dialog do
     default: nil,
     doc: "Handler for dialog closed event. Support both server event handler and JS command struct"
 
+  attr :"return-focus", :string,
+    default: nil,
+    doc:
+      "CSS selector of the element that gets focus when it closes (Radix's `onCloseAutoFocus`); by default focus returns to the element focused at open, or to the trigger"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -169,6 +174,7 @@ defmodule SaladUI.Dialog do
           json(%{
             closeOnOutsideClick: assigns[:"close-on-outside-click"],
             modal: assigns.modal,
+            returnFocus: assigns[:"return-focus"],
             animations: get_animation_config()
           })
       )
