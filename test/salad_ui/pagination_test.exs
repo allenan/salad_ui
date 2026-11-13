@@ -4,6 +4,18 @@ defmodule SaladUi.PaginationTest do
   import SaladUI.Pagination
 
   describe "Test Pagination:" do
+    test "pagination is a navigation landmark" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.pagination>x</.pagination>
+        """)
+
+      assert html =~ ~s(role="navigation")
+      assert html =~ ~s(aria-label="pagination")
+    end
+
     test "It renders pagination_content correctly" do
       assigns = %{}
 
@@ -63,12 +75,30 @@ defmodule SaladUi.PaginationTest do
 
       html =
         ~H"""
-        <span>Next</span>
+        <.pagination_next href="#" />
         """
         |> rendered_to_string()
         |> clean_string()
 
-      assert html =~ "<span>Next</span>"
+      assert html =~ ~s(aria-label="Go to next page")
+      # Like shadcn, mobile shows only the chevron.
+      assert html =~ ~s(<a href="#" class=")
+      assert html =~ ~s(<span class="hidden sm:block">Next</span><svg)
+    end
+
+    test "pagination_next and pagination_previous take a translated text" do
+      assigns = %{}
+
+      html =
+        ~H"""
+        <.pagination_previous href="#" text="Précédent" />
+        <.pagination_next href="#" text="Suivant" />
+        """
+        |> rendered_to_string()
+        |> clean_string()
+
+      assert html =~ ~s(<span class="hidden sm:block">Précédent</span>)
+      assert html =~ ~s(<span class="hidden sm:block">Suivant</span>)
     end
 
     test "IT renders pagination_previous correclty" do
@@ -82,7 +112,7 @@ defmodule SaladUi.PaginationTest do
         |> clean_string()
 
       assert html =~
-               ~s(<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg><span>Previous</span></a>)
+               ~s(<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg><span class="hidden sm:block">Previous</span></a>)
     end
 
     test "It renders pagination_ellipsis correctly" do

@@ -51,7 +51,7 @@ defmodule SaladUI.Skeleton do
       data-slot="skeleton"
       class={
         classes([
-          "animate-pulse rounded-md bg-muted",
+          "animate-pulse rounded-md bg-accent",
           @class
         ])
       }

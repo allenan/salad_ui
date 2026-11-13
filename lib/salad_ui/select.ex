@@ -548,7 +548,7 @@ defmodule SaladUI.Select do
     <div
       data-slot="select-label"
       data-part="label"
-      class={classes(["py-1.5 ps-8 pe-2 text-sm font-semibold", @class])}
+      class={classes(["px-2 py-1.5 text-xs text-muted-foreground", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -556,6 +556,23 @@ defmodule SaladUI.Select do
     """
   end
 
+  @doc """
+  An option in the list.
+
+  Like shadcn, the check that marks the selected item sits on the end side
+  (right, or left under `dir="rtl"`), and the item text is a flex row, so an
+  icon or swatch placed before the label lines up with it:
+
+      <.select_item value="online">
+        <span class="size-2 rounded-full bg-green-500"></span> Online
+      </.select_item>
+
+  ## Options
+
+  * `:value` - The value submitted when this item is selected (required).
+  * `:disabled` - Makes the item unselectable and skipped by the keyboard.
+  * `:class` - Additional CSS classes.
+  """
   attr :value, :string, required: true
   attr :disabled, :boolean, default: false
   attr :class, :string, default: nil
@@ -571,15 +588,18 @@ defmodule SaladUI.Select do
       data-disabled={@disabled && "true"}
       class={
         classes([
-          "relative flex w-full cursor-default select-none items-center rounded-xs py-1.5 ps-8 pe-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pe-8 ps-2 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
           @class
         ])
       }
       tabindex={(@disabled && "-1") || "0"}
       {@rest}
     >
-      <span class="absolute start-2 flex size-3.5 items-center justify-center">
-        <span data-slot="select-item-indicator" data-part="item-indicator" hidden>
+      <span
+        data-slot="select-item-indicator"
+        class="absolute end-2 flex size-3.5 items-center justify-center"
+      >
+        <span data-part="item-indicator" hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -596,18 +616,25 @@ defmodule SaladUI.Select do
           </svg>
         </span>
       </span>
-
       <span data-part="item-text">{render_slot(@inner_block)}</span>
     </div>
     """
   end
+
+  @doc """
+  A horizontal rule between items or groups.
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
 
   def select_separator(assigns) do
     ~H"""
     <div
       data-slot="select-separator"
       data-part="separator"
-      class={classes(["-mx-1 my-1 h-px bg-muted"])}
+      aria-hidden="true"
+      class={classes(["pointer-events-none -mx-1 my-1 h-px bg-border", @class])}
+      {@rest}
     >
     </div>
     """

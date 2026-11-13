@@ -104,9 +104,14 @@ defmodule SaladUI.DirectionTest do
 
       assigns = %{}
 
-      assert rendered_to_string(~H|<.pagination_previous href="#" />|) =~ "<span>Previous</span>"
-      assert rendered_to_string(~H|<.pagination_next href="#" text="التالي" />|) =~ "<span>التالي</span>"
-      assert rendered_to_string(~H|<.pagination_previous href="#" text="السابق" />|) =~ "<span>السابق</span>"
+      assert rendered_to_string(~H|<.pagination_previous href="#" />|) =~
+               ~s(<span class="hidden sm:block">Previous</span>)
+
+      assert rendered_to_string(~H|<.pagination_next href="#" text="التالي" />|) =~
+               ~s(<span class="hidden sm:block">التالي</span>)
+
+      assert rendered_to_string(~H|<.pagination_previous href="#" text="السابق" />|) =~
+               ~s(<span class="hidden sm:block">السابق</span>)
     end
   end
 end

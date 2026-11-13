@@ -120,6 +120,15 @@ for status and known gaps. Every new JS-backed component is registered in
   so default spacing and sizes shift slightly (card header is a grid).
 - Single select trigger is `w-fit` instead of `w-full`; pass a width class to
   keep the old look.
+- Select items match shadcn v4: the check indicator moves from the start side to
+  the end side (`pe-8 ps-2`, indicator at `end-2`), and icons inside an item are
+  sized and muted like shadcn's. `select_label` is the small muted `text-xs`
+  heading, `select_separator` uses `bg-border` and now applies `class` and extra
+  attributes. The trigger gets `role="combobox"` and `aria-controls` pointing at
+  the listbox.
+- Skeleton uses `bg-accent` instead of `bg-muted`. Pagination previous/next hide
+  their text below the `sm` breakpoint (chevron only), and the `nav` has
+  `role="navigation"` instead of the invalid `role="pagination"`.
 - Badge root is a `<span>` instead of a `<div>`.
 - Select and radio group render an extra hidden input so used-input tracking
   works; an empty radio group now submits `""`.

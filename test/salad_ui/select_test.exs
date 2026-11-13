@@ -207,6 +207,21 @@ defmodule SaladUI.SelectTest do
       assert html =~ ~s(data-slot="select-item-indicator")
     end
 
+    test "uses shadcn's classes with the check indicator on the end side" do
+      html = render_component(&select_item/1, %{value: "apple", inner_block: []})
+
+      assert html =~
+               "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pe-8 ps-2 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=&#39;size-&#39;])]:size-4 [&amp;_svg:not([class*=&#39;text-&#39;])]:text-muted-foreground *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2"
+
+      assert html =~
+               ~s(<span data-slot="select-item-indicator" class="absolute end-2 flex size-3.5 items-center justify-center">)
+
+      refute html =~ "ps-8"
+      refute html =~ "start-2"
+      # The item text is the last span, which `*:[span]:last:flex` lays out.
+      assert html =~ ~r/<span data-part="item-text"><\/span>\s*<\/div>\s*$/
+    end
+
     test "passes data-text-value through for typeahead" do
       assigns = %{}
 
@@ -216,6 +231,26 @@ defmodule SaladUI.SelectTest do
         """)
 
       assert html =~ ~s(data-text-value="United States")
+    end
+  end
+
+  describe "select_label/1" do
+    test "uses shadcn's muted, small label classes" do
+      html = render_component(&select_label/1, %{class: "extra", inner_block: []})
+
+      assert html =~ ~s(data-slot="select-label")
+      assert html =~ ~s(class="px-2 py-1.5 text-xs text-muted-foreground extra")
+    end
+  end
+
+  describe "select_separator/1" do
+    test "uses shadcn's classes and passes class and attributes through" do
+      html = render_component(&select_separator/1, %{class: "my-2", "data-test": "sep"})
+
+      assert html =~ ~s(data-slot="select-separator")
+      assert html =~ ~s(aria-hidden="true")
+      assert html =~ ~s(class="pointer-events-none -mx-1 h-px bg-border my-2")
+      assert html =~ ~s(data-test="sep")
     end
   end
 end

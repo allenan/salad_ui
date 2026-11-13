@@ -10,16 +10,32 @@ defmodule SaladUI.Pagination do
             <.pagination_previous href="#" />
           </.pagination_item>
           <.pagination_item>
-            <.pagination_link href="#" is_active={@page == 1}>1</.pagination_link>
+            <.pagination_link href="#" is-active={@page == 1}>1</.pagination_link>
           </.pagination_item>
           <.pagination_item>
-            <.pagination_link href="#" is_active={@page == 2}>2</.pagination_link>
+            <.pagination_link href="#" is-active={@page == 2}>2</.pagination_link>
           </.pagination_item>
           <.pagination_item>
-            <.pagination_link href="#" is_active={@page == 3}>3</.pagination_link>
+            <.pagination_link href="#" is-active={@page == 3}>3</.pagination_link>
           </.pagination_item>
           <.pagination_item>
             <.pagination_ellipsis />
+          </.pagination_item>
+          <.pagination_item>
+            <.pagination_next href="#" />
+          </.pagination_item>
+        </.pagination_content>
+      </.pagination>
+
+  ## Icons only
+
+  Below the `sm` breakpoint `pagination_previous/1` and `pagination_next/1`
+  show only their chevrons. For a data table footer, use them on their own:
+
+      <.pagination class="mx-0 w-auto">
+        <.pagination_content>
+          <.pagination_item>
+            <.pagination_previous href="#" />
           </.pagination_item>
           <.pagination_item>
             <.pagination_next href="#" />
@@ -41,7 +57,7 @@ defmodule SaladUI.Pagination do
     <nav
       data-slot="pagination"
       aria-label="pagination"
-      role="pagination"
+      role="navigation"
       class={
         classes([
           "mx-auto flex w-full justify-center",
@@ -108,7 +124,7 @@ defmodule SaladUI.Pagination do
 
   ## Options
 
-  * `:is_active` - Whether this link represents the current page
+  * `:is-active` - Whether this link represents the current page
   * `:size` - Link size variant (default, sm, lg, icon)
   """
   attr :"is-active", :boolean, default: false
@@ -141,8 +157,10 @@ defmodule SaladUI.Pagination do
   end
 
   @doc """
-  Renders a next page button. Pass `text` to translate the label (e.g. for
-  an RTL page); the chevron flips under `dir="rtl"`.
+  Renders a next page button. Like shadcn, the label is hidden below the `sm`
+  breakpoint, leaving only the chevron (the `aria-label` still names it).
+  Pass `text` to translate the label (e.g. for an RTL page); the chevron
+  flips under `dir="rtl"`.
   """
   attr :class, :string, default: nil
   attr :text, :string, default: "Next", doc: "Visible label"
@@ -156,7 +174,7 @@ defmodule SaladUI.Pagination do
       class={classes(["gap-1 px-2.5 sm:pe-2.5", @class])}
       {@rest}
     >
-      <span>{@text}</span>
+      <span class="hidden sm:block">{@text}</span>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -172,8 +190,10 @@ defmodule SaladUI.Pagination do
   end
 
   @doc """
-  Renders a previous page button. Pass `text` to translate the label (e.g.
-  for an RTL page); the chevron flips under `dir="rtl"`.
+  Renders a previous page button. Like shadcn, the label is hidden below the
+  `sm` breakpoint, leaving only the chevron (the `aria-label` still names
+  it). Pass `text` to translate the label (e.g. for an RTL page); the
+  chevron flips under `dir="rtl"`.
   """
   attr :class, :string, default: nil
   attr :text, :string, default: "Previous", doc: "Visible label"
@@ -197,7 +217,7 @@ defmodule SaladUI.Pagination do
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
       </svg>
-      <span>{@text}</span>
+      <span class="hidden sm:block">{@text}</span>
     </.pagination_link>
     """
   end

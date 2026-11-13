@@ -422,6 +422,9 @@ class SelectComponent extends Component {
       active && this.content?.contains(active) ? active : null;
     this.suspendedForPatch = !!this.positionedElement?.active;
     this.positionedElement?.deactivate();
+    // The content's client id (for aria-controls) would make morphdom
+    // replace it instead of patching it; skipReinitialize() assigns it again.
+    this.clearGeneratedIds();
   }
 
   /**
@@ -563,9 +566,14 @@ class SelectComponent extends Component {
         },
       },
       ariaConfig: {
+        // Radix's SelectTrigger: a combobox that controls the listbox. The
+        // content gets a client id when the server renders none; it is
+        // dropped again before each patch (see beforeUpdate()).
         trigger: {
           all: {
+            role: "combobox",
             haspopup: "listbox",
+            controls: () => this.getPartId("content"),
           },
           open: {
             expanded: "true",

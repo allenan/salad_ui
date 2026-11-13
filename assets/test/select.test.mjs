@@ -842,6 +842,58 @@ test("a LiveView patch keeps an open select open with its selection", () => {
   component.destroy();
 });
 
+test("the trigger is a combobox that controls the listbox", () => {
+  const { component, trigger, content } = buildSelect();
+
+  assert.equal(trigger.getAttribute("role"), "combobox");
+  assert.equal(trigger.getAttribute("aria-haspopup"), "listbox");
+  assert.equal(content.id, "select-1-content");
+  assert.equal(trigger.getAttribute("aria-controls"), "select-1-content");
+  component.destroy();
+});
+
+test("aria-controls uses a content id the server rendered", () => {
+  const { component, trigger, content } = buildSelect({
+    contentAttrs: 'id="fruit-list"',
+  });
+
+  assert.equal(content.id, "fruit-list");
+  assert.equal(trigger.getAttribute("aria-controls"), "fruit-list");
+  component.destroy();
+});
+
+test("the generated content id is dropped before a patch and restored after", () => {
+  const { component, el, trigger, content } = buildSelect({
+    defaultValue: "banana",
+  });
+  const hook = hookFor(el, component);
+  click(trigger);
+
+  hook.beforeUpdate();
+  assert.equal(content.hasAttribute("id"), false);
+  patch(el);
+  hook.updated();
+
+  // Patched in place, not replaced (morphdom keys nodes by id).
+  assert.equal(el.querySelector('[data-part="content"]'), content);
+  assert.equal(content.id, "select-1-content");
+  assert.equal(trigger.getAttribute("role"), "combobox");
+  assert.equal(trigger.getAttribute("aria-controls"), "select-1-content");
+  assert.equal(component.state, "open");
+  component.destroy();
+});
+
+test("a server-rendered content id survives beforeUpdate", () => {
+  const { component, el, content } = buildSelect({
+    contentAttrs: 'id="fruit-list"',
+  });
+  const hook = hookFor(el, component);
+
+  hook.beforeUpdate();
+  assert.equal(content.id, "fruit-list");
+  component.destroy();
+});
+
 test("a multiple select stays open while the form round-trips its value", () => {
   const { component, el, trigger, item, valueDisplay, pushed } = buildSelect({
     multiple: true,
@@ -881,6 +933,7 @@ test("a new server value is selected in place without value-changed", () => {
   });
   const hook = hookFor(el, component);
 
+  hook.beforeUpdate();
   patch(el, {
     name: "fruit",
     multiple: false,
