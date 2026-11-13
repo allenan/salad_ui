@@ -278,8 +278,8 @@ class DialogComponent extends Component {
       });
     }
 
-    // Activate focus trap: before the modal layer, which makes the opener
-    // inert (and so may blur it) and focus could not be returned to it.
+    // Activate focus trap: before the modal layer, so it records the opener
+    // (focus returns to it on close) before the layer hides the page.
     this.focusTrap.activate();
 
     // Idempotent: a patch or a reopen mid-exit-animation never stacks a
