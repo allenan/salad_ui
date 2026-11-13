@@ -45,6 +45,10 @@ defmodule SaladUI.Popover do
   * `:open` - Whether the popover is initially open. Defaults to `false`.
   * `:use-portal` - Whether to move content outside its root while open. Defaults to `false`.
   * `:portal-container` - CSS selector for portal target. Used only when `:use-portal` is `true`.
+    Content portaled to `document.body` is outside your LiveView, so `phx-click`
+    and other `phx-*` bindings inside it don't fire (`on-*` attributes still
+    work). To keep them, portal into an element inside the LiveView, e.g.
+    `<div id="portal" phx-update="ignore"></div>` and `portal-container="#portal"`.
   * `:on-open` - Handler for popover open event.
   * `:on-close` - Handler for popover close event.
   * `:class` - Additional CSS classes.

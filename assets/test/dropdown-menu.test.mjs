@@ -586,3 +586,45 @@ test("a LiveView rebuild during the exit animation still returns focus and fires
   rebuilt.destroy();
   await exitAnimation;
 });
+
+test("a portaled item's on-select runs from the hook element, inside the LiveView", () => {
+  document.body.innerHTML = `
+    <div data-phx-session="s">
+      <div id="dd-view" data-component="dropdown-menu" data-state="closed"
+           data-options='{"usePortal":true}' data-event-mappings='{}' data-part="root">
+        <button type="button" data-part="trigger">Open</button>
+        <div data-part="positioner" hidden>
+          <div data-part="content" tabindex="-1">
+            <div data-part="item" data-value="react" tabindex="0"
+                 data-event-mappings='{"select":[["push",{"event":"react"}]],"select-string":"x"}'>React</div>
+            <div data-part="item" data-value="pin" tabindex="0"
+                 data-event-mappings='{"select":"pin"}'>Pin</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  const el = document.getElementById("dd-view");
+  const executed = [];
+  const pushed = [];
+  const hookContext = {
+    el,
+    pushEventTo: (target, event) => pushed.push({ target, event }),
+    liveSocket: { execJS: (target, js) => executed.push({ target, js }) },
+  };
+  const component = registry.create("dropdown-menu", el, hookContext);
+  const trigger = el.querySelector('[data-part="trigger"]');
+
+  click(trigger);
+  const react = document.querySelector('[data-value="react"]');
+  assert.equal(el.contains(react), false, "the content is portaled out");
+  click(react);
+  assert.equal(executed.length, 1);
+  assert.equal(executed[0].target, el, "JS runs from the hook element");
+
+  click(trigger);
+  click(document.querySelector('[data-value="pin"]'));
+  assert.equal(pushed.at(-1).event, "pin");
+  assert.equal(pushed.at(-1).target, el, "pushes target the hook element");
+
+  component.destroy();
+});

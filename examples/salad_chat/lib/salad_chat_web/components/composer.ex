@@ -34,6 +34,11 @@ defmodule SaladChatWeb.Composer do
   attr :upload, :any, default: nil, doc: "an upload config (@uploads.name) to enable attachments"
   attr :slash, :list, default: []
   attr :mentions, :list, default: [], doc: "people matching the `@query` being typed"
+
+  attr :mention_handles, :list,
+    default: [],
+    doc: "handles highlighted as mention chips in the textarea"
+
   attr :typing, :list, default: []
   attr :class, :string, default: nil
 
@@ -112,15 +117,25 @@ defmodule SaladChatWeb.Composer do
         <input type="hidden" name="composer" value={@id} />
         <.input_group
           id={"#{@id}-group"}
-          class="@container/composer rounded-xl bg-background shadow-xs has-[textarea:focus]:ring-[3px]"
+          class="rounded-xl bg-background shadow-xs has-[textarea:focus]:ring-[3px]"
           phx-drop-target={@upload && @upload.ref}
         >
+          <%!-- Draws mention chips behind the textarea's text; the Composer hook
+               keeps it in sync (text, size, scroll). --%>
+          <div
+            id={"#{@id}-highlights"}
+            phx-update="ignore"
+            aria-hidden="true"
+            class="composer-highlights pointer-events-none absolute overflow-hidden"
+          >
+          </div>
           <.input_group_textarea
             id={"#{@id}-input"}
             field={@form[:body]}
             placeholder={@placeholder}
             phx-hook="Composer"
             data-composer={@id}
+            data-mention-handles={Jason.encode!(@mention_handles)}
             aria-autocomplete="list"
             aria-expanded={to_string(@mentions != [])}
             aria-controls={@mentions != [] && "#{@id}-mentions"}
@@ -128,7 +143,7 @@ defmodule SaladChatWeb.Composer do
             rows="1"
             autocomplete="off"
             aria-label={@placeholder}
-            class="chat-text max-h-48 min-h-11 py-3"
+            class="chat-text relative max-h-48 min-h-11 py-3"
           />
           <.input_group_addon :if={@upload && @upload.entries != []} align="block-start">
             <.attachment_group class="w-full pb-1">
@@ -194,20 +209,11 @@ defmodule SaladChatWeb.Composer do
                 <.kbd>/</.kbd>
               </.tooltip_content>
             </.tooltip>
-            <%!-- Only when the composer itself has room (not the thread pane) --%>
-            <.input_group_text class="ml-auto hidden gap-1 whitespace-nowrap text-xs @xl/composer:flex">
-              <.kbd>Enter</.kbd>
-              send <span class="mx-0.5">·</span>
-              <.kbd_group>
-                <.kbd>Shift</.kbd><.kbd>Enter</.kbd>
-              </.kbd_group>
-              newline
-            </.input_group_text>
             <.input_group_button
               type="submit"
               variant="default"
               size="icon-sm"
-              class="ml-auto shrink-0 rounded-full @xl/composer:ml-1"
+              class="ml-auto shrink-0 rounded-full"
               aria-label="Send"
             >
               <.icon name="hero-paper-airplane-solid" />

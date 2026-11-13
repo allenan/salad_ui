@@ -61,7 +61,7 @@ defmodule SaladChatWeb.MessageComponents do
         <.marker_content class="text-xs font-semibold text-destructive">New messages</.marker_content>
       </.marker>
       <%!-- Right click (or long press) opens the same actions as the ⋮ menu --%>
-      <.context_menu id={"#{@id}-context"} use-portal>
+      <.context_menu id={"#{@id}-context"} use-portal portal-container="#chat-portal">
         <.context_menu_trigger
           as="div"
           disabled={
@@ -168,7 +168,7 @@ defmodule SaladChatWeb.MessageComponents do
             <.context_menu_sub_trigger>
               <.icon name="hero-face-smile" /> React
             </.context_menu_sub_trigger>
-            <.context_menu_sub_content class="w-auto p-1">
+            <.context_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
               <.context_menu_item
                 :for={e <- Enum.take(emoji(), 8)}
                 on-select={JS.push("react", value: %{id: @message.id, emoji: e})}
@@ -432,7 +432,7 @@ defmodule SaladChatWeb.MessageComponents do
 
   def emoji_picker(assigns) do
     ~H"""
-    <.popover id={@id} use-portal>
+    <.popover id={@id} use-portal portal-container="#chat-portal">
       <.popover_trigger
         as={&button/1}
         variant={if @compact, do: "outline", else: "ghost"}
@@ -443,7 +443,12 @@ defmodule SaladChatWeb.MessageComponents do
         <.icon name="hero-face-smile" />
       </.popover_trigger>
       <.popover_content side="top" align="start" class="w-64 p-2">
-        <.emoji_grid on_pick={fn e -> JS.push("react", value: %{id: @message_id, emoji: e}) end} />
+        <.emoji_grid on_pick={
+          fn e ->
+            JS.push("react", value: %{id: @message_id, emoji: e})
+            |> SaladUI.JS.dispatch_command("close", to: "##{@id}")
+          end
+        } />
       </.popover_content>
     </.popover>
     """
@@ -542,7 +547,7 @@ defmodule SaladChatWeb.MessageComponents do
           </.tooltip_trigger>
           <.tooltip_content>Reply in thread</.tooltip_content>
         </.tooltip>
-        <.dropdown_menu id={"#{@id}-more"} use-portal>
+        <.dropdown_menu id={"#{@id}-more"} use-portal portal-container="#chat-portal">
           <.dropdown_menu_trigger
             as={&button/1}
             variant="ghost"
@@ -556,7 +561,7 @@ defmodule SaladChatWeb.MessageComponents do
               <.dropdown_menu_sub_trigger>
                 <.icon name="hero-face-smile" /> React
               </.dropdown_menu_sub_trigger>
-              <.dropdown_menu_sub_content class="w-auto p-1">
+              <.dropdown_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
                 <.dropdown_menu_item
                   :for={e <- Enum.take(emoji(), 8)}
                   on-select={JS.push("react", value: %{id: @message.id, emoji: e})}

@@ -203,6 +203,10 @@
   @apply rounded px-0.5 font-medium text-primary bg-primary/10;
 }
 
+button.mention {
+  @apply cursor-pointer hover:underline;
+}
+
 .mention-me {
   @apply bg-amber-200/60 text-amber-900 dark:bg-amber-400/20 dark:text-amber-200;
 }
@@ -235,4 +239,25 @@
 html,
 body {
   overscroll-behavior: none;
+}
+
+/* While Safari's keyboard (or its shortcut bar) is up, chat.js sets
+   --app-height to the visible height; the fixed sidebar follows it too. */
+[data-slot="sidebar-container"] {
+  height: var(--app-height, 100svh);
+}
+
+/* Mention chips behind the composer's text (see the Composer hook). The text
+   itself stays in the textarea, so only the chip background is drawn. */
+.composer-highlights {
+  color: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.composer-highlights mark {
+  color: transparent;
+  border-radius: 0.25rem;
+  @apply bg-primary/15;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 15%, transparent);
 }

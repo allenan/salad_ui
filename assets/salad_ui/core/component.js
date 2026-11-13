@@ -668,6 +668,19 @@ class Component {
     return assignId(part, `${this.el.id}-${partName}`);
   }
 
+  /**
+   * The element LiveView pushes and JS commands run from. Content moved out
+   * with `Portal.move()` (e.g. a menu item portaled to `<body>`) is outside
+   * every LiveView, so LiveView finds no owner for it and silently drops the
+   * push; the hook's element, which never moves, stands in for it.
+   */
+  eventSource() {
+    const insideView =
+      typeof this.el.closest === "function" &&
+      this.el.closest("[data-phx-session]");
+    return insideView ? this.el : this.hook?.el || this.el;
+  }
+
   // Push event to server (for frameworks like Phoenix LiveView)
   pushEvent(clientEvent, payload = {}, context) {
     if (!this.hook || !this.hook.pushEventTo) return;
@@ -683,9 +696,12 @@ class Component {
           component: el.getAttribute("data-component"),
         };
 
-        this.hook.pushEventTo(this.el, eventHandler, fullPayload);
+        this.hook.pushEventTo(this.eventSource(), eventHandler, fullPayload);
       } else {
-        this.hook.liveSocket.execJS(this.el, JSON.stringify(eventHandler));
+        this.hook.liveSocket.execJS(
+          this.eventSource(),
+          JSON.stringify(eventHandler),
+        );
       }
     }
   }

@@ -369,6 +369,24 @@ defmodule SaladChatWeb.ChatLiveTest do
       assert has_element?(view, "#main-mention-here")
     end
 
+    test "a posted mention is a button that opens the person's profile", %{conn: conn} do
+      {:ok, _} = Chat.create_message("leo", "general", "thanks @sam and @here")
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general")
+
+      assert has_element?(view, ~s(button.mention[data-mention="sam"]), "@sam")
+      refute has_element?(view, ~s([data-mention="here"]))
+      assert has_element?(view, ~s(#mention-profile [data-profile="sam"]))
+    end
+
+    test "the thread drag handle only shows with a thread open", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general")
+      assert has_element?(view, "#chat-panels [data-slot=resizable-handle].hidden")
+
+      {:ok, parent} = Chat.create_message("leo", "general", "Thread me")
+      {:ok, view, _} = live(conn, ~p"/as/kai/c/general/t/#{parent.id}")
+      refute has_element?(view, "#chat-panels [data-slot=resizable-handle].hidden")
+    end
+
     test "the thread composer has its own list", %{conn: conn} do
       {:ok, parent} = Chat.create_message("leo", "general", "Thread me")
       {:ok, view, _} = live(conn, ~p"/as/kai/c/general/t/#{parent.id}")

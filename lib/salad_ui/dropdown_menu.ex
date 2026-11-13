@@ -198,6 +198,9 @@ defmodule SaladUI.DropdownMenu do
   * `:id` - Required unique identifier for the dropdown menu.
   * `:open` - Whether the dropdown is initially open. Defaults to `false`.
   * `:use-portal` - Whether to render the dropdown in a portal. Defaults to `false`.
+    Item `on-select` handlers keep working when portaled to `document.body`; plain
+    `phx-*` bindings inside the content need a `:portal-container` inside the
+    LiveView (see `SaladUI.Popover`).
   * `:portal-container` - CSS selector for the portal container. Defaults to `nil`.
   * `:modal` - Whether the open menu blocks, hides and scroll-locks the page. Defaults to `true`.
   * `:on-open` - Handler for dropdown menu open event.

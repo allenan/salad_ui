@@ -135,6 +135,9 @@ for status and known gaps. Every new JS-backed component is registered in
   spans like `<svg>` icons (16px, centred on the title).
 - Resizable panels use `overflow: clip` (with `hidden` as the fallback), so
   focusing an input inside one can't scroll the panel out of place (iOS Safari).
+- `on-*` handlers of content portaled outside the LiveView (`use-portal` to
+  `<body>`) now push from the component's hook element, so LiveView finds an
+  owner; before, they were silently dropped.
 - Menus no longer wrap with the arrow keys by default (Radix `loop={false}`);
   set `loop` on the content to wrap. Menubar trigger navigation still loops.
 - Class merging follows tailwind-merge v3 exactly, e.g. `outline outline-2`

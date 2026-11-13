@@ -87,6 +87,53 @@ document.addEventListener(
   true,
 )
 
+// iOS/iPadOS Safari: with the keyboard (or its shortcut bar) up, the visible
+// area is shorter than the layout viewport and Safari pans the page to keep
+// the focused composer in view, pushing the header and sidebar top off
+// screen. Fit the app shell to the visible height instead (--app-height, see
+// app.css) and undo the pan.
+if (window.visualViewport) {
+  const viewport = window.visualViewport
+  let frame = null
+  const fit = () => {
+    frame = null
+    const root = document.documentElement
+    if (viewport.height < window.innerHeight - 1) {
+      root.style.setProperty("--app-height", `${Math.round(viewport.height)}px`)
+    } else {
+      root.style.removeProperty("--app-height")
+    }
+    if (window.scrollY !== 0 || viewport.offsetTop !== 0) window.scrollTo(0, 0)
+  }
+  const schedule = () => frame ?? (frame = requestAnimationFrame(fit))
+  viewport.addEventListener("resize", schedule)
+  viewport.addEventListener("scroll", schedule)
+  window.addEventListener("focusin", schedule)
+}
+
+// Tapping an @mention in a message opens that person's profile card, like
+// hovering a sender's name. One popover serves every mention: anchor it on
+// the mention, show that person's card, open it.
+document.addEventListener("click", (e) => {
+  const mention = e.target.closest?.("[data-mention]")
+  const anchor = document.getElementById("mention-profile-anchor")
+  if (!mention || !anchor) return
+
+  const rect = mention.getBoundingClientRect()
+  Object.assign(anchor.style, {
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+  })
+  document.querySelectorAll("[data-profile]").forEach((card) => {
+    card.hidden = card.dataset.profile !== mention.dataset.mention
+  })
+  // After this click's own outside-click handling (which closes a popover
+  // already open on another mention), so it reopens at the new anchor.
+  setTimeout(() => saladCommand("#mention-profile", "open"), 0)
+})
+
 // ---------------------------------------------------------------------------
 // Hooks
 
@@ -162,8 +209,72 @@ const Composer = {
     this.el.dispatchEvent(new Event("input", {bubbles: true}))
   },
 
+  // Mention chips: the textarea can't style part of its text, so an overlay
+  // behind it (same box, font and wrapping, transparent text) draws a chip
+  // background under every @handle of a known person.
+  readMentionHandles() {
+    try {
+      this.mentionHandles = new Set(JSON.parse(this.el.dataset.mentionHandles || "[]"))
+    } catch {
+      this.mentionHandles = new Set()
+    }
+  },
+
+  renderHighlights() {
+    const overlay = document.getElementById(`${this.el.dataset.composer}-highlights`)
+    if (!overlay) return
+    const ta = this.el
+    const style = getComputedStyle(ta)
+    for (const property of [
+      "fontFamily", "fontSize", "fontWeight", "fontStyle", "letterSpacing", "wordSpacing",
+      "lineHeight", "tabSize", "textIndent", "boxSizing", "paddingTop", "paddingBottom",
+      "paddingLeft", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+    ]) {
+      overlay.style[property] = style[property]
+    }
+    // A visible scrollbar narrows the textarea's text box.
+    const scrollbar =
+      ta.offsetWidth - ta.clientWidth -
+      parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth)
+    overlay.style.paddingRight = `${parseFloat(style.paddingRight) + scrollbar}px`
+    overlay.style.borderStyle = "solid"
+    overlay.style.borderColor = "transparent"
+    Object.assign(overlay.style, {
+      top: `${ta.offsetTop}px`,
+      left: `${ta.offsetLeft}px`,
+      width: `${ta.offsetWidth}px`,
+      height: `${ta.offsetHeight}px`,
+    })
+
+    const escape = (text) =>
+      text.replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c])
+    // Same rule as message_format.ex: "@" not preceded by a word char, @, & or #.
+    overlay.innerHTML =
+      escape(ta.value).replace(/(^|[^\w@&#;])@([a-z][a-z0-9_]*)/gi, (whole, before, handle) =>
+        this.mentionHandles.has(handle.toLowerCase()) ? `${before}<mark>@${handle}</mark>` : whole,
+      ) + "\u200b"
+    overlay.scrollTop = ta.scrollTop
+  },
+
+  updated() {
+    this.readMentionHandles()
+    this.renderHighlights()
+  },
+
+  destroyed() {
+    this.resizeObserver?.disconnect()
+  },
+
   mounted() {
     this.el.__composer = this
+    this.readMentionHandles()
+    const render = () => this.renderHighlights()
+    this.el.addEventListener("input", render)
+    this.el.addEventListener("scroll", render)
+    this.resizeObserver = new ResizeObserver(render)
+    this.resizeObserver.observe(this.el)
+    render()
+
     const sync = () => this.syncMention()
     this.el.addEventListener("input", sync)
     this.el.addEventListener("click", sync)
@@ -224,6 +335,7 @@ const Composer = {
       this.el.value = ""
       this.mentionQuery = null
       this.dismissedAt = null
+      this.renderHighlights()
     })
     this.handleEvent(
       "composer:focus",
