@@ -14,10 +14,16 @@ class CollapsibleComponent extends Component {
     this.config.preventDefaultKeys = ["Enter", " "];
   }
 
+  // The trigger and content get client ids for aria-controls/-labelledby.
+  // Drop them before a patch: morphdom would otherwise replace both elements
+  // with fresh copies, taking focus from a field inside the content.
+  beforeUpdate() {
+    this.clearGeneratedIds();
+  }
+
   /**
    * A LiveView patch puts back the server-rendered markup (the content
-   * `hidden`, the server's `data-state`) and, since the trigger and content
-   * get client-assigned ids, may replace them outright. Rebuilding would
+   * `hidden`, the server's `data-state`, no ids or ARIA). Rebuilding would
    * close an item the user opened. Keep the instance and re-apply its state,
    * unless the options or event mappings changed; a new server `open` value
    * is applied as an open/close.

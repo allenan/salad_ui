@@ -7,6 +7,25 @@ import StateMachine from "./state-machine.js";
 import { animateTransition, queryDOM } from "./utils.js";
 import { getDirection } from "./direction.js";
 
+// Ids the client generated for ARIA references (see assignId()). LiveView's
+// morphdom keys nodes by id, so an id the server does not render makes the
+// next patch replace that node with a fresh server-rendered copy instead of
+// patching it, dropping focus, listeners and any state inside it.
+const generatedIds = new WeakSet();
+
+/**
+ * Give `el` the id `id` unless it already has one (e.g. rendered by the
+ * server), remembering that the client made it up. Returns the element's id.
+ */
+export function assignId(el, id) {
+  if (!el) return null;
+  if (!el.id) {
+    el.id = id;
+    generatedIds.add(el);
+  }
+  return el.id;
+}
+
 /**
  * Base class every interactive SaladUI component extends.
  *
@@ -125,9 +144,11 @@ class Component {
   // A patch puts the server-rendered markup back: `hidden`, `data-state`,
   // ARIA and any id the client assigned are reverted, and an element whose
   // client-assigned id the server does not render is replaced outright.
-  // Components whose state lives on the client implement skipReinitialize()
-  // with these helpers: check sameConfig(), re-read the parts with
-  // refreshParts(), then re-apply their state onto the patched markup.
+  // Components whose state lives on the client call clearGeneratedIds() in
+  // beforeUpdate() so their parts are patched in place, and implement
+  // skipReinitialize() with these helpers: check sameConfig(), re-read the
+  // parts with refreshParts(), then re-apply their state (and so the ids)
+  // onto the patched markup.
 
   /**
    * Whether the patched root still carries the data-options and
@@ -205,6 +226,20 @@ class Component {
     if (changed && this.eventSetupCompleted) this.rebindPartListeners();
 
     return true;
+  }
+
+  /**
+   * Drop the ids assignId() generated on this component's parts, so the
+   * coming patch matches those parts to the server-rendered markup and
+   * patches them in place. Call it from beforeUpdate(); skipReinitialize()
+   * (or the rebuilt instance) assigns them again.
+   */
+  clearGeneratedIds() {
+    this.queryParts().forEach((node) => {
+      if (!generatedIds.has(node)) return;
+      node.removeAttribute("id");
+      generatedIds.delete(node);
+    });
   }
 
   /** Re-attach the keyMap/mouseMap listeners to the current part elements. */
@@ -607,10 +642,7 @@ class Component {
     const part = this.getPart(partName);
     if (!part) return null;
 
-    if (!part.id) {
-      part.id = `${this.el.id}-${partName}`;
-    }
-    return part.id;
+    return assignId(part, `${this.el.id}-${partName}`);
   }
 
   // Push event to server (for frameworks like Phoenix LiveView)

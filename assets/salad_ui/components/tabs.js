@@ -1,5 +1,5 @@
 // saladui/components/tabs.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import SaladUI from "../index.js";
 import { CollectionRegistry, Selection } from "../core/collection.js";
 
@@ -57,11 +57,10 @@ class TabsComponent extends Component {
 
   /**
    * A LiveView patch puts back the server-rendered markup: every trigger and
-   * panel inactive, the panels `hidden`, and (because they get
-   * client-assigned ids) often new trigger and panel elements. Rebuilding
-   * would jump back to the server's tab. Keep the tab the user chose and
-   * re-apply it, unless the options or event mappings changed; a new server
-   * `value` selects that tab.
+   * panel inactive, the panels `hidden`, no ids or ARIA. Rebuilding would
+   * jump back to the server's tab. Keep the tab the user chose and re-apply
+   * it, unless the options or event mappings changed; a new server `value`
+   * selects that tab.
    */
   skipReinitialize(el) {
     if (!this.sameConfig(el, ["value"])) return false;
@@ -79,13 +78,16 @@ class TabsComponent extends Component {
     return true;
   }
 
-  // A replaced trigger takes keyboard focus with it; remember which tab had
-  // it so skipReinitialize() can hand focus to its replacement.
+  // Triggers and panels get client ids; drop them so the patch keeps those
+  // elements (and a focused field in a panel) instead of replacing them.
+  // Should the server still replace the focused trigger, remember which tab
+  // had focus so skipReinitialize() can hand it to the replacement.
   beforeUpdate() {
     const active = document.activeElement;
     this.focusedValue = this.triggers.includes(active)
       ? active.getAttribute("data-value")
       : null;
+    this.clearGeneratedIds();
   }
 
   restoreFocus() {
@@ -163,11 +165,8 @@ class TabsComponent extends Component {
           all: { role: "tablist", orientation: this.getOrientation() },
         },
         trigger: {
-          all: {
-            role: "tab",
-            controls: (el) =>
-              `${this.el.id}-content-${el.getAttribute("data-value")}`,
-          },
+          // aria-controls is set with the ids in setupAriaAttributes().
+          all: { role: "tab" },
         },
         content: {
           all: {
@@ -179,18 +178,23 @@ class TabsComponent extends Component {
     };
   }
 
+  // Link each tab and its panel by id, keeping ids the server rendered.
   setupAriaAttributes() {
-    // Set IDs and ARIA attributes for triggers
-    this.triggers.forEach((trigger) => {
-      const value = trigger.getAttribute("data-value");
-      if (!trigger.id) trigger.id = `${this.el.id}-trigger-${value}`;
-    });
+    const valueOf = (el) => el.getAttribute("data-value");
+    const ids = new Map(
+      this.triggers.map((trigger) => [
+        valueOf(trigger),
+        assignId(trigger, `${this.el.id}-trigger-${valueOf(trigger)}`),
+      ]),
+    );
 
-    // Set IDs and ARIA attributes for content panels
     this.contents.forEach((content) => {
-      const value = content.getAttribute("data-value");
-      if (!content.id) content.id = `${this.el.id}-content-${value}`;
-      content.setAttribute("aria-labelledby", `${this.el.id}-trigger-${value}`);
+      const value = valueOf(content);
+      const id = assignId(content, `${this.el.id}-content-${value}`);
+      const trigger = this.triggers.find((el) => valueOf(el) === value);
+      trigger?.setAttribute("aria-controls", id);
+      if (ids.has(value))
+        content.setAttribute("aria-labelledby", ids.get(value));
     });
   }
 

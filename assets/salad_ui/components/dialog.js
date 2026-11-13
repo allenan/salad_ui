@@ -56,6 +56,12 @@ class DialogComponent extends Component {
     return true;
   }
 
+  // The title and description get client ids for aria-labelledby/-describedby;
+  // drop them so the patch keeps those elements (see skipReinitialize).
+  beforeUpdate() {
+    this.clearGeneratedIds();
+  }
+
   afterMount() {
     const requestedState =
       this.el.dataset.open === undefined

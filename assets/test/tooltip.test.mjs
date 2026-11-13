@@ -209,18 +209,17 @@ test("a LiveView patch keeps an open tooltip open and positioned", async () => {
   focusEvent("focusin", button);
   await waitFor(() => component.state === "open");
 
-  // The content's client-assigned id makes morphdom replace it, and the
-  // stamped data-part on the fallback trigger is not in the server markup.
-  hook.beforeUpdate();
-  simulatePatch(el, {
-    hidden: ['[data-part="content"]'],
-    replace: ['[data-part="content"]'],
-  });
-  delete button.dataset.part;
+  // The content's client id is dropped first, so the patch keeps the
+  // element; the stamped data-part on the fallback trigger is not in the
+  // server markup.
   const content = el.querySelector('[data-part="content"]');
+  hook.beforeUpdate();
+  simulatePatch(el, { hidden: ['[data-part="content"]'] });
+  delete button.dataset.part;
   setRect(content, { width: 80, height: 40 });
   hook.updated();
 
+  assert.equal(el.querySelector('[data-part="content"]'), content);
   assert.equal(hook.component, component);
   assert.equal(component.state, "open");
   assert.equal(button.dataset.part, "trigger");
@@ -231,11 +230,28 @@ test("a LiveView patch keeps an open tooltip open and positioned", async () => {
   assert.equal(content.style.position, "fixed");
   assert.equal(pushed.filter(({ event }) => event === "opened").length, 1);
 
+  // Content the server replaces is placed again and wired up.
+  hook.beforeUpdate();
+  simulatePatch(el, {
+    hidden: ['[data-part="content"]'],
+    replace: ['[data-part="content"]'],
+  });
+  delete button.dataset.part;
+  const newContent = el.querySelector('[data-part="content"]');
+  setRect(newContent, { width: 80, height: 40 });
+  hook.updated();
+
+  assert.notEqual(newContent, content);
+  assert.equal(component.state, "open");
+  assert.equal(newContent.hidden, false);
+  assert.equal(newContent.style.position, "fixed");
+  assert.equal(button.getAttribute("aria-describedby"), newContent.id);
+
   // Leaving the new content still closes the tooltip.
   component.config.closeDelay = 1;
-  mouseEvent("mouseout", content);
+  mouseEvent("mouseout", newContent);
   await waitFor(() => component.state === "closed");
-  assert.equal(content.hidden, true);
+  assert.equal(newContent.hidden, true);
   component.destroy();
 });
 

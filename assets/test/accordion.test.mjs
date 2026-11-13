@@ -228,13 +228,11 @@ test("keyboard navigation: ArrowDown/ArrowUp/Home/End move focus across triggers
   assert.equal(document.activeElement, getItemEls("item-3").trigger);
 });
 
-// Items, triggers and contents get client-assigned ids, so morphdom swaps the
-// items for fresh server-rendered copies on a patch.
-function patch(el, options) {
-  simulatePatch(el, {
-    hidden: ['[data-part="item-content"]'],
-    replace: ['[data-part="item"]'],
-  });
+// Re-render from the server markup, which renders no ids below the root.
+// `replace` swaps the matched elements for fresh copies, as when the server
+// re-renders them under new keys.
+function patch(el, options, { replace = [] } = {}) {
+  simulatePatch(el, { hidden: ['[data-part="item-content"]'], replace });
   if (options) el.dataset.options = JSON.stringify(options);
 }
 
@@ -245,13 +243,18 @@ test("a LiveView patch keeps the items opened on the client open", () => {
   const hook = hookFor(el, component);
   click(getItemEls("item-1").trigger);
   click(getItemEls("item-3").trigger);
-  getItemEls("item-3").trigger.focus();
+  const item3 = getItemEls("item-3");
+  item3.trigger.focus();
 
   hook.beforeUpdate();
   patch(el);
   hook.updated();
 
   assert.equal(hook.component, component);
+  // The client ids were dropped before the patch, so the items were patched
+  // in place rather than replaced.
+  assert.equal(getItemEls("item-3").item, item3.item);
+  assert.equal(getItemEls("item-3").content, item3.content);
   for (const [value, open] of [
     ["item-1", true],
     ["item-2", false],
@@ -264,14 +267,53 @@ test("a LiveView patch keeps the items opened on the client open", () => {
     assert.equal(trigger.getAttribute("aria-controls"), content.id, value);
     assert.ok(content.id, value);
   }
-  // Focus moves to the replacement trigger.
-  assert.equal(document.activeElement, getItemEls("item-3").trigger);
+  assert.equal(document.activeElement, item3.trigger);
   assert.equal(pushed.length, 2);
 
-  // The new items are wired up and report the kept values.
+  // The rebuilt items are wired up and report the kept values.
   click(getItemEls("item-2").trigger);
   assert.equal(getItemEls("item-2").content.hidden, false);
   assert.deepEqual(pushed.at(-1).payload.value, ["item-1", "item-3", "item-2"]);
+  component.destroy();
+});
+
+test("a field focused in an open item keeps focus across a patch", () => {
+  const { component, el, getItemEls } = buildAccordion({ value: "item-2" });
+  const hook = hookFor(el, component);
+  const field = document.createElement("input");
+  getItemEls("item-2").content.append(field);
+  field.focus();
+
+  // e.g. the phx-change round trip of a form in the item.
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  assert.equal(field.isConnected, true);
+  assert.equal(document.activeElement, field);
+  assert.equal(getItemEls("item-2").content.hidden, false);
+  component.destroy();
+});
+
+test("items the server replaces keep their state, and focus moves over", () => {
+  const { component, el, getItemEls } = buildAccordion({ type: "multiple" });
+  const hook = hookFor(el, component);
+  click(getItemEls("item-1").trigger);
+  const old = getItemEls("item-1");
+  old.trigger.focus();
+
+  hook.beforeUpdate();
+  patch(el, null, { replace: ['[data-part="item"]'] });
+  hook.updated();
+
+  const { item, trigger, content } = getItemEls("item-1");
+  assert.notEqual(item, old.item);
+  assert.equal(item.dataset.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(trigger.getAttribute("aria-controls"), content.id);
+  assert.equal(document.activeElement, trigger);
+  click(trigger);
+  assert.equal(content.hidden, true);
   component.destroy();
 });
 
@@ -281,6 +323,7 @@ test("a new server value opens exactly those items in place", () => {
   });
   const hook = hookFor(el, component);
 
+  hook.beforeUpdate();
   patch(el, {
     type: "single",
     value: "item-2",

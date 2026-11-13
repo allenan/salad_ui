@@ -13,12 +13,12 @@ import {
 before(() => installDom());
 after(() => uninstallDom());
 
-function triggerMarkup({ value, disabled = false }) {
-  return `<button type="button" data-part="trigger" data-value="${value}" data-state="inactive" data-disabled="${disabled}"${disabled ? " disabled" : ""}>${value}</button>`;
+function triggerMarkup({ value, disabled = false, id }) {
+  return `<button type="button"${id ? ` id="${id}"` : ""} data-part="trigger" data-value="${value}" data-state="inactive" data-disabled="${disabled}"${disabled ? " disabled" : ""}>${value}</button>`;
 }
 
-function contentMarkup({ value }) {
-  return `<div data-part="content" data-value="${value}" data-state="inactive" hidden>${value} content</div>`;
+function contentMarkup({ value, contentId }) {
+  return `<div${contentId ? ` id="${contentId}"` : ""} data-part="content" data-value="${value}" data-state="inactive" hidden>${value} content</div>`;
 }
 
 function buildTabs({
@@ -197,13 +197,11 @@ test("vertical tabs use Up/Down, ignore Left/Right and set aria-orientation", ()
   assert.equal(getTrigger("account").getAttribute("data-state"), "active");
 });
 
-// Triggers and panels get client-assigned ids, so morphdom swaps them for
-// fresh server-rendered copies on a patch.
-function patch(el, options) {
-  simulatePatch(el, {
-    hidden: ['[data-part="content"]'],
-    replace: ['[data-part="trigger"]', '[data-part="content"]'],
-  });
+// Re-render from the server markup, which renders no ids below the root.
+// `replace` swaps the matched elements for fresh copies, as when the server
+// re-renders them under new keys.
+function patch(el, options, { replace = [] } = {}) {
+  simulatePatch(el, { hidden: ['[data-part="content"]'], replace });
   if (options) el.dataset.options = JSON.stringify(options);
 }
 
@@ -213,32 +211,93 @@ test("a LiveView patch keeps the tab chosen on the client", () => {
   });
   const hook = hookFor(el, component);
   click(getTrigger("password"));
-  assert.equal(document.activeElement, getTrigger("password"));
+  const trigger = getTrigger("password");
+  const panel = getContent("password");
+  assert.equal(document.activeElement, trigger);
 
   hook.beforeUpdate();
   patch(el);
   hook.updated();
 
   assert.equal(hook.component, component);
-  assert.equal(getTrigger("password").getAttribute("data-state"), "active");
-  assert.equal(getTrigger("password").getAttribute("aria-selected"), "true");
-  assert.equal(getTrigger("password").getAttribute("role"), "tab");
-  assert.equal(getTrigger("password").id, "tabs-1-trigger-password");
-  assert.equal(getContent("password").hidden, false);
+  // The client ids were dropped before the patch, so the triggers and
+  // panels were patched in place rather than replaced.
+  assert.equal(getTrigger("password"), trigger);
+  assert.equal(getContent("password"), panel);
+  assert.equal(trigger.getAttribute("data-state"), "active");
+  assert.equal(trigger.getAttribute("aria-selected"), "true");
+  assert.equal(trigger.getAttribute("role"), "tab");
+  assert.equal(trigger.id, "tabs-1-trigger-password");
+  assert.equal(trigger.getAttribute("aria-controls"), panel.id);
+  assert.equal(panel.getAttribute("aria-labelledby"), trigger.id);
+  assert.equal(panel.hidden, false);
   assert.equal(getContent("account").hidden, true);
-  assert.equal(
-    getContent("password").getAttribute("aria-labelledby"),
-    "tabs-1-trigger-password",
-  );
-  // Focus moves to the replacement trigger.
-  assert.equal(document.activeElement, getTrigger("password"));
+  assert.equal(document.activeElement, trigger);
   assert.equal(pushed.length, 1);
 
-  // The new triggers are wired up.
+  // Still wired up.
   click(getTrigger("billing"));
   assert.equal(getContent("billing").hidden, false);
   keydown(el.querySelector('[data-part="list"]'), "Home");
   assert.equal(getContent("account").hidden, false);
+  component.destroy();
+});
+
+test("a field focused in a tab panel keeps focus across a patch", () => {
+  const { component, el, getContent } = buildTabs({ defaultValue: "account" });
+  const hook = hookFor(el, component);
+  const field = document.createElement("input");
+  getContent("account").append(field);
+  field.focus();
+
+  // e.g. the phx-change round trip of a form in the panel.
+  hook.beforeUpdate();
+  patch(el);
+  hook.updated();
+
+  assert.equal(field.isConnected, true);
+  assert.equal(document.activeElement, field);
+  assert.equal(getContent("account").hidden, false);
+  component.destroy();
+});
+
+test("server-rendered tab ids are kept and linked", () => {
+  const { component, getTrigger, getContent } = buildTabs({
+    defaultValue: "account",
+    items: [{ value: "account", id: "acct-tab", contentId: "acct-panel" }],
+  });
+
+  assert.equal(getTrigger("account").id, "acct-tab");
+  assert.equal(
+    getTrigger("account").getAttribute("aria-controls"),
+    "acct-panel",
+  );
+  assert.equal(
+    getContent("account").getAttribute("aria-labelledby"),
+    "acct-tab",
+  );
+  component.destroy();
+});
+
+test("a trigger the server replaces gets the state and keeps focus", () => {
+  const { component, el, getTrigger, getContent } = buildTabs({
+    defaultValue: "account",
+  });
+  const hook = hookFor(el, component);
+  click(getTrigger("password"));
+  const trigger = getTrigger("password");
+
+  hook.beforeUpdate();
+  patch(el, null, { replace: ['[data-part="trigger"]'] });
+  hook.updated();
+
+  assert.notEqual(getTrigger("password"), trigger);
+  assert.equal(getTrigger("password").getAttribute("aria-selected"), "true");
+  assert.equal(getContent("password").hidden, false);
+  assert.equal(document.activeElement, getTrigger("password"));
+  // The replacement triggers are wired up.
+  click(getTrigger("billing"));
+  assert.equal(getContent("billing").hidden, false);
   component.destroy();
 });
 
@@ -248,6 +307,7 @@ test("a new server value selects that tab in place", () => {
   });
   const hook = hookFor(el, component);
 
+  hook.beforeUpdate();
   patch(el, { value: "billing", defaultValue: null });
   hook.updated();
 

@@ -1,5 +1,5 @@
 // saladui/components/accordion.js
-import Component from "../core/component.js";
+import Component, { assignId } from "../core/component.js";
 import {
   CollectionRegistry,
   RovingFocus,
@@ -19,8 +19,8 @@ class AccordionItem extends Component {
     // so aria-controls/aria-labelledby never resolve to an empty string.
     const trigger = itemElement.querySelector("[data-part='item-trigger']");
     const content = itemElement.querySelector("[data-part='item-content']");
-    if (trigger && !trigger.id) trigger.id = `${itemElement.id}-trigger`;
-    if (content && !content.id) content.id = `${itemElement.id}-content`;
+    assignId(trigger, `${itemElement.id}-trigger`);
+    assignId(content, `${itemElement.id}-content`);
 
     super(itemElement, { initialState, ignoreItems: false });
     this.parent = parentComponent;
@@ -235,7 +235,7 @@ class AccordionComponent extends Component {
     this.items = itemElements.map((element) => {
       // Initialize AccordionItem without hook context
       const itemValue = element.dataset.value;
-      element.id = `${this.el.id}-item-${itemValue}`;
+      assignId(element, `${this.el.id}-item-${itemValue}`);
 
       // Check if this item is initially open
       const isOpen = this.selection.getValue(true).includes(itemValue);
@@ -250,11 +250,10 @@ class AccordionComponent extends Component {
 
   /**
    * A LiveView patch puts back the server-rendered markup: every item closed
-   * and its content `hidden`, and (because items get client-assigned ids)
-   * usually new item elements. Rebuilding would collapse the items the user
-   * opened. Keep the open values and rebuild only the items, unless the
-   * options or event mappings changed; a new server `value` opens exactly
-   * those items.
+   * and its content `hidden`, no ids or ARIA. Rebuilding would collapse the
+   * items the user opened. Keep the open values and rebuild only the items
+   * (the server may have added or removed some), unless the options or event
+   * mappings changed; a new server `value` opens exactly those items.
    */
   skipReinitialize(el) {
     if (!this.sameConfig(el, ["value"])) return false;
@@ -273,14 +272,17 @@ class AccordionComponent extends Component {
     return true;
   }
 
-  // A replaced item takes keyboard focus with it; remember which item's
-  // trigger had it so skipReinitialize() can hand focus to its replacement.
+  // Items, triggers and contents get client ids; drop them so the patch
+  // keeps those elements (and a focused field in an item) instead of
+  // replacing them. Should the server still replace the focused item,
+  // remember which trigger had focus so skipReinitialize() can hand it on.
   beforeUpdate() {
     const trigger = document.activeElement?.closest?.(
       "[data-part='item-trigger']",
     );
     const item = this.items.find((item) => item.trigger === trigger);
     this.focusedValue = trigger && item ? item.value : null;
+    this.clearGeneratedIds();
   }
 
   restoreFocus() {

@@ -79,6 +79,14 @@ function buildDialog({
   };
 }
 
+// Re-render from the server markup, which renders only these ids.
+function patch(el) {
+  simulatePatch(el, {
+    hidden: ['[data-part="content"]'],
+    keepIds: [el.id, "dialog-action", "field"],
+  });
+}
+
 function click(el) {
   el.dispatchEvent(
     new window.MouseEvent("click", { bubbles: true, cancelable: true }),
@@ -247,11 +255,13 @@ test("a LiveView patch keeps a client-opened dialog open", () => {
   click(trigger);
   const field = document.getElementById("field");
   field.focus();
+  const title = el.querySelector('[data-part="title"]');
+  assert.equal(panel.getAttribute("aria-labelledby"), title.id);
 
   // A phx-change on a form in the dialog re-renders it from the server,
   // which still says closed.
   hook.beforeUpdate();
-  simulatePatch(el, { hidden: ['[data-part="content"]'] });
+  patch(el);
   hook.updated();
 
   assert.equal(hook.component, component);
@@ -261,7 +271,9 @@ test("a LiveView patch keeps a client-opened dialog open", () => {
   assert.equal(panel.getAttribute("role"), "dialog");
   assert.equal(panel.getAttribute("aria-modal"), "true");
   assert.equal(panel.getAttribute("aria-labelledby"), "dialog-1-title");
-  assert.equal(document.getElementById("dialog-1-title").tagName, "H2");
+  // The title's client id was dropped before the patch, so it was patched
+  // in place rather than replaced, and got its id back.
+  assert.equal(document.getElementById("dialog-1-title"), title);
   assert.equal(document.activeElement, field);
   assert.equal(pushed.filter(({ event }) => event === "open").length, 1);
 
@@ -281,7 +293,8 @@ test("a LiveView patch keeps a client-opened sheet (data-state root) open", () =
   const hook = hookFor(el, component);
   click(trigger);
 
-  simulatePatch(el, { hidden: ['[data-part="content"]'] });
+  hook.beforeUpdate();
+  patch(el);
   el.dataset.state = "closed";
   hook.updated();
 
@@ -297,7 +310,8 @@ test("changed dialog options rebuild it from the server-rendered state", () => {
   const hook = hookFor(el, component);
   click(trigger);
 
-  simulatePatch(el, { hidden: ['[data-part="content"]'] });
+  hook.beforeUpdate();
+  patch(el);
   el.setAttribute("data-options", JSON.stringify({ closeOnEscape: false }));
   hook.updated();
 

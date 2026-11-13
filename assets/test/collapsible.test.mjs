@@ -175,12 +175,13 @@ test("open_to_closed animation hides content only after the transition finishes"
   assert.equal(content.classList.contains("opacity-100"), false);
 });
 
-// The trigger and content get client-assigned ids, so morphdom swaps them for
-// fresh server-rendered copies on a patch.
-function patch(el, { open = false } = {}) {
+// Re-render from the server markup, which renders no ids below the root.
+// `replace` swaps the matched elements for fresh copies, as when the server
+// re-renders them under new keys.
+function patch(el, { open = false, replace = [] } = {}) {
   simulatePatch(el, {
     hidden: open ? [] : ['[data-part="content"]'],
-    replace: ['[data-part="trigger"]', '[data-part="content"]'],
+    replace,
   });
   el.dataset.state = open ? "open" : "closed";
 }
@@ -189,13 +190,44 @@ test("a LiveView patch keeps a client-opened collapsible open", () => {
   const { component, el, trigger, pushed } = buildCollapsible();
   const hook = hookFor(el, component);
   click(trigger);
+  const content = el.querySelector('[data-part="content"]');
+  const field = document.createElement("input");
+  content.append(field);
+  field.focus();
 
+  // e.g. the phx-change round trip of a form in the content.
   hook.beforeUpdate();
   patch(el);
   hook.updated();
 
+  assert.equal(hook.component, component);
+  // The client ids were dropped before the patch, so the trigger and
+  // content were patched in place, keeping the focused field.
+  assert.equal(el.querySelector('[data-part="trigger"]'), trigger);
+  assert.equal(el.querySelector('[data-part="content"]'), content);
+  assert.equal(document.activeElement, field);
+  assert.equal(component.state, "open");
+  assert.equal(content.hidden, false);
+  assert.equal(trigger.getAttribute("aria-controls"), content.id);
+  assert.equal(content.getAttribute("aria-labelledby"), trigger.id);
+  assert.equal(pushed.filter(({ event }) => event === "handle_open").length, 1);
+  component.destroy();
+});
+
+test("a collapsible keeps its state when the server replaces its parts", () => {
+  const { component, el, trigger, pushed } = buildCollapsible();
+  const hook = hookFor(el, component);
+  click(trigger);
+
+  hook.beforeUpdate();
+  patch(el, {
+    replace: ['[data-part="trigger"]', '[data-part="content"]'],
+  });
+  hook.updated();
+
   const newTrigger = el.querySelector('[data-part="trigger"]');
   const newContent = el.querySelector('[data-part="content"]');
+  assert.notEqual(newTrigger, trigger);
   assert.equal(hook.component, component);
   assert.equal(component.state, "open");
   assert.equal(el.dataset.state, "open");
@@ -218,12 +250,14 @@ test("a new server open value opens and closes the live collapsible", () => {
   const { component, el } = buildCollapsible();
   const hook = hookFor(el, component);
 
+  hook.beforeUpdate();
   patch(el, { open: true });
   el.dataset.options = JSON.stringify({ open: true });
   hook.updated();
   assert.equal(hook.component, component);
   assert.equal(component.state, "open");
 
+  hook.beforeUpdate();
   patch(el);
   el.dataset.options = JSON.stringify({ open: false });
   hook.updated();

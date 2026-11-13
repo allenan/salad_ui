@@ -42,7 +42,8 @@ defmodule SaladUI.Accordion do
   ## Re-renders
 
   A LiveView re-render keeps the items the user opened open, and keyboard focus
-  on the trigger that had it; items the server adds or removes are picked up.
+  where it was, on a trigger or a field in an item; items the server adds or
+  removes are picked up.
   A new `value` opens exactly those items; changing other options rebuilds the
   accordion from the new markup.
   """

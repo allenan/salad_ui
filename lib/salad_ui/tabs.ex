@@ -54,9 +54,10 @@ defmodule SaladUI.Tabs do
 
   ## Re-renders
 
-  A LiveView re-render keeps the tab the user chose, and keyboard focus on its
-  trigger. A new `value` selects that tab; changing other options rebuilds the
-  tabs from the new markup.
+  A LiveView re-render (such as the `phx-change` round trip of a form in a
+  panel) keeps the tab the user chose, and keyboard focus where it was, on a
+  trigger or a field in the panel. A new `value` selects that tab; changing
+  other options rebuilds the tabs from the new markup.
   """
   use SaladUI, :component
 

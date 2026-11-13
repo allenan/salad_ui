@@ -47,10 +47,15 @@ class TooltipComponent extends Component {
     );
   }
 
+  // The content gets a client id for aria-describedby; drop it so the patch
+  // keeps the element instead of replacing it (see skipReinitialize).
+  beforeUpdate() {
+    this.clearGeneratedIds();
+  }
+
   /**
    * A LiveView patch anywhere around the tooltip puts back its server-rendered
-   * markup: the content `hidden` and closed, and, because the content gets a
-   * client-assigned id, often a new content element. Rebuilding would close a
+   * markup: the content `hidden` and closed, without its id. Rebuilding would close a
    * tooltip the pointer is still on. Keep the instance (and its pending
    * open/close timer) and re-apply the state, unless the options or event
    * mappings changed.
