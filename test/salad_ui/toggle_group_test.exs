@@ -305,4 +305,34 @@ defmodule SaladUI.ToggleGroupTest do
       assert uncontrolled =~ ~s(&quot;controlled&quot;:false)
     end
   end
+
+  describe "required" do
+    test "required reaches the options and marks the root" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle_group :let={b} id="g1" type="single" value="a" required>
+          <.toggle_group_item builder={b} value="a">A</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      assert html =~ ~s(&quot;required&quot;:true)
+      assert html =~ ~r/<div[^>]*id="g1"[^>]*data-required/
+    end
+
+    test "groups are not required by default (Radix)" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle_group :let={b} id="g1" type="multiple">
+          <.toggle_group_item builder={b} value="a">A</.toggle_group_item>
+        </.toggle_group>
+        """)
+
+      assert html =~ ~s(&quot;required&quot;:false)
+      refute html =~ "data-required"
+    end
+  end
 end
