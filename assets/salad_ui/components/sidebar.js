@@ -7,8 +7,9 @@
 //     sidebar's `data-state` / `data-collapsible` so the shadcn Tailwind
 //     classes (`group-data-[collapsible=icon]:...`) keep working;
 //   * a mobile offcanvas sheet below 768px (matchMedia, like useIsMobile),
-//     with overlay, Escape / outside click to close, a focus trap and a
-//     page scroll lock (shadcn renders a modal Sheet there);
+//     with overlay, Escape / outside click to close, a focus trap and the
+//     modal layer (shadcn renders a modal Sheet there: the page behind is
+//     blocked, aria-hidden and scroll-locked);
 //   * the Cmd/Ctrl+B shortcut (SIDEBAR_KEYBOARD_SHORTCUT);
 //   * the `sidebar_state` cookie, so the server can render the last state;
 //   * `on-open-change` and the open/close/toggle commands;
@@ -17,7 +18,7 @@ import Component, { assignId } from "../core/component.js";
 import SaladUI from "../index.js";
 import FocusTrap from "../core/focus-trap.js";
 import PositionedElement from "../core/positioned-element.js";
-import { lockScroll } from "../core/scroll-lock.js";
+import { ModalLayer } from "../core/modal-layer.js";
 
 export const SIDEBAR_COOKIE_NAME = "sidebar_state";
 export const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -420,6 +421,7 @@ class SidebarComponent extends Component {
     if (this.isMobile && this.openMobile) {
       const container = this.containerOf(this.sidebars[0]);
       if (container !== previousContainer) this.activateMobileSheet();
+      else this.modalLayer?.refresh();
     }
     return true;
   }
@@ -543,6 +545,12 @@ class SidebarComponent extends Component {
         return this.isMobile ? this.setOpenMobile(true) : this.setOpen(true);
       case "close":
         return this.isMobile ? this.setOpenMobile(false) : this.setOpen(false);
+      // shadcn's setOpenMobile: act on the phone sheet only, e.g. close it
+      // after a navigation link without collapsing the desktop sidebar.
+      case "open-mobile":
+        return this.isMobile && this.setOpenMobile(true);
+      case "close-mobile":
+        return this.setOpenMobile(false);
       case "expand":
         return this.setOpen(true);
       case "collapse":
@@ -598,14 +606,24 @@ class SidebarComponent extends Component {
       this.mobileContainer = container;
     }
     this.focusTrap.activate();
-    // Re-activation after a patch keeps the lock it already holds.
-    if (!this.releaseScroll) this.releaseScroll = lockScroll();
+    // The sheet and its overlay (which closes it on click) form the layer.
+    // Re-activation after a patch keeps the layer it already has.
+    if (!this.modalLayer) {
+      this.modalLayer = new ModalLayer(() => {
+        const sidebar = this.mobileContainer?.closest('[data-slot="sidebar"]');
+        return [
+          this.mobileContainer,
+          sidebar?.querySelector('[data-slot="sidebar-overlay"]'),
+        ];
+      });
+    }
+    this.modalLayer.activate();
   }
 
   deactivateMobileSheet() {
+    // Unblock first: focus returns to the trigger, aria-hidden until then.
+    this.modalLayer?.deactivate();
     this.focusTrap?.deactivate();
-    this.releaseScroll?.();
-    this.releaseScroll = null;
   }
 
   writeCookie(open) {
@@ -660,9 +678,9 @@ class SidebarComponent extends Component {
     this.hideTooltip();
     this.focusTrap?.destroy?.();
     this.focusTrap = null;
+    this.modalLayer?.deactivate();
+    this.modalLayer = null;
     this.mobileContainer = null;
-    this.releaseScroll?.();
-    this.releaseScroll = null;
   }
 }
 

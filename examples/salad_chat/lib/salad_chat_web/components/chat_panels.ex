@@ -56,7 +56,7 @@ defmodule SaladChatWeb.ChatPanels do
         size="icon-sm"
         class="-ml-1 md:hidden"
         aria-label="Open navigation"
-        phx-click={SaladUI.JS.dispatch_command("open", to: "#mobile-sidebar")}
+        phx-click={SaladUI.JS.dispatch_command("open", to: "#app-sidebar")}
       >
         <.icon name="hero-bars-3" />
       </.button>

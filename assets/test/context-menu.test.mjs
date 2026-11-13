@@ -3,11 +3,13 @@ import { after, afterEach, before, test } from "node:test";
 
 import { registry } from "../salad_ui/core/factory.js";
 import "../salad_ui/components/context_menu.js"; // self-registers "context-menu"
+import { resetModalLayers } from "../salad_ui/core/modal-layer.js";
 import { installDom, setRect, uninstallDom, waitFor } from "./helpers/dom.mjs";
 
 before(() => installDom());
 after(() => uninstallDom());
 afterEach(() => {
+  resetModalLayers();
   document.body.innerHTML = "";
 });
 
@@ -24,9 +26,11 @@ function build({
   animated = false,
   // context_menu_content's `loop`.
   loop = false,
+  modal,
 } = {}) {
   const options = JSON.stringify({
     usePortal,
+    ...(modal !== undefined && { modal }),
     ...(animated && {
       animations: {
         open_to_closed: { duration: 130, target_part: "content" },
@@ -635,4 +639,51 @@ test("a keyboard contextmenu PointerEvent (empty pointerType) opens at the first
   assert.equal(positioner.style.top, px(100));
 
   component.destroy();
+});
+
+test("an open menu is modal: the page is blocked and aria-hidden until it closes", () => {
+  const { component, content, outside } = build();
+
+  contextmenu(component.trigger, 200, 150);
+
+  assert.equal(document.body.style.pointerEvents, "none");
+  assert.equal(outside.getAttribute("aria-hidden"), "true");
+  assert.equal(component.trigger.getAttribute("aria-hidden"), "true");
+  assert.equal(
+    content.closest("[aria-hidden]"),
+    null,
+    "the menu stays exposed",
+  );
+
+  keydown(content, "Escape");
+
+  assert.equal(component.state, "closed");
+  assert.notEqual(document.body.style.pointerEvents, "none");
+  assert.equal(outside.hasAttribute("aria-hidden"), false);
+  assert.equal(component.trigger.hasAttribute("aria-hidden"), false);
+});
+
+test("while modal, a right click inside the trigger (landing on <html>) moves the menu", () => {
+  const { component, positioner, trigger } = build();
+  contextmenu(trigger, 200, 150);
+
+  const event = contextmenu(document.documentElement, 300, 250);
+
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(component.state, "open");
+  assert.equal(positioner.style.left, px(302));
+  assert.equal(positioner.style.top, px(250));
+
+  contextmenu(document.documentElement, 600, 600);
+  assert.equal(component.state, "closed", "outside the trigger it closes");
+});
+
+test("modal={false} leaves the page interactive and exposed", () => {
+  const { component, outside, trigger } = build({ modal: false });
+
+  contextmenu(trigger, 200, 150);
+
+  assert.equal(component.state, "open");
+  assert.notEqual(document.body.style.pointerEvents, "none");
+  assert.equal(outside.hasAttribute("aria-hidden"), false);
 });

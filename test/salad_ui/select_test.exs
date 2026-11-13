@@ -123,7 +123,7 @@ defmodule SaladUI.SelectTest do
       refute after_down =~ "Eastern Standard Time"
     end
 
-    test "defaults to popper placement with shadcn's popper classes" do
+    test "defaults to shadcn's item-aligned position, bottom side and center align" do
       assigns = %{}
 
       html =
@@ -133,9 +133,22 @@ defmodule SaladUI.SelectTest do
         </.select_content>
         """)
 
-      assert html =~ ~s(data-position="popper")
+      assert html =~ ~s(data-position="item-aligned")
       assert html =~ ~s(data-side="bottom")
-      assert html =~ ~s(data-align="start")
+      assert html =~ ~s(data-align="center")
+    end
+
+    test "popper placement renders shadcn's popper classes" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.select_content position="popper">
+          <.select_item value="a">A</.select_item>
+        </.select_content>
+        """)
+
+      assert html =~ ~s(data-position="popper")
 
       assert html =~
                "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1"

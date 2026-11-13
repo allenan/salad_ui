@@ -27,6 +27,29 @@ mix phx.server
 Open <http://localhost:4000>, pick a user, then open another tab (or a
 private window) and pick someone else.
 
+### On your tailnet
+
+To try it from a phone, run a production build on loopback and let
+[`tailscale serve`](https://tailscale.com/kb/1312/serve) put HTTPS in front
+of it (tailnet only, not the public internet):
+
+`mix assets.deploy` writes digested copies next to the seed images, so do
+this in a separate checkout:
+
+```bash
+git worktree add ../salad_ui-host main
+cd ../salad_ui-host/examples/salad_chat
+export MIX_ENV=prod PHX_SERVER=true PHX_IP=127.0.0.1 PORT=4100
+export SECRET_KEY_BASE=$(mix phx.gen.secret)
+export PHX_HOST=$(tailscale status --json | jq -r '.Self.DNSName | rtrimstr(".")')
+mix deps.get --only prod && mix compile && mix assets.deploy
+mix phx.server &
+tailscale serve --bg 4100
+```
+
+Then open `https://$PHX_HOST` on any device in the tailnet.
+`tailscale serve reset` stops serving.
+
 Try:
 
 - <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> for the quick switcher, <kbd>⌥1</kbd>–<kbd>⌥5</kbd> to jump between channels.

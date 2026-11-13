@@ -103,8 +103,8 @@ Deliberate omissions and limits the implementers recorded. React-only concepts
   `progress-controlled` story; no per-component RTL examples; the tooltip arrow
   stays centred for `align="start"/"end"`.
 - **select-deltas**: item-aligned falls back to popper instead of shrinking like
-  Radix; `align` defaults to `start` (shadcn `center`); the item-aligned story
-  shows both modes side by side instead of a Switch.
+  Radix; the item-aligned story shows both modes side by side instead of a
+  Switch. (Defaults now match shadcn: `item-aligned`, `align="center"`.)
 - **sidebar-behaviour**: the server can't read `isMobile`/`openMobile` except
   through events; string tooltips only; the menu skeleton uses a fixed 70% width;
   a `default_open={false}` sidebar also needs `state="collapsed"` to avoid a flash.
@@ -139,10 +139,10 @@ Issues reviewers found but didn't fix. None blocks a merge.
   were fixed after the run: #15, #13.)
 - **Modals**: dialog, sheet, alert dialog, drawer and dropdown menu now block
   outside pointers, hide the rest of the page from assistive tech and block
-  outside wheel/touch scroll (#17, shared `core/modal-layer.js`). Select,
-  context menu, menubar and the sidebar's mobile sheet don't use the modal
-  layer yet (Radix makes them modal too). With two sidebars in one provider,
-  the mobile focus trap covers only the first.
+  outside wheel/touch scroll (#17, shared `core/modal-layer.js`); select,
+  context menu and the sidebar's mobile sheet joined them later. Menubar stays
+  non-modal, as in Radix. With two sidebars in one provider, the mobile focus
+  trap and modal layer cover only the first.
 - **Carousel**: no autoplay pause button and no `aria-controls` on previous/next
   (shadcn has neither).
 - **Code block**: "Copy"/"Copied" labels are hard-coded; hunk headers go through

@@ -658,3 +658,57 @@ test("destroy removes the global listeners", () => {
   assert.equal(sidebar().dataset.state, "expanded");
   assert.equal(media.listeners.size, 0);
 });
+
+test("the mobile sheet is modal: the rest of the page is blocked and aria-hidden", () => {
+  installMatchMedia(true);
+  const { el, overlay, container, trigger } = buildSidebar();
+  mountHook(el);
+  const inset = el.querySelector('[data-slot="sidebar-inset"]');
+  const outside = document.getElementById("outside");
+
+  click(trigger());
+
+  assert.equal(document.body.style.pointerEvents, "none");
+  assert.equal(inset.getAttribute("aria-hidden"), "true");
+  assert.equal(outside.getAttribute("aria-hidden"), "true");
+  assert.equal(container().closest("[aria-hidden]"), null);
+  assert.equal(
+    overlay().style.pointerEvents,
+    "auto",
+    "the overlay still closes it",
+  );
+  assert.equal(document.body.hasAttribute("data-scroll-locked"), true);
+
+  click(overlay());
+
+  assert.notEqual(document.body.style.pointerEvents, "none");
+  assert.equal(inset.hasAttribute("aria-hidden"), false);
+  assert.equal(outside.hasAttribute("aria-hidden"), false);
+  assert.equal(document.body.hasAttribute("data-scroll-locked"), false);
+});
+
+test("open-mobile / close-mobile act on the phone sheet only", () => {
+  installMatchMedia(false);
+  const desktop = buildSidebar();
+  mountHook(desktop.el);
+  desktop.el.querySelector('[data-slot="sidebar"]').dispatchEvent(
+    new window.CustomEvent("salad_ui:command", {
+      detail: { command: "close-mobile" },
+    }),
+  );
+  assert.equal(desktop.el.dataset.state, "expanded", "desktop is untouched");
+
+  mounted.splice(0).forEach((hook) => hook.destroyed());
+  installMatchMedia(true);
+  const { el, sidebar } = buildSidebar();
+  mountHook(el);
+  const send = (command) =>
+    sidebar().dispatchEvent(
+      new window.CustomEvent("salad_ui:command", { detail: { command } }),
+    );
+
+  send("open-mobile");
+  assert.equal(sidebar().dataset.state, "open");
+  send("close-mobile");
+  assert.equal(sidebar().dataset.state, "closed");
+});

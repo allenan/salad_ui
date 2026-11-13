@@ -30,8 +30,11 @@ config :phoenix_live_view,
 config :esbuild,
   version: "0.25.4",
   salad_chat: [
+    # salad_ui is a path dependency (the repo root); point esbuild straight at
+    # its JS so the bundle doesn't depend on NODE_PATH or the checkout's name.
     args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.) ++
+        ["--alias:salad_ui=#{Path.expand("../../../assets/salad_ui", __DIR__)}"],
     cd: Path.expand("../assets", __DIR__),
     env: %{
       "NODE_PATH" => [

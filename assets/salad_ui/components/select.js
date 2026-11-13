@@ -7,6 +7,7 @@ import {
   Selection,
 } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
+import { ModalLayer } from "../core/modal-layer.js";
 import { getTextValue, typeaheadFor } from "../core/typeahead.js";
 
 // Matches the `max-h-[min(24rem,var(...))]` class on select_content.
@@ -308,6 +309,12 @@ class SelectComponent extends Component {
       "Escape",
     ];
 
+    // Radix's Select is always modal: while the list is open, outside
+    // pointer events are blocked (a click outside only closes it), the rest
+    // of the page is hidden from assistive technology and scrolling is
+    // locked. The content is the layer, portaled or not.
+    this.modalLayer = new ModalLayer(() => [this.content]);
+
     // Initialize select items
     this.initializeItems();
     this.initializePlaceholder();
@@ -335,9 +342,9 @@ class SelectComponent extends Component {
    */
   readPlacement() {
     const placement = {
-      position: this.content?.dataset.position || "popper",
+      position: this.content?.dataset.position || "item-aligned",
       side: this.content?.dataset.side || "bottom",
-      align: this.content?.dataset.align || "start",
+      align: this.content?.dataset.align || "center",
     };
     const changed =
       placement.position !== this.position ||
@@ -491,6 +498,7 @@ class SelectComponent extends Component {
       this.positionedElement.activate();
       this.updateScrollButtons();
     }
+    this.modalLayer.refresh();
 
     const focused = this.focusBeforePatch;
     this.focusBeforePatch = null;
@@ -1036,6 +1044,7 @@ class SelectComponent extends Component {
     if (this.positionedElement) {
       this.positionedElement.activate();
     }
+    this.modalLayer.activate();
 
     // Highlight first selected item or first item
     this.highlightFirstSelectedOrFirstItem();
@@ -1058,6 +1067,8 @@ class SelectComponent extends Component {
   onOpenExit() {
     this.stopAutoScroll();
     this.typeahead.reset();
+    // Before refocusing the trigger, which is aria-hidden while blocked.
+    this.modalLayer.deactivate();
 
     // Deactivate positioned element
     if (this.positionedElement) {
@@ -1265,6 +1276,7 @@ class SelectComponent extends Component {
 
   // Cleanup
   beforeDestroy() {
+    this.modalLayer?.deactivate();
     if (this.positionedElement) {
       this.positionedElement.destroy();
       this.positionedElement = null;

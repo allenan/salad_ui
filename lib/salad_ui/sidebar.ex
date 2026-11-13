@@ -149,6 +149,9 @@ defmodule SaladUI.Sidebar do
   * `"open"` / `"close"` - opens/closes the mobile sheet on mobile, expands/
     collapses the sidebar otherwise.
   * `"expand"` / `"collapse"` - always the desktop sidebar.
+  * `"open-mobile"` / `"close-mobile"` - only the mobile sheet (shadcn's
+    `setOpenMobile`); no-ops on desktop. Use `"close-mobile"` on navigation
+    links inside the sidebar so picking one closes the sheet on phones.
   """
   use SaladUI, :component
 

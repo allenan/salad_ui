@@ -123,7 +123,7 @@ defmodule SaladUI.HoverCard do
 
   ## Options
 
-  * `:side` - Placement of the hover card relative to the trigger (top, right, bottom, left). Defaults to `"top"`.
+  * `:side` - Placement of the hover card relative to the trigger (top, right, bottom, left). Defaults to `"bottom"`, as in shadcn/ui.
   * `:align` - Alignment of the hover card (start, center, end). Defaults to `"center"`.
     `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
   * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`.
@@ -131,9 +131,9 @@ defmodule SaladUI.HoverCard do
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
-  attr :side, :string, values: ~w(top right bottom left), default: "top"
+  attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
-  attr :"side-offset", :integer, default: 8, doc: "Distance from the trigger in pixels"
+  attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
   attr :rest, :global
   slot :inner_block, required: true

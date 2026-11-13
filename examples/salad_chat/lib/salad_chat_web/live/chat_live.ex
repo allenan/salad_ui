@@ -846,18 +846,6 @@ defmodule SaladChatWeb.ChatLive do
           active_id={@channel && @channel.id}
           theme={@theme}
         />
-        <.app_sidebar
-          id="mobile-sidebar"
-          mobile
-          me={@me}
-          users={@users}
-          channels={@channels}
-          dms={@dms}
-          unread={@unread}
-          online={@online}
-          active_id={@channel && @channel.id}
-          theme={@theme}
-        />
 
         <.sidebar_inset :if={@channel} class="h-svh min-h-0 min-w-0 overflow-hidden">
           <.channel_header

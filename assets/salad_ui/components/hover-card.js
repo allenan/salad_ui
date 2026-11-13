@@ -5,9 +5,9 @@ import PositionedElement from "../core/positioned-element.js";
 
 // Define constants at the module level outside the class
 const DEFAULT_POSITION_CONFIG = {
-  placement: "top",
+  placement: "bottom",
   alignment: "center",
-  sideOffset: 8,
+  sideOffset: 4,
   alignOffset: 0,
 };
 

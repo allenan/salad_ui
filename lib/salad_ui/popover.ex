@@ -160,14 +160,14 @@ defmodule SaladUI.Popover do
   * `:side` - Placement of the popover relative to the trigger (top, right, bottom, left). Defaults to `"bottom"`.
   * `:align` - Alignment of the popover (start, center, end). Defaults to `"center"`.
     `start`/`end` mirror under `dir="rtl"` for `top`/`bottom` sides.
-  * `:side-offset` - Distance from the trigger in pixels. Defaults to `8`.
+  * `:side-offset` - Distance from the trigger in pixels. Defaults to `4`, as in shadcn/ui.
   * `:align-offset` - Offset along the alignment axis. Defaults to `0`.
   * `:class` - Additional CSS classes.
   """
   attr :class, :string, default: nil
   attr :side, :string, values: ~w(top right bottom left), default: "bottom"
   attr :align, :string, values: ~w(start center end), default: "center"
-  attr :"side-offset", :integer, default: 8, doc: "Distance from the trigger in pixels"
+  attr :"side-offset", :integer, default: 4, doc: "Distance from the trigger in pixels"
   attr :"align-offset", :integer, default: 0, doc: "Offset along the alignment axis"
   attr :rest, :global
   slot :inner_block, required: true

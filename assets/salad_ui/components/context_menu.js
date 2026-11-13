@@ -8,6 +8,7 @@ import SaladUI from "../index.js";
 import Positioner from "../core/positioner.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
 import Portal from "../core/portal.js";
+import { ModalLayer } from "../core/modal-layer.js";
 import Menu from "./menu.js";
 
 // Touch/pen hold time before the menu opens, as in Radix.
@@ -66,6 +67,13 @@ class ContextMenuComponent extends Component {
           },
         )
       : null;
+
+    // Like Radix's ContextMenu (`modal` defaults to true): while open, a
+    // click outside only closes the menu, the rest of the page is hidden
+    // from assistive technology and scrolling is locked.
+    this.modalLayer = new ModalLayer(() => [this.positioner], {
+      modal: this.options.modal !== false,
+    });
 
     this.updateUI();
   }
@@ -212,6 +220,7 @@ class ContextMenuComponent extends Component {
 
     this.position();
     this.startOpenListeners();
+    this.modalLayer.activate();
   }
 
   // Runs as soon as the menu starts closing, before the exit animation: the
@@ -219,6 +228,9 @@ class ContextMenuComponent extends Component {
   // patch in that window (e.g. the reply to an item's on-select) rebuilds the
   // component and the deferred closed-state handler never runs.
   onOpenExit({ restoreFocus = true } = {}) {
+    // Unblock first: the element focus returns to is aria-hidden while the
+    // menu blocks. The scroll lock holds until the exit animation ends.
+    this.modalLayer.releaseInteraction();
     this.menu?.closeSubmenus();
     this.stopOpenListeners();
     this.pushEvent("close");
@@ -231,6 +243,8 @@ class ContextMenuComponent extends Component {
   // After the exit animation.
   onClosedEnter() {
     this.point = null;
+    // Runs from the base constructor too, before the layer exists.
+    this.modalLayer?.deactivate();
 
     if (this.positioner && Portal.isInPortal(this.positioner)) {
       Portal.restore(this.positioner);
@@ -331,7 +345,27 @@ class ContextMenuComponent extends Component {
       return;
     }
 
+    // While a modal menu blocks the page, a right click on the trigger
+    // lands on <html>; it still moves the menu there (Radix closes the
+    // menu on pointerdown, then the trigger reopens it).
+    if (this.modalLayer.blocking && this.pointInTrigger(event)) {
+      event.preventDefault();
+      this.openAt({ x: event.clientX, y: event.clientY });
+      return;
+    }
+
     this.transition("close", { restoreFocus: false });
+  }
+
+  pointInTrigger({ clientX: x, clientY: y }) {
+    const rect = this.trigger?.getBoundingClientRect();
+    return (
+      !!rect &&
+      x >= rect.left &&
+      x <= rect.right &&
+      y >= rect.top &&
+      y <= rect.bottom
+    );
   }
 
   handleContentKeydown(event) {
@@ -398,6 +432,8 @@ class ContextMenuComponent extends Component {
   beforeDestroy() {
     this.clearLongPress();
     this.stopOpenListeners();
+    // A rebuild that stays open activates a new layer from afterMount().
+    this.modalLayer.deactivate();
     this.el.dataset.state = this.state;
 
     if (this.positioner && Portal.isInPortal(this.positioner)) {
