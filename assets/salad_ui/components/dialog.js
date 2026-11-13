@@ -3,6 +3,7 @@ import Component from "../core/component.js";
 import SaladUI from "../index.js";
 import FocusTrap from "../core/focus-trap.js";
 import ClickOutsideMonitor from "../core/click-outside.js";
+import { lockScroll } from "../core/scroll-lock.js";
 
 class DialogComponent extends Component {
   constructor(el, hookContext) {
@@ -187,7 +188,34 @@ class DialogComponent extends Component {
 
   // State machine handlers
   onClosedEnter() {
-    // Content hides after its exit animation completes.
+    // Content hides after its exit animation completes; the scroll lock is
+    // released then too (see updatePartsVisibility).
+  }
+
+  /**
+   * Runs once the parts reach a state's visibility: straight away, or after
+   * the exit animation. Like Radix, the page stays locked until the closing
+   * dialog is gone, so the scrollbar does not come back mid-animation.
+   */
+  updatePartsVisibility() {
+    super.updatePartsVisibility();
+    if (this.state === "closed") this.releaseScrollLock();
+  }
+
+  /**
+   * Lock page scrolling while open, as Radix Dialog does. Idempotent, so a
+   * re-activation (a patch, a reopen mid-exit-animation) never stacks a
+   * second lock. A non-modal dialog (`modal: false` in the options) does
+   * not lock.
+   */
+  acquireScrollLock() {
+    if (this.releaseScroll || this.options.modal === false) return;
+    this.releaseScroll = lockScroll();
+  }
+
+  releaseScrollLock() {
+    this.releaseScroll?.();
+    this.releaseScroll = null;
   }
 
   onClosedExit() {
@@ -210,6 +238,8 @@ class DialogComponent extends Component {
   }
 
   activateOpenState() {
+    this.acquireScrollLock();
+
     // Initialize focus trap if not already created
     this.el.focus();
     if (!this.focusTrap) {
@@ -231,6 +261,9 @@ class DialogComponent extends Component {
     // Clean up focus trap
     this.focusTrap?.destroy();
     this.focusTrap = null;
+    // Destroyed while open (or mid-exit-animation): a rebuild that is still
+    // open locks again from afterMount().
+    this.releaseScrollLock();
   }
 }
 

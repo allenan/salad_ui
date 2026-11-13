@@ -12,8 +12,9 @@ defmodule SaladUI.Sidebar do
       (`group-data-[collapsible=icon]:hidden`, …) follow client-side toggles.
     * **Mobile** – below 768px (the same `matchMedia` check as shadcn's
       `useIsMobile`) the sidebar becomes an offcanvas sheet (`data-mobile="true"`,
-      18rem wide, with an overlay, Escape / outside click to close and a
-      focus trap). No server-side `is_mobile` is needed; pass `is_mobile` only
+      18rem wide, with an overlay, Escape / outside click to close, a
+      focus trap and, like shadcn's modal Sheet, a page scroll lock while it
+      is open). No server-side `is_mobile` is needed; pass `is_mobile` only
       to force one layout.
     * **Persistence** – every desktop toggle writes a `sidebar_state` cookie
       (`path=/`, 7 days). Read it on the server to render the last state, see

@@ -65,6 +65,14 @@ defmodule SaladUI.AlertDialog do
   where it was and without firing `on-open` again. Changing the rendered
   `open` value opens or closes it; changing other options rebuilds it from the
   new markup.
+
+  ## Scroll lock
+
+  An open alert dialog locks page scrolling, as Radix's does, and pads
+  `<body>` by the scrollbar's width so the page does not shift. The lock is
+  shared with dialogs, sheets and drawers and counted, so an alert dialog
+  opened from a dialog leaves the page locked until both have closed. See
+  `SaladUI.Dialog` for details.
   """
   use SaladUI, :component
 

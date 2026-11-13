@@ -50,6 +50,13 @@ defmodule SaladUI.Sheet do
   where it was and without firing `on-open` again. Changing the rendered
   `open` value opens or closes it; changing other options rebuilds it from the
   new markup.
+
+  ## Scroll lock
+
+  An open sheet locks page scrolling, as shadcn's (Radix) Sheet does, and
+  pads `<body>` by the scrollbar's width so the page does not shift. The lock
+  is shared with dialogs and drawers and counted, so the page unlocks once
+  the last open one has closed. See `SaladUI.Dialog` for details.
   """
   use SaladUI, :component
 

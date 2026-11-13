@@ -35,6 +35,16 @@ defmodule SaladUI.Dialog do
   where it was and without firing `on-open` again. Changing the rendered
   `open` value opens or closes it; changing other options rebuilds it from the
   new markup.
+
+  ## Scroll lock
+
+  Like Radix Dialog, an open dialog locks page scrolling: `<html>` and
+  `<body>` get `overflow: hidden`, and `<body>` is padded by the scrollbar's
+  width so the layout does not shift (nothing is padded when the page uses
+  `scrollbar-gutter: stable`). The page's own inline styles come back when the
+  dialog has finished closing. Locks are counted, so a dialog opened from
+  another dialog, sheet or drawer keeps the page locked until the last one
+  closes. While locked, `<body>` carries `data-scroll-locked`.
   """
   use SaladUI, :component
 

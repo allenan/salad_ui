@@ -66,6 +66,13 @@ defmodule SaladUI.Drawer do
   the rendered `open` value opens or closes it; changing other options
   rebuilds it from the new markup.
 
+  ## Scroll lock
+
+  As with vaul, an open drawer locks page scrolling and pads `<body>` by the
+  scrollbar's width so the page does not shift. The lock is shared with
+  dialogs and sheets and counted, so nested modals unlock the page only once
+  the last one has closed. See `SaladUI.Dialog` for details.
+
   ## Component events
 
   * `:on-open` - Fired when the drawer opens.
