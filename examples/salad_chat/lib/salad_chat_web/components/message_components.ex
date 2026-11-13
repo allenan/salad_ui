@@ -21,6 +21,9 @@ defmodule SaladChatWeb.MessageComponents do
   `row` is `%{id, message, grouped?, day, unread?}`: `grouped?` hides the
   avatar and name under the previous message from the same person, `day` adds
   a date separator and `unread?` the "New messages" divider.
+
+  The row is a `message_scroller_item/1`, so it must be a direct child of a
+  `message_scroller_content/1`.
   """
   attr :id, :string, required: true
   attr :row, :map, required: true
@@ -36,8 +39,17 @@ defmodule SaladChatWeb.MessageComponents do
       |> assign(:author, assigns.ctx.users[assigns.row.message.user_id])
       |> assign(:mine?, assigns.row.message.user_id == assigns.ctx.me)
 
+    # SALAD-BUG: message_scroller_item sets `[content-visibility:auto]`
+    # (lib/salad_ui/message_scroller.ex:307), which implies paint containment:
+    # it clips the hover action bar above the row and traps the row's
+    # fixed-positioned popovers and menus. Reset to `visible` here.
     ~H"""
-    <div id={@id} data-row class="relative">
+    <.message_scroller_item
+      id={@id}
+      message_id={"m-#{@message.id}"}
+      data-row
+      class="relative [content-visibility:visible]"
+    >
       <.marker :if={@row.day} variant="separator" class="px-4 py-3">
         <.marker_content class="rounded-full border bg-background px-3 py-0.5 text-xs font-medium text-foreground">
           {@row.day}
@@ -140,7 +152,7 @@ defmodule SaladChatWeb.MessageComponents do
           />
         <% end %>
       </div>
-    </div>
+    </.message_scroller_item>
     """
   end
 

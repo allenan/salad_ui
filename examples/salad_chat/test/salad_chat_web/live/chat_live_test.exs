@@ -63,6 +63,37 @@ defmodule SaladChatWeb.ChatLiveTest do
       assert render(leo) =~ "<strong>ramen</strong>"
     end
 
+    test "the message list is a message_scroller over the stream", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      assert has_element?(view, "#message-scroller[data-component=message-scroller]")
+      assert has_element?(view, "#message-scroller [data-part=scroll-button]")
+
+      assert has_element?(
+               view,
+               "#message-scroller [data-part=content]#messages[phx-update=stream]"
+             )
+
+      assert has_element?(view, "#messages > [data-slot=message-scroller-item][data-message-id]")
+
+      view |> form("#main-form", %{"body" => "scroll me"}) |> render_submit()
+
+      assert_push_event(view, "saladui:command", %{
+        command: "scroll_to_end",
+        target: "message-scroller"
+      })
+    end
+
+    test "the open thread scrolls in its own message_scroller", %{conn: conn} do
+      {:ok, parent} = Chat.create_message("leo", "design", "Thread me")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/design/t/#{parent.id}")
+
+      assert has_element?(
+               view,
+               "#thread-desktop-scroller [data-part=content] > #thread-desktop-parent"
+             )
+    end
+
     test "typing shows an indicator in the other tab", %{conn: conn} do
       {:ok, maya, _} = live(conn, ~p"/as/maya/c/random")
       {:ok, leo, _} = live(build_conn(), ~p"/as/leo/c/random")

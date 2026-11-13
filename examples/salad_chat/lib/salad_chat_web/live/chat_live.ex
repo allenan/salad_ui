@@ -324,7 +324,7 @@ defmodule SaladChatWeb.ChatLive do
              socket
              |> assign(main_form: blank_form(), slash: [], last_typing_at: nil)
              |> push_event("composer:clear", %{id: "main-input"})
-             |> push_event("chat:scroll-bottom", %{})}
+             |> SaladUI.LiveView.send_command("message-scroller", "scroll_to_end")}
 
           {:error, :empty} ->
             {:noreply, socket}
@@ -855,39 +855,45 @@ defmodule SaladChatWeb.ChatLive do
               min-size={35}
               class="flex min-h-0 min-w-0 flex-col"
             >
-              <%!-- TODO(salad-pass-2): use message_scroller (stand-in: a plain scroll container + ChatScroll hook) --%>
-              <div
-                id="message-scroll"
-                phx-hook="ChatScroll"
-                class="salad-scroll-area min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]"
-              >
-                <div data-scroll-content class="flex min-h-full flex-col justify-end pb-3">
-                  <%= if @loaded? do %>
-                    <.channel_intro
-                      :if={!@has_more}
-                      channel={@channel}
-                      me={@me}
-                      users={@users}
-                      empty?={@channel_empty?}
-                    />
-                    <.message_skeletons :if={@has_more} id="history-skeleton" count={2} />
-                    <div
-                      id="messages"
-                      phx-update="stream"
-                      phx-viewport-top={@has_more && "load_older"}
-                    >
-                      <.message_row
-                        :for={{dom_id, row} <- @streams.messages}
-                        id={dom_id}
-                        row={row}
-                        ctx={@ctx}
+              <.message_scroller id="message-scroller" auto_scroll class="min-h-0 flex-1">
+                <%!-- SALAD-BUG: message_scroller_viewport sets `contain-content` and
+                     `scroll-fade-b` (lib/salad_ui/message_scroller.ex:235). Layout/paint
+                     containment makes the viewport the containing block of the
+                     fixed-positioned, non-portaled popovers, dropdowns and hover cards
+                     in the rows, and the fade's mask hides whatever of them extends
+                     past the viewport. Turn both off. --%>
+                <.message_scroller_viewport class="flex flex-col contain-none! scroll-fade-none!">
+                  <%!-- Above the stream: pushes short channels to the bottom (mt-auto) --%>
+                  <div class="mt-auto shrink-0">
+                    <%= if @loaded? do %>
+                      <.channel_intro
+                        :if={!@has_more}
+                        channel={@channel}
+                        me={@me}
+                        users={@users}
+                        empty?={@channel_empty?}
                       />
-                    </div>
-                  <% else %>
-                    <.message_skeletons id="initial-skeleton" count={6} />
-                  <% end %>
-                </div>
-              </div>
+                      <.message_skeletons :if={@has_more} id="history-skeleton" count={2} />
+                    <% else %>
+                      <.message_skeletons id="initial-skeleton" count={6} />
+                    <% end %>
+                  </div>
+                  <.message_scroller_content
+                    id="messages"
+                    phx-update="stream"
+                    phx-viewport-top={@has_more && "load_older"}
+                    class="min-h-0 shrink-0 gap-0 pb-3"
+                  >
+                    <.message_row
+                      :for={{dom_id, row} <- @streams.messages}
+                      id={dom_id}
+                      row={row}
+                      ctx={@ctx}
+                    />
+                  </.message_scroller_content>
+                </.message_scroller_viewport>
+                <.message_scroller_button aria-label="Jump to latest messages" />
+              </.message_scroller>
               <.composer
                 id="main"
                 form={@main_form}

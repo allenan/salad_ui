@@ -111,60 +111,7 @@ const Composer = {
   },
 }
 
-// The message list. Sticks to the bottom while new messages arrive (unless
-// the reader scrolled up), and keeps the reading position when older history
-// is prepended at the top.
-// TODO(salad-pass-2): use message_scroller once SaladUI ships it.
-const ChatScroll = {
-  mounted() {
-    this.content = this.el.querySelector("[data-scroll-content]") || this.el
-    this.stick = true
-    this.lastHeight = this.content.scrollHeight
-    this.firstId = this.firstRowId()
-    this.scrollToBottom()
-
-    this.el.addEventListener("scroll", () => {
-      this.stick = this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < 120
-    })
-
-    this.observer = new ResizeObserver(() => this.contentResized())
-    this.observer.observe(this.content)
-
-    this.handleEvent("chat:scroll-bottom", () => {
-      this.stick = true
-      this.scrollToBottom()
-    })
-  },
-  updated() {
-    this.contentResized()
-  },
-  destroyed() {
-    this.observer?.disconnect()
-  },
-  contentResized() {
-    const height = this.content.scrollHeight
-    const firstId = this.firstRowId()
-    const delta = height - this.lastHeight
-
-    if (firstId !== this.firstId && delta > 0 && !this.stick) {
-      // Older messages were prepended: keep the same message in view.
-      this.el.scrollTop += delta
-    } else if (this.stick) {
-      this.scrollToBottom()
-    }
-
-    this.lastHeight = height
-    this.firstId = firstId
-  },
-  firstRowId() {
-    return this.el.querySelector("[data-row]")?.id
-  },
-  scrollToBottom() {
-    this.el.scrollTop = this.el.scrollHeight
-  },
-}
-
-export const Hooks = {Composer, ChatScroll}
+export const Hooks = {Composer}
 
 // ---------------------------------------------------------------------------
 // Keep open dialogs and sheets open across LiveView patches.

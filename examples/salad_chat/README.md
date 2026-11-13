@@ -51,6 +51,7 @@ Try:
 | `sheet` | Channel details, the thread on phones, the mobile sidebar |
 | `tabs` | Channel details, settings |
 | `message`, `bubble` | Message rows (ghost bubbles in channels, real bubbles in DMs) |
+| `message_scroller` | Main message list and thread: follows new messages at the bottom, keeps your place when older history loads, "jump to latest" button |
 | `marker` | Day separators, the "New messages" divider, "Sprout is thinking…" |
 | `toggle` | Reaction pills |
 | `hover_card` | Profile card on author names |
@@ -82,7 +83,7 @@ lib/salad_chat_web/
   live/landing_live.ex    # pick a user
   live/settings_component.ex, live/new_channel_component.ex
   components/             # sidebar, header, message rows, composer, thread pane, overlays
-assets/js/chat.js         # hooks (composer, scroll), shortcuts, theme
+assets/js/chat.js         # composer hook, shortcuts, theme
 ```
 
 SaladUI is used in library mode: a path dependency on the repo
@@ -92,7 +93,7 @@ and `assets/salad_ui`, and the JS resolved through npm (`"salad_ui":
 package's `exports`.
 
 Some pieces wait on components SaladUI doesn't ship yet; look for
-`TODO(salad-pass-2)` (message scroller, context menu, combobox, date picker).
+`TODO(salad-pass-2)` (context menu, combobox, date picker).
 
 ## Tests
 

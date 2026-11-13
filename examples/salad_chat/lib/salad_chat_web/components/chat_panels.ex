@@ -246,33 +246,37 @@ defmodule SaladChatWeb.ChatPanels do
           </.tooltip_content>
         </.tooltip>
       </div>
-      <div
-        id={"#{@id}-scroll"}
-        phx-hook="ChatScroll"
-        class="salad-scroll-area min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]"
-      >
-        <div data-scroll-content class="pb-2">
-          <.message_row
-            id={"#{@id}-parent"}
-            row={%{message: @parent, grouped?: false, day: nil}}
-            ctx={@thread_ctx}
-          />
-          <.marker variant="separator" class="px-4 py-2">
-            <.marker_content class="text-xs">
-              {@parent.reply_count} {if @parent.reply_count == 1, do: "reply", else: "replies"}
-            </.marker_content>
-          </.marker>
-          <.message_row
-            :for={row <- @replies}
-            id={"#{@id}-r#{row.message.id}"}
-            row={row}
-            ctx={@thread_ctx}
-          />
-          <p :if={@replies == []} class="px-4 py-6 text-center text-sm text-muted-foreground">
-            No replies yet. Start the conversation!
-          </p>
-        </div>
-      </div>
+      <.message_scroller id={"#{@id}-scroller"} auto_scroll class="min-h-0 flex-1">
+        <%!-- SALAD-BUG: the viewport's containment and fade mask trap row overlays; see chat_live.ex --%>
+        <.message_scroller_viewport aria-label="Thread" class="contain-none! scroll-fade-none!">
+          <.message_scroller_content class="gap-0 pb-2">
+            <.message_row
+              id={"#{@id}-parent"}
+              row={%{message: @parent, grouped?: false, day: nil}}
+              ctx={@thread_ctx}
+            />
+            <.message_scroller_item>
+              <.marker variant="separator" class="px-4 py-2">
+                <.marker_content class="text-xs">
+                  {@parent.reply_count} {if @parent.reply_count == 1, do: "reply", else: "replies"}
+                </.marker_content>
+              </.marker>
+            </.message_scroller_item>
+            <.message_row
+              :for={row <- @replies}
+              id={"#{@id}-r#{row.message.id}"}
+              row={row}
+              ctx={@thread_ctx}
+            />
+            <.message_scroller_item :if={@replies == []}>
+              <p class="px-4 py-6 text-center text-sm text-muted-foreground">
+                No replies yet. Start the conversation!
+              </p>
+            </.message_scroller_item>
+          </.message_scroller_content>
+        </.message_scroller_viewport>
+        <.message_scroller_button aria-label="Jump to latest reply" />
+      </.message_scroller>
       <.composer
         id={"#{@id}-composer"}
         form={@form}
