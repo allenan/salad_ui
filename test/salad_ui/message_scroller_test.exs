@@ -126,6 +126,31 @@ defmodule SaladUI.MessageScrollerTest do
       assert html =~ ~s(phx-update="stream")
       assert html =~ ~s(aria-busy="false")
       assert html =~ "flex h-max min-h-full flex-col gap-8"
+      refute html =~ "content-visibility"
+      refute html =~ "data-skip-offscreen"
+    end
+
+    test "skip_offscreen skips rows out of view, except hovered, focused, open and the newest" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.message_scroller_content skip_offscreen class="[--message-scroller-item-size:56px]">
+          <.message_scroller_item message_id="m1">Hi</.message_scroller_item>
+        </.message_scroller_content>
+        """)
+
+      assert html =~ "data-skip-offscreen"
+      assert html =~ "[&amp;&gt;*]:[content-visibility:auto]"
+      assert html =~ "[&amp;&gt;*]:[contain-intrinsic-size:auto_var(--message-scroller-item-size,10rem)]"
+      assert html =~ "[&amp;&gt;*:hover]:[content-visibility:visible]"
+      assert html =~ "[&amp;&gt;*:focus-within]:[content-visibility:visible]"
+      assert html =~ "[&amp;&gt;*:has([data-state=open])]:[content-visibility:visible]"
+      assert html =~ "[&amp;&gt;*:nth-last-child(-n+8)]:[content-visibility:visible]"
+      assert html =~ "[--message-scroller-item-size:56px]"
+      # The row itself carries no per-row classes.
+      assert html =~
+               ~s(data-slot="message-scroller-item" data-message-id="m1" data-scroll-anchor="false" class="min-w-0 shrink-0")
     end
   end
 
@@ -140,7 +165,6 @@ defmodule SaladUI.MessageScrollerTest do
       assert html =~ ~s(data-message-id="m2")
       assert html =~ ~s(data-scroll-anchor="false")
       assert html =~ ~s(class="min-w-0 shrink-0")
-      refute html =~ "content-visibility"
     end
 
     test "omits data-message-id without a message_id" do
