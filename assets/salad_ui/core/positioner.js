@@ -23,6 +23,7 @@ class Positioner {
       container = document.body,
       flip = true,
       shift = true,
+      overlap = false,
       alignOffset = 0,
       sideOffset = 8,
     } = options;
@@ -129,6 +130,29 @@ class Positioner {
           y,
           referenceRect.top - elementRect.height,
           referenceRect.bottom,
+        );
+      }
+    }
+
+    // With `overlap`, when the element fits on neither side, slide it back
+    // inside the container along the side axis too, over the reference. Used
+    // by sub-menus: on a phone a sub-menu often has no room left or right of
+    // its parent menu, and an item off-screen cannot be reached.
+    if (overlap) {
+      const clampInto = (value, min, max) =>
+        max < min ? min : Math.min(Math.max(value, min), max);
+      const side = actualPlacement.split("-")[0];
+      if (side === "left" || side === "right") {
+        x = clampInto(
+          x,
+          containerRect.left,
+          containerRect.right - elementRect.width,
+        );
+      } else {
+        y = clampInto(
+          y,
+          containerRect.top,
+          containerRect.bottom - elementRect.height,
         );
       }
     }
