@@ -529,6 +529,30 @@ for status and known gaps. Every new JS-backed component is registered in
   trigger it was open for. The example chat app's message rows now use
   shared menus, hover cards and tooltips (see its README).
 
+**Keyboard and ARIA fixes from downstream use**
+- Escape in a `command_dialog` closes the dialog. The command list no longer
+  handles Escape at all (it used to blur its input and mark the key as
+  handled, so the dialog ignored it and a second Escape reached nothing), as
+  cmdk does; a standalone `command` leaves the key to the page.
+- A popover with nothing focusable inside closes on Escape. Its focus trap
+  focused the positioner, outside the content where Escape is heard; it now
+  focuses the content (the dialog), as Radix does. `FocusTrap` and
+  `PositionedElement` take a `fallbackFocus` option for this.
+- `tooltip`, `tooltip_trigger` and `tooltip_provider` take `describe={false}`,
+  and any trigger takes `data-salad-tooltip-describe="false"` (text tooltips
+  too), to keep the tooltip out of the trigger's `aria-describedby` when its
+  accessible name already says the same thing. The default (described, as
+  in Radix) is unchanged; see "Accessible description" in `SaladUI.Tooltip`.
+- `item` with `role="listitem"` and a link (`href`, `navigate`, `patch`)
+  renders the link inside a `<div role="listitem">`, so a link row in an
+  `item_group` list (`role="list"`, as in shadcn) keeps its link role.
+- A resizable handle whose panels on one side are all collapsed to nothing
+  sits on the group's edge and gets `data-edge="start"`/`"end"`; its
+  `with_handle` grip moves inside the group instead of hanging half off it.
+- Docs: `SaladUI.Dialog` "Automated accessibility checks" explains the axe
+  `aria-hidden-focus` and `page-has-heading-one` results on the page behind
+  an open dialog or menu (expected, as with Radix).
+
 # 0.14.0
 
 **Changes**

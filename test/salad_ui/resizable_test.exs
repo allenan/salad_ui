@@ -141,6 +141,17 @@ defmodule SaladUI.ResizableTest do
       assert html =~ "lucide-grip-vertical size-2.5"
     end
 
+    test "a handle on the group's edge (data-edge, set by the client) keeps its grip inside" do
+      assigns = %{}
+
+      html = to_html(~H"<.resizable_handle with_handle />")
+
+      assert html =~ "aria-[orientation=vertical]:data-[edge=start]:justify-start"
+      assert html =~ "aria-[orientation=vertical]:data-[edge=end]:justify-end"
+      assert html =~ "aria-[orientation=horizontal]:data-[edge=start]:items-start"
+      assert html =~ "aria-[orientation=horizontal]:data-[edge=end]:items-end"
+    end
+
     test "disabled handles leave the tab order" do
       assigns = %{}
 

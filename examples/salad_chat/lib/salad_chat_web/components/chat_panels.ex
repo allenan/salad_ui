@@ -134,6 +134,7 @@ defmodule SaladChatWeb.ChatPanels do
                 <.item_group :if={@pinned != []} class="p-1">
                   <.item
                     :for={m <- @pinned}
+                    role="listitem"
                     size="sm"
                     patch={Paths.thread_path(@me.handle, m.channel_id, m.id)}
                   >
@@ -525,7 +526,7 @@ defmodule SaladChatWeb.ChatPanels do
           <.tabs_content value="members" id="details-tabs-content-members" class="pt-2">
             <.scroll_area class="max-h-[60vh]">
               <.item_group>
-                <.item :for={u <- @members} size="sm">
+                <.item :for={u <- @members} role="listitem" size="sm">
                   <.item_media>
                     <.user_avatar user={u} online={u.bot? or MapSet.member?(@online, u.handle)} />
                   </.item_media>

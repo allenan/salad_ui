@@ -75,6 +75,23 @@ defmodule SaladUI.Dialog do
   clickable, readable and scrollable, Tab is not trapped, and a click outside
   the dialog (other than on its trigger) closes it.
 
+  ## Automated accessibility checks
+
+  Every modal layer hides the page behind it the same way: a dialog, alert
+  dialog, sheet or drawer, and an open dropdown menu, context menu, select
+  or mobile sidebar. An axe (or Lighthouse) scan taken while one is open
+  therefore reports the page behind it, as it does for Radix:
+
+  * `aria-hidden-focus`: the focusable controls behind the layer are
+    `aria-hidden` but not `inert`;
+  * `page-has-heading-one`: the page's `h1` is hidden too.
+
+  Both are expected, not bugs to work around: keyboard focus that lands
+  behind the layer is sent back into it, and screen readers do not reach the
+  hidden page. Making the page `inert` instead would restyle every element
+  each time a menu opens or closes. Scan pages with the layer closed, or
+  exclude those two rules from scans taken with it open.
+
   ## Scroll lock
 
   Like Radix Dialog, an open dialog locks page scrolling: `<html>` and

@@ -21,6 +21,9 @@ const DEFAULT_POSITION_CONFIG = {
   alignOffset: 0,
 };
 
+// On a trigger: "false" keeps the tooltip out of its aria-describedby.
+const DESCRIBE_ATTR = "data-salad-tooltip-describe";
+
 const DEFAULT_TIMING_CONFIG = {
   openDelay: 150,
   closeDelay: 100,
@@ -72,7 +75,8 @@ class TooltipComponent extends Component {
       expanded: false,
       // A trigger is often a menu trigger too, whose data-state the menu owns.
       state: false,
-      describedBy: () => this.contentId(),
+      describedBy: () =>
+        this.describes(this.detached?.trigger) ? this.contentId() : null,
       onRemoved: () => this.closeNow(),
     });
     this.detachedTriggers = new DetachedHoverTriggers(this, (type, handler) =>
@@ -93,6 +97,19 @@ class TooltipComponent extends Component {
 
   contentId() {
     return this.getPartId("content");
+  }
+
+  /**
+   * Whether the tooltip's content goes into `trigger`'s aria-describedby.
+   * Yes by default, as in Radix. A trigger whose accessible name already says
+   * what the tooltip says opts out with `data-salad-tooltip-describe="false"`
+   * (or the whole tooltip with the `describe: false` option), so screen
+   * readers don't read it twice.
+   */
+  describes(trigger) {
+    const own = trigger?.getAttribute(DESCRIBE_ATTR);
+    if (own != null) return own !== "false";
+    return this.options?.describe !== false;
   }
 
   // The detached trigger the tooltip is open for (null: the nested one).
@@ -208,7 +225,11 @@ class TooltipComponent extends Component {
       ariaConfig: {
         trigger: {
           all: {
-            describedby: () => this.getPartId("content"),
+            // Opted out (see describes()), leave the trigger's own value.
+            describedby: (part) =>
+              this.describes(part)
+                ? this.getPartId("content")
+                : part.getAttribute("aria-describedby"),
           },
         },
         content: {

@@ -363,6 +363,29 @@ class ResizableComponent extends Component {
         this.applyInert(i);
       }
     });
+    this.applyHandleEdges();
+  }
+
+  /**
+   * A handle whose panels on one side are all collapsed to nothing sits on
+   * the group's edge: `data-edge="start"` / `"end"` there, so its grip
+   * (`with_handle`, resizable.ex) moves inside the group instead of hanging
+   * half off it.
+   */
+  applyHandleEdges() {
+    const empty = (from, to) =>
+      this.layout.slice(from, to).every((size) => size < EPSILON);
+    this.handles?.forEach((handle) => {
+      const pivot = this.pivots?.get(handle);
+      if (pivot === undefined) return;
+      const edge = empty(0, pivot + 1)
+        ? "start"
+        : empty(pivot + 1, this.layout.length)
+          ? "end"
+          : null;
+      if (edge) handle.setAttribute("data-edge", edge);
+      else handle.removeAttribute("data-edge");
+    });
   }
 
   /**

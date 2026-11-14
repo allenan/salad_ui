@@ -118,7 +118,7 @@ Command palette with search and keyboard navigation.
 - `↓` - Navigate down
 - `↑` - Navigate up
 - `Enter` - Select item
-- `Escape` - Clear or close
+- `Escape` - Not handled (as in cmdk): it closes an enclosing `command_dialog` or popover
 
 ### Dialog (`components/dialog.js`)
 
@@ -155,6 +155,7 @@ Modal dialog with focus trap.
 - `role="dialog"` on content
 - `aria-modal="true"` when open
 - `aria-labelledby` and `aria-describedby`
+- The page behind is `aria-hidden` (not `inert`) while it is open, as in Radix, so an axe scan taken then reports `aria-hidden-focus` and `page-has-heading-one` for the page behind. Expected; see "Automated accessibility checks" in `SaladUI.Dialog`.
 
 ### DropdownMenu (`components/dropdown_menu.js`)
 
@@ -190,6 +191,7 @@ Context menu with keyboard navigation.
 - `role="menu"` on content
 - `role="menuitem"` on items
 - `role="separator"` on separators
+- The page behind is `aria-hidden` (not `inert`) while it is open, as in Radix, so an axe scan taken then reports `aria-hidden-focus` and `page-has-heading-one` for the page behind. Expected; see "Automated accessibility checks" in `SaladUI.Dialog`.
 
 ### HoverCard (`components/hover-card.js`)
 

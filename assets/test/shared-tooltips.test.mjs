@@ -603,3 +603,72 @@ test("moving a shared hover card fires on-close for the previous trigger first",
   assert.equal(closes.length, 1);
   assert.equal(closes[0].payload.id, 1);
 });
+
+// --- describe opt-out ---------------------------------------------------------
+// A trigger whose accessible name already says what the tooltip says opts
+// out of aria-describedby, so screen readers do not read it twice.
+
+test("a text tooltip with data-salad-tooltip-describe=false leaves aria-describedby alone", async () => {
+  const { $, provider, content } = buildProvider();
+  const react = $("#react-1");
+  react.setAttribute("data-salad-tooltip-describe", "false");
+
+  hover(react);
+  await waitFor(() => provider.state === "open");
+  assert.equal(content.hidden, false);
+  assert.equal(react.getAttribute("aria-describedby"), "hint");
+
+  provider.closeNow();
+  assert.equal(react.getAttribute("aria-describedby"), "hint");
+});
+
+test("a provider with describe: false describes none of its triggers", async () => {
+  document.body.innerHTML = `
+    <button id="pill" type="button" aria-label="Thumbs up, 2 reactions"
+            data-salad-tooltip="Thumbs up, 2 reactions">+2</button>
+    <div id="tooltips" data-component="tooltip-provider" data-state="closed"
+         data-options='{"openDelay":${OPEN},"closeDelay":${CLOSE},"describe":false}'
+         data-event-mappings="{}" data-part="root">
+      <div id="tooltips-content" data-part="content" hidden>
+        <span data-part="text"></span>
+      </div>
+    </div>`;
+  rect(document.getElementById("pill"), 0);
+  const provider = mount("tooltip-provider", "tooltips", hookContext([]));
+
+  hover(document.getElementById("pill"));
+  await waitFor(() => provider.state === "open");
+  assert.equal(
+    document.getElementById("pill").hasAttribute("aria-describedby"),
+    false,
+  );
+});
+
+test("a detached trigger with data-salad-tooltip-describe=false is not described", async () => {
+  document.body.innerHTML = `
+    <span id="a1" data-salad-for="tip" data-salad-tooltip-describe="false">Ada</span>
+    <span id="a2" data-salad-for="tip">Grace</span>
+    <div id="tip" data-component="tooltip" data-state="closed" data-part="root"
+         data-options='{"openDelay":${OPEN},"closeDelay":${CLOSE}}'
+         data-event-mappings='{}'>
+      <div data-part="content" hidden>Online</div>
+    </div>`;
+  rect(document.getElementById("a1"), 0);
+  rect(document.getElementById("a2"), 30);
+  const tip = mount("tooltip", "tip", hookContext([]));
+  const content = document.querySelector("#tip [data-part='content']");
+
+  hover(document.getElementById("a1"));
+  await waitFor(() => tip.state === "open");
+  assert.equal(
+    document.getElementById("a1").hasAttribute("aria-describedby"),
+    false,
+  );
+
+  hover(document.getElementById("a2"), document.getElementById("a1"));
+  await waitFor(() => tip.positionedElement?.reference?.id === "a2");
+  assert.equal(
+    document.getElementById("a2").getAttribute("aria-describedby"),
+    content.id,
+  );
+});

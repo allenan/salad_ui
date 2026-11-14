@@ -25,7 +25,11 @@ defmodule SaladUI.AsChildAttrsTest do
     {&sidebar_group_label/1, "sidebar-group-label"},
     {&sidebar_menu_button/1, "sidebar-menu-button"},
     {&sidebar_menu_sub_button/1, "sidebar-menu-sub-button"},
-    {&button_group_text/1, "button-group-text"}
+    {&button_group_text/1, "button-group-text"},
+    {&tooltip_trigger/1, "tooltip-trigger"},
+    {&hover_card_trigger/1, "hover-card-trigger"},
+    {&sidebar_group_action/1, "sidebar-group-action"},
+    {&sidebar_menu_action/1, "sidebar-menu-action"}
   ]
 
   @children [

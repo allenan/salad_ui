@@ -34,6 +34,11 @@ class FocusTrap {
       // When true, `returnFocus` wins over the element focused at activate()
       // (Radix's onCloseAutoFocus): an app names where focus goes on close.
       preferReturnFocus: false,
+      // What gets focus on activate() when nothing inside is focusable: an
+      // element, or a function returning one. Defaults to the trapped
+      // element. A popover traps its positioner but names its content (the
+      // dialog, which listens for Escape), as Radix focuses the content.
+      fallbackFocus: null,
       ...options,
     };
 
@@ -152,9 +157,20 @@ class FocusTrap {
         const initialFocusEl = autoFocusEl || focusableElements[0];
         initialFocusEl.focus();
       } else {
-        // If no focusable elements, make the element itself focusable
-        this.element.setAttribute("tabindex", "-1");
-        this.element.focus();
+        // If no focusable elements, make the fallback (by default the
+        // element itself) focusable.
+        const { fallbackFocus } = this.options;
+        const fallback =
+          (typeof fallbackFocus === "function"
+            ? fallbackFocus()
+            : fallbackFocus) || this.element;
+        const target = this.element.contains(fallback)
+          ? fallback
+          : this.element;
+        if (!target.hasAttribute("tabindex")) {
+          target.setAttribute("tabindex", "-1");
+        }
+        target.focus();
       }
     }, 50); // Small delay to ensure DOM is ready
   }
