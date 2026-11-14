@@ -40,10 +40,11 @@ defmodule SaladUI.Item do
         </.item_content>
       </.item>
 
+      <%!-- role="list": each row is a listitem (a link row is wrapped in one) --%>
       <.item_group>
-        <.item>...</.item>
+        <.item role="listitem">...</.item>
         <.item_separator />
-        <.item>...</.item>
+        <.item role="listitem" navigate="/profile">...</.item>
       </.item_group>
   """
   use SaladUI, :component
@@ -72,12 +73,17 @@ defmodule SaladUI.Item do
   }
 
   @doc """
-  Renders a group of items as a list (`role="list"`).
+  Renders a group of items as a list (`role="list"`, as in shadcn).
+
+  A list's rows must be list items, so give each `item/1` `role="listitem"`;
+  a link item then renders inside a `<div role="listitem">` and keeps its
+  link role. Separators between them are decorative (`role="none"`).
 
   ## Examples
 
       <.item_group class="gap-4">
         <.item variant="outline" role="listitem">...</.item>
+        <.item variant="outline" role="listitem" navigate={~p"/tasks/1"}>...</.item>
       </.item_group>
   """
   attr :class, :any, default: nil
@@ -124,6 +130,10 @@ defmodule SaladUI.Item do
   * `:href`, `:navigate`, `:patch` - When any is set the item renders as a link
     (`<a>` via `Phoenix.Component.link/1`), which enables the hover background.
     This is the SaladUI equivalent of shadcn's `<Item asChild><a /></Item>`.
+  * `role="listitem"` - For an item in an `item_group/1` (a `role="list"`, as in
+    shadcn, whose rows must be list items). On a plain item it is the item's
+    role; a link item is wrapped in a `<div role="listitem">` instead, so the
+    link keeps its link role.
   * `:class` - Additional CSS classes.
 
   ## Examples
@@ -149,6 +159,29 @@ defmodule SaladUI.Item do
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(method download hreflang referrerpolicy rel target replace)
   slot :inner_block, required: true
+
+  def item(%{href: href, navigate: navigate, patch: patch, rest: %{role: "listitem"} = rest} = assigns)
+      when not is_nil(href) or not is_nil(navigate) or not is_nil(patch) do
+    # A link cannot be a listitem without losing its link role: the row is a
+    # listitem wrapping the link.
+    assigns = assign(assigns, :rest, Map.delete(rest, :role))
+
+    ~H"""
+    <div role="listitem" data-slot="item-listitem" class="flex flex-col">
+      <.item
+        href={@href}
+        navigate={@navigate}
+        patch={@patch}
+        variant={@variant}
+        size={@size}
+        class={@class}
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </.item>
+    </div>
+    """
+  end
 
   def item(%{href: href, navigate: navigate, patch: patch} = assigns)
       when not is_nil(href) or not is_nil(navigate) or not is_nil(patch) do

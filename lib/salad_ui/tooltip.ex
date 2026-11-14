@@ -62,6 +62,27 @@ defmodule SaladUI.Tooltip do
   within `skip-delay` (300ms) after one closed, the next one opens without
   its delay, so moving along a toolbar shows each tooltip at once.
 
+  ## Accessible description
+
+  As in Radix, the tooltip's content is added to its trigger's
+  `aria-describedby`, so a screen reader reads the tooltip after the
+  trigger's name. When the name already says the same thing (an icon button
+  with `aria-label="Reply"` and the tooltip "Reply", or a reaction pill
+  labelled "Thumbs up, 2 reactions" with that tooltip) it is read twice. Opt
+  out for those triggers:
+
+  * `describe={false}` on `tooltip/1` (every trigger), `tooltip_trigger/1`
+    (one trigger, nested or detached) or `tooltip_provider/1` (every text
+    tooltip);
+  * `data-salad-tooltip-describe="false"` on any trigger element, e.g. one
+    text tooltip: `<button aria-label="Reply" data-salad-tooltip="Reply"
+    data-salad-tooltip-describe="false">`. It wins over the tooltip's own
+    setting (`"true"` opts one trigger back in).
+
+  Keep the default when the tooltip adds something the name does not say
+  (a keyboard shortcut, a longer explanation): opting out then hides it
+  from screen readers.
+
   ## Shared rich tooltips
 
   A `tooltip/1` with no nested trigger can serve many *detached* triggers:
@@ -97,6 +118,8 @@ defmodule SaladUI.Tooltip do
   * `:on-open` - Handler for tooltip open event; with detached triggers it receives the
     trigger's `context`.
   * `:on-close` - Handler for tooltip close event.
+  * `:describe` - Set to `false` to keep the content out of the triggers'
+    `aria-describedby` (see "Accessible description"). Defaults to `true`.
   * `:class` - Additional CSS classes.
 
   ## Component events
@@ -114,6 +137,11 @@ defmodule SaladUI.Tooltip do
 
   attr :"on-open", :any, default: nil, doc: "Handler for tooltip open event"
   attr :"on-close", :any, default: nil, doc: "Handler for tooltip close event"
+
+  attr :describe, :boolean,
+    default: true,
+    doc: "add the content to the triggers' `aria-describedby` (see \"Accessible description\")"
+
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -131,6 +159,7 @@ defmodule SaladUI.Tooltip do
           openDelay: assigns[:"open-delay"],
           closeDelay: assigns[:"close-delay"],
           skipDelay: assigns[:"skip-delay"],
+          describe: assigns.describe,
           animations: get_animation_config()
         })
       )
@@ -178,10 +207,13 @@ defmodule SaladUI.Tooltip do
   * `:as` - Tag or function component to render. Defaults to `"div"`.
   * `:for` - The id of a shared `tooltip/1` this trigger opens. Defaults to `nil` (nested).
   * `:context` - With `for`: a map the tooltip's `on-open` receives.
+  * `:describe` - Set to `false` to keep the content out of this trigger's
+    `aria-describedby` (see "Accessible description"). Defaults to `true`.
   """
   attr :as, :any, default: "div"
   attr :for, :string, default: nil, doc: "id of the shared tooltip this detached trigger opens"
   attr :context, :map, default: nil, doc: "with `for`: the map `on-open` receives"
+  attr :describe, :boolean, default: true, doc: "add the content to this trigger's `aria-describedby`"
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(variant size type)
   slot :inner_block, required: true
@@ -191,12 +223,14 @@ defmodule SaladUI.Tooltip do
       assigns
       |> drop_button_props()
       |> assign(:trigger_attrs, trigger_attrs(assigns.for, assigns.context, state: false))
+      |> assign(:describe_attr, if(assigns.describe, do: nil, else: "false"))
 
     ~H"""
     <div
       :if={@as == "div"}
       data-slot="tooltip-trigger"
       class={classes(["", @class])}
+      data-salad-tooltip-describe={@describe_attr}
       {@trigger_attrs}
       {@rest}
     >
@@ -207,6 +241,7 @@ defmodule SaladUI.Tooltip do
       data-slot={@rest[:"data-slot"] || "tooltip-trigger"}
       tag={@as}
       class={classes([@class])}
+      data-salad-tooltip-describe={@describe_attr}
       {@trigger_attrs}
       {Map.delete(@rest, :"data-slot")}
     >
@@ -286,6 +321,8 @@ defmodule SaladUI.Tooltip do
     and `data-salad-tooltip-align` override them per element.
   * `:side-offset` / `:align-offset` - As in `tooltip_content/1`. Default `8` / `0`.
   * `:open-delay` / `:close-delay` / `:skip-delay` - As in `tooltip/1`. Default `150` / `100` / `300`.
+  * `:describe` - As in `tooltip/1`: `false` keeps the text out of every element's
+    `aria-describedby`. Defaults to `true`; `data-salad-tooltip-describe="false"` opts out one element.
   * `:class` - Additional CSS classes for the content.
   """
   attr :id, :string, required: true
@@ -297,6 +334,7 @@ defmodule SaladUI.Tooltip do
   attr :"open-delay", :integer, default: 150
   attr :"close-delay", :integer, default: 100
   attr :"skip-delay", :integer, default: 300
+  attr :describe, :boolean, default: true, doc: "add the text to the elements' `aria-describedby`"
   attr :class, :any, default: nil
   attr :rest, :global
 
@@ -310,6 +348,7 @@ defmodule SaladUI.Tooltip do
             closeDelay: assigns[:"close-delay"],
             skipDelay: assigns[:"skip-delay"],
             scope: assigns.scope,
+            describe: assigns.describe,
             animations: get_animation_config()
           })
       )

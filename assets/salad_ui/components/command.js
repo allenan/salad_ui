@@ -21,13 +21,9 @@ class CommandComponent extends Component {
     // Initial search/filter
     this.handleSearch();
 
-    // Prevent default for navigation keys
-    this.config.preventDefaultKeys = [
-      "Enter",
-      "Escape",
-      "ArrowDown",
-      "ArrowUp",
-    ];
+    // Prevent default for navigation keys. Escape is not handled at all, as
+    // in cmdk: it reaches an enclosing dialog or popover, which closes.
+    this.config.preventDefaultKeys = ["Enter", "ArrowDown", "ArrowUp"];
   }
 
   /**
@@ -87,7 +83,6 @@ class CommandComponent extends Component {
             Enter: "selectItem",
             ArrowDown: "focusNextItem",
             ArrowUp: "focusPrevItem",
-            Escape: "blurInput",
           },
         },
       },
@@ -125,8 +120,6 @@ class CommandComponent extends Component {
 
   focusNextItem = () => this.focusItem(this.currentItemIdx + 1);
   focusPrevItem = () => this.focusItem(this.currentItemIdx - 1);
-
-  blurInput = () => this.input?.blur();
 
   selectItem = () => {
     if (this.currentItemIdx === -1) return;

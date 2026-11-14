@@ -197,4 +197,40 @@ defmodule SaladUI.TooltipTest do
       assert html =~ "&quot;skipDelay&quot;:0"
     end
   end
+
+  describe "describe opt-out" do
+    test "tooltip and tooltip_provider describe their triggers by default" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip id="t">
+          <.tooltip_trigger>T</.tooltip_trigger>
+          <.tooltip_content>x</.tooltip_content>
+        </.tooltip>
+        <.tooltip_provider id="tips" />
+        """)
+
+      assert count_substring(html, "&quot;describe&quot;:true") == 2
+      refute html =~ "data-salad-tooltip-describe"
+    end
+
+    test "describe={false} reaches the client on tooltip, tooltip_provider and tooltip_trigger" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.tooltip id="t" describe={false}>
+          <.tooltip_trigger>T</.tooltip_trigger>
+          <.tooltip_content>x</.tooltip_content>
+        </.tooltip>
+        <.tooltip_provider id="tips" describe={false} />
+        <.tooltip_trigger for="t" describe={false}>Ada</.tooltip_trigger>
+        <.tooltip_trigger as="button" describe={false}>Bob</.tooltip_trigger>
+        """)
+
+      assert count_substring(html, "&quot;describe&quot;:false") == 2
+      assert count_substring(html, ~s(data-salad-tooltip-describe="false")) == 2
+    end
+  end
 end
