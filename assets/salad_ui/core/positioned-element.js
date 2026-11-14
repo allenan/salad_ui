@@ -34,6 +34,9 @@ class PositionedElement {
 
       // Focus management
       trapFocus: false,
+      // With trapFocus: what to focus when nothing inside is focusable (an
+      // element or a function returning one; see FocusTrap).
+      fallbackFocus: null,
       focusableSelector:
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
 
@@ -62,6 +65,7 @@ class PositionedElement {
     // Focus trap for keyboard navigation
     this.focusTrap = new FocusTrap(this.element, {
       focusableSelector: this.options.focusableSelector,
+      fallbackFocus: this.options.fallbackFocus,
     });
 
     // Click outside detection

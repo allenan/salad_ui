@@ -266,3 +266,29 @@ test("changed tooltip options rebuild it", () => {
   assert.equal(component.destroyed, true);
   hook.destroyed();
 });
+
+test("describe: false keeps aria-describedby off the nested trigger", () => {
+  const { el, trigger, hookContext } = buildTooltip();
+  el.setAttribute(
+    "data-options",
+    JSON.stringify({ openDelay: 1, closeDelay: 5, describe: false }),
+  );
+  trigger.setAttribute("aria-describedby", "own-hint");
+  const component = registry.create("tooltip", el, hookContext);
+
+  assert.equal(trigger.getAttribute("aria-describedby"), "own-hint");
+  component.transition("open");
+  assert.equal(trigger.getAttribute("aria-describedby"), "own-hint");
+
+  component.destroy();
+});
+
+test("data-salad-tooltip-describe=false on the nested trigger opts it out", () => {
+  const { el, trigger, hookContext } = buildTooltip();
+  trigger.setAttribute("data-salad-tooltip-describe", "false");
+  const component = registry.create("tooltip", el, hookContext);
+
+  assert.equal(trigger.hasAttribute("aria-describedby"), false);
+
+  component.destroy();
+});

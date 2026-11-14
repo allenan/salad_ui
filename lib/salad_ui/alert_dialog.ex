@@ -72,7 +72,9 @@ defmodule SaladUI.AlertDialog do
   option): while it is open, clicks outside it never reach the page (and do
   not close it either), everything outside it is `aria-hidden`, focus stays inside it,
   and wheel and touch scrolling outside it are cancelled. See "Modal
-  behaviour" in `SaladUI.Dialog`.
+  behaviour" in `SaladUI.Dialog`, and "Automated accessibility checks"
+  there for the axe rules (`aria-hidden-focus`, `page-has-heading-one`) an
+  open alert dialog, dialog or menu makes fail on the page behind it.
 
   Escape closes it, as Radix's does (firing `on-close`); opened from another
   dialog, Escape closes only the alert dialog.

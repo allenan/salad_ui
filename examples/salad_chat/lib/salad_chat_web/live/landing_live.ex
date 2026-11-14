@@ -63,6 +63,7 @@ defmodule SaladChatWeb.LandingLive do
               <.item
                 :for={user <- @users}
                 id={"pick-#{user.handle}"}
+                role="listitem"
                 variant="outline"
                 navigate={Paths.channel_path(user.handle, "general")}
                 class="bg-card shadow-xs transition-shadow hover:shadow-md"

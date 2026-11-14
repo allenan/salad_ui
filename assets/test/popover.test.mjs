@@ -16,6 +16,7 @@ function buildPopover({
   state = "closed",
   usePortal = false,
   withAnchor = false,
+  contentHtml = '<button type="button">Content action</button>',
 } = {}) {
   const options = JSON.stringify({
     portalContainer: "#portal",
@@ -32,7 +33,7 @@ function buildPopover({
       <button data-part="trigger" data-action="toggle" type="button">Open</button>
       <div data-part="positioner" data-side="bottom" data-align="center"
            data-side-offset="8" data-align-offset="0" hidden>
-        <div data-part="content"><button type="button">Content action</button></div>
+        <div data-part="content">${contentHtml}</div>
       </div>
     </div>
   `;
@@ -337,4 +338,32 @@ test("send_command opens, closes and toggles the popover", () => {
   handlers["saladui:command"]({ command: "open", target: "other" });
   assert.equal(hook.component.state, "closed");
   hook.destroyed();
+});
+
+// Radix's FocusScope focuses the content (the dialog) when nothing inside is
+// focusable; the popover listens for Escape there.
+test("a popover with nothing focusable focuses its content and closes on Escape", async () => {
+  const { el, trigger, positioner, content, hookContext } = buildPopover({
+    contentHtml: "<p>Just text</p>",
+  });
+  const component = registry.create("popover", el, hookContext);
+
+  trigger.focus();
+  click(trigger);
+  await new Promise((resolve) => setTimeout(resolve, 80));
+
+  assert.equal(document.activeElement, content);
+  assert.equal(content.getAttribute("tabindex"), "-1");
+  assert.equal(positioner.hasAttribute("tabindex"), false);
+
+  document.activeElement.dispatchEvent(
+    new window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+
+  assert.equal(component.state, "closed");
+  component.destroy();
 });
