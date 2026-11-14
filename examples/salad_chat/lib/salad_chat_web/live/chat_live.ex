@@ -542,6 +542,12 @@ defmodule SaladChatWeb.ChatLive do
      |> Toast.toast("Marked as unread")}
   end
 
+  # "Copy text" copies in the browser (SaladUI.JS.copy/2); this is its
+  # on_copied, once the clipboard has the text.
+  def handle_event("copied", _params, socket) do
+    {:noreply, Toast.toast(socket, "Copied")}
+  end
+
   ## Navigation and workspace events
 
   def handle_event("close_thread", _, socket) do

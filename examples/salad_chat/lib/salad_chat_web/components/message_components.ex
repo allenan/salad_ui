@@ -98,6 +98,7 @@ defmodule SaladChatWeb.MessageComponents do
           <.deleted_message />
         <% else %>
           <.message
+            id={"#{@id}-message"}
             align={if @ctx.bubbles? and @mine?, do: "end", else: "start"}
             class="gap-3"
           >
@@ -297,16 +298,20 @@ defmodule SaladChatWeb.MessageComponents do
     }
   end
 
-  # "More reactions…": the page's one emoji picker, opened at the row's
-  # trigger (the ⋮ button, or the right-clicked row) for that row's message.
-  # The picker pushes "react" with the id and the emoji, like a row's own
-  # "Add reaction" button.
+  # "More reactions…": the page's one emoji picker, opened at the row's ⋮
+  # button for that row's message. From the ⋮ menu that is its trigger; from
+  # the right-click menu the trigger is the whole row, which takes no focus,
+  # so the selector picks the row's ⋮ (the picker anchors there and gives it
+  # focus back on Escape). The picker pushes "react" with the id and the
+  # emoji, like a row's own "Add reaction" button.
   defp open_reaction_picker do
+    more_button = SaladUI.JS.trigger("[data-salad-for~='msg-more']")
+
     SaladUI.JS.dispatch_command("open",
       to: "#emoji-picker",
       detail: %{
-        anchor: SaladUI.JS.trigger(),
-        return_focus: SaladUI.JS.trigger(),
+        anchor: more_button,
+        return_focus: more_button,
         event: "react",
         values: %{id: SaladUI.JS.context(:id)}
       }
@@ -372,7 +377,7 @@ defmodule SaladChatWeb.MessageComponents do
     assigns = assign(assigns, :segments, MessageFormat.segments(assigns.message.body))
 
     ~H"""
-    <div class="flex min-w-0 flex-col gap-2" data-message-text>
+    <div class="flex min-w-0 flex-col gap-2" data-message-text data-source={@message.body}>
       <%= for {segment, i} <- Enum.with_index(@segments) do %>
         <%= case segment do %>
           <% {:text, text} -> %>
@@ -684,7 +689,8 @@ defmodule SaladChatWeb.MessageComponents do
   # "React" sub-menu), in groups. Each one is a plain `phx-click` on an
   # existing ChatLive event that receives the open message's `%{"id" => id}`,
   # except "Copy text", which SaladUI copies in the browser from the open
-  # row. `show_when` / `hide_when` match the row's `menu_context/3`.
+  # row (the message's source, from `data-source`, then pushes "copied" for
+  # a toast). `show_when` / `hide_when` match the row's `menu_context/3`.
   defp message_menu_sections do
     [
       %{
@@ -698,7 +704,12 @@ defmodule SaladChatWeb.MessageComponents do
           action(
             "hero-clipboard-document",
             "Copy text",
-            SaladUI.JS.copy(within: "[data-row]", from: "[data-message-text]")
+            SaladUI.JS.copy(
+              within: "[data-row]",
+              from: "[data-message-text]",
+              attr: "data-source",
+              on_copied: "copied"
+            )
           ),
           action("hero-bookmark", "Pin to channel", "toggle_pin", hide_when: %{pinned: true}),
           action("hero-bookmark-slash", "Unpin from channel", "toggle_pin",
@@ -830,7 +841,12 @@ defmodule SaladChatWeb.MessageComponents do
         </.marker_content>
       </.marker>
 
-      <.bubble :if={@bot.status in [:answering, :done]} variant="ghost" data-message-text>
+      <.bubble
+        :if={@bot.status in [:answering, :done]}
+        variant="ghost"
+        data-message-text
+        data-source={@message.body}
+      >
         <.bubble_content class={
           if @bot.status == :answering, do: "chat-text stream-caret", else: "chat-text"
         }>

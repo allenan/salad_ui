@@ -240,8 +240,30 @@ defmodule SaladUI.JS do
   button, or the row of a context menu), in the params of
   `dispatch_command/3` run from one of its items: e.g. the `anchor` to open
   another component at. See `context/1`.
+
+  With a `selector`, it stands for an element of the trigger instead: the
+  trigger itself when it matches, else the first element inside it that
+  does, else (nothing matches) the trigger. A context menu's trigger is the
+  whole row, which takes no focus; a selector picks the row's own button to
+  anchor another popup at and to return focus to, while the same command
+  run from a dropdown on that button still gets the button:
+
+      <.context_menu_item phx-click={
+        SaladUI.JS.dispatch_command("open",
+          to: "#emoji-picker",
+          detail: %{
+            anchor: SaladUI.JS.trigger("[data-salad-for~='msg-more']"),
+            return_focus: SaladUI.JS.trigger("[data-salad-for~='msg-more']"),
+            values: %{id: SaladUI.JS.context(:id)}
+          }
+        )
+      }>
+        More reactions…
+      </.context_menu_item>
   """
   def trigger, do: %{"__salad__" => "trigger"}
+
+  def trigger(selector) when is_binary(selector), do: %{"__salad__" => "trigger", "selector" => selector}
 
   @doc """
   Copies text to the clipboard (`navigator.clipboard.writeText`), with no app
@@ -257,6 +279,13 @@ defmodule SaladUI.JS do
       shared menu's item acts for (the menu's trigger), else from the element
       that runs the command. Without it, `:from` is searched in the document,
       and without either the element itself is copied.
+    * `:attr` - copy the value of this attribute of that element, as is,
+      instead of its text. `innerText` is the text as rendered, which loses
+      the source of formatted content (code spans, file cards, mentions):
+      render the source into an attribute and copy that.
+    * `:on_copied` - what to run once the text is on the clipboard: an event
+      name (pushed like `JS.push/2`, from the element that ran the command)
+      or a `%JS{}` command, e.g. to toast "Copied".
 
   From a shared menu, copy the text of the row the menu is open for:
 
@@ -266,23 +295,51 @@ defmodule SaladUI.JS do
         Copy text
       </.dropdown_menu_item>
 
+  Copy the row's source text instead, and toast once it is copied:
+
+      <%!-- in the row: <div data-message-text data-source={@message.body}> --%>
+      <.dropdown_menu_item phx-click={
+        SaladUI.JS.copy(
+          within: "[data-row]",
+          from: "[data-message-text]",
+          attr: "data-source",
+          on_copied: "copied"
+        )
+      }>
+        Copy text
+      </.dropdown_menu_item>
+
+      def handle_event("copied", _params, socket),
+        do: {:noreply, SaladUI.Toast.toast(socket, "Copied")}
+
   Anywhere else, e.g. a copy button next to a field:
 
       <button phx-click={SaladUI.JS.copy(from: "#invite-link")}>Copy link</button>
 
-  It dispatches a bubbling `salad_ui:copy` event that SaladUI's JS handles;
-  chain other commands (a `JS.push/2` for a toast) as usual.
+  It dispatches a bubbling `salad_ui:copy` event that SaladUI's JS handles.
+  Once the browser has written the clipboard, the element that ran the
+  command dispatches a bubbling `salad_ui:copied` event
+  (`detail: %{text: text}`) and `:on_copied` runs. When there is nothing to
+  copy, no clipboard, or the browser refuses (an insecure origin, no user
+  gesture), it dispatches `salad_ui:copy-failed`
+  (`detail: %{text: text, error: reason}`) instead. A command chained after
+  `copy/2` runs right away, whether or not the copy works.
   """
   def copy(opts) when is_list(opts), do: copy(%JS{}, opts)
 
   def copy(%JS{} = js, opts \\ []) do
     detail =
       opts
-      |> Keyword.take([:text, :from, :within])
+      |> Keyword.take([:text, :from, :within, :attr])
       |> Map.new()
+      |> put_on_copied(Keyword.get(opts, :on_copied))
 
     JS.dispatch(js, "salad_ui:copy", detail: detail)
   end
+
+  defp put_on_copied(detail, nil), do: detail
+  defp put_on_copied(detail, event) when is_binary(event), do: put_on_copied(detail, JS.push(event))
+  defp put_on_copied(detail, %JS{ops: ops}), do: Map.put(detail, :on_copied, ops)
 end
 
 if !Code.ensure_loaded?(Jason.Encoder.Phoenix.LiveView.JS) do

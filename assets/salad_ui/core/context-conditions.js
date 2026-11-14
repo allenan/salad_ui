@@ -93,12 +93,6 @@ export function hasConditions(root) {
   return !!root?.querySelector(`${CONDITION_SELECTOR}, [${DISABLED_WHEN}]`);
 }
 
-function hide(el, reason) {
-  if (el.hidden) return;
-  el.hidden = true;
-  el.setAttribute(HIDDEN_MARK, reason);
-}
-
 function isDisabledAttr(el) {
   const value = el.getAttribute("data-disabled");
   return (
@@ -116,30 +110,95 @@ export function hiddenWithin(el, boundary) {
   return false;
 }
 
-// Undo what the previous pass did.
-function reset(root) {
-  root.querySelectorAll(`[${HIDDEN_MARK}]`).forEach((el) => {
-    el.hidden = false;
-    el.removeAttribute(HIDDEN_MARK);
-  });
-  root.querySelectorAll(`[${DISABLED_MARK}]`).forEach((el) => {
-    el.removeAttribute("data-disabled");
-    el.removeAttribute("aria-disabled");
-    el.removeAttribute(DISABLED_MARK);
-  });
-}
-
 function panelsOf(root) {
   const panels = [...root.querySelectorAll(PANEL_SELECTOR)];
   return root.matches?.(PANEL_SELECTOR) ? [root, ...panels] : panels;
 }
 
+/**
+ * One evaluation of a menu's conditions. It decides which parts to hide
+ * and disable without touching the DOM, then writes only the difference
+ * from the previous pass (marked by HIDDEN_MARK / DISABLED_MARK): undoing
+ * the previous pass first and hiding again would restyle every conditional
+ * part on every open, even when the next row needs the same items.
+ */
+class Pass {
+  constructor(root) {
+    this.root = root;
+    // What the previous pass hid (el -> reason) and disabled.
+    this.hiddenBefore = new Map();
+    root.querySelectorAll(`[${HIDDEN_MARK}]`).forEach((el) => {
+      this.hiddenBefore.set(el, el.getAttribute(HIDDEN_MARK));
+    });
+    this.disabledBefore = new Set(root.querySelectorAll(`[${DISABLED_MARK}]`));
+    // What this pass hides (el -> reason) and disabled.
+    this.hidden = new Map();
+    this.disabled = new Set();
+  }
+
+  // Hidden by something other than a previous pass (e.g. the server).
+  hiddenElsewhere(el) {
+    return el.hidden && !this.hiddenBefore.has(el);
+  }
+
+  isHidden(el) {
+    return this.hidden.has(el) || this.hiddenElsewhere(el);
+  }
+
+  hiddenWithin(el, boundary) {
+    for (let node = el; node && node !== boundary; node = node.parentElement) {
+      if (this.isHidden(node)) return true;
+    }
+    return false;
+  }
+
+  hide(el, reason) {
+    if (!this.isHidden(el)) this.hidden.set(el, reason);
+  }
+
+  disable(el) {
+    const elsewhere = isDisabledAttr(el) && !this.disabledBefore.has(el);
+    if (!elsewhere) this.disabled.add(el);
+  }
+
+  write() {
+    this.hiddenBefore.forEach((_reason, el) => {
+      if (this.hidden.has(el)) return;
+      el.hidden = false;
+      el.removeAttribute(HIDDEN_MARK);
+    });
+    this.hidden.forEach((reason, el) => {
+      if (!el.hidden) el.hidden = true;
+      if (el.getAttribute(HIDDEN_MARK) !== reason) {
+        el.setAttribute(HIDDEN_MARK, reason);
+      }
+    });
+
+    this.disabledBefore.forEach((el) => {
+      if (this.disabled.has(el)) return;
+      el.removeAttribute("data-disabled");
+      el.removeAttribute("aria-disabled");
+      el.removeAttribute(DISABLED_MARK);
+    });
+    this.disabled.forEach((el) => {
+      if (el.getAttribute("data-disabled") !== "true") {
+        el.setAttribute("data-disabled", "true");
+      }
+      if (el.getAttribute("aria-disabled") !== "true") {
+        el.setAttribute("aria-disabled", "true");
+      }
+      if (!el.hasAttribute(DISABLED_MARK)) el.setAttribute(DISABLED_MARK, "");
+    });
+  }
+}
+
 // Hide what the conditions hid leaves dangling in one panel: groups with no
 // visible item, labels heading no visible item, and separators that lead,
 // trail or follow another separator.
-function tidy(panel) {
+function tidy(panel, pass) {
   const own = (el) => el.closest(PANEL_SELECTOR) === panel;
-  const visible = (el) => !hiddenWithin(el, panel);
+  const visible = (el) => !pass.hiddenWithin(el, panel);
+  const hide = (el, reason) => pass.hide(el, reason);
 
   panel.querySelectorAll(GROUP_SELECTOR).forEach((group) => {
     if (!own(group) || !visible(group)) return;
@@ -179,41 +238,44 @@ function tidy(panel) {
 /**
  * Evaluates the show/hide/disabled conditions of every part inside `root`
  * (a menu's positioner, sub-menus included) against `context`, then tidies
- * the panels whose parts a condition hid. Parts this module hid or disabled
- * in a previous pass are restored first; nothing else is touched, so parts
- * the server rendered hidden or disabled stay so. Returns whether `root` has
- * any condition at all.
+ * the panels whose parts a condition hid. What a previous pass hid or
+ * disabled and this one does not is restored, and only parts whose state
+ * changes are written; nothing else is touched, so parts the server rendered
+ * hidden or disabled stay so. Returns whether `root` has any condition at
+ * all.
  */
 export function applyContextConditions(root, context) {
   if (!root?.querySelectorAll) return false;
 
-  reset(root);
-  if (!hasConditions(root)) return false;
+  const pass = new Pass(root);
+  const conditional = hasConditions(root);
+  if (conditional) {
+    const hidByCondition = [];
+    root.querySelectorAll(CONDITION_SELECTOR).forEach((el) => {
+      const show = readCondition(el, SHOW_WHEN);
+      const hideWhen = readCondition(el, HIDE_WHEN);
+      const shown =
+        (show === undefined || matchesContext(show, context)) &&
+        (hideWhen === undefined || !matchesContext(hideWhen, context));
+      if (shown || pass.isHidden(el)) return;
+      pass.hide(el, "when");
+      hidByCondition.push(el);
+    });
 
-  root.querySelectorAll(CONDITION_SELECTOR).forEach((el) => {
-    const show = readCondition(el, SHOW_WHEN);
-    const hideWhen = readCondition(el, HIDE_WHEN);
-    const shown =
-      (show === undefined || matchesContext(show, context)) &&
-      (hideWhen === undefined || !matchesContext(hideWhen, context));
-    if (!shown) hide(el, "when");
-  });
+    root.querySelectorAll(`[${DISABLED_WHEN}]`).forEach((el) => {
+      const condition = readCondition(el, DISABLED_WHEN);
+      if (condition === undefined) return;
+      if (matchesContext(condition, context)) pass.disable(el);
+    });
 
-  root.querySelectorAll(`[${DISABLED_WHEN}]`).forEach((el) => {
-    const condition = readCondition(el, DISABLED_WHEN);
-    if (condition === undefined || isDisabledAttr(el)) return;
-    if (!matchesContext(condition, context)) return;
-
-    el.setAttribute("data-disabled", "true");
-    el.setAttribute("aria-disabled", "true");
-    el.setAttribute(DISABLED_MARK, "");
-  });
-
-  for (const panel of panelsOf(root)) {
-    const hidByCondition = [
-      ...panel.querySelectorAll(`[${HIDDEN_MARK}="when"]`),
-    ].some((el) => el.closest(PANEL_SELECTOR) === panel);
-    if (hidByCondition) tidy(panel);
+    const panels = new Set(
+      hidByCondition.map((el) => el.closest(PANEL_SELECTOR)),
+    );
+    for (const panel of panelsOf(root)) {
+      if (panels.has(panel)) tidy(panel, pass);
+    }
   }
-  return true;
+
+  pass.write();
+  return conditional;
 }

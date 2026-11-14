@@ -140,6 +140,35 @@ defmodule SaladUI.Combobox do
         {:noreply, assign(socket, query: query, users: Accounts.search_users(query))}
       end
 
+  ## Free entry
+
+  Like shadcn's Combobox (built on Base UI's, which "does not allow
+  free-form text input"), the value is always one of the items: when the
+  list closes without a pick, the input shows the selected label again and
+  the typed text is dropped. `allow-custom-value` is a SaladUI opt-in for a
+  single combobox that keeps it instead (Base UI offers this as a separate
+  Autocomplete component). When the list closes without a pick (`Enter`
+  with nothing highlighted, `Escape`, `Tab`, a click outside):
+
+  * text equal to an item's label (ignoring case) selects that item;
+  * any other text becomes the value itself, submitted through `name` and
+    reported by `on-value-changed` (`%{"value" => "the text"}`);
+  * empty text clears the value.
+
+  Picking an item works as usual. With `auto-highlight` the first match is
+  highlighted while typing, so `Enter` picks it rather than the text. It
+  applies to `combobox_input/1` outside the content, not to the popup mode
+  or a multiple combobox.
+
+      <.combobox id="city" name="city" allow-custom-value on-value-changed="city_changed">
+        <.combobox_input placeholder="Pick or type a city" />
+        <.combobox_content>
+          <.combobox_list>
+            <.combobox_item :for={city <- @cities} value={city}>{city}</.combobox_item>
+          </.combobox_list>
+        </.combobox_content>
+      </.combobox>
+
   ## Forms
 
   With `name` (or `field`) the selected value is submitted through hidden
@@ -233,6 +262,8 @@ defmodule SaladUI.Combobox do
     `Enter` picks it.
   * `:filter` - `true` (default) filters on the client; `false` leaves the
     rendered items untouched, for server-side filtering.
+  * `:allow-custom-value` - Free entry for a single combobox: typed text that
+    matches no item becomes the value when the list closes. See "Free entry".
   * `:disabled` - Disables the whole combobox.
   * `:open` - Whether the list is open. It opens on mount when `true`, and a
     changed value from the server opens or closes it; re-rendering the same
@@ -251,6 +282,11 @@ defmodule SaladUI.Combobox do
   attr :multiple, :boolean, default: false, doc: "allow selecting several values"
   attr :"auto-highlight", :boolean, default: false, doc: "highlight the first match while typing"
   attr :filter, :boolean, default: true, doc: "filter items on the client; false for server filtering"
+
+  attr :"allow-custom-value", :boolean,
+    default: false,
+    doc: "keep typed text that matches no item as the value (single combobox)"
+
   attr :disabled, :boolean, default: false
   attr :open, :boolean, default: false, doc: "whether the list is open; a changed value opens or closes it"
   attr :"use-portal", :boolean, default: false, doc: "render the content in a portal while open"
@@ -282,6 +318,7 @@ defmodule SaladUI.Combobox do
           multiple: assigns.multiple,
           autoHighlight: assigns[:"auto-highlight"],
           filter: assigns.filter,
+          allowCustomValue: assigns[:"allow-custom-value"],
           disabled: assigns.disabled,
           open: assigns.open,
           usePortal: assigns[:"use-portal"],
@@ -661,8 +698,13 @@ defmodule SaladUI.Combobox do
 
   @doc """
   A line between groups. Hidden while a query is typed.
+
+  It is decorative (`role="none"`): a listbox may only own options and
+  groups, so a `separator` role inside `combobox_list/1` fails axe's
+  `aria-required-children`. Pass `role="separator"` for one outside the list.
   """
   attr :class, :any, default: nil
+  attr :role, :string, default: "none", doc: "decorative inside the listbox"
   attr :rest, :global
 
   def combobox_separator(assigns) do
@@ -670,7 +712,7 @@ defmodule SaladUI.Combobox do
     <div
       data-slot="combobox-separator"
       data-part="separator"
-      role="separator"
+      role={@role}
       class={classes(["-mx-1 my-1 h-px bg-border", @class])}
       {@rest}
     >

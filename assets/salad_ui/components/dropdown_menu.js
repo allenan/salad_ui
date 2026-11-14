@@ -9,8 +9,10 @@ import { ModalLayer } from "../core/modal-layer.js";
 import {
   CONTEXT_TARGETS,
   DetachedAnchor,
+  findReplacement,
   focusFallback,
   isTriggerDisabled,
+  keepFocusOnReplacement,
   listen,
   readContext,
   resolveAnchor,
@@ -72,6 +74,15 @@ class DropdownMenuComponent extends Component {
         if (this.state !== "open" || this.destroyed) return;
         this.applyConditions();
         this.positionedElement?.update();
+      },
+      // A patch rebuilt the trigger (an element around it had no stable
+      // id): stay open at the new one, and return focus there.
+      onReplaced: (next, previous) => {
+        if (this.previousFocusEl === previous) this.previousFocusEl = next;
+        if (this.positionedElement) {
+          this.positionedElement.updateReference(next);
+          this.positionedElement.update();
+        }
       },
     });
 
@@ -287,7 +298,17 @@ class DropdownMenuComponent extends Component {
     if (this.state !== "open") return;
 
     this.detached.restore(restore?.detached);
-    // The patch that rebuilt the menu also removed its trigger.
+    // The patch that rebuilt the menu also rebuilt its trigger: follow it.
+    const stale = this.activeTrigger;
+    const next =
+      stale && !stale.isConnected
+        ? findReplacement(stale, this.detached.path, this.el.id)
+        : null;
+    if (next) {
+      this.detached.follow(next);
+      if (restore?.previousFocusEl === stale) restore.previousFocusEl = next;
+    }
+    // ... or removed it.
     if (this.activeTrigger && !this.activeTrigger.isConnected) {
       this.previousFocusEl = restore.previousFocusEl;
       this.transition("close", { anchorRemoved: true });
@@ -592,7 +613,11 @@ class DropdownMenuComponent extends Component {
 
     if (focusTarget) {
       focusTarget.focus();
-      if (document.activeElement === focusTarget) return;
+      if (document.activeElement === focusTarget) {
+        // The reply to the item that closed the menu may rebuild the row.
+        keepFocusOnReplacement(focusTarget, this.el.id);
+        return;
+      }
     }
     // The trigger is gone (its row was deleted) or no longer focusable (a
     // patch disabled it): focus what held it, and never leave focus in the

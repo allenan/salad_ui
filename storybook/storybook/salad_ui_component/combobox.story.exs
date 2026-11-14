@@ -180,6 +180,17 @@ defmodule Storybook.SaladUIComponents.Combobox do
         """
       },
       %Variation{
+        id: :custom_value,
+        description:
+          "`allow-custom-value` (a SaladUI opt-in): text that matches no item is kept as the value when the list closes, and submitted.",
+        template: """
+        <.combobox id="combobox-custom-value" name="framework" allow-custom-value>
+          <.combobox_input placeholder="Pick or type a framework" />
+          #{framework_list()}
+        </.combobox>
+        """
+      },
+      %Variation{
         id: :auto_highlight,
         description: "`auto-highlight` highlights the first match while typing, so Enter picks it.",
         template: """

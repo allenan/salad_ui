@@ -252,12 +252,47 @@ defmodule SaladUI.DropdownMenu do
   takes focus. When a patch changes the trigger's `context` while the menu is
   open for it (the row was pinned meanwhile), the menu stays open and its
   `phx-value-*` and conditional items (below) follow the new context;
-  `on-open` does not fire again. This needs the patch to update the trigger
-  in place: LiveView keys elements by `id` (else by an id it derives from the
-  template), and a re-rendered stream item can get the derived ones anew, so
-  it replaces the trigger and the menu closes as if the row had gone. Give
-  the trigger, and the elements that hold it inside the row, stable ids
-  (`id={"\#{@dom_id}-more"}`).
+  `on-open` does not fire again.
+
+  ### Stable ids down to the trigger
+
+  A re-rendered row should update its trigger in place. LiveView keys
+  elements by `id`, and an element without one can be rebuilt instead of
+  patched when its row re-renders: it is replaced by a fresh copy, with
+  everything inside it. If any element between the stream row and the
+  trigger has no id, a re-render replaces the trigger with it, even when
+  the trigger itself has a stable id. So give an id to *every* element on
+  the way from the row down to the trigger, not only to the trigger and its
+  closest wrapper:
+
+      <div :for={{dom_id, msg} <- @streams.messages} id={dom_id}>
+        <div id={"\#{dom_id}-message"} class="flex gap-2">  <%!-- this one too --%>
+          <div id={"\#{dom_id}-toolbar"}>
+            <.dropdown_menu_trigger id={"\#{dom_id}-more"} for="msg-more" context={%{id: msg.id}}>
+              ⋮
+            </.dropdown_menu_trigger>
+          </div>
+        </div>
+      </div>
+
+  Without the id on the middle `div`, picking Pin with the mouse closes the
+  menu and returns focus to the ⋮ button, then the reply re-renders the row,
+  LiveView rebuilds that `div`, and focus falls to `<body>` with the old
+  button.
+
+  SaladUI follows a rebuilt trigger where it can tell which element replaced
+  it: the trigger for the same menu that now has the old one's `id`, else
+  the row's only trigger for that menu (the row being the nearest element
+  with an id that is still on the page), else the one there with the same
+  `context`. An open menu then stays open at the new trigger, and focus that
+  had just returned to the old trigger moves to the new one. When it cannot
+  tell (the row is gone, or holds several such triggers and none with the
+  old context), the menu closes as if the row had gone. A trigger with an id
+  can also be moved rather than rebuilt (LiveView re-inserts a keyed element
+  when the unkeyed siblings before it change), which drops focus as well;
+  focus that had just returned to it is put back. Stable ids are still the
+  fix: they patch the trigger in place, with no element replaced and nothing
+  for assistive technology to lose track of.
 
   ### Items that depend on the row
 
@@ -344,14 +379,33 @@ defmodule SaladUI.DropdownMenu do
             Add reaction…
           </.dropdown_menu_item>
 
+      `SaladUI.JS.trigger/1` takes a selector for an element of the
+      trigger: the trigger itself if it matches, else the first element
+      inside it that does, else the trigger. A context menu's trigger is
+      the whole row, which takes no focus, so the same command in a context
+      menu would open the picker against the row's edge and return focus to
+      the list. `SaladUI.JS.trigger("[data-salad-for~='msg-more']")` anchors
+      at the row's ⋮ button and returns focus to it, from both menus.
+
     * `SaladUI.JS.copy/2` copies text found relative to the trigger, e.g.
-      the row's message:
+      the row's message. `attr:` copies an attribute's value instead of
+      the rendered text (a message's source, which `innerText` would
+      mangle), and `on_copied:` runs an event or `%JS{}` once the clipboard
+      has it, e.g. for a "Copied" toast:
 
           <.dropdown_menu_item phx-click={
-            SaladUI.JS.copy(within: "[data-row]", from: "[data-message-text]")
+            SaladUI.JS.copy(
+              within: "[data-row]",
+              from: "[data-message-text]",
+              attr: "data-source",
+              on_copied: "copied"
+            )
           }>
             Copy text
           </.dropdown_menu_item>
+
+      The element that ran it also dispatches a bubbling `salad_ui:copied`
+      (or `salad_ui:copy-failed`) event.
 
   A custom `JS.dispatch/3` to your own listener gets the item in
   `event.detail.dispatcher`; SaladUI's `contextSourceOf(item)` (in
