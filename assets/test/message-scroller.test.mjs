@@ -660,3 +660,143 @@ test("parts inside transcript rows are not collected or given data-state", () =>
     false,
   );
 });
+
+test("frame parts with an app's own phx-hook are still collected; nested components are not", () => {
+  const { el, viewport, content } = build({ rows: conversation(10) });
+  // An app hook on the content and viewport (Commons' ChatScroll), and a
+  // nested SaladUI component in the frame with its own parts.
+  content.setAttribute("phx-hook", "ChatScroll");
+  viewport.setAttribute("phx-hook", "ViewportHook");
+  el.insertAdjacentHTML(
+    "beforeend",
+    '<div data-component="tooltip" phx-hook="SaladUI"><span data-part="trigger"></span><span data-part="content"></span></div>' +
+      '<div phx-hook="SaladUI"><span data-part="content"></span></div>',
+  );
+
+  // A fresh instance over the same markup, as on mount.
+  current.component.destroy();
+  current.component = registry.create("message-scroller", el, {
+    pushEventTo: () => {},
+    liveSocket: { execJS: () => {} },
+  });
+  const { component } = current;
+
+  assert.equal(component.viewport, viewport);
+  assert.equal(component.content, content);
+  const parts = component.queryParts().map((part) => part.dataset.part);
+  assert.deepEqual(parts.sort(), [
+    "content",
+    "root",
+    "scroll-button",
+    "scroll-button",
+    "spacer",
+    "viewport",
+  ]);
+  assert.equal(viewport.scrollTop, 600);
+});
+
+// Rows that change height once drawn, as rows skipped with
+// content-visibility: auto do when they leave their size estimate.
+const growRows = (ids, h) =>
+  ids.forEach((id) => {
+    current.row(id).dataset.h = String(h);
+  });
+
+test("a jump is re-aimed when rows above its target change height", () => {
+  const { viewport, component, scrolls } = build({ rows: conversation(10) });
+
+  component.handleCommand("scroll_to_message", { message_id: "m8" });
+  assert.equal(viewport.scrollTop, 700);
+
+  growRows(["m2", "m3", "m4"], 150);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 850);
+  assert.equal(scrolls.at(-1).behavior, "auto");
+  assert.equal(component.mode, "settling-jump");
+});
+
+test("a smooth jump is corrected when it ends, eased when the rest is short", async () => {
+  const { viewport, component, scrolls } = build({ rows: conversation(10) });
+
+  component.handleCommand("scroll_to_message", {
+    message_id: "m8",
+    behavior: "smooth",
+  });
+  assert.equal(viewport.scrollTop, 700);
+
+  // Not re-aimed in flight: that would restart its easing every frame.
+  growRows(["m2", "m3", "m4"], 150);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 700);
+
+  viewport.dispatchEvent(new window.Event("scrollend"));
+  await waitFor(() => viewport.scrollTop === 850);
+  assert.equal(scrolls.at(-1).behavior, "smooth");
+  const count = scrolls.length;
+  viewport.dispatchEvent(new window.Event("scrollend"));
+  await waitFor(() => component.settleFrame === null);
+  assert.equal(scrolls.length, count);
+  assert.equal(viewport.scrollTop, 850);
+});
+
+test("a jump that landed off target is corrected, then released", async () => {
+  const { viewport, component } = build({ rows: conversation(10) });
+
+  component.handleCommand("scroll_to_message", { message_id: "m6" });
+  assert.equal(viewport.scrollTop, 500);
+  // Drawn after the scroll landed, with no resize reported.
+  growRows(["m1", "m2"], 130);
+  viewport.dispatchEvent(new window.Event("scrollend"));
+  await waitFor(() => viewport.scrollTop === 560);
+
+  // Its window closed: later height changes leave the reader where they are.
+  component.settle.until = 0;
+  growRows(["m3"], 200);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 560);
+  assert.equal(component.settle, null);
+});
+
+test("the reader taking over, or another scroll, stops landing a jump", () => {
+  const { viewport, component, setScroll } = build({
+    rows: conversation(10),
+  });
+
+  component.handleCommand("scroll_to_message", {
+    message_id: "m8",
+    behavior: "smooth",
+  });
+  viewport.dispatchEvent(new window.Event("wheel"));
+  growRows(["m2"], 300);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 700);
+
+  component.handleCommand("scroll_to_message", { message_id: "m5" });
+  assert.notEqual(component.settle, null);
+  viewport.dispatchEvent(new window.Event("pointerdown"));
+  assert.equal(component.settle, null);
+
+  component.handleCommand("scroll_to_message", { message_id: "m5" });
+  assert.notEqual(component.settle, null);
+  // Find in page, focus or the app's own scroll moves the viewport.
+  setScroll(100);
+  assert.equal(component.settle, null);
+  growRows(["m1"], 250);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 100);
+});
+
+test("opening at the end without autoScroll lands on the end as rows resize", async () => {
+  const { viewport, component } = build({ rows: conversation(10) });
+  assert.equal(viewport.scrollTop, 600);
+
+  growRows(["m9", "m10"], 140);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 680);
+
+  // After its window, new content is not followed without autoScroll.
+  component.settle.until = 0;
+  growRows(["m10"], 300);
+  component.handleResize();
+  assert.equal(viewport.scrollTop, 680);
+});

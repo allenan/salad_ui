@@ -95,16 +95,50 @@ defmodule SaladUI.MessageScroller do
   container until the reply, and LiveView (1.2.13) merges the locked copy back
   with the `at: 0` rows appended at the end.
 
-  ## Overlays in rows
+  ## Long histories: skipping rows off screen
 
-  Unlike shadcn, the viewport has no `contain-content` or `scroll-fade-b` and
-  items have no `content-visibility: auto`. SaladUI popovers, dropdown menus
-  and hover cards render inside the row (shadcn portals them), and
-  containment or a mask on an ancestor would clip them and offset their
-  fixed positioning. Add the classes back when rows hold no such overlays:
+  With `skip_offscreen` on the content, rows out of view get
+  `content-visibility: auto` and skip style, layout and paint, so a long
+  history costs little once it is loaded: opening a menu (its modal layer
+  restyles the page) or adding a message no longer touches every row.
+
+      <.message_scroller_content id="chat-messages" phx-update="stream" skip_offscreen>
+
+  Skipped rows stay in the DOM, find in page finds text in them, and
+  `scroll_to_message` reaches them (it re-aims while the rows it passes
+  render at their real height). A skipped row takes the height it last had
+  on screen, or `--message-scroller-item-size` (default `10rem`) before it
+  has been on screen. Set that to your typical row height, so the scrollbar
+  and jumps to rows never seen are close from the start:
+
+      <.message_scroller_content skip_offscreen class="[--message-scroller-item-size:56px]">
+
+  `content-visibility: auto` clips a row's paint to its box and makes the
+  row the containing block of `position: fixed` descendants. SaladUI
+  popovers, menus and hover cards render inside the row (shadcn portals
+  them), and a hover toolbar often floats over the row's top edge, so a row
+  is drawn in full while it is hovered, while focus is inside it and while
+  anything in it has `data-state="open"`. Anything else that overflows a row
+  (a badge over its edge, an overlay's exit animation after focus moved
+  elsewhere) is clipped while the row is not hovered. Keep such a row drawn
+  with `[content-visibility:visible]!` on it.
+
+  Off by default (shadcn turns it on for every item) because Chrome leaves
+  the contents of a skipped row out of the accessibility tree: a screen
+  reader reaches the rows near the viewport, as in a virtualized list, and
+  more as it scrolls. The newest 8 rows are always drawn, so additions to
+  the `role="log"` are announced while the reader is scrolled up.
+
+  The viewport has no `contain-content` or `scroll-fade-b`: those would clip
+  overlays in every row. Add them back when rows hold no overlays:
 
       <.message_scroller_viewport class="contain-content scroll-fade-b">
-      <.message_scroller_item class="[contain-intrinsic-size:auto_10rem] [content-visibility:auto]">
+
+  ## Hooks on the frame
+
+  The viewport and content can carry an app's own `phx-hook` (with an `id`)
+  and are still the scroller's parts. Only another SaladUI component nested
+  in the frame keeps its parts to itself.
 
   ## Commands
 
@@ -147,6 +181,15 @@ defmodule SaladUI.MessageScroller do
   scroll toward they are `inert`, `tabindex="-1"` and `data-active="false"`.
   """
   use SaladUI, :component
+
+  # `skip_offscreen` on the content: rows off screen skip rendering, but a row
+  # is drawn in full while hovered, focused or holding an open overlay
+  # (`auto` clips a row's paint to its box and makes it the containing block
+  # of fixed descendants, which would cut off a hover toolbar over the row's
+  # edge and misplace a menu or popover rendered in the row). The newest rows
+  # stay drawn so live-region additions reach the accessibility tree. Set on
+  # the content, not per row: one class instead of one per row in the payload.
+  @skip_offscreen_class "[&>*]:[content-visibility:auto] [&>*]:[contain-intrinsic-size:auto_var(--message-scroller-item-size,10rem)] [&>*:hover]:[content-visibility:visible] [&>*:focus-within]:[content-visibility:visible] [&>*:has([data-state=open])]:[content-visibility:visible] [&>*:nth-last-child(-n+8)]:[content-visibility:visible]"
 
   @button_class "absolute inset-s-1/2 -translate-x-1/2 border-border bg-background text-foreground transition-[translate,scale,opacity] duration-200 hover:bg-muted hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=false]:ease-[cubic-bezier(0.7,0,0.84,0)] data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[active=true]:ease-[cubic-bezier(0.23,1,0.32,1)] data-[direction=end]:bottom-4 data-[direction=end]:data-[active=false]:translate-y-full data-[direction=start]:top-4 data-[direction=start]:data-[active=false]:-translate-y-full rtl:translate-x-1/2 data-[direction=start]:[&_svg]:rotate-180"
 
@@ -271,6 +314,8 @@ defmodule SaladUI.MessageScroller do
   The transcript container: a `role="log"` live region. Every direct child
   should be a `message_scroller_item/1`. Pass `phx-update="stream"` (with an
   `id`) to render a LiveView stream, and `aria-busy` while a turn streams.
+  `skip_offscreen` makes long histories cheap (see "Long histories" in the
+  module docs).
   """
   attr :role, :string, default: "log", doc: "ARIA role for live announcements"
   attr :"aria-relevant", :string, default: "additions", doc: "Live-region updates to announce"
@@ -279,22 +324,32 @@ defmodule SaladUI.MessageScroller do
     default: nil,
     doc: ~s(Marks the live region busy while a turn streams; booleans render as "true"/"false")
 
+  attr :skip_offscreen, :boolean,
+    default: false,
+    doc:
+      "Rows out of view skip style, layout and paint (`content-visibility: auto`), except while hovered, focused or holding an open overlay, and the newest 8"
+
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(aria-live)
   slot :inner_block
 
   def message_scroller_content(assigns) do
     busy = assigns[:"aria-busy"]
-    assigns = assign(assigns, :busy, if(is_nil(busy), do: nil, else: to_string(busy)))
+
+    assigns =
+      assigns
+      |> assign(:busy, if(is_nil(busy), do: nil, else: to_string(busy)))
+      |> assign(:skip_class, assigns.skip_offscreen && @skip_offscreen_class)
 
     ~H"""
     <div
       data-slot="message-scroller-content"
       data-part="content"
+      data-skip-offscreen={@skip_offscreen}
       role={@role}
       aria-relevant={assigns[:"aria-relevant"]}
       aria-busy={@busy}
-      class={classes(["flex h-max min-h-full flex-col gap-8", @class])}
+      class={classes(["flex h-max min-h-full flex-col gap-8", @skip_class, @class])}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -304,8 +359,8 @@ defmodule SaladUI.MessageScroller do
 
   @doc """
   One transcript row: a message, marker, typing indicator, separator or
-  "load earlier" row. Rendered items stay in the DOM but skip off-screen
-  rendering work (`content-visibility: auto`).
+  "load earlier" row. With `skip_offscreen` on the content, rows out of view
+  skip rendering work (`content-visibility: auto`).
   """
   attr :message_id, :string,
     default: nil,

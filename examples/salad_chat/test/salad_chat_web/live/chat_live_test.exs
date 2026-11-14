@@ -75,6 +75,8 @@ defmodule SaladChatWeb.ChatLiveTest do
              )
 
       assert has_element?(view, "#messages > [data-slot=message-scroller-item][data-message-id]")
+      # Rows out of view skip rendering (README, "Rows off screen are skipped").
+      assert has_element?(view, "#messages[data-skip-offscreen]")
 
       view |> form("#main-form", %{"body" => "scroll me"}) |> render_submit()
 

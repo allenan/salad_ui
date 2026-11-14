@@ -82,7 +82,9 @@ Deliberate omissions and limits the implementers recorded. React-only concepts
   `on-status-change` instead of per-item; conditional items and controlled choices
   need a server render; the form is always `novalidate`.
 - **message-scroller**: no inline anti-flash `<script>` recipe, no virtualization
-  example; the group-chat and animation examples are simplified.
+  example; the group-chat and animation examples are simplified. Items have no
+  `content-visibility: auto` unless the content has `skip_offscreen` (Chrome
+  drops a skipped row's contents from the accessibility tree).
 - **direction-rtl**: logical-class sweep covers only the menu family and pagination;
   chart keyboard navigation and toast swipe are not mirrored; a slider that
   inherits RTL renders LTR until the hook mounts.

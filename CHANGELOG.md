@@ -457,6 +457,34 @@ for status and known gaps. Every new JS-backed component is registered in
 - What remains is `pointer-events: none` on `<body>` (~50 ms at 40k
   elements), which Radix sets too.
 
+**Long message lists: rows off screen are skipped**
+- `message_scroller_content` takes `skip_offscreen`: rows out of view get
+  `content-visibility: auto` and skip style, layout and paint. A row is drawn
+  in full while hovered, while focus is inside it and while anything in it
+  has `data-state="open"`, so a hover toolbar over its edge is not clipped
+  and menus and popovers rendered in it are positioned correctly; the newest
+  8 rows are always drawn, so `role="log"` additions reach screen readers
+  while the reader is scrolled up. A row not yet drawn is
+  `--message-scroller-item-size` high (default `10rem`). One class on the
+  content, nothing per row. In the example chat with 1,500 messages: mount
+  2.56 s to 1.34 s, a message menu opens in 43 ms instead of 215 ms, and a
+  sent message is painted in 161 ms instead of 516 ms. Off by default
+  (shadcn sets it on every item): Chrome leaves a skipped row's contents out
+  of the accessibility tree. Find in page still finds them.
+- `scroll_to_message` lands on its target when the rows on the way change
+  height after the jump (rows drawn for the first time, late images): an
+  instant jump is re-aimed while content resizes for 1.5 s, and any jump is
+  checked when its scroll ends and corrected (smoothly when the rest is under
+  a viewport). With rows skipped, a smooth jump across 500 rows ended 8,500
+  px short before. Wheel, touch, scroll keys, a press in the viewport or
+  another scroll stop it. Opening at the end without `auto_scroll` gets the
+  same treatment.
+- `message_scroller` adopts a viewport or content that carries the app's own
+  `phx-hook`; it used to skip any hooked element, so an app hook on the
+  content (to scroll or highlight from the app) left the scroller without
+  its content. Only nested SaladUI components keep their parts to
+  themselves.
+
 **Extensions from downstream use** (not in shadcn/Radix/Sonner; defaults unchanged)
 - Toggle group takes `required`: in a `type="single"` group pressing the
   pressed item (click, Space, Enter) does nothing: no release, no
