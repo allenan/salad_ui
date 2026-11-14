@@ -254,3 +254,58 @@ test("calculate(): collisionPadding counts for flipping", () => {
     "bottom",
   );
 });
+
+test("calculate(): overlap keeps a side-placed element inside when neither side fits", () => {
+  // A 390px-wide window: a 150px sub-menu beside a menu at 91..300 fits on
+  // neither side.
+  const innerWidth = window.innerWidth;
+  const innerHeight = window.innerHeight;
+  window.innerWidth = 390;
+  window.innerHeight = 800;
+  try {
+    setRect(reference, {
+      top: 300,
+      bottom: 332,
+      left: 91,
+      right: 300,
+      width: 209,
+      height: 32,
+    });
+    setRect(element, { width: 150, height: 120 });
+
+    const options = { placement: "right", alignment: "start", sideOffset: 0 };
+    const without = Positioner.calculate(element, reference, options);
+    const withOverlap = Positioner.calculate(element, reference, {
+      ...options,
+      overlap: true,
+    });
+
+    assert.ok(
+      without.x < 0 || without.x + 150 > 390,
+      `expected overflow without overlap, got x=${without.x}`,
+    );
+    assert.ok(withOverlap.x >= 0, `x=${withOverlap.x}`);
+    assert.ok(withOverlap.x + 150 <= 390, `x=${withOverlap.x}`);
+  } finally {
+    window.innerWidth = innerWidth;
+    window.innerHeight = innerHeight;
+  }
+});
+
+test("calculate(): overlap leaves an element that fits where it is", () => {
+  setRect(reference, {
+    top: 100,
+    bottom: 132,
+    left: 100,
+    right: 200,
+    width: 100,
+    height: 32,
+  });
+  setRect(element, { width: 50, height: 40 });
+
+  const options = { placement: "right", alignment: "start", sideOffset: 0 };
+  assert.deepEqual(
+    Positioner.calculate(element, reference, { ...options, overlap: true }),
+    Positioner.calculate(element, reference, options),
+  );
+});

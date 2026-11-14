@@ -620,6 +620,10 @@ for status and known gaps. Every new JS-backed component is registered in
   a separator inside `combobox_list` no longer fails axe's
   `aria-required-children`; `role="separator"` is still accepted for one
   outside the list.
+- A sub-menu with no room on either side of its parent menu (a phone) now
+  slides back inside the window, over the parent, instead of drawing items
+  off-screen. Radix leaves it overflowing; this is the new `overlap` option
+  of the positioner, set for sub-menus only.
 
 **Keyboard and ARIA fixes from downstream use**
 - Escape in a `command_dialog` closes the dialog. The command list no longer

@@ -595,6 +595,9 @@ class MenuSubTrigger extends MenuItemBase {
         10,
       ),
       flip: true,
+      // No room on either side (a phone): overlap the parent menu rather
+      // than draw items off-screen.
+      overlap: true,
       trapFocus: false,
       onPosition: ({ placement }) =>
         this.content?.setAttribute("data-side", placement),
