@@ -148,6 +148,24 @@ See "Shared menus" in `SaladUI.DropdownMenu`, "Text tooltips for long lists"
 in `SaladUI.Tooltip` and "Shared hover cards for long lists" in
 `SaladUI.HoverCard`.
 
+### Rows off screen are skipped
+
+The message list and the thread pass `skip_offscreen` to
+`message_scroller_content`, with `--message-scroller-item-size: 64px` as the
+height of a row not yet drawn. A row out of view then has
+`content-visibility: auto`, so the browser skips its style, layout and
+paint, and opening a menu (whose modal layer restyles the page) or adding
+a message no longer touches every row. A row is drawn in full while it is
+hovered, holds focus or has a menu open for it, so its toolbar (which
+floats over the row's top edge) and menus are never clipped, and the
+newest 8 rows are always drawn. With 1,500 messages loaded in a channel
+(prod build, headless Chrome 157 at 1440×900, median of 3), it took mount
+from 2.56 s to 1.34 s, opening a message's ⋮ menu from 215 ms to 43 ms, and
+sending a message until its row is painted from 516 ms to 161 ms. With
+rows skipped, the modal layer's `pointer-events: none` on `<body>` costs a
+few milliseconds of that menu open (40 ms with it stubbed out). See "Long
+histories" in `SaladUI.MessageScroller` for the trade-offs.
+
 ## How it is put together
 
 ```

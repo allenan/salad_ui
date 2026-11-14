@@ -201,6 +201,9 @@ class PopoverComponent extends Component {
           usePortal,
           portalContainer,
           trapFocus: true,
+          // With nothing focusable inside, focus the content (the dialog,
+          // where Escape is heard), not the positioner around it.
+          fallbackFocus: () => this.content,
           onOutsideClick: (event) => {
             // With an anchor the trigger is outside the monitored elements;
             // let its own toggle action close the popover instead.

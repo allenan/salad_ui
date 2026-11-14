@@ -3,6 +3,41 @@ defmodule SaladUI.ItemTest do
 
   import SaladUI.Item
 
+  describe "item/1 in an item_group list" do
+    test "role=listitem on a plain item goes on the item" do
+      assigns = %{}
+      html = rendered_to_string(~H|<.item role="listitem">X</.item>|)
+
+      assert html =~ ~s(<div data-slot="item")
+      assert count_substring(html, ~s(role="listitem")) == 1
+      assert html =~ ~r/<div data-slot="item"[^>]*role="listitem"/
+    end
+
+    test "role=listitem on a link item wraps the link, which keeps its link role" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.item_group>
+          <.item navigate="/tasks/1" role="listitem" variant="outline">Task</.item>
+        </.item_group>
+        """)
+
+      assert html =~ ~r/<div role="listitem" data-slot="item-listitem"[^>]*>\s*<a[^>]*data-slot="item"/
+      assert count_substring(html, ~s(role="listitem")) == 1
+      refute html =~ ~r/<a[^>]*role=/
+      assert html =~ ~s(href="/tasks/1")
+    end
+
+    test "a link item with any other role keeps it on the link" do
+      assigns = %{}
+      html = rendered_to_string(~H|<.item href="#x" role="menuitem">X</.item>|)
+
+      assert html =~ ~r/<a[^>]*role="menuitem"/
+      refute html =~ "item-listitem"
+    end
+  end
+
   describe "item/1" do
     test "renders a div with default variant and size" do
       assigns = %{}

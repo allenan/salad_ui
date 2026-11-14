@@ -25,6 +25,11 @@ import SaladUI from "../index.js";
 const SCROLL_POSITION_EPSILON = 0.5;
 // How long data-autoscrolling stays set during a programmatic scroll.
 const AUTOSCROLLING_CLEAR_DELAY = 180;
+// Corrections after a jump lands somewhere other than its target.
+const MAX_SETTLE_CORRECTIONS = 4;
+// How long (ms) after it was last aimed a jump follows its target as rows
+// around it are drawn.
+const SETTLE_WINDOW = 1500;
 
 const DEFAULT_OPTIONS = {
   autoScroll: false,
@@ -69,6 +74,15 @@ function getBlockPadding(element) {
   };
 }
 
+// Another SaladUI component inside the frame (a tooltip around a scroll
+// button) owns its parts. Any other `phx-hook` is the app's.
+function isNestedComponent(element) {
+  return (
+    element.hasAttribute("data-component") ||
+    element.getAttribute("phx-hook") === "SaladUI"
+  );
+}
+
 function sameIds(a, b) {
   return a.length === b.length && a.every((id, index) => id === b[index]);
 }
@@ -110,8 +124,16 @@ class MessageScrollerComponent extends Component {
     this.stateFrame = null;
     this.visibilityFrame = null;
     this.resizeFrame = null;
+    this.settleFrame = null;
+    this.settleTimer = null;
+    // A programmatic jump (scroll_to_message, or the end without autoScroll)
+    // that is still landing: { element, options | end, behavior, top,
+    // corrections }.
+    this.settle = null;
 
     this.onScroll = this.onScroll.bind(this);
+    this.onScrollEnd = this.onScrollEnd.bind(this);
+    this.onViewportPointerDown = this.onViewportPointerDown.bind(this);
     this.onUserScrollIntent = this.onUserScrollIntent.bind(this);
     this.onButtonClick = this.onButtonClick.bind(this);
     this.onResizeObserved = this.onResizeObserved.bind(this);
@@ -143,12 +165,15 @@ class MessageScrollerComponent extends Component {
 
   // Only the frame's own parts: rows (everything inside the content part)
   // belong to the app and may contain any number of unrelated data-part
-  // elements, so they are neither collected nor given data-state.
+  // elements, so they are neither collected nor given data-state. A nested
+  // SaladUI component owns its parts and is skipped, but a frame part that
+  // carries an app's own hook (a `phx-hook` on the content or viewport) is
+  // still this scroller's part.
   queryParts() {
     const parts = [];
     const walk = (node) => {
       for (const child of node.children) {
-        if (child.getAttribute("phx-hook") != null) continue;
+        if (isNestedComponent(child)) continue;
         if (child.dataset?.part) parts.push(child);
         if (child.dataset?.part === "content") continue;
         walk(child);
@@ -208,6 +233,9 @@ class MessageScrollerComponent extends Component {
       this.viewport.addEventListener("touchmove", this.onUserScrollIntent, {
         passive: true,
       });
+      this.viewport.addEventListener("scrollend", this.onScrollEnd);
+      // Starts a scrollbar drag, which no wheel/touch/key event announces.
+      this.viewport.addEventListener("pointerdown", this.onViewportPointerDown);
     }
 
     const ResizeObserverImpl = window.ResizeObserver;
@@ -232,6 +260,11 @@ class MessageScrollerComponent extends Component {
       this.viewport.removeEventListener("scroll", this.onScroll);
       this.viewport.removeEventListener("wheel", this.onUserScrollIntent);
       this.viewport.removeEventListener("touchmove", this.onUserScrollIntent);
+      this.viewport.removeEventListener("scrollend", this.onScrollEnd);
+      this.viewport.removeEventListener(
+        "pointerdown",
+        this.onViewportPointerDown,
+      );
     }
 
     this.resizeObserver?.disconnect();
@@ -240,7 +273,12 @@ class MessageScrollerComponent extends Component {
     this.mutationObserver = null;
     this.stopVisibilityTracking();
 
-    for (const key of ["stateFrame", "visibilityFrame", "resizeFrame"]) {
+    for (const key of [
+      "stateFrame",
+      "visibilityFrame",
+      "resizeFrame",
+      "settleFrame",
+    ]) {
       if (this[key] !== null) {
         window.cancelAnimationFrame(this[key]);
         this[key] = null;
@@ -248,6 +286,8 @@ class MessageScrollerComponent extends Component {
     }
     clearTimeout(this.autoscrollingTimer);
     this.autoscrollingTimer = null;
+    clearTimeout(this.settleTimer);
+    this.settleTimer = null;
   }
 
   afterMount() {
@@ -411,6 +451,29 @@ class MessageScrollerComponent extends Component {
 
   onUserScrollIntent() {
     this.userScrollIntent();
+  }
+
+  // A press in the viewport (a scrollbar drag, or the reader acting on a
+  // row) ends a landing jump, so it never pulls the reader back. Follow
+  // and turn anchoring are left alone: clicking a row is not scrolling.
+  onViewportPointerDown() {
+    this.settle = null;
+  }
+
+  onScrollEnd() {
+    this.scheduleSettleCheck();
+  }
+
+  // The rows around the target are drawn in the frame after the scroll
+  // lands; check the position once they have their real height.
+  scheduleSettleCheck() {
+    if (!this.settle || this.settleFrame !== null) return;
+    this.settleFrame = window.requestAnimationFrame(() => {
+      this.settleFrame = window.requestAnimationFrame(() => {
+        this.settleFrame = null;
+        this.checkSettle();
+      });
+    });
   }
 
   onResizeObserved() {
@@ -843,6 +906,7 @@ class MessageScrollerComponent extends Component {
     if (!this.viewport) return false;
     this.setTailSpacerHeight(0);
     this.streamingTurn = null;
+    this.settle = null;
     this.mode = "free-scrolling";
     this.scrollToPosition(0, { behavior });
     this.scheduleVisibilitySync();
@@ -854,10 +918,13 @@ class MessageScrollerComponent extends Component {
     this.setTailSpacerHeight(0);
     this.streamingTurn = null;
     this.mode = this.opts.autoScroll ? "following-bottom" : "free-scrolling";
-    this.scrollToPosition(this.getMaxScrollTop(), {
-      autoscrolling: true,
-      behavior,
-    });
+    const top = this.getMaxScrollTop();
+    // Following the live edge already goes back to the end on every resize.
+    this.settle = this.opts.autoScroll
+      ? null
+      : this.newSettle({ end: true }, behavior, top);
+    this.scrollToPosition(top, { autoscrolling: true, behavior });
+    this.afterSettleScroll();
     this.scheduleVisibilitySync();
     return true;
   }
@@ -890,10 +957,155 @@ class MessageScrollerComponent extends Component {
 
     this.mode = keepPreviousPeek ? "anchored-to-message" : "settling-jump";
     this.streamingTurn = keepPreviousPeek ? element : null;
+    // An anchored turn is held by reanchorToAnchoredMessage() instead.
+    this.settle = keepPreviousPeek
+      ? null
+      : this.newSettle(
+          { element, options: { align, scrollMargin } },
+          behavior,
+          scrollTop,
+        );
 
     this.scrollToPosition(scrollTop, { behavior });
+    this.afterSettleScroll();
     this.scheduleVisibilitySync();
     return true;
+  }
+
+  // --- landing a jump ------------------------------------------------------
+  //
+  // A jump is aimed with the heights rows have when it starts. Rows it
+  // passes or lands beside can change height once drawn (rows skipped with
+  // `content-visibility: auto` are sized by an estimate until then; images
+  // load late), and native scroll anchoring does not move the end of a
+  // smooth scroll. So every jump is checked (and corrected, a few times at
+  // most) once its scroll has ended, and for SETTLE_WINDOW after it was last
+  // aimed an instant jump is re-aimed when the content resizes. Wheel,
+  // touch, scroll keys, a press in the viewport or a scroll from elsewhere
+  // end this at once.
+
+  newSettle(target, behavior, top) {
+    const previous = this.settle;
+    const same =
+      previous &&
+      (target.end ? previous.end : previous.element === target.element);
+    return {
+      ...target,
+      behavior,
+      top,
+      scrollHeight: this.viewport.scrollHeight,
+      corrections: same ? previous.corrections : 0,
+      until: Date.now() + SETTLE_WINDOW,
+    };
+  }
+
+  afterSettleScroll() {
+    const settle = this.settle;
+    if (!settle) return;
+    if (settle.behavior !== "smooth") {
+      this.scheduleSettleCheck();
+    } else if (!("onscrollend" in window)) {
+      // No scrollend to say when the smooth scroll is over.
+      clearTimeout(this.settleTimer);
+      this.settleTimer = setTimeout(() => this.scheduleSettleCheck(), 1000);
+    }
+  }
+
+  settleScrollTop(settle) {
+    if (settle.end) return this.getMaxScrollTop();
+    const { align, scrollMargin } = settle.options;
+    return this.getElementScrollTop(settle.element, align, scrollMargin);
+  }
+
+  settleTargetGone(settle) {
+    return !!settle.element && !settle.element.isConnected;
+  }
+
+  settleExpired(settle) {
+    return this.settleTargetGone(settle) || Date.now() > settle.until;
+  }
+
+  reissueSettle(settle, behavior) {
+    if (settle.end) return this.scrollToEnd({ behavior });
+    return this.scrollToElement(settle.element, {
+      ...settle.options,
+      behavior,
+    });
+  }
+
+  // On resize: the target moved since the jump was aimed, so aim again. Not
+  // for a smooth scroll in flight: aiming it again restarts its easing from
+  // where it is, so it would crawl; it is corrected when it ends.
+  reaimSettle() {
+    const settle = this.settle;
+    if (!settle || !this.viewport || settle.behavior === "smooth") {
+      return false;
+    }
+    if (this.settleExpired(settle)) {
+      this.settle = null;
+      return false;
+    }
+    if (
+      Math.abs(this.settleScrollTop(settle) - settle.top) <=
+      SCROLL_POSITION_EPSILON
+    ) {
+      return false;
+    }
+    return this.reissueSettle(settle, settle.behavior);
+  }
+
+  // A scroll that is neither the jump (it is not where the jump was aimed,
+  // and the target is not in place) nor scroll anchoring (nothing changed
+  // height) came from elsewhere (find in page, focus, an app's own scroll):
+  // stop landing the jump. A smooth jump passes through other positions,
+  // so only the reader releases it (wheel, touch, keys, a press in the
+  // viewport).
+  releaseSettleIfScrolledAway() {
+    const settle = this.settle;
+    if (!settle || settle.behavior === "smooth") return;
+    // Rows changed height since the last scroll: this one is native scroll
+    // anchoring (which holds some row in view, not always the target).
+    const height = this.viewport.scrollHeight;
+    const resized = height !== settle.scrollHeight;
+    settle.scrollHeight = height;
+    if (resized) return;
+    const scrollTop = this.viewport.scrollTop;
+    const aimed = Math.min(Math.max(0, settle.top), this.getMaxScrollTop());
+    if (
+      Math.abs(scrollTop - aimed) > 1 &&
+      Math.abs(this.settleScrollTop(settle) - scrollTop) > 1
+    ) {
+      this.settle = null;
+    }
+  }
+
+  // After the scroll ended: correct it if it missed (a few times at most).
+  checkSettle() {
+    const settle = this.settle;
+    if (!settle || this.destroyed || !this.viewport) return;
+    if (this.settleTargetGone(settle)) {
+      this.settle = null;
+      return;
+    }
+    const target = Math.min(
+      Math.max(0, this.settleScrollTop(settle)),
+      this.getMaxScrollTop(),
+    );
+    // Landed: rows drawn from here on are still followed by reaimSettle()
+    // until the jump's window closes.
+    if (Math.abs(target - this.viewport.scrollTop) <= 1) return;
+    if (settle.corrections >= MAX_SETTLE_CORRECTIONS) {
+      this.settle = null;
+      return;
+    }
+    settle.corrections += 1;
+    // A short way left is eased like the jump; a long way is jumped at once.
+    const near =
+      Math.abs(target - this.viewport.scrollTop) <= this.viewport.clientHeight;
+    this.reissueSettle(
+      settle,
+      near && settle.behavior === "smooth" ? "smooth" : "auto",
+    );
   }
 
   reanchorToAnchoredMessage() {
@@ -1096,6 +1308,7 @@ class MessageScrollerComponent extends Component {
       this.defaultScrollPositionApplied = false;
       this.setTailSpacerHeight(0);
       this.streamingTurn = null;
+      this.settle = null;
       this.mode = this.opts.autoScroll ? "following-bottom" : "free-scrolling";
     }
 
@@ -1183,6 +1396,7 @@ class MessageScrollerComponent extends Component {
       return;
     }
 
+    if (this.reaimSettle()) return;
     if (this.drainReleasedSpacer()) return;
 
     this.scheduleStateCommit();
@@ -1190,6 +1404,7 @@ class MessageScrollerComponent extends Component {
   }
 
   userScrollIntent() {
+    this.settle = null;
     if (
       this.mode === "following-bottom" ||
       this.mode === "anchored-to-message" ||
@@ -1202,6 +1417,7 @@ class MessageScrollerComponent extends Component {
 
   syncAfterScroll() {
     if (this.destroyed || !this.viewport) return;
+    this.releaseSettleIfScrolledAway();
     this.drainReleasedSpacer();
     this.commitScrollState();
     this.scheduleVisibilitySync();

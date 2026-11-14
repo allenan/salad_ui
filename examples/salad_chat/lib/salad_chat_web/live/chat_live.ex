@@ -938,7 +938,8 @@ defmodule SaladChatWeb.ChatLive do
                   <.message_scroller_content
                     id="messages"
                     phx-update="stream"
-                    class="min-h-0 shrink-0 gap-0 pb-3"
+                    skip_offscreen
+                    class="min-h-0 shrink-0 gap-0 pb-3 [--message-scroller-item-size:64px]"
                   >
                     <.message_row
                       :for={{dom_id, row} <- @streams.messages}

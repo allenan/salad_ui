@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import CommandComponent from "../salad_ui/components/command.js";
+import "../salad_ui/components/dialog.js";
+import { registry } from "../salad_ui/core/factory.js";
 import {
   hookFor,
   installDom,
@@ -214,4 +216,67 @@ test("changed command options rebuild it", () => {
   assert.notEqual(hook.component, component);
   assert.equal(component.destroyed, true);
   hook.destroyed();
+});
+
+// cmdk has no Escape handling: the key passes through, so a command_dialog's
+// Radix Dialog closes on it, and the input keeps focus.
+test("Escape in the input is left alone (cmdk), not blurred or prevented", () => {
+  const { component, input } = buildCommand();
+  input.focus();
+
+  const event = new window.KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  input.dispatchEvent(event);
+
+  assert.equal(event.defaultPrevented, false);
+  assert.equal(document.activeElement, input);
+
+  component.destroy();
+});
+
+test("Escape in a command_dialog's input closes the dialog", () => {
+  document.body.innerHTML = `
+    <div id="cmd_dialog" data-component="dialog" data-open="false"
+         data-options='{"closeOnEscape":true}' data-part="root">
+      <div data-part="content" hidden>
+        <div data-part="content-panel">
+          <div id="cmd" data-component="command" data-part="root">
+            <input data-part="input" />
+            <div data-part="list" role="listbox">
+              <button data-part="item">Calendar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  // The command mounts first, as in the real page (its hook has nothing to
+  // wait for), and is idle.
+  const command = new CommandComponent(document.getElementById("cmd"), null);
+  command.setupEvents();
+  const hookContext = { pushEventTo() {}, liveSocket: { execJS() {} } };
+  const dialog = registry.create(
+    "dialog",
+    document.getElementById("cmd_dialog"),
+    hookContext,
+  );
+  dialog.transition("open");
+  const input = document.querySelector('#cmd [data-part="input"]');
+  input.focus();
+
+  input.dispatchEvent(
+    new window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+
+  assert.equal(dialog.state, "closed");
+
+  command.destroy();
+  dialog.destroy();
 });

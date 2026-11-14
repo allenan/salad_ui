@@ -785,3 +785,49 @@ test("a patch that changes the server's collapsed state collapses or expands", (
   const rebuilt = build(el);
   assert.deepEqual(rebuilt.component.layout, [100, 0]);
 });
+
+// With every panel on one side collapsed to nothing the handle sits on the
+// group's edge; `data-edge` tells the grip (`with_handle`) to sit inside it.
+test("a handle on the group's edge after a collapse carries data-edge", () => {
+  const { el, component } = mount(
+    panel({ id: "nav", size: 20, min: 10, collapsible: true }) +
+      handle() +
+      panel({ id: "main", size: 50 }) +
+      handle() +
+      panel({ id: "side", size: 30, min: 20, collapsible: true }),
+  );
+  const [first, second] = handlesOf(el);
+  assert.equal(first.hasAttribute("data-edge"), false);
+  assert.equal(second.hasAttribute("data-edge"), false);
+
+  component.handleCommand("collapse", { panel: "side" });
+  assert.equal(second.getAttribute("data-edge"), "end");
+  assert.equal(first.hasAttribute("data-edge"), false);
+
+  component.handleCommand("collapse", { panel: "nav" });
+  assert.equal(first.getAttribute("data-edge"), "start");
+
+  // A patch puts back the server's markup; the client state is re-applied.
+  second.removeAttribute("data-edge");
+  assert.equal(component.skipReinitialize(el), true);
+  assert.equal(second.getAttribute("data-edge"), "end");
+
+  component.handleCommand("expand", { panel: "side" });
+  assert.equal(second.hasAttribute("data-edge"), false);
+});
+
+test("a panel collapsed to a size (an icon rail) leaves its handle off the edge", () => {
+  const { el, component } = mount(
+    panel({
+      id: "rail",
+      size: 25,
+      min: 15,
+      collapsible: true,
+      collapsedSize: 4,
+    }) +
+      handle() +
+      panel({ size: 75 }),
+  );
+  component.handleCommand("collapse", { panel: "rail" });
+  assert.equal(handlesOf(el)[0].hasAttribute("data-edge"), false);
+});

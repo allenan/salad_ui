@@ -1530,3 +1530,17 @@ test("content without data-position/data-align uses shadcn's defaults", () => {
   assert.equal(component.position, "item-aligned");
   assert.equal(component.align, "center");
 });
+
+// Radix's DismissableLayer closes on Escape wherever focus is: with no
+// items, focus stays on the trigger.
+test("an open select with no items closes on Escape", () => {
+  const { component, trigger } = buildSelect({ items: [] });
+  trigger.focus();
+  click(trigger);
+  assert.equal(component.state, "open");
+
+  keydown(document.activeElement, "Escape");
+
+  assert.equal(component.state, "closed");
+  component.destroy();
+});
