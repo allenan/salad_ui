@@ -114,12 +114,24 @@ A message row renders no menu, hover card or tooltip of its own. ChatLive
 renders them once per page and each row carries only their triggers:
 
 - the ⋮ button is a `dropdown_menu_trigger` and the row a
-  `context_menu_trigger`, with `for` (the shared menu's id) and
-  `context={%{id: message.id}}`. While a menu is open for a row, SaladUI
-  writes that context on its items as `phx-value-id`, so the items are plain
-  `phx-click="toggle_pin"` and ChatLive's handlers read `%{"id" => id}`. There
-  is one menu per variant (your own message or not, pinned or not, channel
-  or thread), since their items differ (`MessageComponents.message_menus/1`);
+  `context_menu_trigger`, with `for` (the shared menu's id: `msg-more`,
+  `msg-context`) and a `context` (`MessageComponents.menu_context/3`:
+  `%{id: 42, own: true, pinned: false, thread: false}`). The page renders one
+  of each for every row, channel and thread (`message_menus/1`). The items
+  that differ by row decide for themselves from the open row's context:
+  "Pin" has `hide-when={%{pinned: true}}` and "Unpin"
+  `show-when={%{pinned: true}}`, "Reply in thread"
+  `hide-when={%{thread: true}}`, and Edit and Delete sit in a group with
+  `show-when={%{own: true}}`. While a menu is open for a row, SaladUI writes
+  that context on its items as `phx-value-*`, so the items are plain
+  `phx-click="toggle_pin"` and ChatLive's handlers read `%{"id" => id}`. A
+  message pinned (or edited, or deleted) while its menu is open updates or
+  closes the menu. "Copy text" is `SaladUI.JS.copy(within: "[data-row]",
+  from: "[data-message-text]")` and "More reactions…" opens the page's emoji
+  picker at the row with `SaladUI.JS.trigger()` and
+  `SaladUI.JS.context(:id)`, so neither needs app JavaScript. Before these
+  conditions existed the page rendered 8 dropdowns and 8 context menus, one
+  per combination;
 - the author's name is a `hover_card_trigger` for that person's card
   (`author_cards/1`: one per person, not per message);
 - toolbar buttons and reaction pills carry `data-salad-tooltip="…"`, shown

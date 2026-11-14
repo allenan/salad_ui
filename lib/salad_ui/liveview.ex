@@ -202,6 +202,87 @@ defmodule SaladUI.JS do
 
     JS.dispatch(js, "salad_ui:command", opts)
   end
+
+  @doc """
+  A placeholder for the context of the row a shared menu is open for, in
+  the params (`detail`) of `dispatch_command/3` run from one of its items.
+
+  With no key it stands for the whole context map, with a key for one of
+  its values (`nil` when the context has no such key). The browser fills it
+  in before the target component gets the command, so a JS command can act
+  on the row without app JavaScript:
+
+      <.dropdown_menu_item phx-click={
+        SaladUI.JS.dispatch_command("open",
+          to: "#emoji-picker",
+          detail: %{
+            anchor: SaladUI.JS.trigger(),
+            event: "react",
+            values: %{id: SaladUI.JS.context(:id)}
+          }
+        )
+      }>
+        Add reaction…
+      </.dropdown_menu_item>
+
+  Run from a detached trigger itself (an element with `context`), it stands
+  for that trigger's context. Anywhere else it is `nil`. `JS.push/2` needs no
+  placeholder: it already sends the item's `phx-value-*`, which hold the
+  context while the menu is open (see "Shared menus" in
+  `SaladUI.DropdownMenu`).
+  """
+  def context, do: %{"__salad__" => "context"}
+
+  def context(key) when is_atom(key) or is_binary(key), do: %{"__salad__" => "context", "key" => to_string(key)}
+
+  @doc """
+  A placeholder for the trigger element a shared menu is open for (the ⋮
+  button, or the row of a context menu), in the params of
+  `dispatch_command/3` run from one of its items: e.g. the `anchor` to open
+  another component at. See `context/1`.
+  """
+  def trigger, do: %{"__salad__" => "trigger"}
+
+  @doc """
+  Copies text to the clipboard (`navigator.clipboard.writeText`), with no app
+  JavaScript.
+
+  ## Options
+
+    * `:text` - the text to copy: a string, or a `context/1` placeholder.
+    * `:from` - a CSS selector for the element whose text is copied (its
+      `innerText`, or `value` for an input or textarea), searched in
+      `:within`.
+    * `:within` - a CSS selector matched with `closest()` from the row a
+      shared menu's item acts for (the menu's trigger), else from the element
+      that runs the command. Without it, `:from` is searched in the document,
+      and without either the element itself is copied.
+
+  From a shared menu, copy the text of the row the menu is open for:
+
+      <.dropdown_menu_item phx-click={
+        SaladUI.JS.copy(within: "[data-row]", from: "[data-message-text]")
+      }>
+        Copy text
+      </.dropdown_menu_item>
+
+  Anywhere else, e.g. a copy button next to a field:
+
+      <button phx-click={SaladUI.JS.copy(from: "#invite-link")}>Copy link</button>
+
+  It dispatches a bubbling `salad_ui:copy` event that SaladUI's JS handles;
+  chain other commands (a `JS.push/2` for a toast) as usual.
+  """
+  def copy(opts) when is_list(opts), do: copy(%JS{}, opts)
+
+  def copy(%JS{} = js, opts \\ []) do
+    detail =
+      opts
+      |> Keyword.take([:text, :from, :within])
+      |> Map.new()
+
+    JS.dispatch(js, "salad_ui:copy", detail: detail)
+  end
 end
 
 if !Code.ensure_loaded?(Jason.Encoder.Phoenix.LiveView.JS) do

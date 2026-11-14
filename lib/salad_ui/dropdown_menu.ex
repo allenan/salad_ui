@@ -246,6 +246,116 @@ defmodule SaladUI.DropdownMenu do
   If the trigger leaves the page while the menu is open (its row was
   deleted, the stream reset, a navigation), the menu closes and focus moves
   to the nearest focusable element that held the trigger (else to the page).
+  The same happens when a patch points the trigger at another menu (its
+  `for` changes) or disables it (`disabled`, `aria-disabled` or
+  `data-disabled`), except that focus goes back to the trigger when it still
+  takes focus. When a patch changes the trigger's `context` while the menu is
+  open for it (the row was pinned meanwhile), the menu stays open and its
+  `phx-value-*` and conditional items (below) follow the new context;
+  `on-open` does not fire again. This needs the patch to update the trigger
+  in place: LiveView keys elements by `id` (else by an id it derives from the
+  template), and a re-rendered stream item can get the derived ones anew, so
+  it replaces the trigger and the menu closes as if the row had gone. Give
+  the trigger, and the elements that hold it inside the row, stable ids
+  (`id={"\#{@dom_id}-more"}`).
+
+  ### Items that depend on the row
+
+  One menu serves every row, so which items it shows cannot be decided per
+  row on the server. Instead, items, checkbox and radio items, link items,
+  groups, radio groups, labels, separators, sub-menus and sub-triggers take
+  conditions on the context, evaluated in the browser each time the menu
+  opens (and when the context changes while it is open):
+
+    * `show-when` - shown only when the context matches;
+    * `hide-when` - hidden when the context matches;
+    * `disabled-when` - (items and sub-triggers) disabled when it matches.
+
+  A condition is a map whose every key must match: the context's value
+  equals the condition's value, or one of them when that value is a list. A
+  list of maps matches when any of them does. A key the context lacks reads
+  as `nil`. Values compare as JSON, so `:pinned` matches `"pinned"`.
+
+      <%!-- per row --%>
+      <.dropdown_menu_trigger
+        for="msg-more"
+        context={%{id: msg.id, own: msg.user_id == @me, pinned: msg.pinned, kind: msg.kind}}
+      >
+        ⋮
+      </.dropdown_menu_trigger>
+
+      <%!-- once per page --%>
+      <.dropdown_menu id="msg-more">
+        <.dropdown_menu_content align="end">
+          <.dropdown_menu_item phx-click="reply" show-when={%{kind: :post}}>Reply</.dropdown_menu_item>
+          <.dropdown_menu_item phx-click="pin" hide-when={%{pinned: true}}>Pin</.dropdown_menu_item>
+          <.dropdown_menu_item phx-click="unpin" show-when={%{pinned: true}}>Unpin</.dropdown_menu_item>
+          <.dropdown_menu_group show-when={%{own: true}}>
+            <.dropdown_menu_separator />
+            <.dropdown_menu_item phx-click="edit">Edit</.dropdown_menu_item>
+          </.dropdown_menu_group>
+          <.dropdown_menu_separator />
+          <.dropdown_menu_item
+            phx-click="delete"
+            show-when={[%{own: true}, %{kind: [:agent, :bot]}]}
+          >
+            Delete
+          </.dropdown_menu_item>
+        </.dropdown_menu_content>
+      </.dropdown_menu>
+
+  Pin and Unpin are two items with opposite conditions. A hidden part gets
+  the `hidden` attribute: it is not shown, not announced, and skipped by
+  arrow keys and typeahead. Put a condition on a group to show or hide a
+  label, a separator and several items together. After the conditions, the
+  menu tidies itself: a group whose items are all hidden is hidden, a label
+  heading no visible item is hidden, and separators that would lead, trail or
+  double up are hidden. When no condition hides anything in a panel, nothing
+  is touched. A condition decides what to show, not what is allowed: check
+  permissions in the event handler too. For anything a map cannot express,
+  compute a key on the server (`context={%{id: m.id, deletable: can_delete?(m)}}`).
+
+  ### JS commands with the row
+
+  `JS.push/2` from an item sends the item's `phx-value-*` (LiveView reads
+  them from the element that ran the command), so it gets the context like a
+  plain `phx-click`; its own `value` wins over a context key with the same
+  name.
+
+  Other JS commands get the row through `SaladUI.JS`, with no app
+  JavaScript:
+
+    * `SaladUI.JS.trigger/0` and `SaladUI.JS.context/0,1` are placeholders
+      in the params of `SaladUI.JS.dispatch_command/3`, filled in with the
+      menu's trigger element and context before the target gets the command,
+      e.g. to open the emoji picker at the row for that row's id:
+
+          <.dropdown_menu_item phx-click={
+            SaladUI.JS.dispatch_command("open",
+              to: "#emoji-picker",
+              detail: %{
+                anchor: SaladUI.JS.trigger(),
+                return_focus: SaladUI.JS.trigger(),
+                event: "react",
+                values: %{id: SaladUI.JS.context(:id)}
+              }
+            )
+          }>
+            Add reaction…
+          </.dropdown_menu_item>
+
+    * `SaladUI.JS.copy/2` copies text found relative to the trigger, e.g.
+      the row's message:
+
+          <.dropdown_menu_item phx-click={
+            SaladUI.JS.copy(within: "[data-row]", from: "[data-message-text]")
+          }>
+            Copy text
+          </.dropdown_menu_item>
+
+  A custom `JS.dispatch/3` to your own listener gets the item in
+  `event.detail.dispatcher`; SaladUI's `contextSourceOf(item)` (in
+  `salad_ui/core/detached-triggers`) returns `{trigger, context}` for it.
 
   Open a shared menu from the server or from JS with an `anchor` (an element
   or a CSS selector) and, optionally, a `context` (otherwise read from the
@@ -503,6 +613,15 @@ defmodule SaladUI.DropdownMenu do
   * `:class` - Additional CSS classes.
   """
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -520,6 +639,15 @@ defmodule SaladUI.DropdownMenu do
   """
   attr :class, :any, default: nil
   attr :inset, :boolean, default: false
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -549,6 +677,19 @@ defmodule SaladUI.DropdownMenu do
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selection"
   attr :as, :any, default: "div"
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -572,11 +713,24 @@ defmodule SaladUI.DropdownMenu do
   attr :variant, :string, values: ~w(default destructive), default: "default"
   attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global, include: ~w(href navigate patch method replace)
   slot :inner_block, required: true
 
   def dropdown_menu_link_item(assigns) do
-    assigns = assign(assigns, :base, @item_class)
+    assigns = assign(assigns, base: @item_class, conditions: context_conditions(assigns))
 
     ~H"""
     <.link
@@ -590,6 +744,7 @@ defmodule SaladUI.DropdownMenu do
       aria-disabled={@disabled && "true"}
       class={classes([@base, @class])}
       tabindex="-1"
+      {@conditions}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -617,6 +772,18 @@ defmodule SaladUI.DropdownMenu do
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is toggled"
   attr :"on-select", :any, default: nil, doc: "Handler for item selected event"
   attr :"on-checked-change", :any, default: nil, doc: "Handler for when checked state changes"
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
 
   attr :rest, :global
   slot :inner_block, required: true
@@ -659,6 +826,15 @@ defmodule SaladUI.DropdownMenu do
     doc: "Handler fired with `%{\"value\" => value}` when the selected item changes"
 
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -689,6 +865,19 @@ defmodule SaladUI.DropdownMenu do
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item selected event"
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -721,6 +910,15 @@ defmodule SaladUI.DropdownMenu do
       </.dropdown_menu_sub>
   """
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -740,6 +938,19 @@ defmodule SaladUI.DropdownMenu do
   attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -796,6 +1007,15 @@ defmodule SaladUI.DropdownMenu do
   * `:class` - Additional CSS classes.
   """
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
 
   def dropdown_menu_separator(assigns) do

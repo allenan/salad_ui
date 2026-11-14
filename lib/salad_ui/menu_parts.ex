@@ -13,21 +13,37 @@ defmodule SaladUI.MenuParts do
   # picked (menu.js reads `data-close-on-select`). Only `false` is rendered.
   defp close_on_select(assigns), do: if(assigns[:"close-on-select"] == false, do: "false")
 
+  # A shared menu part's `show-when` / `hide-when` / `disabled-when`, as
+  # `data-*` JSON (see `SaladUI.Helpers.context_conditions/1`).
+  defp put_conditions(assigns), do: assign(assigns, :conditions, context_conditions(assigns))
+
   def group(assigns) do
+    assigns = put_conditions(assigns)
+
     ~H"""
-    <div data-slot={@slot} data-part="group" role="group" class={classes([@class])} {@rest}>
+    <div
+      data-slot={@slot}
+      data-part="group"
+      role="group"
+      class={classes([@class])}
+      {@conditions}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </div>
     """
   end
 
   def label(assigns) do
+    assigns = put_conditions(assigns)
+
     ~H"""
     <div
       data-slot={@slot}
       data-part="label"
       data-inset={@inset}
       class={classes([@base, @class])}
+      {@conditions}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -37,7 +53,9 @@ defmodule SaladUI.MenuParts do
 
   def item(assigns) do
     assigns =
-      assign(assigns, event_map: json(event_mappings(assigns)), close_on_select: close_on_select(assigns))
+      assigns
+      |> assign(event_map: json(event_mappings(assigns)), close_on_select: close_on_select(assigns))
+      |> put_conditions()
 
     ~H"""
     <.dynamic
@@ -54,6 +72,7 @@ defmodule SaladUI.MenuParts do
       data-event-mappings={@event_map}
       class={classes([@base, @class])}
       tabindex="-1"
+      {@conditions}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -63,7 +82,9 @@ defmodule SaladUI.MenuParts do
 
   def checkbox_item(assigns) do
     assigns =
-      assign(assigns, event_map: json(event_mappings(assigns)), close_on_select: close_on_select(assigns))
+      assigns
+      |> assign(event_map: json(event_mappings(assigns)), close_on_select: close_on_select(assigns))
+      |> put_conditions()
 
     ~H"""
     <div
@@ -80,6 +101,7 @@ defmodule SaladUI.MenuParts do
       data-event-mappings={@event_map}
       class={classes([@base, @class])}
       tabindex="-1"
+      {@conditions}
       {@rest}
     >
       <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
@@ -106,7 +128,7 @@ defmodule SaladUI.MenuParts do
   end
 
   def radio_group(assigns) do
-    assigns = assign(assigns, :event_map, json(event_mappings(assigns)))
+    assigns = assigns |> assign(:event_map, json(event_mappings(assigns))) |> put_conditions()
 
     ~H"""
     <div
@@ -116,6 +138,7 @@ defmodule SaladUI.MenuParts do
       data-event-mappings={@event_map}
       role="group"
       class={classes([@class])}
+      {@conditions}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -127,11 +150,13 @@ defmodule SaladUI.MenuParts do
   # checks the item whose value matches its group's `value`.
   def radio_item(assigns) do
     assigns =
-      assign(assigns,
+      assigns
+      |> assign(
         event_map: json(event_mappings(assigns)),
         close_on_select: close_on_select(assigns),
         checked: assigns[:checked] == true
       )
+      |> put_conditions()
 
     ~H"""
     <div
@@ -147,6 +172,7 @@ defmodule SaladUI.MenuParts do
       data-event-mappings={@event_map}
       class={classes([@base, @class])}
       tabindex="-1"
+      {@conditions}
       {@rest}
     >
       <span class="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
@@ -173,14 +199,18 @@ defmodule SaladUI.MenuParts do
   end
 
   def sub(assigns) do
+    assigns = put_conditions(assigns)
+
     ~H"""
-    <div data-slot={@slot} data-part="sub" class={classes([@class])} {@rest}>
+    <div data-slot={@slot} data-part="sub" class={classes([@class])} {@conditions} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
   end
 
   def sub_trigger(assigns) do
+    assigns = put_conditions(assigns)
+
     ~H"""
     <div
       data-slot={@slot}
@@ -194,6 +224,7 @@ defmodule SaladUI.MenuParts do
       aria-expanded="false"
       class={classes([@base, @class])}
       tabindex="-1"
+      {@conditions}
       {@rest}
     >
       {render_slot(@inner_block)}
@@ -244,6 +275,8 @@ defmodule SaladUI.MenuParts do
   end
 
   def separator(assigns) do
+    assigns = put_conditions(assigns)
+
     ~H"""
     <div
       data-slot={@slot}
@@ -251,6 +284,7 @@ defmodule SaladUI.MenuParts do
       role="separator"
       aria-orientation="horizontal"
       class={classes(["-mx-1 my-1 h-px bg-border", @class])}
+      {@conditions}
       {@rest}
     />
     """

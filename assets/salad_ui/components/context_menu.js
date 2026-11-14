@@ -20,6 +20,7 @@ import {
   resolveAnchor,
   triggersFor,
 } from "../core/detached-triggers.js";
+import { applyContextConditions } from "../core/context-conditions.js";
 import Menu from "./menu.js";
 
 // Touch/pen hold time before the menu opens, as in Radix.
@@ -60,6 +61,19 @@ class ContextMenuComponent extends Component {
         if (this.state === "open" && !this.destroyed) {
           this.transition("close", { anchorRemoved: true });
         }
+      },
+      // A patch pointed the trigger at another menu, or disabled it.
+      id: () => this.el.id,
+      onLost: () => {
+        if (this.state === "open" && !this.destroyed) {
+          this.transition("close", { anchorLost: true });
+        }
+      },
+      // A patch changed what the trigger stands for: show the items for it.
+      onContextChange: () => {
+        if (this.state !== "open" || this.destroyed) return;
+        this.applyConditions();
+        this.position();
       },
     });
 
@@ -288,6 +302,7 @@ class ContextMenuComponent extends Component {
 
     if (this.state === "open") {
       this.menu?.closeSubmenus();
+      this.applyConditions();
       this.position();
       this.focusContent(fromKeyboard);
       return;
@@ -334,6 +349,8 @@ class ContextMenuComponent extends Component {
   onOpenEnter({ fromKeyboard = false } = {}) {
     const active = document.activeElement;
     this.previousFocusEl = active && active !== document.body ? active : null;
+    // Before positioning: hidden items change the panel's size.
+    this.applyConditions();
     this.show();
     this.detached.activate();
     this.focusContent(fromKeyboard);
@@ -360,7 +377,11 @@ class ContextMenuComponent extends Component {
   // close event and the focus return must not wait for it, since a LiveView
   // patch in that window (e.g. the reply to an item's on-select) rebuilds the
   // component and the deferred closed-state handler never runs.
-  onOpenExit({ restoreFocus = true, anchorRemoved = false } = {}) {
+  onOpenExit({
+    restoreFocus = true,
+    anchorRemoved = false,
+    anchorLost = false,
+  } = {}) {
     // Unblock first: the element focus returns to is aria-hidden while the
     // menu blocks. The scroll lock holds until the exit animation ends.
     this.modalLayer.releaseInteraction();
@@ -376,12 +397,14 @@ class ContextMenuComponent extends Component {
 
     if (target?.isConnected) {
       target.focus();
+      if (document.activeElement === target) return;
+    } else if (!anchorRemoved && !anchorLost) {
       return;
     }
-    if (!anchorRemoved) return;
 
-    // The trigger is gone (its row was deleted): focus what held it, and
-    // never leave focus in the hidden menu.
+    // The trigger is gone (its row was deleted), or what had focus no longer
+    // takes it: focus what held the trigger, and never leave focus in the
+    // hidden menu.
     if (
       !focusFallback(path) &&
       this.positioner?.contains(document.activeElement)
@@ -399,6 +422,15 @@ class ContextMenuComponent extends Component {
     if (this.positioner && Portal.isInPortal(this.positioner)) {
       Portal.restore(this.positioner);
     }
+  }
+
+  /**
+   * Shows, hides and disables the items whose `show-when` / `hide-when` /
+   * `disabled-when` the open menu's context decides (context-conditions.js).
+   */
+  applyConditions() {
+    if (!applyContextConditions(this.positioner, this.context)) return;
+    this.menu?.refresh();
   }
 
   focusContent(fromKeyboard) {
@@ -577,10 +609,17 @@ class ContextMenuComponent extends Component {
       this.transition("close", { anchorRemoved: true });
       return;
     }
+    // ... or pointed it at another menu, or disabled it.
+    if (this.detached.refresh() === "lost") {
+      this.previousFocusEl = saved.previousFocusEl;
+      this.transition("close", { anchorLost: true });
+      return;
+    }
 
     this.previousFocusEl = saved.previousFocusEl?.isConnected
       ? saved.previousFocusEl
       : null;
+    this.applyConditions();
     this.show();
     this.detached.activate();
 

@@ -4,6 +4,7 @@ import { isRtl } from "../core/direction.js";
 import { CollectionRegistry, RovingFocus } from "../core/collection.js";
 import PositionedElement from "../core/positioned-element.js";
 import { getTextValue, typeaheadFor } from "../core/typeahead.js";
+import { hiddenWithin } from "../core/context-conditions.js";
 
 // Parts that are navigable menu items, and parts that are menu panels.
 const ITEM_SELECTOR = [
@@ -726,7 +727,7 @@ class Menu extends Component {
     if (event.target?.closest?.(MENU_SELECTOR) !== this.el) return;
     if (!this.menuItems) return;
 
-    const items = this.menuItems.filter((item) => !item.disabled);
+    const items = this.menuItems.filter((item) => this.isNavigable(item));
     const active = document.activeElement;
     this.typeahead.handleKey(event, {
       items,
@@ -808,7 +809,9 @@ class Menu extends Component {
     this.registry = new CollectionRegistry({
       type: "single",
       getItemValue: (item) => item.value,
-      isItemDisabled: (item) => item.disabled,
+      // Items a shared menu's context hides (context-conditions.js) are
+      // skipped like disabled ones.
+      isItemDisabled: (item) => !this.isNavigable(item),
     });
     this.rovingFocus = new RovingFocus(this.registry);
 
@@ -816,6 +819,42 @@ class Menu extends Component {
     this.menuItems.forEach((item) => {
       this.registry.add(item);
     });
+  }
+
+  /**
+   * Whether keyboard navigation and typeahead may land on `item`: it is
+   * enabled and not hidden (e.g. by a shared menu's `show-when`).
+   */
+  isNavigable(item) {
+    return !item.disabled && !hiddenWithin(item.el, this.el);
+  }
+
+  /**
+   * Re-reads which items are disabled after a shared menu re-evaluated its
+   * context conditions, in this panel and its sub-menus. A highlighted item
+   * that was hidden or disabled loses the highlight (focus goes to the
+   * panel), and a sub-menu whose trigger was closes.
+   */
+  refresh() {
+    this.menuItems?.forEach((item) => {
+      const disabled = item.isElementDisabled(item.el);
+      if (disabled !== item.disabled) {
+        item.disabled = disabled;
+        item.updateUI();
+      }
+      if (item instanceof MenuSubTrigger) {
+        if (!this.isNavigable(item)) item.close();
+        item.subMenu?.refresh();
+      }
+    });
+
+    const focused = this.rovingFocus?.focusedItem;
+    if (!focused || this.isNavigable(focused.instance)) return;
+
+    const hadFocus = document.activeElement === focused.instance.el;
+    focused.focused = false;
+    this.rovingFocus.reset();
+    if (hadFocus) this.el.focus({ preventScroll: true });
   }
 
   /** The open menu's context map ({} when there is none). */
@@ -916,7 +955,7 @@ class Menu extends Component {
 
     for (const menu of menus.reverse()) {
       const item = menu.menuItems.find((candidate) => candidate.el === focused);
-      if (item && !item.disabled) {
+      if (item && menu.isNavigable(item)) {
         menu.handleItemFocus(item);
         return;
       }

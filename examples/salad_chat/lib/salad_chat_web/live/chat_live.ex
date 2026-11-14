@@ -1011,7 +1011,6 @@ defmodule SaladChatWeb.ChatLive do
            triggers (`for` + `context`), so a long history costs no hook and
            no menu, hover card or tooltip markup per message. --%>
       <.message_menus />
-      <.message_menus thread? />
       <.tooltip_provider id="tooltips" />
 
       <%!-- Overlay roots take no space; their panels are fixed-positioned. --%>

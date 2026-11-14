@@ -394,6 +394,42 @@ defmodule SaladUI.Helpers do
   end
 
   @doc """
+  The context conditions of a shared menu part, from its `show-when`,
+  `hide-when` and `disabled-when` assigns, as the `data-*` attributes
+  `assets/salad_ui/core/context-conditions.js` evaluates against the open
+  menu's context (see "Shared menus" in `SaladUI.DropdownMenu`).
+
+  Each condition is a map (every key must match; a list as a value accepts
+  any of its values) or a list of maps (any of them must match), JSON-encoded.
+  Unset conditions render no attribute.
+
+      context_conditions(%{"show-when": %{own: true}})
+      #=> %{"data-show-when": ~s({"own":true}), "data-hide-when": nil, "data-disabled-when": nil}
+  """
+  def context_conditions(assigns) do
+    %{
+      "data-show-when": condition_json(assigns[:"show-when"], "show-when"),
+      "data-hide-when": condition_json(assigns[:"hide-when"], "hide-when"),
+      "data-disabled-when": condition_json(assigns[:"disabled-when"], "disabled-when")
+    }
+  end
+
+  defp condition_json(nil, _name), do: nil
+  defp condition_json(condition, _name) when is_map(condition), do: json(condition)
+
+  defp condition_json(conditions, name) when is_list(conditions) do
+    if Enum.all?(conditions, &is_map/1) do
+      json(conditions)
+    else
+      raise ArgumentError, "#{name} takes a map or a list of maps, got: #{inspect(conditions)}"
+    end
+  end
+
+  defp condition_json(condition, name) do
+    raise ArgumentError, "#{name} takes a map or a list of maps, got: #{inspect(condition)}"
+  end
+
+  @doc """
   Returns the assigns when they carry an `:id`, and raises otherwise.
 
   For hooked components that also take a form `field` (which supplies the

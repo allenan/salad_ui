@@ -72,17 +72,6 @@ window.addEventListener("keydown", (e) => {
   }
 })
 
-// "Copy text" in a message's ⋮ / right-click menu. The menus are shared by
-// every message, so the item knows its message only by the open menu's
-// context: the `phx-value-id` SaladUI writes on it while the menu is open.
-window.addEventListener("salad-chat:copy", (e) => {
-  const id = e.detail?.id ?? e.target?.getAttribute?.("phx-value-id")
-  const text =
-    e.detail?.text ??
-    document.querySelector(`[data-message-id="m-${id}"] [data-message-text]`)?.innerText
-  if (text) navigator.clipboard?.writeText(text.trim()).catch(() => {})
-})
-
 // The server asks for the thread sheet when a thread opens. On desktop the
 // thread lives in the resizable pane instead, so only phones get the sheet.
 window.addEventListener("phx:thread-opened", () => {

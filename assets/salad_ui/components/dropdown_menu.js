@@ -15,6 +15,7 @@ import {
   readContext,
   resolveAnchor,
 } from "../core/detached-triggers.js";
+import { applyContextConditions } from "../core/context-conditions.js";
 import Menu from "./menu.js";
 
 // Open sub-menus and focus, handed from the instance torn down by a LiveView
@@ -58,6 +59,19 @@ class DropdownMenuComponent extends Component {
         if (this.state === "open" && !this.destroyed) {
           this.transition("close", { anchorRemoved: true });
         }
+      },
+      // A patch pointed the trigger at another menu, or disabled it.
+      id: () => this.el.id,
+      onLost: () => {
+        if (this.state === "open" && !this.destroyed) {
+          this.transition("close");
+        }
+      },
+      // A patch changed what the trigger stands for: show the items for it.
+      onContextChange: () => {
+        if (this.state !== "open" || this.destroyed) return;
+        this.applyConditions();
+        this.positionedElement?.update();
       },
     });
 
@@ -279,6 +293,13 @@ class DropdownMenuComponent extends Component {
       this.transition("close", { anchorRemoved: true });
       return;
     }
+    // ... or pointed it at another menu, or disabled it (a changed context
+    // is picked up by activateOpenState()).
+    if (this.detached.refresh() === "lost") {
+      this.previousFocusEl = restore.previousFocusEl;
+      this.transition("close");
+      return;
+    }
 
     // Rendered open with only detached triggers: nothing to anchor to.
     if (!this.anchorEl) {
@@ -487,6 +508,8 @@ class DropdownMenuComponent extends Component {
         ? activeElement
         : this.anchorEl);
 
+    // Before positioning: hidden items change the panel's size.
+    this.applyConditions();
     this.initializePositionedElement();
     this.positionedElement?.activate();
     this.modalLayer.activate();
@@ -516,6 +539,15 @@ class DropdownMenuComponent extends Component {
     if (pushEvent) {
       this.pushEvent("open", { ...this.context });
     }
+  }
+
+  /**
+   * Shows, hides and disables the items whose `show-when` / `hide-when` /
+   * `disabled-when` the open menu's context decides (context-conditions.js).
+   */
+  applyConditions() {
+    if (!applyContextConditions(this.positioner, this.context)) return;
+    this.menu?.refresh();
   }
 
   focusContent(focusFirst) {
@@ -560,10 +592,11 @@ class DropdownMenuComponent extends Component {
 
     if (focusTarget) {
       focusTarget.focus();
-      return;
+      if (document.activeElement === focusTarget) return;
     }
-    // The trigger is gone (its row was deleted): focus what held it, and
-    // never leave focus in the hidden menu.
+    // The trigger is gone (its row was deleted) or no longer focusable (a
+    // patch disabled it): focus what held it, and never leave focus in the
+    // hidden menu.
     if (
       !focusFallback(path) &&
       this.positioner?.contains(document.activeElement)
