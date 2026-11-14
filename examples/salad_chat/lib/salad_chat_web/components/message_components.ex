@@ -7,8 +7,9 @@ defmodule SaladChatWeb.MessageComponents do
   author hover cards and the tooltips are shared instances that ChatLive
   renders once per page (`message_menus/1`, `author_cards/1`, a
   `tooltip_provider`). Each row only carries their triggers: `for` names the
-  instance and `context` (`%{id: message.id}`) tells the menu items which
-  message they act on, as `phx-value-id` for their plain `phx-click`. With a
+  instance and `context` (`menu_context/3`: the message's id, and whether it
+  is yours, pinned, in a thread) tells the menu which items to show and
+  which message they act on, as `phx-value-id` for their plain `phx-click`. With a
   few hundred messages loaded, a menu, context menu, hover card and tooltips
   per row made the page several times slower to mount. See "Shared menus"
   in `SaladUI.DropdownMenu`.
@@ -74,8 +75,8 @@ defmodule SaladChatWeb.MessageComponents do
            (the same actions as the ⋮ menu) for this message. --%>
       <.context_menu_trigger
         as="div"
-        for={menu_id(:context, @message, @mine?, @ctx)}
-        context={%{id: @message.id}}
+        for="msg-context"
+        context={menu_context(@message, @mine?, @ctx)}
         disabled={@message.deleted? or @message.id == @ctx.editing_id or Message.streaming?(@message)}
         class={
           Enum.join(
@@ -178,109 +179,133 @@ defmodule SaladChatWeb.MessageComponents do
   end
 
   @doc """
-  The shared ⋮ and right-click menus of one message list (the channel's, or
-  a thread's), rendered once per page.
+  The shared ⋮ and right-click menus of every message list (the channel's
+  and a thread's), rendered once per page.
 
-  The items differ by message: only your own messages can be edited or
-  deleted, and a pinned one offers "Unpin". So there is one menu per
-  combination (own or not, pinned or not), and each row's triggers name the
-  one that fits (`menu_id/4`). The items act on the open row through its
-  `context`: `phx-value-id` on their `phx-click`.
+  Their items differ by message: only your own messages can be edited or
+  deleted, a pinned one offers "Unpin", and a thread's messages have no
+  "Reply in thread". Each row's triggers carry that in their `context`
+  (`menu_context/3`), and the items show or hide themselves with
+  `show-when` / `hide-when`, so one dropdown and one context menu serve every
+  row. The items act on the open row through the same context: `phx-value-*`
+  on their `phx-click`, `SaladUI.JS.copy/2` relative to the row, and
+  `SaladUI.JS.trigger/0` / `SaladUI.JS.context/1` for the emoji picker.
   """
-  attr :thread?, :boolean, default: false
-
   def message_menus(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :variants,
-        for(own? <- [false, true], pinned? <- [false, true], do: {own?, pinned?})
-      )
+    assigns = assign(assigns, sections: message_menu_sections(), quick: Enum.take(emoji(), 8))
 
     ~H"""
-    <%= for {own?, pinned?} <- @variants do %>
-      <.dropdown_menu
-        id={menu_id(:more, own?, pinned?, @thread?)}
-        use-portal
-        portal-container="#chat-portal"
-      >
-        <.dropdown_menu_content align="end" class="w-56">
-          <.dropdown_menu_sub>
-            <.dropdown_menu_sub_trigger>
-              <.icon name="hero-face-smile" /> React
-            </.dropdown_menu_sub_trigger>
-            <.dropdown_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
-              <.dropdown_menu_item
-                :for={e <- Enum.take(emoji(), 8)}
-                phx-click="react"
-                phx-value-emoji={e}
-                class="justify-center text-lg"
-              >
-                {e}
-              </.dropdown_menu_item>
-            </.dropdown_menu_sub_content>
-          </.dropdown_menu_sub>
-          <%= for action <- message_menu_actions(own?, pinned?, @thread?) do %>
-            <.dropdown_menu_separator :if={action.separator?} />
-            <.dropdown_menu_item variant={action.variant} phx-click={action.click}>
-              <.icon name={action.icon} /> {action.label}
-              <.dropdown_menu_shortcut :if={action.shortcut}>
-                {action.shortcut}
-              </.dropdown_menu_shortcut>
+    <.dropdown_menu id="msg-more" use-portal portal-container="#chat-portal">
+      <.dropdown_menu_content align="end" class="w-56">
+        <.dropdown_menu_sub>
+          <.dropdown_menu_sub_trigger>
+            <.icon name="hero-face-smile" /> React
+          </.dropdown_menu_sub_trigger>
+          <.dropdown_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
+            <.dropdown_menu_item
+              :for={e <- @quick}
+              phx-click="react"
+              phx-value-emoji={e}
+              class="justify-center text-lg"
+            >
+              {e}
             </.dropdown_menu_item>
-          <% end %>
-        </.dropdown_menu_content>
-      </.dropdown_menu>
-      <.context_menu
-        id={menu_id(:context, own?, pinned?, @thread?)}
-        use-portal
-        portal-container="#chat-portal"
-      >
-        <.context_menu_content class="w-56">
-          <.context_menu_sub>
-            <.context_menu_sub_trigger>
-              <.icon name="hero-face-smile" /> React
-            </.context_menu_sub_trigger>
-            <.context_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
-              <.context_menu_item
-                :for={e <- Enum.take(emoji(), 8)}
-                phx-click="react"
-                phx-value-emoji={e}
-                class="justify-center text-lg"
-              >
-                {e}
-              </.context_menu_item>
-            </.context_menu_sub_content>
-          </.context_menu_sub>
-          <%= for action <- message_menu_actions(own?, pinned?, @thread?) do %>
-            <.context_menu_separator :if={action.separator?} />
-            <.context_menu_item variant={action.variant} phx-click={action.click}>
-              <.icon name={action.icon} /> {action.label}
-              <.context_menu_shortcut :if={action.shortcut}>
-                {action.shortcut}
-              </.context_menu_shortcut>
+            <.dropdown_menu_item class="col-span-4" phx-click={open_reaction_picker()}>
+              <.icon name="hero-plus" /> More reactions…
+            </.dropdown_menu_item>
+          </.dropdown_menu_sub_content>
+        </.dropdown_menu_sub>
+        <.dropdown_menu_group
+          :for={section <- @sections}
+          show-when={section.show_when}
+          aria-label={section.label}
+        >
+          <.dropdown_menu_separator :if={section.separator?} />
+          <.dropdown_menu_item
+            :for={action <- section.actions}
+            variant={action.variant}
+            phx-click={action.click}
+            show-when={action.show_when}
+            hide-when={action.hide_when}
+          >
+            <.icon name={action.icon} /> {action.label}
+            <.dropdown_menu_shortcut :if={action.shortcut}>
+              {action.shortcut}
+            </.dropdown_menu_shortcut>
+          </.dropdown_menu_item>
+        </.dropdown_menu_group>
+      </.dropdown_menu_content>
+    </.dropdown_menu>
+    <.context_menu id="msg-context" use-portal portal-container="#chat-portal">
+      <.context_menu_content class="w-56">
+        <.context_menu_sub>
+          <.context_menu_sub_trigger>
+            <.icon name="hero-face-smile" /> React
+          </.context_menu_sub_trigger>
+          <.context_menu_sub_content class="grid w-auto min-w-0 grid-cols-4 p-1">
+            <.context_menu_item
+              :for={e <- @quick}
+              phx-click="react"
+              phx-value-emoji={e}
+              class="justify-center text-lg"
+            >
+              {e}
             </.context_menu_item>
-          <% end %>
-        </.context_menu_content>
-      </.context_menu>
-    <% end %>
+            <.context_menu_item class="col-span-4" phx-click={open_reaction_picker()}>
+              <.icon name="hero-plus" /> More reactions…
+            </.context_menu_item>
+          </.context_menu_sub_content>
+        </.context_menu_sub>
+        <.context_menu_group
+          :for={section <- @sections}
+          show-when={section.show_when}
+          aria-label={section.label}
+        >
+          <.context_menu_separator :if={section.separator?} />
+          <.context_menu_item
+            :for={action <- section.actions}
+            variant={action.variant}
+            phx-click={action.click}
+            show-when={action.show_when}
+            hide-when={action.hide_when}
+          >
+            <.icon name={action.icon} /> {action.label}
+            <.context_menu_shortcut :if={action.shortcut}>
+              {action.shortcut}
+            </.context_menu_shortcut>
+          </.context_menu_item>
+        </.context_menu_group>
+      </.context_menu_content>
+    </.context_menu>
     """
   end
 
-  @doc "The id of the shared menu (`:more` or `:context`) that fits a message."
-  def menu_id(kind, %Message{} = message, mine?, ctx) do
-    menu_id(kind, mine? and !message.bot, !!message.pinned_by, ctx.thread?)
+  @doc """
+  What a message row's menu triggers tell the shared menus: which message,
+  and what decides its items (`message_menus/1`).
+  """
+  def menu_context(%Message{} = message, mine?, ctx) do
+    %{
+      id: message.id,
+      own: mine? and !message.bot,
+      pinned: !!message.pinned_by,
+      thread: !!ctx.thread?
+    }
   end
 
-  def menu_id(kind, own?, pinned?, thread?) do
-    Enum.join(
-      [
-        if(thread?, do: "thread-msg", else: "msg"),
-        kind,
-        if(own?, do: "own", else: "other"),
-        if(pinned?, do: "pinned", else: "unpinned")
-      ],
-      "-"
+  # "More reactions…": the page's one emoji picker, opened at the row's
+  # trigger (the ⋮ button, or the right-clicked row) for that row's message.
+  # The picker pushes "react" with the id and the emoji, like a row's own
+  # "Add reaction" button.
+  defp open_reaction_picker do
+    SaladUI.JS.dispatch_command("open",
+      to: "#emoji-picker",
+      detail: %{
+        anchor: SaladUI.JS.trigger(),
+        return_focus: SaladUI.JS.trigger(),
+        event: "react",
+        values: %{id: SaladUI.JS.context(:id)}
+      }
     )
   end
 
@@ -591,12 +616,14 @@ defmodule SaladChatWeb.MessageComponents do
   attr :ctx, :map, required: true
 
   # The toolbar that appears over a message on hover (always visible as a
-  # single "more" button on touch screens).
+  # single "more" button on touch screens). Its id keeps LiveView patching
+  # it in place when the row changes (a pin), so a ⋮ menu open on it stays
+  # open and follows the row's new context instead of losing its trigger.
   defp message_actions(assigns) do
     assigns = assign(assigns, :quick, @quick_reactions)
 
     ~H"""
-    <div class={[
+    <div id={"#{@id}-actions"} class={[
       "absolute -top-4 right-4 z-10 rounded-lg border bg-background p-0.5 shadow-sm transition-opacity",
       "pointer-events-none opacity-0 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100",
       "focus-within:pointer-events-auto focus-within:opacity-100",
@@ -630,8 +657,8 @@ defmodule SaladChatWeb.MessageComponents do
           <.icon name="hero-chat-bubble-left-ellipsis" />
         </.button>
         <.dropdown_menu_trigger
-          for={menu_id(:more, @message, @mine?, @ctx)}
-          context={%{id: @message.id}}
+          for="msg-more"
+          context={menu_context(@message, @mine?, @ctx)}
           as={&button/1}
           variant="ghost"
           size="icon-sm"
@@ -645,26 +672,44 @@ defmodule SaladChatWeb.MessageComponents do
     """
   end
 
-  # The actions of the ⋮ menu and the right-click context menu (after their
-  # "React" sub-menu), for one menu variant. Each one is a plain `phx-click`
-  # on an existing ChatLive event that receives the open message's
-  # `%{"id" => id}`, except "Copy text", which is handled in the browser
-  # (assets/js/chat.js reads the message's text by that id).
-  defp message_menu_actions(own?, pinned?, thread?) do
+  # The items of the ⋮ menu and the right-click context menu (after their
+  # "React" sub-menu), in groups. Each one is a plain `phx-click` on an
+  # existing ChatLive event that receives the open message's `%{"id" => id}`,
+  # except "Copy text", which SaladUI copies in the browser from the open
+  # row. `show_when` / `hide_when` match the row's `menu_context/3`.
+  defp message_menu_sections do
     [
-      !thread? && action("hero-chat-bubble-left-ellipsis", "Reply in thread", "open_thread"),
-      action("hero-clipboard-document", "Copy text", JS.dispatch("salad-chat:copy")),
-      action(
-        if(pinned?, do: "hero-bookmark-slash", else: "hero-bookmark"),
-        if(pinned?, do: "Unpin from channel", else: "Pin to channel"),
-        "toggle_pin"
-      ),
-      action("hero-bell-alert", "Remind me about this", "remind"),
-      action("hero-eye-slash", "Mark unread", "mark_unread"),
-      own? && action("hero-pencil", "Edit message", "edit", separator?: true, shortcut: "E"),
-      own? && action("hero-trash", "Delete message", "confirm_delete", variant: "destructive")
+      %{
+        label: "Message",
+        separator?: false,
+        show_when: nil,
+        actions: [
+          action("hero-chat-bubble-left-ellipsis", "Reply in thread", "open_thread",
+            hide_when: %{thread: true}
+          ),
+          action(
+            "hero-clipboard-document",
+            "Copy text",
+            SaladUI.JS.copy(within: "[data-row]", from: "[data-message-text]")
+          ),
+          action("hero-bookmark", "Pin to channel", "toggle_pin", hide_when: %{pinned: true}),
+          action("hero-bookmark-slash", "Unpin from channel", "toggle_pin",
+            show_when: %{pinned: true}
+          ),
+          action("hero-bell-alert", "Remind me about this", "remind"),
+          action("hero-eye-slash", "Mark unread", "mark_unread")
+        ]
+      },
+      %{
+        label: "Your message",
+        separator?: true,
+        show_when: %{own: true},
+        actions: [
+          action("hero-pencil", "Edit message", "edit", shortcut: "E"),
+          action("hero-trash", "Delete message", "confirm_delete", variant: "destructive")
+        ]
+      }
     ]
-    |> Enum.filter(& &1)
   end
 
   defp action(icon, label, click, opts \\ []) do
@@ -672,9 +717,10 @@ defmodule SaladChatWeb.MessageComponents do
       icon: icon,
       label: label,
       click: click,
-      separator?: Keyword.get(opts, :separator?, false),
       shortcut: Keyword.get(opts, :shortcut),
-      variant: Keyword.get(opts, :variant, "default")
+      variant: Keyword.get(opts, :variant, "default"),
+      show_when: Keyword.get(opts, :show_when),
+      hide_when: Keyword.get(opts, :hide_when)
     }
   end
 

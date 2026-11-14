@@ -528,6 +528,36 @@ for status and known gaps. Every new JS-backed component is registered in
   `on-open` for the new one; `on-close` always carries the context of the
   trigger it was open for. The example chat app's message rows now use
   shared menus, hover cards and tooltips (see its README).
+- Shared menu items that depend on the row (gap report items 17-19 from a
+  downstream app):
+  - Dropdown and context menu items, link, checkbox and radio items, groups,
+    radio groups, labels, separators, sub-menus and sub-triggers take
+    `show-when` and `hide-when`, items and sub-triggers also
+    `disabled-when`: a map matched against the open menu's context (every
+    key equal; a list value accepts any of its values) or a list of such
+    maps (any). They render as JSON `data-*` attributes and are evaluated in
+    the browser on open, on moving to another trigger and when the context
+    changes while open (`core/context-conditions.js`). Hidden parts get
+    `hidden` (not shown, not announced, skipped by arrow keys and
+    typeahead); groups with no visible item, labels heading none and
+    leading, trailing or doubled separators are then hidden too. Pin and
+    Unpin are two items with opposite conditions.
+  - An open shared menu follows its trigger: it closes when a patch points
+    the trigger at another menu (`for`) or disables it (focus returns to the
+    trigger when it still takes focus, else to its nearest focusable
+    ancestor), and re-evaluates its items and `phx-value-*` when the
+    trigger's `context` changes. Also after a patch that rebuilds the menu.
+  - Items' JS commands reach the row without app JavaScript:
+    `SaladUI.JS.trigger/0` and `SaladUI.JS.context/0,1` are placeholders in
+    `SaladUI.JS.dispatch_command/3` params, filled in from the open menu (or
+    the detached trigger that runs the command); `SaladUI.JS.copy/2` copies
+    text found relative to the menu's trigger (or the clicked element).
+    `JS.push/2` already sends the item's `phx-value-*` (documented). The
+    emoji picker's `return_focus` takes an element as well as a selector.
+  - The example chat app now renders 1 message dropdown and 1 context menu
+    instead of 8 of each, and its "Copy text" listener in `chat.js` is gone.
+  Storybook: "Shared menus" example (Pin/Unpin, own-only Edit/Delete,
+  Report disabled on your own, Copy text).
 
 # 0.14.0
 

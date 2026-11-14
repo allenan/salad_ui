@@ -206,5 +206,69 @@ defmodule SaladUI.ContextMenuTest do
       assert html =~ ~s(data-part="trigger")
       refute html =~ "data-salad-for"
     end
+
+    test "parts take context conditions for shared menus" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.context_menu id="msg-context">
+          <.context_menu_content>
+            <.context_menu_item phx-click="pin" hide-when={%{pinned: true}}>Pin</.context_menu_item>
+            <.context_menu_item phx-click="unpin" show-when={%{pinned: true}}>Unpin</.context_menu_item>
+            <.context_menu_group show-when={%{own: true}}>
+              <.context_menu_separator />
+              <.context_menu_label>Yours</.context_menu_label>
+              <.context_menu_item phx-click="edit" disabled-when={%{locked: true}}>
+                Edit
+              </.context_menu_item>
+            </.context_menu_group>
+            <.context_menu_checkbox_item disabled-when={%{own: false}}>Mute</.context_menu_checkbox_item>
+            <.context_menu_radio_group hide-when={%{own: false}}>
+              <.context_menu_radio_item value="a" hide-when={%{own: false}}>A</.context_menu_radio_item>
+            </.context_menu_radio_group>
+            <.context_menu_separator hide-when={%{own: false}} />
+            <.context_menu_sub show-when={%{kind: ["user", "agent"]}}>
+              <.context_menu_sub_trigger hide-when={%{kind: "agent"}}>React</.context_menu_sub_trigger>
+              <.context_menu_sub_content>
+                <.context_menu_item>👍</.context_menu_item>
+              </.context_menu_sub_content>
+            </.context_menu_sub>
+          </.context_menu_content>
+        </.context_menu>
+        """)
+
+      attr = fn markers, name -> attr_of(html, markers, name) end
+
+      assert attr.(~s(phx-click="pin"), "data-hide-when") == ~s({"pinned":true})
+      assert attr.(~s(phx-click="unpin"), "data-show-when") == ~s({"pinned":true})
+      assert attr.(~s(data-part="group"), "data-show-when") == ~s({"own":true})
+      assert attr.(~s(phx-click="edit"), "data-disabled-when") == ~s({"locked":true})
+      assert attr.(~s(data-part="checkbox-item"), "data-disabled-when") == ~s({"own":false})
+      assert attr.(~s(data-part="radio-group"), "data-hide-when") == ~s({"own":false})
+      assert attr.(~s(data-part="radio-item"), "data-hide-when") == ~s({"own":false})
+      assert attr.([~s(data-part="separator"), "data-hide-when"], "data-hide-when") == ~s({"own":false})
+      assert attr.(~s(data-part="sub"), "data-show-when") == ~s({"kind":["user","agent"]})
+      assert attr.(~s(data-part="sub-trigger"), "data-hide-when") == ~s({"kind":"agent"})
+    end
+  end
+
+  # The value of attribute `name` on the first tag of `html` that contains
+  # every string in `markers` (unescaped), or nil.
+  defp attr_of(html, markers, name) do
+    markers = List.wrap(markers)
+
+    tag =
+      ~r/<[a-z][^>]*>/
+      |> Regex.scan(html)
+      |> List.flatten()
+      |> Enum.find(fn tag -> Enum.all?(markers, &String.contains?(tag, &1)) end)
+
+    with tag when is_binary(tag) <- tag,
+         [_, value] <- Regex.run(~r/\s#{name}="([^"]*)"/, tag) do
+      value |> String.replace("&quot;", "\"") |> String.replace("&#39;", "'")
+    else
+      _ -> nil
+    end
   end
 end

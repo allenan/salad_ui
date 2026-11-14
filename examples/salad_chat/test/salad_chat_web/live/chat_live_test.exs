@@ -158,67 +158,128 @@ defmodule SaladChatWeb.ChatLiveTest do
   end
 
   describe "message menus" do
-    test "rows are detached triggers of the shared ⋮ and right-click menus", %{conn: conn} do
+    test "rows are detached triggers of the page's one ⋮ and one right-click menu", %{conn: conn} do
       {:ok, mine} = Chat.create_message("maya", "random", "mine")
       {:ok, theirs} = Chat.create_message("leo", "random", "theirs")
-      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+      {:ok, view, html} = live(conn, ~p"/as/maya/c/random")
 
       # The row: no menu of its own, triggers naming the shared menus.
       refute has_element?(view, "#msg-#{mine.id} [data-component]")
+      assert has_element?(view, ~s(#msg-#{mine.id} [data-salad-for="msg-context"]), "mine")
+      assert has_element?(view, ~s(#msg-#{mine.id} [data-salad-for="msg-more"]))
+      assert has_element?(view, ~s(#msg-#{theirs.id} [data-salad-for="msg-more"]))
 
-      assert has_element?(
-               view,
-               ~s(#msg-#{mine.id} [data-salad-for="msg-context-own-unpinned"]),
-               "mine"
-             )
+      # One dropdown and one context menu for every row, channel and thread.
+      assert length(Regex.scan(~r/id="msg-more"/, html)) == 1
+      assert length(Regex.scan(~r/id="msg-context"/, html)) == 1
+      assert length(Regex.scan(~r/data-component="context-menu"/, html)) == 1
+      # No per-variant menus (own/other × pinned/unpinned × channel/thread).
+      refute html =~ ~r/id="(thread-)?msg-(more|context)-/
+      assert has_element?(view, "#msg-more[data-component=dropdown-menu]")
+      assert has_element?(view, "#msg-context[data-component=context-menu]")
 
-      assert has_element?(view, ~s(#msg-#{mine.id} [data-salad-for="msg-more-own-unpinned"]))
-      assert has_element?(view, ~s(#msg-#{theirs.id} [data-salad-for="msg-more-other-unpinned"]))
+      for menu <- ["#msg-more", "#msg-context"],
+          label <-
+            ["React", "More reactions…", "Reply in thread", "Copy text", "Pin to channel"] ++
+              ["Unpin from channel", "Remind me about this", "Mark unread", "Edit message"] ++
+              ["Delete message"] do
+        assert has_element?(view, menu, label)
+      end
 
-      menu = "#msg-context-own-unpinned"
-      assert has_element?(view, "#{menu}[data-component=context-menu]")
+      # What each row's context tells the menus.
+      assert context_of(view, mine, "msg-more") == %{
+               "id" => mine.id,
+               "own" => true,
+               "pinned" => false,
+               "thread" => false
+             }
 
-      for label <-
-            ["React", "Reply in thread", "Copy text", "Pin to channel"] ++
-              ["Remind me about this", "Mark unread", "Edit message", "Delete message"] do
-        assert has_element?(view, "#{menu} [data-slot=context-menu-content]", label)
+      assert %{"own" => false} = context_of(view, theirs, "msg-context")
+    end
+
+    test "the items show or hide themselves by the row's context", %{conn: conn} do
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      for menu <- ["#msg-more", "#msg-context"] do
+        assert condition(view, menu, "Reply in thread", "data-hide-when") == %{"thread" => true}
+        assert condition(view, menu, "Pin to channel", "data-hide-when") == %{"pinned" => true}
+
+        assert condition(view, menu, "Unpin from channel", "data-show-when") == %{
+                 "pinned" => true
+               }
+
+        assert condition(view, menu, "Remind me about this", "data-show-when") == nil
+
+        # Edit and Delete sit in a group shown on your own messages.
+        assert has_element?(
+                 view,
+                 ~s(#{menu} [role=group][data-show-when='{"own":true}']),
+                 "Edit message"
+               )
 
         assert has_element?(
                  view,
-                 "#msg-more-own-unpinned [data-slot=dropdown-menu-content]",
-                 label
+                 ~s(#{menu} [role=group][data-show-when='{"own":true}']),
+                 "Delete message"
                )
       end
+    end
 
-      refute has_element?(view, "#msg-more-other-unpinned", "Edit message")
-      assert has_element?(view, "#msg-more-other-pinned", "Unpin from channel")
-      # The thread's menus have no "Reply in thread".
-      refute has_element?(view, "#thread-msg-more-own-unpinned", "Reply in thread")
+    test "a pin changes the row's context; a thread's rows say so", %{conn: conn} do
+      {:ok, message} = Chat.create_message("leo", "random", "pin me")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      # SaladUI writes the trigger's context as phx-value-* on the items.
+      view
+      |> element("#msg-more [phx-click=toggle_pin]:not([data-show-when])")
+      |> render_click(%{"id" => "#{message.id}"})
+
+      assert has_element?(view, "#msg-#{message.id}", "Pinned")
+      assert %{"pinned" => true} = context_of(view, message, "msg-more")
+      assert %{"pinned" => true} = context_of(view, message, "msg-context")
+
+      {:ok, reply} = Chat.create_message("maya", "random", "a reply", parent_id: message.id)
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random/t/#{message.id}")
+
+      thread_context =
+        view
+        |> element(~s(#thread-desktop-r#{reply.id} [data-salad-for="msg-more"]))
+        |> render()
+        |> decode_context()
+
+      assert %{"thread" => true, "own" => true} = thread_context
     end
 
     test "menu items act on the message in the open menu's context", %{conn: conn} do
       {:ok, message} = Chat.create_message("leo", "random", "pin me")
       {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
 
-      # SaladUI writes the trigger's context as phx-value-id on the items.
       view
-      |> element("#msg-more-other-unpinned [phx-click=toggle_pin]")
-      |> render_click(%{"id" => "#{message.id}"})
-
-      assert has_element?(view, "#msg-#{message.id}", "Pinned")
-      assert has_element?(view, ~s(#msg-#{message.id} [data-salad-for="msg-more-other-pinned"]))
-
-      view
-      |> element("#msg-more-other-pinned [phx-click=react][phx-value-emoji='🎉']")
+      |> element("#msg-more [phx-click=react][phx-value-emoji='🎉']")
       |> render_click(%{"id" => "#{message.id}"})
 
       assert has_element?(view, "#msg-#{message.id} [role=group][aria-label=Reactions]", "🎉")
 
       view
-      |> element("#msg-more-other-pinned [phx-click=open_thread]")
+      |> element("#msg-context [phx-click=open_thread]")
       |> render_click(%{"id" => "#{message.id}"})
 
       assert_patch(view, ~p"/as/maya/c/random/t/#{message.id}")
+    end
+
+    test "copy and more reactions are JS commands that reach the row with no app JS", %{
+      conn: conn
+    } do
+      {:ok, _message} = Chat.create_message("leo", "random", "copy me")
+      {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
+
+      copy = view |> element("#msg-more [data-part=item]", "Copy text") |> render()
+      assert copy =~ "salad_ui:copy"
+      assert copy =~ "[data-message-text]"
+
+      more = view |> element("#msg-context [data-part=item]", "More reactions…") |> render()
+      assert more =~ "#emoji-picker"
+      assert more =~ "__salad__"
     end
 
     test "author names open the author's shared hover card", %{conn: conn} do
@@ -456,6 +517,29 @@ defmodule SaladChatWeb.ChatLiveTest do
       check.(result) -> result
       tries == 0 -> flunk("condition never became true. Last result:\n#{result}")
       true -> Process.sleep(20) && eventually(fun, check, tries - 1)
+    end
+  end
+
+  # The `data-salad-context` of a message row's trigger for `menu`.
+  defp context_of(view, message, menu) do
+    view
+    |> element(~s(#msg-#{message.id} [data-salad-for="#{menu}"]))
+    |> render()
+    |> decode_context()
+  end
+
+  defp decode_context(html) do
+    [_, json] = Regex.run(~r/data-salad-context="([^"]*)"/, html)
+    json |> String.replace("&quot;", "\"") |> Jason.decode!()
+  end
+
+  # A menu item's condition attribute, decoded (nil when it has none).
+  defp condition(view, menu, label, attribute) do
+    html = view |> element("#{menu} [data-part=item]", label) |> render()
+
+    case Regex.run(~r/#{attribute}="([^"]*)"/, html) do
+      [_, json] -> json |> String.replace("&quot;", "\"") |> Jason.decode!()
+      nil -> nil
     end
   end
 end

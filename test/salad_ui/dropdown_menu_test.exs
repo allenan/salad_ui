@@ -501,4 +501,99 @@ defmodule SaladUI.DropdownMenuTest do
       refute html =~ "data-state"
     end
   end
+
+  describe "context conditions (shared menus)" do
+    test "parts render show-when / hide-when / disabled-when as JSON" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.dropdown_menu id="msg-more">
+          <.dropdown_menu_content>
+            <.dropdown_menu_item phx-click="pin" hide-when={%{pinned: true}}>Pin</.dropdown_menu_item>
+            <.dropdown_menu_item phx-click="unpin" show-when={%{pinned: true}}>Unpin</.dropdown_menu_item>
+            <.dropdown_menu_item phx-click="remind" disabled-when={%{kind: [:bot, :agent]}}>
+              Remind
+            </.dropdown_menu_item>
+            <.dropdown_menu_group show-when={%{own: true}}>
+              <.dropdown_menu_label show-when={%{own: true}}>Yours</.dropdown_menu_label>
+              <.dropdown_menu_separator hide-when={%{own: false}} />
+              <.dropdown_menu_link_item navigate="/edit" show-when={%{own: true}}>Edit</.dropdown_menu_link_item>
+            </.dropdown_menu_group>
+            <.dropdown_menu_checkbox_item show-when={%{own: true}}>Mute</.dropdown_menu_checkbox_item>
+            <.dropdown_menu_radio_group value="a" hide-when={%{own: false}}>
+              <.dropdown_menu_radio_item value="a" show-when={%{own: true}}>A</.dropdown_menu_radio_item>
+            </.dropdown_menu_radio_group>
+            <.dropdown_menu_sub hide-when={%{kind: :bot}}>
+              <.dropdown_menu_sub_trigger disabled-when={%{locked: true}}>
+                React
+              </.dropdown_menu_sub_trigger>
+              <.dropdown_menu_sub_content>
+                <.dropdown_menu_item
+                  phx-click="delete"
+                  show-when={[%{own: true}, %{kind: :bot}]}
+                >
+                  Delete
+                </.dropdown_menu_item>
+              </.dropdown_menu_sub_content>
+            </.dropdown_menu_sub>
+          </.dropdown_menu_content>
+        </.dropdown_menu>
+        """)
+
+      attr = fn markers, name -> attr_of(html, markers, name) end
+
+      assert attr.(~s(phx-click="pin"), "data-hide-when") == ~s({"pinned":true})
+      assert attr.(~s(phx-click="unpin"), "data-show-when") == ~s({"pinned":true})
+      assert attr.(~s(phx-click="remind"), "data-disabled-when") == ~s({"kind":["bot","agent"]})
+      assert attr.(~s(data-part="group"), "data-show-when") == ~s({"own":true})
+      assert attr.(~s(data-part="label"), "data-show-when") == ~s({"own":true})
+      assert attr.([~s(data-part="separator"), "data-hide-when"], "data-hide-when") == ~s({"own":false})
+      assert attr.("<a ", "data-show-when") == ~s({"own":true})
+      assert attr.(~s(data-part="checkbox-item"), "data-show-when") == ~s({"own":true})
+      assert attr.(~s(data-part="radio-group"), "data-hide-when") == ~s({"own":false})
+      assert attr.(~s(data-part="radio-item"), "data-show-when") == ~s({"own":true})
+      assert attr.(~s(data-part="sub"), "data-hide-when") == ~s({"kind":"bot"})
+      assert attr.(~s(data-part="sub-trigger"), "data-disabled-when") == ~s({"locked":true})
+      assert attr.(~s(phx-click="delete"), "data-show-when") == ~s([{"own":true},{"kind":"bot"}])
+      # Unset conditions render nothing.
+      assert attr.(~s(phx-click="pin"), "data-show-when") == nil
+      refute html =~ ~s( show-when=)
+    end
+
+    test "a condition must be a map or a list of maps" do
+      assigns = %{}
+
+      assert_raise ArgumentError, ~r/show-when takes a map or a list of maps/, fn ->
+        rendered_to_string(~H"""
+        <.dropdown_menu_item show-when="own">Edit</.dropdown_menu_item>
+        """)
+      end
+
+      assert_raise ArgumentError, ~r/hide-when takes a map or a list of maps/, fn ->
+        rendered_to_string(~H"""
+        <.dropdown_menu_item hide-when={[:own]}>Edit</.dropdown_menu_item>
+        """)
+      end
+    end
+  end
+
+  # The value of attribute `name` on the first tag of `html` that contains
+  # every string in `markers` (unescaped), or nil.
+  defp attr_of(html, markers, name) do
+    markers = List.wrap(markers)
+
+    tag =
+      ~r/<[a-z][^>]*>/
+      |> Regex.scan(html)
+      |> List.flatten()
+      |> Enum.find(fn tag -> Enum.all?(markers, &String.contains?(tag, &1)) end)
+
+    with tag when is_binary(tag) <- tag,
+         [_, value] <- Regex.run(~r/\s#{name}="([^"]*)"/, tag) do
+      value |> String.replace("&quot;", "\"") |> String.replace("&#39;", "'")
+    else
+      _ -> nil
+    end
+  end
 end
