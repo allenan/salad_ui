@@ -13,8 +13,10 @@
 // `emoji-picker:select` event with `{emoji, name}` once the picker has closed.
 //
 // Commands (`SaladUI.JS.dispatch_command/3`, `SaladUI.LiveView.send_command/4`):
-// `open` with `{anchor, event, values, return_focus}` (selectors for anchor
-// and return_focus), `close` and `toggle`.
+// `open` with `{anchor, event, values, return_focus}` (elements or
+// selectors for anchor and return_focus), `close` and `toggle`. From a
+// shared menu's item, `SaladUI.JS.trigger()` and `SaladUI.JS.context("id")`
+// in those params open it at the row the menu is open for.
 //
 // The dataset (`emoji_picker/data.json`, from Unicode's emoji-test.txt; see
 // generate_data.exs and DATA_LICENSE.txt there) is loaded with a dynamic
@@ -86,6 +88,17 @@ function write(key, value) {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Storage blocked or full: recents are a convenience.
+  }
+}
+
+// An element, or the element a selector names (null when nothing matches).
+function elementFor(target) {
+  if (!target) return null;
+  if (typeof target !== "string") return target.isConnected ? target : null;
+  try {
+    return document.querySelector(target);
+  } catch {
+    return null;
   }
 }
 
@@ -301,10 +314,7 @@ class EmojiPickerComponent extends Component {
     return_focus = null,
   } = {}) {
     if (this.destroyed || !this.anchor) return;
-    const anchorEl =
-      typeof anchor === "string"
-        ? document.querySelector(anchor)
-        : anchor || opener;
+    const anchorEl = anchor ? elementFor(anchor) : opener;
     if (!anchorEl) return;
 
     this.opener = opener;
@@ -331,8 +341,7 @@ class EmojiPickerComponent extends Component {
 
     // The popover's focus trap returns focus to what had it when it opened:
     // make that the opener (or, from a menu, `return_focus`).
-    const back =
-      opener || (return_focus && document.querySelector(return_focus));
+    const back = opener || elementFor(return_focus);
     if (back && document.activeElement !== back) {
       back.focus({ preventScroll: true });
     }
@@ -361,8 +370,7 @@ class EmojiPickerComponent extends Component {
     if (this.destroyed || !this.wasOpen) return;
     this.wasOpen = false;
     const opener = this.opener?.isConnected ? this.opener : null;
-    const back =
-      opener || (this.returnFocus && document.querySelector(this.returnFocus));
+    const back = opener || elementFor(this.returnFocus);
     const pick = this.pending;
     this.pending = null;
 

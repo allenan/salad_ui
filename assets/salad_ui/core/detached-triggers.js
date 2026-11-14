@@ -260,14 +260,31 @@ export function toggleToken(el, name, token, present) {
   else el.removeAttribute(name);
 }
 
+// Trigger attributes a LiveView patch may revert (the instance re-applies
+// them), and those that change what the trigger stands for.
+const STATE_ATTRS = ["data-state", "aria-expanded", "aria-describedby"];
+const TARGET_ATTRS = [
+  FOR_ATTR,
+  CONTEXT_ATTR,
+  "disabled",
+  "aria-disabled",
+  "data-disabled",
+];
+
 /**
  * Watches the trigger an open instance is anchored to. `onRemoved` runs
  * once when it leaves the document (a stream delete or reset, a navigation);
  * `onPatched` runs when a LiveView patch puts its server-rendered
- * `data-state`/`aria-expanded` back, so the caller can re-apply its own.
- * Returns the stop function.
+ * `data-state`/`aria-expanded` back, so the caller can re-apply its own;
+ * `onChanged` runs when its `data-salad-for`, `data-salad-context` or
+ * disabled state (`disabled`, `aria-disabled`, `data-disabled`) changes,
+ * e.g. a patch moved the row to another menu, disabled it, or changed what
+ * it stands for. Returns the stop function.
  */
-export function watchTrigger(trigger, { onRemoved, onPatched } = {}) {
+export function watchTrigger(
+  trigger,
+  { onRemoved, onPatched, onChanged } = {},
+) {
   const view = trigger?.ownerDocument?.defaultView;
   const Observer = view?.MutationObserver;
   if (!Observer || !trigger.ownerDocument.body) return () => {};
@@ -278,7 +295,13 @@ export function watchTrigger(trigger, { onRemoved, onPatched } = {}) {
       onRemoved?.();
       return;
     }
-    if (records.some((record) => record.target === trigger)) onPatched?.();
+    const own = records.filter((record) => record.target === trigger);
+    if (own.length === 0) return;
+
+    onPatched?.();
+    if (own.some((record) => TARGET_ATTRS.includes(record.attributeName))) {
+      onChanged?.();
+    }
   });
   observer.observe(trigger.ownerDocument.body, {
     childList: true,
@@ -286,16 +309,23 @@ export function watchTrigger(trigger, { onRemoved, onPatched } = {}) {
   });
   observer.observe(trigger, {
     attributes: true,
-    attributeFilter: ["data-state", "aria-expanded", "aria-describedby"],
+    attributeFilter: [...STATE_ATTRS, ...TARGET_ATTRS],
   });
   return () => observer.disconnect();
 }
+
+// Element -> what it acts for while its shared instance is open (and until
+// the event that closed it is done): `{trigger, context}`. Read by
+// contextSourceOf() for the JS commands an item runs.
+const sources = new WeakMap();
 
 /**
  * Writes an open instance's context map onto elements as `phx-value-<key>`
  * attributes, so a plain `phx-click` (or a `JS.push` run from that element)
  * receives it: `%{id: 42}` arrives as `%{"id" => "42"}`. Values that are not
- * strings are JSON-encoded. `clear()` puts back what was there before.
+ * strings are JSON-encoded. With a `source` (`{trigger, context}`), the
+ * elements are also registered for contextSourceOf(). `clear()` puts back
+ * what was there before.
  */
 export class ContextValues {
   constructor() {
@@ -303,19 +333,20 @@ export class ContextValues {
     this.written = new Map();
   }
 
-  apply(elements, context) {
+  apply(elements, context, source = null) {
     this.clear();
-    if (!context || typeof context !== "object") return;
+    const hasContext = !!context && typeof context === "object";
+    if (!hasContext && !source) return;
 
     const attributes = [];
-    for (const [key, value] of Object.entries(context)) {
+    for (const [key, value] of Object.entries(hasContext ? context : {})) {
       if (value === null || value === undefined) continue;
       attributes.push([
         `phx-value-${key}`.toLowerCase(),
         typeof value === "string" ? value : JSON.stringify(value),
       ]);
     }
-    if (attributes.length === 0) return;
+    if (attributes.length === 0 && !source) return;
 
     for (const el of elements) {
       if (!el?.setAttribute) continue;
@@ -329,7 +360,8 @@ export class ContextValues {
           saved.delete(name);
         }
       }
-      if (saved.size > 0) this.written.set(el, saved);
+      if (source) sources.set(el, source);
+      if (saved.size > 0 || source) this.written.set(el, saved);
     }
   }
 
@@ -339,6 +371,7 @@ export class ContextValues {
         if (previous === null) el.removeAttribute(name);
         else el.setAttribute(name, previous);
       });
+      sources.delete(el);
     });
     this.written.clear();
   }
@@ -364,7 +397,12 @@ export class ContextValues {
  * - `describedBy()`: an id added to the trigger's `aria-describedby` while
  *   active (a tooltip's content);
  * - `targets()`: the elements that get the `phx-value-*`;
- * - `onRemoved()`: the trigger left the page while active.
+ * - `onRemoved()`: the trigger left the page while active;
+ * - `id()`: the instance's root id, for `onLost`;
+ * - `onLost()`: while active, the trigger stopped naming the instance in
+ *   `data-salad-for`, or became disabled;
+ * - `onContextChange(context)`: while active, the trigger's
+ *   `data-salad-context` changed; the new context is already applied.
  */
 export class DetachedAnchor {
   constructor({
@@ -374,6 +412,9 @@ export class DetachedAnchor {
     describedBy = () => null,
     targets = () => [],
     onRemoved = () => {},
+    id = () => null,
+    onLost = () => {},
+    onContextChange = () => {},
   } = {}) {
     this.options = {
       expanded,
@@ -382,13 +423,20 @@ export class DetachedAnchor {
       describedBy,
       targets,
       onRemoved,
+      id,
+      onLost,
+      onContextChange,
     };
     this.trigger = null;
     this.path = null;
     this.context = null;
+    // What the trigger looked like when set(): its raw context attribute,
+    // whether it named this instance, whether it was disabled.
+    this.seen = null;
     this.values = new ContextValues();
     this.generation = 0;
     this.stopWatching = null;
+    installContextCommands();
   }
 
   /** Point at `trigger` (null: none) with `context`; nothing is applied yet. */
@@ -396,17 +444,67 @@ export class DetachedAnchor {
     this.trigger = trigger || null;
     this.path = trigger ? ancestry(trigger) : null;
     this.context = context ?? null;
+    this.seen = trigger ? this.look(trigger) : null;
+  }
+
+  look(trigger) {
+    const id = this.options.id();
+    return {
+      context: trigger.getAttribute?.(CONTEXT_ATTR) ?? null,
+      named: !!id && isTriggerFor(trigger, id),
+      disabled: isTriggerDisabled(trigger),
+    };
   }
 
   /** Fields to hand to the instance a LiveView patch rebuilds. */
   snapshot() {
-    return { trigger: this.trigger, path: this.path, context: this.context };
+    return {
+      trigger: this.trigger,
+      path: this.path,
+      context: this.context,
+      seen: this.seen,
+    };
   }
 
-  restore({ trigger = null, path = null, context = null } = {}) {
+  restore({ trigger = null, path = null, context = null, seen = null } = {}) {
     this.trigger = trigger;
     this.path = path;
     this.context = context;
+    this.seen = seen || (trigger ? this.look(trigger) : null);
+  }
+
+  /**
+   * Compares the trigger with what it was when set(): "lost" when it no
+   * longer names this instance (it did) or became disabled; "context" when
+   * its `data-salad-context` changed, which then becomes the context (the
+   * values are not re-applied: see activate()); null otherwise.
+   */
+  refresh() {
+    const trigger = this.trigger;
+    if (!trigger || !this.seen) return null;
+
+    const now = this.look(trigger);
+    if (
+      (this.seen.named && !now.named) ||
+      (!this.seen.disabled && now.disabled)
+    ) {
+      return "lost";
+    }
+    if (now.context === this.seen.context) return null;
+
+    this.seen = { ...this.seen, context: now.context };
+    this.context = readContext(trigger);
+    return "context";
+  }
+
+  checkTrigger() {
+    const change = this.refresh();
+    if (change === "lost") {
+      this.options.onLost();
+    } else if (change === "context") {
+      this.applyValues();
+      this.options.onContextChange(this.context);
+    }
   }
 
   sync(open) {
@@ -426,6 +524,7 @@ export class DetachedAnchor {
       ? watchTrigger(this.trigger, {
           onRemoved: () => this.options.onRemoved(),
           onPatched: () => this.sync(true),
+          onChanged: () => this.checkTrigger(),
         })
       : null;
     this.applyValues();
@@ -433,8 +532,11 @@ export class DetachedAnchor {
 
   applyValues() {
     this.generation++;
-    if (this.context) {
-      this.values.apply(this.options.targets(), this.context);
+    if (this.context || this.trigger) {
+      this.values.apply(this.options.targets(), this.context, {
+        trigger: this.trigger,
+        context: this.context,
+      });
     } else {
       this.values.clear();
     }
@@ -475,4 +577,154 @@ export class DetachedAnchor {
     this.sync(false);
     this.clearValues();
   }
+}
+
+// --- the context in JS commands ---------------------------------------------
+//
+// An item of a shared menu acts for the row its menu is open for. A JS
+// command it runs gets that row through two placeholders in the params of
+// `SaladUI.JS.dispatch_command/3` (resolved before the target component sees
+// them) and through `SaladUI.JS.copy/2`:
+//
+//     {"__salad__": "context"}             the context map
+//     {"__salad__": "context", "key": "id"} one of its values
+//     {"__salad__": "trigger"}             the trigger element
+//
+// LiveView's `JS.dispatch` names the element that ran the command in
+// `detail.dispatcher`: an item (or the menu root, for an `on-select` JS
+// command), registered by ContextValues while its menu is open, or a
+// detached trigger itself.
+
+export const MARKER = "__salad__";
+
+/**
+ * What `node` acts for: `{trigger, context}` of the shared instance it is an
+ * item of (while open, or until the event that closed it is done), else of
+ * the detached trigger (an element with `data-salad-context`) it is in;
+ * null otherwise.
+ */
+export function contextSourceOf(node) {
+  const start = elementOf(node);
+  for (let el = start; el; el = el.parentElement) {
+    const source = sources.get(el);
+    if (source) return source;
+  }
+
+  const trigger = start?.closest?.(`[${CONTEXT_ATTR}]`);
+  return trigger ? { trigger, context: readContext(trigger) } : null;
+}
+
+function isMarker(value) {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof value[MARKER] === "string"
+  );
+}
+
+function hasMarker(value) {
+  if (isMarker(value)) return true;
+  if (Array.isArray(value)) return value.some(hasMarker);
+  if (value && typeof value === "object" && value.constructor === Object) {
+    return Object.values(value).some(hasMarker);
+  }
+  return false;
+}
+
+/**
+ * `value` with every placeholder replaced from `source` (contextSourceOf());
+ * a placeholder resolves to null when there is no source or no such key.
+ */
+export function resolveContextParams(value, source) {
+  if (isMarker(value)) {
+    const context = source?.context ?? null;
+    switch (value[MARKER]) {
+      case "context":
+        return value.key === undefined || value.key === null
+          ? context
+          : (context?.[value.key] ?? null);
+      case "trigger":
+        return source?.trigger ?? null;
+      default:
+        return null;
+    }
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveContextParams(entry, source));
+  }
+  if (value && typeof value === "object" && value.constructor === Object) {
+    const resolved = {};
+    for (const [key, entry] of Object.entries(value)) {
+      resolved[key] = resolveContextParams(entry, source);
+    }
+    return resolved;
+  }
+  return value;
+}
+
+// Runs before the target's own listener (capture on the document), so the
+// component sees resolved params.
+function resolveCommand(event) {
+  const detail = event.detail;
+  if (!detail || !hasMarker(detail.params)) return;
+
+  detail.params = resolveContextParams(
+    detail.params,
+    contextSourceOf(detail.dispatcher || null),
+  );
+}
+
+/** The text `SaladUI.JS.copy/2` copies (see copyText()). */
+export function textToCopy(detail = {}, origin = null) {
+  const source = contextSourceOf(detail.dispatcher || origin);
+  const text = resolveContextParams(detail.text, source);
+  if (text !== null && text !== undefined) return String(text);
+
+  // Relative to the row a shared menu item acts for, else to the element
+  // that ran the command.
+  const start = source?.trigger || elementOf(detail.dispatcher || origin);
+  let scope = document;
+  if (detail.within) {
+    scope = start?.closest?.(detail.within);
+    if (!scope) return null;
+  }
+
+  let el = detail.within ? scope : start;
+  if (detail.from) {
+    try {
+      el = scope.querySelector(detail.from);
+    } catch {
+      el = null;
+    }
+  }
+  if (!el) return null;
+
+  const value = el.matches?.("input, textarea")
+    ? el.value
+    : (el.innerText ?? el.textContent);
+  return (value ?? "").trim();
+}
+
+function copyText(event) {
+  const text = textToCopy(event.detail || {}, event.target);
+  const clipboard = globalThis.navigator?.clipboard;
+  if (text === null || !clipboard?.writeText) return;
+
+  clipboard.writeText(text).catch(() => {});
+}
+
+let installedOn = null;
+
+/**
+ * Installs the document listeners that resolve the context placeholders of
+ * `salad_ui:command` events and run `salad_ui:copy` (once per document;
+ * index.js and every shared instance call it).
+ */
+export function installContextCommands() {
+  if (typeof document === "undefined" || installedOn === document) return;
+
+  installedOn = document;
+  document.addEventListener("salad_ui:command", resolveCommand, true);
+  document.addEventListener("salad_ui:copy", copyText);
 }

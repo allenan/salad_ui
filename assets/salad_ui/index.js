@@ -3,6 +3,11 @@ import Component from "./core/component.js";
 import { registry } from "./core/factory.js";
 import { SaladUIHook } from "./core/hook.js";
 import { getDirection } from "./core/direction.js";
+import { installContextCommands } from "./core/detached-triggers.js";
+
+// `SaladUI.JS.copy/2`, and the context placeholders of
+// `SaladUI.JS.dispatch_command/3` run from a shared menu's items.
+installContextCommands();
 
 function register(type, ComponentClass) {
   registry.register(type, ComponentClass);

@@ -116,7 +116,22 @@ defmodule SaladUI.ContextMenu do
   in `SaladUI.DropdownMenu` (see "Shared menus" there): `phx-value-*` on the
   items for `phx-click` and `JS.push/2`, and merged into the payload of
   string event handlers. If the row leaves the page while the menu is open,
-  the menu closes.
+  the menu closes; so it does when a patch points the row at another menu
+  or disables it. A changed `context` while open updates the items instead.
+
+  Items, groups, labels, separators, sub-menus and sub-triggers take
+  `show-when`, `hide-when` and (items) `disabled-when` conditions on the
+  row's context, and items' JS commands reach the row through
+  `SaladUI.JS.trigger/0`, `SaladUI.JS.context/1` and `SaladUI.JS.copy/2`,
+  as in `SaladUI.DropdownMenu` ("Items that depend on the row", "JS commands
+  with the row"):
+
+      <.context_menu_item phx-click="pin" hide-when={%{pinned: true}}>Pin</.context_menu_item>
+      <.context_menu_item phx-click="unpin" show-when={%{pinned: true}}>Unpin</.context_menu_item>
+      <.context_menu_group show-when={%{own: true}}>
+        <.context_menu_separator />
+        <.context_menu_item phx-click="edit">Edit</.context_menu_item>
+      </.context_menu_group>
 
   From the server: `send_command(socket, "msg-context", "open", %{anchor:
   "#messages-42", context: %{id: 42}})` opens it at the row's bottom-left
@@ -278,6 +293,15 @@ defmodule SaladUI.ContextMenu do
 
   @doc "Groups related items (`role=\"group\"`)."
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -294,6 +318,15 @@ defmodule SaladUI.ContextMenu do
   """
   attr :inset, :boolean, default: false
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -322,6 +355,19 @@ defmodule SaladUI.ContextMenu do
   attr :"on-select", :any, default: nil, doc: "Handler for item selection"
   attr :as, :any, default: "div"
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global, include: ~w(href navigate patch method)
   slot :inner_block, required: true
 
@@ -348,6 +394,19 @@ defmodule SaladUI.ContextMenu do
   attr :"on-select", :any, default: nil, doc: "Handler for item activation"
   attr :"on-checked-change", :any, default: nil, doc: "Handler for checked state changes"
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -366,6 +425,15 @@ defmodule SaladUI.ContextMenu do
   attr :value, :string, default: nil, doc: "The selected value"
   attr :"on-value-changed", :any, default: nil, doc: "Handler fired when the selected item changes"
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -388,6 +456,19 @@ defmodule SaladUI.ContextMenu do
   attr :"close-on-select", :boolean, default: true, doc: "Close the menu when the item is picked"
   attr :"on-select", :any, default: nil, doc: "Handler for item activation"
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -402,6 +483,15 @@ defmodule SaladUI.ContextMenu do
   `context_menu_sub_content/1`. Sub-menus can be nested.
   """
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -421,6 +511,19 @@ defmodule SaladUI.ContextMenu do
   attr :inset, :boolean, default: false
   attr :disabled, :boolean, default: false
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"disabled-when", :any,
+    default: nil,
+    doc: "shared menus: disable when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
   slot :inner_block, required: true
 
@@ -464,6 +567,15 @@ defmodule SaladUI.ContextMenu do
 
   @doc "A horizontal rule between groups of items."
   attr :class, :any, default: nil
+
+  attr :"show-when", :any,
+    default: nil,
+    doc: "shared menus: show only when the open menu's context matches this map (see \"Shared menus\")"
+
+  attr :"hide-when", :any,
+    default: nil,
+    doc: "shared menus: hide when the open menu's context matches this map (see \"Shared menus\")"
+
   attr :rest, :global
 
   def context_menu_separator(assigns) do
