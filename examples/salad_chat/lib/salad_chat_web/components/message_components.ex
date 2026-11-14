@@ -73,7 +73,11 @@ defmodule SaladChatWeb.MessageComponents do
       </.marker>
       <%!-- Right click (or long press) opens the page's shared context menu
            (the same actions as the ⋮ menu) for this message. --%>
+      <%!-- Ids on the triggers and the elements around them keep LiveView
+           patching them in place when the row changes (a pin), so a menu
+           open on the row follows it instead of losing its trigger. --%>
       <.context_menu_trigger
+        id={"#{@id}-body"}
         as="div"
         for="msg-context"
         context={menu_context(@message, @mine?, @ctx)}
@@ -623,14 +627,17 @@ defmodule SaladChatWeb.MessageComponents do
     assigns = assign(assigns, :quick, @quick_reactions)
 
     ~H"""
-    <div id={"#{@id}-actions"} class={[
-      "absolute -top-4 right-4 z-10 rounded-lg border bg-background p-0.5 shadow-sm transition-opacity",
-      "pointer-events-none opacity-0 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100",
-      "focus-within:pointer-events-auto focus-within:opacity-100",
-      "has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100",
-      "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:top-1 [@media(hover:none)]:border-0 [@media(hover:none)]:bg-transparent [@media(hover:none)]:opacity-100 [@media(hover:none)]:shadow-none"
-    ]}>
-      <.button_group aria-label="Message actions">
+    <div
+      id={"#{@id}-actions"}
+      class={[
+        "absolute -top-4 right-4 z-10 rounded-lg border bg-background p-0.5 shadow-sm transition-opacity",
+        "pointer-events-none opacity-0 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100",
+        "focus-within:pointer-events-auto focus-within:opacity-100",
+        "has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100",
+        "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:top-1 [@media(hover:none)]:border-0 [@media(hover:none)]:bg-transparent [@media(hover:none)]:opacity-100 [@media(hover:none)]:shadow-none"
+      ]}
+    >
+      <.button_group id={"#{@id}-action-group"} aria-label="Message actions">
         <.button
           :for={e <- @quick}
           variant="ghost"
@@ -657,6 +664,7 @@ defmodule SaladChatWeb.MessageComponents do
           <.icon name="hero-chat-bubble-left-ellipsis" />
         </.button>
         <.dropdown_menu_trigger
+          id={"#{@id}-more"}
           for="msg-more"
           context={menu_context(@message, @mine?, @ctx)}
           as={&button/1}

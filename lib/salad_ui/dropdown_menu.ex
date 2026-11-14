@@ -252,7 +252,12 @@ defmodule SaladUI.DropdownMenu do
   takes focus. When a patch changes the trigger's `context` while the menu is
   open for it (the row was pinned meanwhile), the menu stays open and its
   `phx-value-*` and conditional items (below) follow the new context;
-  `on-open` does not fire again.
+  `on-open` does not fire again. This needs the patch to update the trigger
+  in place: LiveView keys elements by `id` (else by an id it derives from the
+  template), and a re-rendered stream item can get the derived ones anew, so
+  it replaces the trigger and the menu closes as if the row had gone. Give
+  the trigger, and the elements that hold it inside the row, stable ids
+  (`id={"\#{@dom_id}-more"}`).
 
   ### Items that depend on the row
 

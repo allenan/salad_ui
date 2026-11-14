@@ -170,6 +170,10 @@ defmodule SaladChatWeb.ChatLiveTest do
       assert has_element?(view, ~s(#msg-#{mine.id} [data-salad-for="msg-context"]), "mine")
       assert has_element?(view, ~s(#msg-#{mine.id} [data-salad-for="msg-more"]))
       assert has_element?(view, ~s(#msg-#{theirs.id} [data-salad-for="msg-more"]))
+      # Stable ids, so a re-render (a pin) patches the triggers in place and a
+      # menu open on them stays open.
+      assert has_element?(view, ~s(#msg-#{mine.id}-more[data-salad-for="msg-more"]))
+      assert has_element?(view, ~s(#msg-#{mine.id}-body[data-salad-for="msg-context"]))
 
       # One dropdown and one context menu for every row, channel and thread.
       assert length(Regex.scan(~r/id="msg-more"/, html)) == 1

@@ -584,6 +584,8 @@ for status and known gaps. Every new JS-backed component is registered in
     emoji picker's `return_focus` takes an element as well as a selector.
   - The example chat app now renders 1 message dropdown and 1 context menu
     instead of 8 of each, and its "Copy text" listener in `chat.js` is gone.
+    Its row triggers got stable ids: a re-rendered stream row got new
+    LiveView-derived ids, so a pin replaced the ⋮ button and closed its menu.
   Storybook: "Shared menus" example (Pin/Unpin, own-only Edit/Delete,
   Report disabled on your own, Copy text).
 
