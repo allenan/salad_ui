@@ -535,6 +535,23 @@ class MenuSubTrigger extends MenuItemBase {
   handleMouseLeave(event) {
     const rect =
       this.state === "open" ? this.content?.getBoundingClientRect() : null;
+
+    // Left straight into the sub-menu: it overlaps the trigger (no room on
+    // either side, see `overlap` in initializePositionedElement), or a tap's
+    // compatibility mouse events land on one of its items. The pointer is
+    // where it was heading, so keep the sub-menu open.
+    if (
+      rect?.width &&
+      rect?.height &&
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom
+    ) {
+      this.parent.pointerGrace = null;
+      return;
+    }
+
     const toRight = rect && rect.left + rect.width / 2 > event.clientX;
     const lastX = this.lastPointerX;
     const movingAway =

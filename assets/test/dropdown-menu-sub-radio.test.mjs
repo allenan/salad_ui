@@ -693,6 +693,43 @@ test("moving the pointer from an open sub-trigger toward its sub-menu does not c
   component.destroy();
 });
 
+test("leaving a sub-trigger into a sub-menu that overlaps it keeps the sub-menu open", () => {
+  const { component, invite, inviteContent, trigger } = build();
+
+  // A phone: the sub-menu found room on neither side and slid over its
+  // parent, covering the left part of the trigger row (y 40-60).
+  setRect(invite, {
+    top: 40,
+    bottom: 60,
+    left: 90,
+    right: 310,
+    width: 220,
+    height: 20,
+  });
+  setRect(inviteContent, {
+    top: 40,
+    bottom: 140,
+    left: 0,
+    right: 160,
+    width: 160,
+    height: 100,
+  });
+
+  const pointer = (type, el, clientX, clientY) =>
+    el.dispatchEvent(new window.MouseEvent(type, { clientX, clientY }));
+
+  click(trigger);
+  pointer("mouseenter", invite, 200, 50);
+  assert.equal(invite.getAttribute("data-state"), "open");
+
+  // A tap on the sub-menu's first item, left of its centre (x 80): the
+  // compatibility mouse events leave the trigger at the tap point.
+  pointer("mouseleave", invite, 30, 70);
+  assert.equal(invite.getAttribute("data-state"), "open");
+
+  component.destroy();
+});
+
 test("typeahead is scoped to each menu panel: a sub-menu searches only its own items", () => {
   const { component, email, invite, message, more, newTeam, team, trigger } =
     build();
