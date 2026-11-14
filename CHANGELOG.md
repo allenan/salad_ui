@@ -624,6 +624,9 @@ for status and known gaps. Every new JS-backed component is registered in
   slides back inside the window, over the parent, instead of drawing items
   off-screen. Radix leaves it overflowing; this is the new `overlap` option
   of the positioner, set for sub-menus only.
+  Leaving the sub-trigger straight into such a sub-menu (or a tap's
+  compatibility mouse events landing on one of its items) keeps it open, so
+  every item takes a tap.
 
 **Keyboard and ARIA fixes from downstream use**
 - Escape in a `command_dialog` closes the dialog. The command list no longer
