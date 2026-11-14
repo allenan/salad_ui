@@ -41,6 +41,18 @@ defmodule SaladStorybookWeb.ComboboxStoriesTest do
     assert languages(view) == ["Go"]
   end
 
+  test "the component story shows free entry and decorative separators", %{conn: conn} do
+    {:ok, _view, html} = live(conn, "/salad_ui_component/combobox")
+    doc = Floki.parse_document!(html)
+
+    [options] = doc |> Floki.find("#combobox-custom-value") |> Floki.attribute("data-options")
+    assert %{"allowCustomValue" => true, "multiple" => false} = Jason.decode!(options)
+
+    separators = Floki.find(doc, ~s(#combobox-groups [data-slot="combobox-separator"]))
+    assert separators != []
+    assert separators |> Floki.attribute("role") |> Enum.uniq() == ["none"]
+  end
+
   test "popover: picking a status shows it on the trigger", %{conn: conn} do
     view = example(conn, "/examples/combobox_popover")
     assert render(view) =~ "+ Set status"

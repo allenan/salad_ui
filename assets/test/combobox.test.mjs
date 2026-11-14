@@ -89,6 +89,7 @@ function buildCombobox({
   groups = null,
   inForm = false,
   usePortal = false,
+  allowCustomValue = false,
   open,
 } = {}) {
   const options = {
@@ -99,6 +100,7 @@ function buildCombobox({
     filter,
     disabled,
     usePortal,
+    allowCustomValue,
     ...(open === undefined ? {} : { open }),
   };
 
@@ -357,6 +359,79 @@ test("closing without picking restores the selected label", async () => {
   keydown(c.input, "Escape");
   await waitFor(() => isClosed(c));
   assert.equal(c.input.value, "Remix");
+});
+
+test("allow-custom-value: typed text that matches no item becomes the value", async () => {
+  const c = buildCombobox({ value: "Remix", allowCustomValue: true });
+  const changes = () =>
+    c.pushed.filter((p) => p.event === "changed").map((p) => p.payload.value);
+
+  // Enter with nothing highlighted takes the text, without submitting.
+  type(c.input, "Qwik");
+  assert.deepEqual(c.visibleValues(), []);
+  const enter = keydown(c.input, "Enter");
+  assert.equal(enter.defaultPrevented, true);
+  await waitFor(() => isClosed(c));
+  assert.equal(c.input.value, "Qwik");
+  assert.equal(c.component.getValue(), "Qwik");
+  assert.deepEqual(c.hiddenValues(), [["framework", "Qwik"]]);
+  assert.deepEqual(changes(), ["Qwik"]);
+
+  // Escape (any close without a pick) keeps it too; the same text again is
+  // no change.
+  type(c.input, " Solid  ");
+  keydown(c.input, "Escape");
+  await waitFor(() => isClosed(c));
+  assert.equal(c.input.value, "Solid");
+  type(c.input, "Solid");
+  keydown(c.input, "Escape");
+  await waitFor(() => isClosed(c));
+  assert.deepEqual(changes(), ["Qwik", "Solid"]);
+
+  // Text naming an item selects it, by value; empty text clears.
+  type(c.input, "astro");
+  keydown(c.input, "Escape");
+  await waitFor(() => isClosed(c));
+  assert.equal(c.component.getValue(), "Astro");
+  assert.equal(c.input.value, "Astro");
+  type(c.input, "");
+  keydown(c.input, "Escape");
+  await waitFor(() => isClosed(c));
+  assert.equal(c.component.getValue(), null);
+  assert.deepEqual(c.hiddenValues(), []);
+  assert.deepEqual(changes(), ["Qwik", "Solid", "Astro", null]);
+});
+
+test("allow-custom-value: picking an item still picks it, not the query", async () => {
+  const c = buildCombobox({ allowCustomValue: true });
+
+  type(c.input, "rem");
+  keydown(c.input, "ArrowDown");
+  keydown(c.input, "Enter");
+  await waitFor(() => isClosed(c));
+  assert.equal(c.component.getValue(), "Remix");
+  assert.equal(c.input.value, "Remix");
+
+  type(c.input, "nu");
+  click(c.item("Nuxt.js"));
+  await waitFor(() => isClosed(c));
+  assert.equal(c.component.getValue(), "Nuxt.js");
+  assert.equal(c.input.value, "Nuxt.js");
+});
+
+test("allow-custom-value is ignored by a multiple combobox", async () => {
+  const c = buildCombobox({
+    mode: "chips",
+    multiple: true,
+    allowCustomValue: true,
+  });
+
+  type(c.input, "Qwik");
+  keydown(c.input, "Enter");
+  assert.equal(isOpen(c), true);
+  keydown(c.input, "Escape");
+  await waitFor(() => isClosed(c));
+  assert.deepEqual(c.component.getValue(), []);
 });
 
 test("auto-highlight highlights the first match while typing", () => {

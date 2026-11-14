@@ -351,6 +351,34 @@ defmodule SaladUI.ComboboxTest do
     assert duplicated == []
   end
 
+  test "the separator is decorative inside the listbox (axe aria-required-children)" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.combobox id="c">
+        <.combobox_input />
+        <.combobox_content>
+          <.combobox_list>
+            <.combobox_item value="a">A</.combobox_item>
+            <.combobox_separator class="my-2" />
+            <.combobox_item value="b">B</.combobox_item>
+          </.combobox_list>
+        </.combobox_content>
+      </.combobox>
+      """)
+
+    [separator] = Regex.run(~r/<div[^>]*data-slot="combobox-separator"[^>]*>/, html)
+    assert separator =~ ~s(role="none")
+    refute separator =~ ~s(role="separator")
+    assert separator =~ "h-px bg-border"
+
+    # Outside a list it can still be a separator, with one role attribute.
+    html = rendered_to_string(~H|<.combobox_separator role="separator" />|)
+    assert [_] = Regex.scan(~r/\srole=/, html)
+    assert html =~ ~s(role="separator")
+  end
+
   describe "open" do
     test "open is passed to the JS in data-options" do
       assigns = %{}
@@ -367,5 +395,19 @@ defmodule SaladUI.ComboboxTest do
 
       assert html =~ ~s(&quot;open&quot;:true)
     end
+  end
+
+  test "allow-custom-value is passed to the JS in data-options, off by default" do
+    assigns = %{}
+
+    on =
+      rendered_to_string(~H"""
+      <.combobox id="c" allow-custom-value><.combobox_input /></.combobox>
+      """)
+
+    off = rendered_to_string(~H|<.combobox id="c"><.combobox_input /></.combobox>|)
+
+    assert on =~ ~s(&quot;allowCustomValue&quot;:true)
+    assert off =~ ~s(&quot;allowCustomValue&quot;:false)
   end
 end

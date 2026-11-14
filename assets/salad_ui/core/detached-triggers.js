@@ -217,6 +217,95 @@ export function focusFallback(path = []) {
 }
 
 /**
+ * The element that took a removed detached trigger's place, when a LiveView
+ * patch rebuilt it rather than patching it in place (an element around it
+ * in the row has no stable id, so LiveView replaced that element with
+ * everything in it). It is the trigger for instance `id` that now has the
+ * removed one's `id`; else, inside the nearest element of `path` (see
+ * ancestry()) still in the page that has an id (the row), the only trigger
+ * for `id`, or the only one with the same `data-salad-context`. Disabled
+ * triggers do not count. Null when there is no such element, or more than
+ * one.
+ */
+export function findReplacement(trigger, path, id) {
+  if (!trigger || trigger.isConnected || !id) return null;
+  const doc = trigger.ownerDocument;
+  const usable = (el) =>
+    !!el && el !== trigger && isTriggerFor(el, id) && !isTriggerDisabled(el);
+
+  if (trigger.id) {
+    const el = doc.getElementById(trigger.id);
+    if (usable(el)) return el;
+  }
+
+  const scope = (path || []).find(
+    (node) =>
+      node !== trigger &&
+      node.isConnected &&
+      node.id &&
+      node !== doc.body &&
+      node !== doc.documentElement,
+  );
+  if (!scope) return null;
+
+  let candidates = triggersFor(id, scope).filter(usable);
+  if (candidates.length > 1) {
+    const context = trigger.getAttribute(CONTEXT_ATTR);
+    candidates = candidates.filter(
+      (el) => el.getAttribute(CONTEXT_ATTR) === context,
+    );
+  }
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+/**
+ * Keeps focus on the detached trigger `el` (for instance `id`), which an
+ * instance just returned focus to, through the LiveView patch that follows:
+ * e.g. the reply to the item that closed the menu re-renders the row. A
+ * patch that moves the focused trigger (morphdom re-inserts a keyed element
+ * whose siblings changed) or rebuilds it drops focus to the page; then the
+ * trigger, or its replacement (findReplacement()), is focused again. Stops
+ * at the first pointer or key press, once focus has moved elsewhere, after
+ * one repair, or after `timeout` ms. Returns the stop function.
+ */
+export function keepFocusOnReplacement(el, id, { timeout = 5000 } = {}) {
+  const doc = el?.ownerDocument;
+  const Observer = doc?.defaultView?.MutationObserver;
+  if (!Observer || !doc.body || !id || !isTriggerFor(el, id)) return () => {};
+  if (doc.activeElement !== el) return () => {};
+
+  const path = ancestry(el);
+  let timer = null;
+  const observer = new Observer(() => {
+    const active = doc.activeElement;
+    if (el.isConnected && active === el) return;
+
+    stop();
+    // Focus went somewhere on purpose.
+    if (active && active !== doc.body && active !== doc.documentElement) {
+      return;
+    }
+    const target = el.isConnected ? el : findReplacement(el, path, id);
+    target?.focus({ preventScroll: true });
+  });
+  // The user acting (a click on nothing focusable also leaves focus on the
+  // page) ends the guard: focus is theirs to move.
+  const onInput = () => stop();
+  function stop() {
+    observer.disconnect();
+    clearTimeout(timer);
+    doc.removeEventListener("pointerdown", onInput, true);
+    doc.removeEventListener("keydown", onInput, true);
+  }
+
+  observer.observe(doc.body, { childList: true, subtree: true });
+  doc.addEventListener("pointerdown", onInput, true);
+  doc.addEventListener("keydown", onInput, true);
+  timer = setTimeout(stop, timeout);
+  return stop;
+}
+
+/**
  * Mirrors an instance's open state onto the detached trigger it is anchored
  * to: `data-state` (so a row can style itself with
  * `group-has-[[data-state=open]]`), and with `expanded`, `aria-expanded`
@@ -402,7 +491,11 @@ export class ContextValues {
  * - `onLost()`: while active, the trigger stopped naming the instance in
  *   `data-salad-for`, or became disabled;
  * - `onContextChange(context)`: while active, the trigger's
- *   `data-salad-context` changed; the new context is already applied.
+ *   `data-salad-context` changed; the new context is already applied;
+ * - `onReplaced(next, previous)`: opts in to following a trigger that a
+ *   patch rebuilt (see findReplacement()) instead of `onRemoved`. The anchor
+ *   has already moved to `next`; the instance repoints what it keeps
+ *   (positioning reference, focus return).
  */
 export class DetachedAnchor {
   constructor({
@@ -415,6 +508,7 @@ export class DetachedAnchor {
     id = () => null,
     onLost = () => {},
     onContextChange = () => {},
+    onReplaced = null,
   } = {}) {
     this.options = {
       expanded,
@@ -426,6 +520,7 @@ export class DetachedAnchor {
       id,
       onLost,
       onContextChange,
+      onReplaced,
     };
     this.trigger = null;
     this.path = null;
@@ -445,6 +540,16 @@ export class DetachedAnchor {
     this.path = trigger ? ancestry(trigger) : null;
     this.context = context ?? null;
     this.seen = trigger ? this.look(trigger) : null;
+  }
+
+  /**
+   * Point at `next`, a rebuilt copy of the trigger (findReplacement()),
+   * keeping the context and what the trigger looked like, so refresh()
+   * picks up what the rebuild changed.
+   */
+  follow(next) {
+    this.trigger = next;
+    this.path = ancestry(next);
   }
 
   look(trigger) {
@@ -522,12 +627,31 @@ export class DetachedAnchor {
     this.stopWatching?.();
     this.stopWatching = this.trigger
       ? watchTrigger(this.trigger, {
-          onRemoved: () => this.options.onRemoved(),
+          onRemoved: () => this.handleRemoved(),
           onPatched: () => this.sync(true),
           onChanged: () => this.checkTrigger(),
         })
       : null;
     this.applyValues();
+  }
+
+  // The trigger left the page: follow its replacement when the instance
+  // opted in and a patch rebuilt it, else report it gone.
+  handleRemoved() {
+    const previous = this.trigger;
+    const next = this.options.onReplaced
+      ? findReplacement(previous, this.path, this.options.id())
+      : null;
+    if (!next) {
+      this.options.onRemoved();
+      return;
+    }
+
+    this.follow(next);
+    this.activate();
+    this.options.onReplaced(next, previous);
+    // The rebuilt trigger may stand for something else now (a pin).
+    this.checkTrigger();
   }
 
   applyValues() {
@@ -633,6 +757,27 @@ function hasMarker(value) {
 }
 
 /**
+ * The element a `{"__salad__": "trigger", "selector": ...}` placeholder
+ * names: the trigger itself when it matches `selector`, else the first
+ * element inside it that does, else the trigger (also when `selector` is
+ * missing or invalid). From a context menu the trigger is the whole row,
+ * which takes no focus; a selector picks the row's button to anchor at and
+ * return focus to.
+ */
+export function triggerPart(trigger, selector) {
+  if (!trigger || typeof selector !== "string" || selector === "") {
+    return trigger;
+  }
+
+  try {
+    if (trigger.matches(selector)) return trigger;
+    return trigger.querySelector(selector) || trigger;
+  } catch {
+    return trigger;
+  }
+}
+
+/**
  * `value` with every placeholder replaced from `source` (contextSourceOf());
  * a placeholder resolves to null when there is no source or no such key.
  */
@@ -645,7 +790,7 @@ export function resolveContextParams(value, source) {
           ? context
           : (context?.[value.key] ?? null);
       case "trigger":
-        return source?.trigger ?? null;
+        return triggerPart(source?.trigger ?? null, value.selector);
       default:
         return null;
     }
@@ -700,18 +845,99 @@ export function textToCopy(detail = {}, origin = null) {
   }
   if (!el) return null;
 
+  // An attribute holds the text as is (e.g. a message's source, which
+  // innerText would mangle: code spans, file cards).
+  if (typeof detail.attr === "string" && detail.attr !== "") {
+    return el.getAttribute(detail.attr);
+  }
+
   const value = el.matches?.("input, textarea")
     ? el.value
     : (el.innerText ?? el.textContent);
   return (value ?? "").trim();
 }
 
-function copyText(event) {
-  const text = textToCopy(event.detail || {}, event.target);
-  const clipboard = globalThis.navigator?.clipboard;
-  if (text === null || !clipboard?.writeText) return;
+// The LiveSocket the SaladUI hook runs in (recorded on mount), for the JS a
+// command runs outside any component: `SaladUI.JS.copy/2`'s `on_copied`.
+let liveSocketRef = null;
 
-  clipboard.writeText(text).catch(() => {});
+/** Records the page's LiveSocket (hook.js does, on every mount). */
+export function rememberLiveSocket(liveSocket) {
+  if (liveSocket?.execJS) liveSocketRef = liveSocket;
+}
+
+function currentLiveSocket() {
+  return liveSocketRef || globalThis.window?.liveSocket || null;
+}
+
+const inLiveView = (node) => !!node?.closest?.("[data-phx-session]");
+
+// Runs encoded JS ops (an `on_copied` command) from `el`, or from the row a
+// shared menu item acts for when the menu was portaled out of the LiveView.
+function runJS(el, ops, source) {
+  const liveSocket = currentLiveSocket();
+  if (!ops || !el || !liveSocket?.execJS) return;
+
+  const target =
+    !inLiveView(el) && inLiveView(source?.trigger) ? source.trigger : el;
+  try {
+    liveSocket.execJS(
+      target,
+      typeof ops === "string" ? ops : JSON.stringify(ops),
+    );
+  } catch (error) {
+    console.error("SaladUI: copy on_copied failed:", error);
+  }
+}
+
+function emit(el, type, detail) {
+  const View = el?.ownerDocument?.defaultView;
+  if (!View) return;
+  el.dispatchEvent(new View.CustomEvent(type, { bubbles: true, detail }));
+}
+
+/**
+ * Handles `salad_ui:copy`: writes textToCopy() to the clipboard, then
+ * dispatches a bubbling `salad_ui:copied` (detail: `{text}`) from the
+ * element that ran the command and runs its `on_copied` JS; or dispatches
+ * `salad_ui:copy-failed` (detail: `{text, error}`) when there is nothing to
+ * copy, no clipboard, or the browser refused. Resolves to whether it copied.
+ */
+export function copyText(event) {
+  const detail = event.detail || {};
+  const origin = detail.dispatcher || event.target;
+  const el = elementOf(origin);
+  const source = contextSourceOf(origin);
+  const text = textToCopy(detail, origin);
+  const clipboard = globalThis.navigator?.clipboard;
+
+  const fail = (error) => {
+    emit(el, "salad_ui:copy-failed", { text, error: String(error) });
+    return false;
+  };
+  if (text === null || text === undefined) {
+    return Promise.resolve(fail("nothing to copy"));
+  }
+  if (!clipboard?.writeText) {
+    return Promise.resolve(fail("clipboard unavailable"));
+  }
+
+  // Called synchronously: Safari only lets the clipboard be written while
+  // the click that ran the command is being handled.
+  let write;
+  try {
+    write = Promise.resolve(clipboard.writeText(text));
+  } catch (error) {
+    write = Promise.reject(error);
+  }
+  return write.then(
+    () => {
+      emit(el, "salad_ui:copied", { text });
+      runJS(el, detail.on_copied, source);
+      return true;
+    },
+    (error) => fail(error?.message || error),
+  );
 }
 
 let installedOn = null;

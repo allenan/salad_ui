@@ -14,6 +14,8 @@ import {
 } from "../salad_ui/core/context-conditions.js";
 import {
   contextSourceOf,
+  copyText,
+  rememberLiveSocket,
   resolveContextParams,
   textToCopy,
 } from "../salad_ui/core/detached-triggers.js";
@@ -265,6 +267,58 @@ test("applyContextConditions() hides, disables, tidies and undoes its own work o
   // Server-rendered state is left alone.
   assert.equal($("d").hidden, true);
   assert.equal($("e").hasAttribute("data-disabled"), true);
+
+  // Each pass writes only what changes: the same context again writes
+  // nothing (so opening the menu for a row like the last one restyles
+  // nothing), and another context writes only the parts that change.
+  applyContextConditions(root, { own: false });
+  const mutations = [];
+  const observer = new window.MutationObserver((records) =>
+    mutations.push(...records),
+  );
+  observer.observe(root, { attributes: true, subtree: true });
+  const flushRecords = () => mutations.push(...observer.takeRecords());
+
+  applyContextConditions(root, { own: false });
+  flushRecords();
+  assert.deepEqual(mutations, []);
+
+  applyContextConditions(root, { own: true });
+  flushRecords();
+  const changed = new Set(mutations.map((record) => record.target.id || "l"));
+  assert.deepEqual([...changed].sort(), [
+    "a",
+    "b",
+    "c",
+    "g",
+    "l",
+    "s1",
+    "s2",
+    "s3",
+  ]);
+  observer.disconnect();
+});
+
+test("applyContextConditions() re-applies what a patch reverted", () => {
+  document.body.innerHTML = `
+    <div id="root"><div data-part="content">
+      <div data-part="item" id="a" data-show-when='{"own":true}'>A</div>
+      <div data-part="item" id="b" data-disabled-when='{"own":false}'>B</div>
+    </div></div>`;
+  const root = document.getElementById("root");
+  const $ = (id) => document.getElementById(id);
+
+  applyContextConditions(root, { own: false });
+  // A patch put the server's markup back on A but not its mark, and dropped
+  // B's disabled attributes but not its mark.
+  $("a").hidden = false;
+  $("b").removeAttribute("data-disabled");
+  $("b").removeAttribute("aria-disabled");
+
+  applyContextConditions(root, { own: false });
+  assert.equal($("a").hidden, true);
+  assert.equal($("b").getAttribute("data-disabled"), "true");
+  assert.equal($("b").getAttribute("aria-disabled"), "true");
 });
 
 test("applyContextConditions() leaves a menu without conditions untouched", () => {
@@ -620,4 +674,261 @@ test("SaladUI.JS.copy copies the row's text relative to the menu's trigger", asy
   document.body.append(note);
   assert.equal(textToCopy({}, note), "outside");
   assert.equal(textToCopy({ from: "#nope" }, $("#more-1")), null);
+});
+
+test("a trigger placeholder with a selector resolves to that element of the trigger", () => {
+  const { $, item } = build();
+  const source = (el) => contextSourceOf(el);
+  const placeholder = (selector) => ({ __salad__: "trigger", selector });
+
+  // From the context menu the trigger is the row: the selector picks its ⋮.
+  contextmenu($("#row-2"), 20, 110);
+  const remind = item("ctx", "remind");
+  assert.equal(
+    resolveContextParams(
+      placeholder("[data-salad-for~='more']"),
+      source(remind),
+    ),
+    $("#more-2"),
+  );
+  // The trigger itself when it matches; the trigger when nothing does or
+  // the selector is invalid.
+  assert.equal(
+    resolveContextParams(placeholder("[data-row]"), source(remind)),
+    $("#row-2"),
+  );
+  assert.equal(
+    resolveContextParams(placeholder(".nope"), source(remind)),
+    $("#row-2"),
+  );
+  assert.equal(
+    resolveContextParams(placeholder("[["), source(remind)),
+    $("#row-2"),
+  );
+  // From the dropdown on the ⋮ button, the same placeholder is the button.
+  click(remind);
+  click($("#more-2"));
+  assert.equal(
+    resolveContextParams(
+      placeholder("[data-salad-for~='more']"),
+      source(item("more", "remind")),
+    ),
+    $("#more-2"),
+  );
+  // No source: null.
+  assert.equal(resolveContextParams(placeholder("button"), null), null);
+});
+
+test("SaladUI.JS.copy copies an attribute, then reports copied or failed", async () => {
+  const { $, item } = build();
+  $("#row-1 [data-text]").setAttribute("data-source", "Message `1`\n");
+  const written = [];
+  let refuse = false;
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    value: {
+      writeText: async (text) => {
+        if (refuse) throw new Error("denied");
+        written.push(text);
+      },
+    },
+    configurable: true,
+  });
+  const executed = [];
+  rememberLiveSocket({ execJS: (el, ops) => executed.push({ el, ops }) });
+  cleanups.push(() => {
+    delete globalThis.navigator.clipboard;
+    rememberLiveSocket({ execJS: () => {} });
+  });
+  const events = [];
+  const record = (event) => events.push([event.type, event.detail]);
+  document.addEventListener("salad_ui:copied", record);
+  document.addEventListener("salad_ui:copy-failed", record);
+  cleanups.push(() => {
+    document.removeEventListener("salad_ui:copied", record);
+    document.removeEventListener("salad_ui:copy-failed", record);
+  });
+
+  click($("#more-1"));
+  const remind = item("more", "remind");
+  const onCopied = [["push", { event: "copied" }]];
+  const copy = (detail) =>
+    copyText(
+      new window.CustomEvent("salad_ui:copy", {
+        detail: { dispatcher: remind, ...detail },
+      }),
+    );
+
+  assert.equal(
+    await copy({
+      within: "[data-row]",
+      from: "[data-text]",
+      attr: "data-source",
+      on_copied: onCopied,
+    }),
+    true,
+  );
+  // As is: not trimmed, not rendered.
+  assert.deepEqual(written, ["Message `1`\n"]);
+  assert.deepEqual(events, [["salad_ui:copied", { text: "Message `1`\n" }]]);
+  assert.equal(executed.length, 1);
+  assert.equal(executed[0].el, remind);
+  assert.deepEqual(JSON.parse(executed[0].ops), onCopied);
+
+  // A missing attribute is nothing to copy; a refused write fails too, and
+  // neither runs on_copied.
+  events.length = 0;
+  assert.equal(
+    await copy({ within: "[data-row]", from: "[data-text]", attr: "data-x" }),
+    false,
+  );
+  refuse = true;
+  assert.equal(await copy({ text: "x", on_copied: onCopied }), false);
+  assert.deepEqual(events, [
+    ["salad_ui:copy-failed", { text: null, error: "nothing to copy" }],
+    ["salad_ui:copy-failed", { text: "x", error: "denied" }],
+  ]);
+  assert.equal(executed.length, 1);
+});
+
+// --- a patch that rebuilds the trigger ---------------------------------------
+
+// What LiveView does to an element with no stable id around the trigger:
+// it replaces it, and the trigger with it, by a fresh copy.
+function rebuild(el, change = () => {}) {
+  const copy = el.cloneNode(true);
+  change(copy);
+  el.replaceWith(copy);
+  return copy;
+}
+
+test("an open dropdown follows a trigger a patch rebuilt, and returns focus to it", async () => {
+  const { $, more, item } = build();
+  click($("#more-2"));
+  assert.equal(more.state, "open");
+
+  const fresh = rebuild($("#more-2"), (copy) => {
+    // The server's markup: closed, and the row was unpinned meanwhile.
+    copy.setAttribute("data-state", "closed");
+    copy.setAttribute("aria-expanded", "false");
+    copy.setAttribute(
+      "data-salad-context",
+      JSON.stringify({ ...ROWS[1], pinned: false }),
+    );
+  });
+  await flush();
+
+  assert.equal(more.state, "open");
+  assert.equal(more.activeTrigger, fresh);
+  assert.equal(fresh.getAttribute("data-state"), "open");
+  assert.equal(fresh.getAttribute("aria-expanded"), "true");
+  // The new context applies: Pin instead of Unpin.
+  assert.equal(item("more", "pin").hidden, false);
+  assert.equal(item("more", "unpin").hidden, true);
+  assert.equal(item("more", "pin").getAttribute("phx-value-pinned"), "false");
+
+  keydown(document.activeElement, "Escape");
+  assert.equal(more.state, "closed");
+  assert.equal(document.activeElement, fresh);
+});
+
+test("a rebuilt trigger with no id is found as the row's only trigger for the menu", async () => {
+  const { $, more } = build();
+  $("#more-1").removeAttribute("id");
+  click($("#row-1 [data-salad-for='more']"));
+  assert.equal(more.state, "open");
+
+  const fresh = rebuild($("#row-1 [data-salad-for='more']"));
+  await flush();
+  assert.equal(more.activeTrigger, fresh);
+  assert.equal(more.state, "open");
+});
+
+test("an open dropdown closes when its row is gone or its rebuilt trigger is ambiguous", async () => {
+  const { $, more } = build();
+  click($("#more-3"));
+  // Two triggers for the menu in the row, neither with the old context.
+  const old = $("#more-3");
+  old.removeAttribute("id");
+  const other = old.cloneNode(true);
+  other.setAttribute("data-salad-context", '{"id":99}');
+  const fresh = old.cloneNode(true);
+  fresh.setAttribute("data-salad-context", '{"id":98}');
+  old.replaceWith(fresh, other);
+  await flush();
+  assert.equal(more.state, "closed");
+
+  click($("#more-1"));
+  $("#row-1").remove();
+  await flush();
+  assert.equal(more.state, "closed");
+});
+
+test("focus returned to a trigger survives the patch that then rebuilds it", async () => {
+  const { $, more, item } = build();
+  click($("#more-2"));
+  click(item("more", "unpin"));
+  assert.equal(more.state, "closed");
+  assert.equal(document.activeElement, $("#more-2"));
+
+  // The reply to Unpin re-renders the row without a stable id around the
+  // trigger.
+  const fresh = rebuild($("#more-2"));
+  await flush();
+  assert.equal(document.activeElement, fresh);
+
+  // Once focus has moved on, a later rebuild leaves it alone.
+  $("#list").focus();
+  rebuild(fresh);
+  await flush();
+  assert.equal(document.activeElement, $("#list"));
+});
+
+test("an open context menu follows its rebuilt row; focus survives a rebuild after close", async () => {
+  const { $, ctx, item } = build();
+  $("#row-1").setAttribute("tabindex", "-1");
+  $("#row-1").focus();
+  contextmenu($("#row-1"), 20, 60);
+  assert.equal(ctx.state, "open");
+
+  const fresh = rebuild($("#row-1"));
+  await flush();
+  assert.equal(ctx.state, "open");
+  assert.equal(ctx.activeTrigger, fresh);
+  assert.equal(fresh.getAttribute("data-state"), "open");
+
+  click(item("ctx", "pin"));
+  assert.equal(ctx.state, "closed");
+  assert.equal(document.activeElement, fresh);
+  const again = rebuild(fresh);
+  await flush();
+  assert.equal(document.activeElement, again);
+});
+
+test("focus returned to a trigger a patch then moves is put back; user input ends the guard", async () => {
+  const { $, item } = build();
+  click($("#more-1"));
+  click(item("more", "pin"));
+  const button = $("#more-1");
+  assert.equal(document.activeElement, button);
+
+  // morphdom re-inserting the keyed trigger (its siblings changed): the
+  // same node, but moving it dropped focus.
+  const row = $("#row-1");
+  row.insertBefore(button, row.firstChild);
+  if (document.activeElement === button) button.blur();
+  await flush();
+  assert.equal(document.activeElement, button);
+
+  // Next time, a click elsewhere (on nothing focusable) comes first: the
+  // guard stops and leaves focus where the user put it.
+  click($("#more-1"));
+  click(item("more", "pin"));
+  assert.equal(document.activeElement, button);
+  document.body.dispatchEvent(
+    new window.PointerEvent("pointerdown", { bubbles: true }),
+  );
+  button.blur();
+  row.append(button);
+  await flush();
+  assert.equal(document.activeElement, document.body);
 });

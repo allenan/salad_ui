@@ -276,16 +276,34 @@ defmodule SaladChatWeb.ChatLiveTest do
     test "copy and more reactions are JS commands that reach the row with no app JS", %{
       conn: conn
     } do
-      {:ok, _message} = Chat.create_message("leo", "random", "copy me")
+      {:ok, message} = Chat.create_message("leo", "random", "copy `me`")
       {:ok, view, _} = live(conn, ~p"/as/maya/c/random")
 
       copy = view |> element("#msg-more [data-part=item]", "Copy text") |> render()
       assert copy =~ "salad_ui:copy"
       assert copy =~ "[data-message-text]"
+      # The message's source, not its rendered text, and a toast once copied.
+      assert copy =~ "data-source"
+      assert copy =~ "copied"
+
+      assert has_element?(
+               view,
+               ~s(#msg-#{message.id} [data-message-text][data-source="copy `me`"])
+             )
+
+      render_click(view, "copied", %{})
+
+      assert_push_event(view, "saladui:command", %{
+        command: "add",
+        target: "toaster",
+        params: %{title: "Copied"}
+      })
 
       more = view |> element("#msg-context [data-part=item]", "More reactions…") |> render()
       assert more =~ "#emoji-picker"
       assert more =~ "__salad__"
+      # From the right-click menu it anchors at the row's ⋮ button, not the row.
+      assert more =~ "data-salad-for~=&#39;msg-more&#39;"
     end
 
     test "author names open the author's shared hover card", %{conn: conn} do

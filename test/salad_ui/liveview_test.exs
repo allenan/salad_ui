@@ -56,5 +56,29 @@ defmodule SaladUI.LiveViewTest do
 
       assert %JS{ops: [["push", _], ["dispatch", %{detail: %{text: %{"__salad__" => "context"}}}]]} = js
     end
+
+    test "takes an attribute to copy and a command to run once copied" do
+      assert %JS{ops: [["dispatch", %{detail: detail}]]} =
+               SaladUI.JS.copy(from: "[data-message-text]", attr: "data-source", on_copied: "copied")
+
+      assert detail.attr == "data-source"
+      assert detail.on_copied == JS.push("copied").ops
+
+      toast = JS.dispatch("app:toast", detail: %{text: "Copied"})
+      assert %JS{ops: [["dispatch", %{detail: %{on_copied: ops}}]]} = SaladUI.JS.copy(text: "x", on_copied: toast)
+      assert ops == toast.ops
+
+      # The nested command survives the JSON a phx-click carries.
+      [["dispatch", decoded]] =
+        [text: "x", on_copied: "copied"] |> SaladUI.JS.copy() |> Jason.encode!() |> Jason.decode!()
+
+      assert [["push", %{"event" => "copied"}]] = decoded["detail"]["on_copied"]
+    end
+  end
+
+  describe "SaladUI.JS.trigger/1" do
+    test "carries a selector resolved against the trigger" do
+      assert SaladUI.JS.trigger("[data-more]") == %{"__salad__" => "trigger", "selector" => "[data-more]"}
+    end
   end
 end

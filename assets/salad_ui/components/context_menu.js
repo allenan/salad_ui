@@ -13,8 +13,10 @@ import {
   CONTEXT_TARGETS,
   DetachedAnchor,
   closestTrigger,
+  findReplacement,
   focusFallback,
   isTriggerDisabled,
+  keepFocusOnReplacement,
   listen,
   readContext,
   resolveAnchor,
@@ -74,6 +76,11 @@ class ContextMenuComponent extends Component {
         if (this.state !== "open" || this.destroyed) return;
         this.applyConditions();
         this.position();
+      },
+      // A patch rebuilt the trigger (an element around it had no stable
+      // id): stay open for the new one, and return focus there.
+      onReplaced: (next, previous) => {
+        if (this.previousFocusEl === previous) this.previousFocusEl = next;
       },
     });
 
@@ -397,7 +404,11 @@ class ContextMenuComponent extends Component {
 
     if (target?.isConnected) {
       target.focus();
-      if (document.activeElement === target) return;
+      if (document.activeElement === target) {
+        // The reply to the item that closed the menu may rebuild the row.
+        keepFocusOnReplacement(target, this.el.id);
+        return;
+      }
     } else if (!anchorRemoved && !anchorLost) {
       return;
     }
@@ -603,7 +614,17 @@ class ContextMenuComponent extends Component {
 
     this.point = saved.point || null;
     this.detached.restore(saved.detached);
-    // The patch that rebuilt the menu also removed its trigger.
+    // The patch that rebuilt the menu also rebuilt its trigger: follow it.
+    const stale = this.activeTrigger;
+    const next =
+      stale && !stale.isConnected
+        ? findReplacement(stale, this.detached.path, this.el.id)
+        : null;
+    if (next) {
+      this.detached.follow(next);
+      if (saved.previousFocusEl === stale) saved.previousFocusEl = next;
+    }
+    // ... or removed it.
     if (this.activeTrigger && !this.activeTrigger.isConnected) {
       this.previousFocusEl = saved.previousFocusEl;
       this.transition("close", { anchorRemoved: true });

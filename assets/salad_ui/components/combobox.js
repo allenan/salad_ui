@@ -82,6 +82,9 @@ class ComboboxComponent extends Component {
     this.autoHighlight = !!this.options.autoHighlight;
     this.usePortal = this.options.usePortal === true;
     this.portalContainer = this.options.portalContainer || null;
+    // Free entry (`allow-custom-value`): a single combobox keeps text that
+    // matches no item as its value instead of reverting to the selection.
+    this.allowCustomValue = !!this.options.allowCustomValue && !this.multiple;
   }
 
   normalizeValue(value) {
@@ -483,8 +486,14 @@ class ComboboxComponent extends Component {
         break;
       }
       case "Enter": {
-        if (event.isComposing) return;
-        if (!open || this.highlighted === null) return;
+        if (event.isComposing || !open) return;
+        if (this.highlighted === null) {
+          // Free entry: Enter takes the typed text (onOpenExit()).
+          if (!this.allowCustomValue || !this.mainInput()) return;
+          event.preventDefault();
+          this.close();
+          return;
+        }
         event.preventDefault();
         this.selectValue(this.highlighted);
         break;
@@ -665,7 +674,9 @@ class ComboboxComponent extends Component {
     this.pendingHighlight = null;
 
     const main = this.mainInput();
-    if (main) {
+    if (main && this.allowCustomValue && !this.picking) {
+      this.setInputText(main, this.takeTypedText(main.value));
+    } else if (main) {
       this.setInputText(
         main,
         this.multiple || this.values.length === 0
@@ -698,6 +709,34 @@ class ComboboxComponent extends Component {
     return this.multiple ? [...this.values] : (this.values[0] ?? null);
   }
 
+  /**
+   * Free entry: the list closed without a pick, so the input's text becomes
+   * the value. Text naming an item (its label, ignoring case) selects that
+   * item; empty text clears the value; any other text is the value itself.
+   * Returns the text the input shows.
+   */
+  takeTypedText(raw) {
+    const text = (raw ?? "").trim();
+    const current = this.values[0] ?? null;
+    if (current !== null && text === this.labelFor(current)) return text;
+
+    let next = null;
+    if (text !== "") {
+      const wanted = text.toLowerCase();
+      const item = this.getItems().find(
+        (el) =>
+          !isItemDisabled(el) && this.itemLabel(el).toLowerCase() === wanted,
+      );
+      next = item ? item.dataset.value : text;
+    }
+
+    if (next !== current) {
+      this.values = next === null ? [] : [next];
+      this.commitValue();
+    }
+    return next === null ? "" : this.labelFor(next);
+  }
+
   selectValue(value) {
     if (value === undefined || value === null || this.isDisabled()) return;
 
@@ -712,7 +751,7 @@ class ComboboxComponent extends Component {
     } else {
       if (this.values.length === 1 && this.values[0] === value) {
         // Picking the selected item again only closes the list.
-        this.close();
+        this.closeAfterPick();
         const input = this.mainInput();
         if (input) this.setInputText(input, this.labelFor(value));
         return;
@@ -723,9 +762,19 @@ class ComboboxComponent extends Component {
     this.commitValue();
 
     if (!this.multiple) {
-      this.close();
+      this.closeAfterPick();
       const input = this.mainInput();
       if (input) this.setInputText(input, this.labelFor(value));
+    }
+  }
+
+  // Closing after a pick: the typed query is not a free-entry value.
+  closeAfterPick() {
+    this.picking = true;
+    try {
+      this.close();
+    } finally {
+      this.picking = false;
     }
   }
 

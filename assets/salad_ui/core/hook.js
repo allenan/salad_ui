@@ -1,8 +1,11 @@
 // saladui/core/hook.js
 import { registry } from "./factory.js";
+import { rememberLiveSocket } from "./detached-triggers.js";
 
 const SaladUIHook = {
   mounted() {
+    // For JS commands run outside a component (SaladUI.JS.copy's on_copied).
+    rememberLiveSocket(this.liveSocket);
     this.initComponent();
     this.setupServerEvents();
   },

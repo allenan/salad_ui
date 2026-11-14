@@ -588,6 +588,38 @@ for status and known gaps. Every new JS-backed component is registered in
     LiveView-derived ids, so a pin replaced the ⋮ button and closed its menu.
   Storybook: "Shared menus" example (Pin/Unpin, own-only Edit/Delete,
   Report disabled on your own, Copy text).
+- Shared menu follow-ups from the same downstream app:
+  - Docs ("Stable ids down to the trigger" in `SaladUI.DropdownMenu`): every
+    element between a stream row and its trigger needs a stable id, or a
+    re-render rebuilds it with the trigger inside (focus fell to `<body>`
+    after Pin). The menus now also follow a rebuilt trigger
+    (`findReplacement()`: the same id, else the row's only trigger for the
+    menu, else the one with the same context): an open dropdown or context
+    menu stays open at it, and focus that had just returned to the old
+    trigger moves to the new one.
+  - `SaladUI.JS.trigger/1` takes a selector resolved against the trigger
+    (the trigger if it matches, else the first match inside it, else the
+    trigger), so a context menu item can anchor at, and return focus to,
+    the row's button instead of the row. The example chat app's "More
+    reactions…" uses it.
+  - `SaladUI.JS.copy/2` takes `attr:` (copy an attribute's value as is,
+    e.g. a message's source) and `on_copied:` (an event name or `%JS{}` run
+    once the clipboard has the text), and the element that ran it
+    dispatches a bubbling `salad_ui:copied` (`detail.text`) or
+    `salad_ui:copy-failed` (`detail.text`, `detail.error`). The example chat
+    app copies the message's source and toasts "Copied".
+  - Context conditions write only what changes from the previous open
+    (they used to un-hide every conditional part and hide it again).
+- `combobox` takes `allow-custom-value` (opt-in; shadcn's Base UI Combobox
+  has no free entry): a single combobox keeps typed text that matches no
+  item as its value when the list closes (`Enter` with nothing highlighted,
+  `Escape`, `Tab`, a click outside), submitted through `name` and reported
+  by `on-value-changed`. Text naming an item selects it; empty text clears.
+  Storybook: "custom_value" variation.
+- `combobox_separator` renders `role="none"` (like `command_separator`), so
+  a separator inside `combobox_list` no longer fails axe's
+  `aria-required-children`; `role="separator"` is still accepted for one
+  outside the list.
 
 **Keyboard and ARIA fixes from downstream use**
 - Escape in a `command_dialog` closes the dialog. The command list no longer
