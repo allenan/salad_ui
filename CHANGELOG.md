@@ -687,6 +687,13 @@ for status and known gaps. Every new JS-backed component is registered in
   - opened from an element the close's patch replaced: the new node with the
     same id gets focus.
   Focus returns only to a rendered element, then falls back as before.
+- A patch that removes the focused control in an open dialog (a "Join"
+  button the server swaps for "Leave") puts focus back on the dialog's
+  panel instead of leaving it on `<body>`, as Radix's FocusScope does
+  (`FocusTrap` watches for removals while it traps). And Escape with focus
+  on `<body>` closes the top open dialog: it is heard on the document while
+  that dialog is the top layer (`ModalLayer#topmost`), as in Radix; a menu
+  or select open above it gets the key instead.
 
 # 0.14.0
 

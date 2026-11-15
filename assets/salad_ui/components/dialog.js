@@ -248,11 +248,31 @@ class DialogComponent extends Component {
     this.pushEvent("open");
   }
 
+  /**
+   * Escape with focus nowhere (on <body>: the focused control was patched
+   * away, or a click landed on plain text) still closes the top open
+   * dialog, as Radix hears Escape on the document for its top layer. With
+   * focus inside, the root's key map handles it first (and prevents its
+   * default), so it is not closed twice.
+   */
+  handleDocumentEscape(event) {
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    if (this.options.closeOnEscape === false || this.state !== "open") return;
+    const target = event.target;
+    if (target !== document.body && target !== document.documentElement) {
+      return;
+    }
+    if (!this.modalLayer.topmost) return;
+    event.preventDefault();
+    this.transition("close");
+  }
+
   onOpenExit() {
     // Unblock the page as soon as the dialog starts closing (before focus
     // goes back to the trigger, which is aria-hidden until then); the
     // scroll lock holds through the exit animation.
     this.modalLayer.releaseInteraction();
+    document.removeEventListener("keydown", this.onDocumentKeydown);
     this.focusTrap?.deactivate();
     this.clickOutsideMonitor?.stop();
 
@@ -303,10 +323,16 @@ class DialogComponent extends Component {
       this.clickOutsideMonitor.start();
     }
 
-    // Escape handling uses the component key map.
+    // Escape: the component key map, and the document while focus is
+    // nowhere (handleDocumentEscape).
+    this.onDocumentKeydown ??= (event) => this.handleDocumentEscape(event);
+    document.addEventListener("keydown", this.onDocumentKeydown);
   }
 
   beforeDestroy() {
+    if (this.onDocumentKeydown) {
+      document.removeEventListener("keydown", this.onDocumentKeydown);
+    }
     // Clean up focus trap
     this.focusTrap?.destroy();
     this.focusTrap = null;
