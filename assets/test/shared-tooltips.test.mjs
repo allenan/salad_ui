@@ -10,7 +10,10 @@ import {
   modalLayerCount,
   resetModalLayers,
 } from "../salad_ui/core/modal-layer.js";
-import { resetTooltipSkipDelay } from "../salad_ui/core/hover-popups.js";
+import {
+  resetPointerInteraction,
+  resetTooltipSkipDelay,
+} from "../salad_ui/core/hover-popups.js";
 import {
   hookFor,
   installDom,
@@ -29,6 +32,7 @@ afterEach(() => {
   created.splice(0).forEach((component) => component.destroy());
   resetModalLayers();
   resetTooltipSkipDelay();
+  resetPointerInteraction();
   document.body.innerHTML = "";
   // A pointer press elsewhere would keep focus-opens blocked.
   document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "x" }));
@@ -238,6 +242,31 @@ test("focus that follows a pointer press does not open a text tooltip", async ()
   assert.equal(provider.state, "closed");
 });
 
+// A touch tap: the touch's pointer events, then the mouse events the
+// browser emulates for it.
+function tap(target) {
+  for (const type of ["pointerover", "pointerdown", "pointerup"]) {
+    fire(type, target, { pointerType: "touch" });
+  }
+  hover(target);
+  fire("mousemove", target);
+  fire("focusin", target);
+  fire("click", target);
+}
+
+test("a touch tap on a text tooltip trigger does not open it", async () => {
+  const { $, provider } = buildProvider();
+  tap($("#reply-1"));
+
+  await wait(OPEN * 3);
+  assert.equal(provider.state, "closed");
+
+  // A mouse on the same device still hovers it open.
+  fire("pointerover", $("#reply-2"), { pointerType: "mouse" });
+  hover($("#reply-2"), $("#reply-1"));
+  await waitFor(() => provider.state === "open");
+});
+
 test("pressing the trigger closes its text tooltip", async () => {
   const { $, provider } = buildProvider();
   hover($("#reply-1"));
@@ -414,6 +443,18 @@ test("a hover card per entity opens at whichever trigger is hovered", async () =
   await waitFor(() => card.state === "closed");
   assert.equal($("#t2").getAttribute("aria-expanded"), "false");
   assert.equal($("#t2").getAttribute("data-state"), "closed");
+});
+
+test("a touch tap on a detached hover card trigger does not open the card", async () => {
+  const { $, card } = buildCards();
+  for (const type of ["pointerover", "pointerdown", "pointerup"]) {
+    fire(type, $("#t2"), { pointerType: "touch" });
+  }
+  hover($("#t2"));
+  fire("focusin", $("#t2"));
+
+  await wait(OPEN * 3);
+  assert.equal(card.state, "closed");
 });
 
 test("moving to another trigger of the same card moves it after the open delay", async () => {

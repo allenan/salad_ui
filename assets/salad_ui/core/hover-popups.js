@@ -7,6 +7,9 @@
 // - none opens while a click-opened popup (menu, popover, dialog, select, ...)
 //   is open, unless its trigger is inside that popup's content;
 // - focus that follows a pointer press does not open one; keyboard focus does;
+// - a touch tap does not open one (as in Radix): the mouseover and
+//   mouseenter a browser emulates after the tap are ignored, while a mouse or
+//   trackpad on the same device still opens them on hover;
 // - an open one closes on Escape, on a scroll around its trigger, and when the
 //   pointer is seen over something else (a missed mouseleave must not leave it
 //   stuck);
@@ -43,16 +46,52 @@ const openPopups = new Set();
 let pointerInteraction = false;
 let listening = false;
 
+// The pointer behind the last pointerover/down/up, and when. After a touch
+// tap the browser fires compatibility mouse events (mouseover, mouseenter,
+// mousemove, click) at the tapped element; those come after the touch's own
+// pointer events, while a real mouse or trackpad fires pointerover (mouse)
+// before its mouseover. Kept per interaction, not per device.
+let lastPointerType = null;
+let lastPointerAt = -Infinity;
+// Compatibility mouse events follow the touch's pointerup within a tick or
+// two; a generous window still lets a later mouse hover through.
+const TOUCH_EMULATION_WINDOW = 1000;
+const MOUSE_EVENTS = new Set(["mouseover", "mouseenter", "mousemove"]);
+
+function notePointer(event) {
+  lastPointerType = event.pointerType || null;
+  lastPointerAt = Date.now();
+}
+
+/** Whether `event` is a mouse event a browser emulated after a touch tap. */
+function emulatedFromTouch(event) {
+  return (
+    MOUSE_EVENTS.has(event?.type) &&
+    lastPointerType === "touch" &&
+    Date.now() - lastPointerAt < TOUCH_EMULATION_WINDOW
+  );
+}
+
+/** Forget the last pointer (for tests). */
+export function resetPointerInteraction() {
+  pointerInteraction = false;
+  lastPointerType = null;
+  lastPointerAt = -Infinity;
+}
+
 function listenForInteraction() {
   if (listening || typeof document === "undefined") return;
   listening = true;
   document.addEventListener(
     "pointerdown",
-    () => {
+    (event) => {
       pointerInteraction = true;
+      notePointer(event);
     },
     true,
   );
+  document.addEventListener("pointerover", notePointer, true);
+  document.addEventListener("pointerup", notePointer, true);
   document.addEventListener(
     "keydown",
     () => {
@@ -108,6 +147,7 @@ export class HoverPopup {
   // default) may start the open delay.
   mayOpen(event, trigger = this.component.trigger) {
     if (event?.type === "focusin" && pointerInteraction) return false;
+    if (emulatedFromTouch(event)) return false;
     return !this.blocked(trigger);
   }
 

@@ -4,6 +4,7 @@ import { after, afterEach, before, test } from "node:test";
 import "../salad_ui/components/tooltip.js";
 import "../salad_ui/components/hover-card.js";
 import { registry } from "../salad_ui/core/factory.js";
+import { resetPointerInteraction } from "../salad_ui/core/hover-popups.js";
 import { installDom, setRect, uninstallDom, wait } from "./helpers/dom.mjs";
 
 before(() => installDom());
@@ -13,6 +14,7 @@ const created = [];
 afterEach(() => {
   created.splice(0).forEach((c) => c.destroy());
   document.body.innerHTML = "";
+  resetPointerInteraction();
 });
 
 const hookContext = {
@@ -145,4 +147,64 @@ test("no hover card opens while a menu is open", async () => {
   await wait(15);
 
   assert.equal(card.component.state, "closed");
+});
+
+// A touch tap: the touch's pointer events, then the mouse events the
+// browser emulates for it (and, on some browsers, focus).
+function tap(target, { enter = "mouseover" } = {}) {
+  for (const type of ["pointerover", "pointerdown", "pointerup"]) {
+    fire(type, target, { pointerType: "touch" });
+  }
+  fire(enter, target);
+  fire("mousemove", target);
+  fire("focusin", target);
+  fire("click", target);
+}
+
+test("a touch tap on a tooltip trigger does not open it", async () => {
+  document.body.innerHTML = tooltip("tip");
+  const tip = mount("tip", "tooltip");
+
+  tap(tip.trigger);
+  await wait(20);
+
+  assert.equal(tip.component.state, "closed");
+});
+
+test("a touch tap on a hover card trigger does not open it", async () => {
+  document.body.innerHTML = hoverCard("maya");
+  const card = mount("maya", "hover-card");
+
+  tap(card.trigger, { enter: "mouseenter" });
+  await wait(20);
+
+  assert.equal(card.component.state, "closed");
+});
+
+test("a mouse hover after a touch tap still opens the tooltip", async () => {
+  document.body.innerHTML = tooltip("tip");
+  const tip = mount("tip", "tooltip");
+
+  tap(tip.trigger);
+  await wait(20);
+  fire("mouseout", tip.trigger);
+  fire("pointerover", tip.trigger, { pointerType: "mouse" });
+  fire("mouseover", tip.trigger);
+  await wait(20);
+
+  assert.equal(tip.component.state, "open");
+});
+
+test("keyboard focus after a touch tap still opens the tooltip", async () => {
+  document.body.innerHTML = tooltip("tip");
+  const tip = mount("tip", "tooltip");
+
+  tap(tip.trigger);
+  await wait(20);
+  fire("keydown", document, { key: "Tab" });
+  fire("focusout", tip.trigger);
+  fire("focusin", tip.trigger);
+  await wait(20);
+
+  assert.equal(tip.component.state, "open");
 });

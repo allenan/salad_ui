@@ -696,6 +696,13 @@ for status and known gaps. Every new JS-backed component is registered in
   on `<body>` closes the top open dialog: it is heard on the document while
   that dialog is the top layer (`ModalLayer#topmost`), as in Radix; a menu
   or select open above it gets the key instead.
+- A touch tap on a tooltip or hover card trigger no longer opens it, as in
+  Radix. Before, the mouseover/mouseenter the browser emulates after a tap
+  opened it, and with no pointer to leave it stayed open until the next
+  tap elsewhere. This covers nested, detached (`for`) and
+  `data-salad-tooltip` triggers. The check is per interaction, so a mouse
+  or trackpad on the same tablet still opens them on hover, and keyboard
+  focus still opens them.
 
 # 0.14.0
 
