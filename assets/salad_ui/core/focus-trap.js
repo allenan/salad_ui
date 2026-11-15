@@ -85,10 +85,22 @@ class FocusTrap {
    */
   handleMutations(mutations) {
     if (!this.active || !this.element?.isConnected) return;
-    const focused = document.activeElement;
-    if (focused && focused !== document.body) return;
+    if (!this.focusIsLost()) return;
     if (!mutations.some((mutation) => mutation.removedNodes.length > 0)) return;
-    this.focusElement();
+    // A tick later, and only if focus is still nowhere: a layer nested
+    // inside (a popover or emoji picker in a dialog) that is closing returns
+    // focus to its own trigger on that tick, and that wins.
+    if (this.refocusTimer) return;
+    this.refocusTimer = setTimeout(() => {
+      this.refocusTimer = null;
+      if (!this.active || !this.element?.isConnected) return;
+      if (this.focusIsLost()) this.focusElement();
+    }, 0);
+  }
+
+  focusIsLost() {
+    const focused = document.activeElement;
+    return !focused || focused === document.body;
   }
 
   /** Focus the trapped element itself, making it focusable if need be. */
@@ -109,6 +121,8 @@ class FocusTrap {
 
   stopObservingRemovals() {
     this.observer?.disconnect();
+    clearTimeout(this.refocusTimer);
+    this.refocusTimer = null;
   }
 
   /** The element focus counts as inside of (see the `scope` option). */
