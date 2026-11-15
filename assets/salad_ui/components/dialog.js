@@ -264,17 +264,29 @@ class DialogComponent extends Component {
     // Initialize focus trap if not already created
     this.el.focus();
     if (!this.focusTrap) {
+      // Held here, not read from `this`: a dialog the server removes while
+      // open (a live action patched away) is destroyed before focus returns.
+      const root = this.el;
+      const returnSelector = this.options.returnFocus;
+      const triggers = this.queryParts().filter(
+        (part) => part.dataset.part === "trigger",
+      );
       this.focusTrap = new FocusTrap(this.contentPanel, {
         contain: this.isModal(),
+        // Focus anywhere in the dialog (the overlay container a click
+        // outside leaves it on) is still focus to return on close.
+        scope: root,
         // `return-focus` names where focus goes on close (Radix's
         // onCloseAutoFocus). Otherwise a dialog the server opened (focus was
         // on <body>) returns focus to its trigger.
         returnFocus: () =>
-          this.el &&
-          ((this.options.returnFocus &&
-            document.querySelector(this.options.returnFocus)) ||
-            this.queryParts().find((part) => part.dataset.part === "trigger")),
-        preferReturnFocus: Boolean(this.options.returnFocus),
+          (returnSelector && document.querySelector(returnSelector)) ||
+          (this.el &&
+            this.queryParts().find(
+              (part) => part.dataset.part === "trigger",
+            )) ||
+          triggers.find((trigger) => trigger.isConnected),
+        preferReturnFocus: Boolean(returnSelector),
       });
     }
 

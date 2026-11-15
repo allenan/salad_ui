@@ -26,6 +26,7 @@ function buildDialog({
   closeOnOutsideClick = true,
   closeOnEscape = true,
   animations,
+  returnFocus,
   extraPanelHtml = "",
 } = {}) {
   const initialState =
@@ -35,6 +36,7 @@ function buildDialog({
     closeOnOutsideClick,
     closeOnEscape,
     ...(animations ? { animations } : {}),
+    ...(returnFocus ? { returnFocus } : {}),
   });
 
   document.body.innerHTML = `
@@ -431,5 +433,80 @@ test("the trigger fallback focuses the button inside a <div> trigger", async () 
 
   component.transition("close");
   await waitFor(() => document.activeElement === trigger);
+  component.destroy();
+});
+
+test("closing by a click outside returns focus to the opener (focus was on the overlay container)", async () => {
+  const { component, trigger, content, overlay, outsideTrigger } =
+    buildDialog();
+  outsideTrigger.focus();
+  click(trigger);
+  await wait(60);
+
+  // A pointer down on the overlay focuses a focusable container around the
+  // panel, outside the trapped panel but inside the dialog.
+  content.setAttribute("tabindex", "-1");
+  content.focus();
+  click(overlay);
+  assert.equal(component.state, "closed");
+
+  await waitFor(() => document.activeElement === outsideTrigger);
+  component.destroy();
+});
+
+test("a dialog removed by the server while open still honours return-focus", async () => {
+  const { component, el, trigger } = buildDialog({
+    returnFocus: "#outside-trigger",
+  });
+  const target = document.getElementById("outside-trigger");
+  trigger.focus();
+  click(trigger);
+  await wait(60);
+
+  // A live action patched away: the hook is destroyed, the node removed,
+  // with no close transition.
+  component.destroy();
+  el.remove();
+
+  await waitFor(() => document.activeElement === target);
+});
+
+test("a dialog opened from a menu item returns focus to the menu's button", async () => {
+  const { component, el, trigger } = buildDialog();
+  document.body.insertAdjacentHTML(
+    "afterbegin",
+    `<button id="menu-button" type="button">Account</button>
+     <div id="menu-content" role="menu"><div id="menu-item" role="menuitem" tabindex="-1">Set a status</div></div>`,
+  );
+  const menuButton = document.getElementById("menu-button");
+  const menuItem = document.getElementById("menu-item");
+  menuItem.focus();
+
+  // The item's on-select opens the dialog; then the menu closes, hides its
+  // content and hands focus back to its button (outside the dialog).
+  component.transition("open");
+  document.getElementById("menu-content").hidden = true;
+  menuButton.focus();
+  await wait(60);
+  assert.ok(el.contains(document.activeElement));
+
+  component.transition("close");
+  await waitFor(() => document.activeElement === menuButton);
+  assert.notEqual(document.activeElement, trigger);
+  component.destroy();
+});
+
+test("focus returns to the node a patch replaced the opener with (same id)", async () => {
+  const { component, trigger } = buildDialog();
+  const opener = document.getElementById("outside-trigger");
+  opener.focus();
+  click(trigger);
+  await wait(60);
+
+  const replacement = opener.cloneNode(true);
+  opener.replaceWith(replacement);
+
+  component.transition("close");
+  await waitFor(() => document.activeElement === replacement);
   component.destroy();
 });
