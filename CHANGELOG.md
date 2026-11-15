@@ -690,7 +690,9 @@ for status and known gaps. Every new JS-backed component is registered in
 - A patch that removes the focused control in an open dialog (a "Join"
   button the server swaps for "Leave") puts focus back on the dialog's
   panel instead of leaving it on `<body>`, as Radix's FocusScope does
-  (`FocusTrap` watches for removals while it traps). And Escape with focus
+  (`FocusTrap` watches for removals while it traps, and acts a tick later
+  only if focus is still on `<body>`, so a popover or emoji picker closing
+  inside the dialog keeps returning focus to its own trigger). And Escape with focus
   on `<body>` closes the top open dialog: it is heard on the document while
   that dialog is the top layer (`ModalLayer#topmost`), as in Radix; a menu
   or select open above it gets the key instead.

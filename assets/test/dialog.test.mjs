@@ -589,3 +589,30 @@ test("Escape on <body> leaves a dialog with closeOnEscape off open", async () =>
   assert.equal(component.state, "open");
   component.destroy();
 });
+
+test("a nested layer closing inside the dialog keeps focus on its own trigger", async () => {
+  const { component, trigger, panel } = buildDialog({
+    extraPanelHtml: `<button id="picker-button" type="button">😀</button>
+      <div id="picker-portal"><div id="picker"><input id="picker-search" /></div></div>`,
+  });
+  click(trigger);
+  await wait(60);
+
+  const pickerButton = document.getElementById("picker-button");
+  document.getElementById("picker-search").focus();
+
+  // The picker closes: its trap schedules focus back to its trigger for
+  // the next tick (only while focus is still lost, as FocusTrap does), then
+  // its content leaves the portal container.
+  setTimeout(() => {
+    if (document.activeElement === document.body) pickerButton.focus();
+  }, 0);
+  document.getElementById("picker").remove();
+  assert.equal(document.activeElement, document.body);
+
+  await wait(20);
+  assert.equal(document.activeElement, pickerButton);
+  assert.notEqual(document.activeElement, panel);
+  assert.equal(component.state, "open");
+  component.destroy();
+});
