@@ -132,9 +132,74 @@ class PositionedElement {
   }
 
   /**
+   * Take the element out of the way of a LiveView patch: back from the portal
+   * (LiveView only patches it in place) with its listeners off, but keeping
+   * the focus trap's return target. resume() puts it back and refocuses what
+   * had focus inside, which moving the node out of the page dropped to
+   * <body>. Returns whether it was active.
+   */
+  suspend() {
+    if (!this.active) return false;
+
+    const focused = document.activeElement;
+    this.focusBeforeSuspend =
+      focused && this.element.contains(focused) ? focused : null;
+
+    if (this.options.trapFocus) this.focusTrap.suspend();
+    this.clickOutsideMonitor?.stop();
+    this.scrollManager.stop();
+    if (Portal.isInPortal(this.element) && this.options.scrollPassThrough) {
+      this.cleanupScrollPassthrough();
+    }
+    if (Portal.isInPortal(this.element)) this.restoreFromPortal();
+
+    this.active = false;
+    this.suspended = true;
+    return true;
+  }
+
+  /** Undo suspend() after the patch. */
+  resume() {
+    if (!this.suspended) return this;
+    this.suspended = false;
+
+    if (this.options.usePortal) this.moveToPortal();
+    this.calculateAndApplyPosition();
+    if (this.options.trapFocus) this.focusTrap.resume();
+    this.clickOutsideMonitor?.start();
+    this.scrollManager.start(this.reference, this.element);
+    if (Portal.isInPortal(this.element) && this.options.scrollPassThrough) {
+      this.setupScrollPassthrough();
+    }
+    this.active = true;
+
+    const focused = this.focusBeforeSuspend;
+    this.focusBeforeSuspend = null;
+    const active = document.activeElement;
+    const lost = !active || active === document.body || !active.isConnected;
+    if (focused && lost) {
+      if (focused.isConnected && this.element.contains(focused)) {
+        focused.focus({ preventScroll: true });
+      } else if (this.options.trapFocus) {
+        // The patch replaced the focused node: the first focusable instead.
+        this.focusTrap.setInitialFocus();
+      }
+    }
+    return this;
+  }
+
+  /**
    * Deactivate the positioned element
    */
   deactivate() {
+    if (this.suspended) {
+      // Closed (or destroyed) between suspend() and resume(): everything else
+      // is already off; focus goes back as on a normal close.
+      this.suspended = false;
+      this.focusBeforeSuspend = null;
+      if (this.options.trapFocus) this.focusTrap.deactivate();
+      return this;
+    }
     if (!this.active) return this;
 
     // Deactivate sub-modules

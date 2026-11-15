@@ -10,6 +10,27 @@ function focusTarget(element, selector) {
   return element.matches(selector) ? element : element.querySelector(selector);
 }
 
+// Whether `el` is rendered and can take focus: not `hidden`, `inert`,
+// `display: none` or `visibility: hidden` (itself or an ancestor). A closed
+// popover nested in the content (an emoji picker's search box) matches the
+// focusable selector but focus() on it does nothing.
+function isVisible(el) {
+  if (el.closest("[inert]")) return false;
+  if (typeof el.checkVisibility === "function") {
+    return el.checkVisibility({ visibilityProperty: true });
+  }
+  // No checkVisibility (Safari before 17.4, jsdom): walk up.
+  const view = el.ownerDocument?.defaultView;
+  for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+    if (node.hidden) return false;
+    const style = view?.getComputedStyle?.(node);
+    if (style && (style.display === "none" || style.visibility === "hidden")) {
+      return false;
+    }
+  }
+  return true;
+}
+
 class FocusTrap {
   /**
    * Create a focus trap for a specific element
@@ -70,6 +91,8 @@ class FocusTrap {
    * Deactivate the focus trap and restore previous focus
    */
   deactivate() {
+    // Closed while suspended: focus still goes back.
+    if (this.suspended) this.resume();
     if (!this.active) return;
 
     // Remove event listeners
@@ -129,6 +152,25 @@ class FocusTrap {
   }
 
   /**
+   * Stop trapping for a moment (a LiveView patch of the content) without
+   * returning focus or forgetting where it goes back to on deactivate().
+   */
+  suspend() {
+    if (!this.active) return;
+    this.element.removeEventListener("keydown", this.handleKeyDown);
+    this.active = false;
+    this.suspended = true;
+  }
+
+  /** Trap again after suspend(), without moving focus. */
+  resume() {
+    if (!this.suspended) return;
+    this.suspended = false;
+    this.active = true;
+    this.element.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  /**
    * Whether `element` (focused at activate()) can take focus back: still on
    * the page and not <body> (where focus sits when nothing is focused).
    */
@@ -152,8 +194,11 @@ class FocusTrap {
       const focusableElements = this.getFocusableElements();
 
       if (focusableElements.length > 0) {
-        // Look for an element with autofocus attribute first
-        const autoFocusEl = this.element.querySelector("[autofocus]");
+        // A visible [autofocus] first (Radix's FocusScope too), else the
+        // first visible focusable.
+        const autoFocusEl = [
+          ...this.element.querySelectorAll("[autofocus]"),
+        ].find(isVisible);
         const initialFocusEl = autoFocusEl || focusableElements[0];
         initialFocusEl.focus();
       } else {
@@ -201,12 +246,12 @@ class FocusTrap {
   }
 
   /**
-   * Get all focusable elements within the trap
+   * The visible focusable elements within the trap, in document order
    */
   getFocusableElements() {
     return Array.from(
       this.element.querySelectorAll(this.options.focusableSelector),
-    );
+    ).filter(isVisible);
   }
 
   /**

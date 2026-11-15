@@ -272,3 +272,55 @@ test("preferReturnFocus sends focus to returnFocus instead of the opener", async
 
   assert.equal(document.activeElement.id, "target");
 });
+
+test("activate() skips focusables that are not rendered (a closed popover inside)", async () => {
+  // An emoji picker's closed popover, portaled into a dialog ahead of its
+  // field: its search box and buttons match the selector but cannot take focus.
+  document.body.innerHTML = `
+    <div id="trap">
+      <div hidden><input id="picker-search" /><button id="picker-tab">x</button></div>
+      <div style="display: none"><button id="collapsed">y</button></div>
+      <input id="field" />
+      <button id="last">last</button>
+      <div style="visibility: hidden"><button id="invisible">z</button></div>
+    </div>
+  `;
+  const trap = new FocusTrap(document.getElementById("trap"));
+
+  trap.activate();
+  await wait(INITIAL_FOCUS_DELAY);
+  assert.equal(document.activeElement.id, "field");
+  assert.deepEqual(
+    trap.getFocusableElements().map((el) => el.id),
+    ["field", "last"],
+  );
+
+  // Tab from the last visible control loops to the first visible one.
+  document.getElementById("last").focus();
+  const tab = new window.KeyboardEvent("keydown", {
+    key: "Tab",
+    bubbles: true,
+    cancelable: true,
+  });
+  document.getElementById("last").dispatchEvent(tab);
+  assert.equal(tab.defaultPrevented, true);
+  assert.equal(document.activeElement.id, "field");
+
+  await teardown(trap);
+});
+
+test("activate() ignores a hidden [autofocus]", async () => {
+  document.body.innerHTML = `
+    <div id="trap">
+      <div hidden><input id="hidden-auto" autofocus /></div>
+      <input id="field" />
+    </div>
+  `;
+  const trap = new FocusTrap(document.getElementById("trap"));
+
+  trap.activate();
+  await wait(INITIAL_FOCUS_DELAY);
+  assert.equal(document.activeElement.id, "field");
+
+  await teardown(trap);
+});

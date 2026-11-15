@@ -243,3 +243,53 @@ test("computePosition places the element its own way, and null falls back to sid
 
   pe.destroy();
 });
+
+test("suspend()/resume() around a patch keep focus inside and the return target", async () => {
+  const { container, reference, element } = buildDom();
+  const pe = new PositionedElement(element, reference, {
+    usePortal: true,
+    trapFocus: true,
+  });
+
+  reference.focus();
+  pe.activate();
+  await wait(60);
+  const inside = document.getElementById("focusable");
+  assert.equal(document.activeElement, inside);
+
+  // Before a LiveView patch: back in place, where LiveView can patch it.
+  assert.equal(pe.suspend(), true);
+  assert.equal(element.parentElement, container);
+  assert.equal(pe.active, false);
+
+  // After it: portaled again, and focus is back on the same control.
+  pe.resume();
+  assert.equal(pe.active, true);
+  assert.notEqual(element.parentElement, container);
+  assert.equal(document.activeElement, inside);
+
+  // Closing still returns focus to the opener, not <body>.
+  pe.deactivate();
+  await wait(10);
+  assert.equal(document.activeElement, reference);
+  pe.destroy();
+});
+
+test("deactivate() while suspended returns focus to the opener", async () => {
+  const { reference, element } = buildDom();
+  const pe = new PositionedElement(element, reference, {
+    usePortal: true,
+    trapFocus: true,
+  });
+  reference.focus();
+  pe.activate();
+  await wait(60);
+
+  pe.suspend();
+  document.activeElement.blur?.();
+  pe.deactivate();
+  await wait(10);
+  assert.equal(document.activeElement, reference);
+  assert.equal(pe.active, false);
+  pe.destroy();
+});
