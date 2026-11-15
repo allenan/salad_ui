@@ -38,6 +38,30 @@ defmodule SaladUI.Command do
 
   A LiveView re-render keeps the current filter and the highlighted item, and
   filters any items the server adds or replaces with the query in the input.
+
+  ## Server-side results
+
+  The client filters items by their text. For results the server searches
+  (`phx-keyup` on the input, or the input's own `phx-hook`), as cmdk's
+  `shouldFilter` and `forceMount`:
+
+    * `should_filter={false}` on `command/1` (or `command_dialog/1`) turns
+      client filtering off: the server renders only what matches.
+    * `force_mount` on `command_group/1` or `command_item/1` keeps that group's
+      items, or that item, shown whatever the query, while the rest are still
+      filtered (server message results under client-filtered commands).
+
+      <.command id="goto">
+        <.command_input phx-keyup="search" phx-debounce="150" />
+        <.command_list>
+          <.command_group heading="Pages">...</.command_group>
+          <.command_group heading="Messages" force_mount>
+            <.command_item :for={m <- @results} phx-click="open" phx-value-id={m.id}>
+              {m.excerpt}
+            </.command_item>
+          </.command_group>
+        </.command_list>
+      </.command>
   """
   use SaladUI, :component
 
@@ -49,6 +73,8 @@ defmodule SaladUI.Command do
   ## Attributes
 
     * `:id` (required) - The unique id for the command palette.
+    * `:should_filter` - Filter items by the query on the client. Defaults to
+      `true`; pass `false` when the server filters (cmdk's `shouldFilter`).
     * `:class` - Additional classes to apply.
     * All global attributes are passed to the root `<div>`.
 
@@ -63,6 +89,11 @@ defmodule SaladUI.Command do
       </.command>
   """
   attr :id, :string, required: true
+
+  attr :should_filter, :boolean,
+    default: true,
+    doc: "filter items by the query on the client; false when the server filters"
+
   attr :class, :any, default: ""
   attr :rest, :global
   slot :inner_block, required: true
@@ -74,6 +105,7 @@ defmodule SaladUI.Command do
       id={@id}
       tabindex="-1"
       data-component="command"
+      data-options={!@should_filter && json(%{shouldFilter: false})}
       data-part="root"
       phx-hook="SaladUI"
       class={
@@ -102,6 +134,7 @@ defmodule SaladUI.Command do
     * `:title` - The dialog's accessible title. Defaults to `"Command Palette"`.
     * `:description` - The dialog's accessible description. Defaults to `"Search for a command to run..."`.
     * `:show_close_button` - Render the dialog's close button. Defaults to `true`.
+    * `:should_filter` - Filter items on the client (see `command/1`). Defaults to `true`.
     * `:class` - Additional classes for the dialog content.
 
   ## Slots
@@ -123,6 +156,7 @@ defmodule SaladUI.Command do
     doc: "the dialog's accessible (sr-only) description"
 
   attr :show_close_button, :boolean, default: true, doc: "render the dialog's close button"
+  attr :should_filter, :boolean, default: true, doc: "filter items on the client (see `command/1`)"
   attr :class, :any, default: nil
   slot :inner_block, required: true
 
@@ -139,6 +173,7 @@ defmodule SaladUI.Command do
         </.dialog_header>
         <.command
           id={@id}
+          should_filter={@should_filter}
           class="**:data-[slot=command-input-wrapper]:h-12 **:data-[slot=command-group-heading]:px-2 **:data-[slot=command-group-heading]:font-medium **:data-[slot=command-group-heading]:text-muted-foreground **:data-[slot=command-group]:px-2 [&_[data-slot=command-group]:not([data-visible=false])~[data-slot=command-group]]:pt-0 [&_[data-slot=command-input-wrapper]_svg]:h-5 [&_[data-slot=command-input-wrapper]_svg]:w-5 **:data-[slot=command-input]:h-12 **:data-[slot=command-item]:px-2 **:data-[slot=command-item]:py-3 [&_[data-slot=command-item]_svg]:h-5 [&_[data-slot=command-item]_svg]:w-5"
         >
           {render_slot(@inner_block)}
@@ -299,6 +334,8 @@ defmodule SaladUI.Command do
 
     * `:heading` - The group heading (`data-slot="command-group-heading"`).
       Omit it for a group without one, as cmdk allows.
+    * `:force_mount` - Show the group and its items whatever the query (cmdk's
+      `forceMount`), for results the server searched.
     * `:class` - Additional classes to apply.
 
   ## Slots
@@ -312,6 +349,11 @@ defmodule SaladUI.Command do
       </.command_group>
   """
   attr :heading, :string, default: nil
+
+  attr :force_mount, :boolean,
+    default: false,
+    doc: "show the group and its items whatever the query"
+
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -322,6 +364,7 @@ defmodule SaladUI.Command do
       data-slot="command-group"
       role="presentation"
       data-part="group"
+      data-force-mount={@force_mount && "true"}
       class={classes(["overflow-hidden p-1 text-foreground data-[visible=false]:hidden", @class])}
       {@rest}
     >
@@ -388,6 +431,7 @@ defmodule SaladUI.Command do
 
     * `:disabled` - Whether the item is disabled (also sets `data-disabled="true"`).
     * `:selected` - Whether the item is selected.
+    * `:force_mount` - Show the item whatever the query (cmdk's `forceMount`).
     * `:class` - Additional classes to apply.
     * All global attributes are passed to the `<button>` element.
 
@@ -404,6 +448,7 @@ defmodule SaladUI.Command do
   """
   attr :disabled, :boolean, default: false
   attr :selected, :boolean, default: false
+  attr :force_mount, :boolean, default: false, doc: "show the item whatever the query"
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -416,6 +461,7 @@ defmodule SaladUI.Command do
       tabindex="-1"
       role="option"
       data-part="item"
+      data-force-mount={@force_mount && "true"}
       class={
         classes([
           "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",

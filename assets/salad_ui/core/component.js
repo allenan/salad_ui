@@ -137,12 +137,24 @@ class Component {
     return false;
   }
 
+  // This component's parts. A nested SaladUI component (its own
+  // `data-component` or `phx-hook="SaladUI"`) owns everything under it and is
+  // skipped. A part that carries an app's own hook (a `phx-hook` on a command
+  // input) is still this component's part; what the hook renders inside it
+  // is not looked into.
   queryParts() {
-    return queryDOM(this.el, (node) => {
-      if (!node.dataset?.part) return 0;
-      if (node.getAttribute("phx-hook") != null) return -1;
-      return 1;
-    }).concat([this.el]);
+    const hookedParts = [];
+    const parts = queryDOM(this.el, (node) => {
+      const hook = node.getAttribute("phx-hook");
+      if (hook != null) {
+        const nested =
+          hook === "SaladUI" || node.hasAttribute("data-component");
+        if (!nested && node.dataset?.part) hookedParts.push(node);
+        return -1;
+      }
+      return node.dataset?.part ? 1 : 0;
+    });
+    return parts.concat(hookedParts, [this.el]);
   }
 
   /**

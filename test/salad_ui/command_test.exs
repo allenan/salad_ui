@@ -18,6 +18,45 @@ defmodule SaladUI.CommandTest do
       assert html =~ "custom-class"
       assert html =~ "data-component=\"command\""
       assert html =~ "<span>Content</span>"
+      refute html =~ "data-options"
+    end
+
+    test "should_filter={false} turns client filtering off" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command id="goto" should_filter={false}><span>x</span></.command>
+        """)
+
+      assert html =~ ~s(data-options="{&quot;shouldFilter&quot;:false}")
+    end
+
+    test "command_dialog passes should_filter through" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_dialog id="goto" should_filter={false}><span>x</span></.command_dialog>
+        """)
+
+      assert html =~ ~s(data-options="{&quot;shouldFilter&quot;:false}")
+    end
+
+    test "force_mount marks a group and an item" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.command_group heading="Messages" force_mount>
+          <.command_item force_mount>Result</.command_item>
+        </.command_group>
+        <.command_item>Plain</.command_item>
+        """)
+
+      assert html =~ ~r/data-slot="command-group"[^>]*data-force-mount="true"/
+      assert html =~ ~r/data-slot="command-item"[^>]*data-force-mount="true"/
+      assert length(Regex.scan(~r/data-force-mount/, html)) == 2
     end
   end
 

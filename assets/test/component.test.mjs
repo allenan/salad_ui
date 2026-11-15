@@ -519,3 +519,25 @@ test("clearGeneratedIdsWithin() drops every generated id under the given roots, 
   assert.equal(elements.trigger.id, "server-trigger", "server ids kept");
   assert.equal(el.id, "test-1");
 });
+
+test("a part with an app's own phx-hook is still a part; its contents are not", () => {
+  document.body.innerHTML = `
+    <div id="hooked" data-component="test" data-part="root">
+      <input data-part="input" phx-hook="Debounce" />
+      <div data-part="content" phx-hook="AppWidget">
+        <span data-part="inner"></span>
+      </div>
+      <div data-component="other" data-part="nested" phx-hook="SaladUI">
+        <span data-part="nested-inner"></span>
+      </div>
+    </div>`;
+  const el = document.getElementById("hooked");
+  const parts = new TestComponent(el, { hookContext: null }).queryParts();
+  const names = parts.map((part) => part.dataset.part);
+
+  assert.ok(names.includes("input"));
+  assert.ok(names.includes("content"));
+  assert.ok(!names.includes("inner"));
+  assert.ok(!names.includes("nested"));
+  assert.ok(!names.includes("nested-inner"));
+});
