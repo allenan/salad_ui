@@ -90,7 +90,8 @@ class PopoverComponent extends Component {
 
     if (this.suspendedForPatch) {
       this.suspendedForPatch = false;
-      if (this.state === "open") this.activateOpenState();
+      if (this.state === "open") this.positionedElement?.resume();
+      else this.positionedElement?.deactivate();
     } else if (this.state === "open") {
       this.positionedElement?.update();
     }
@@ -246,10 +247,10 @@ class PopoverComponent extends Component {
 
   beforeUpdate() {
     // Portaled content must be back inside the root for LiveView to patch it.
-    // In place, it can stay active (see skipReinitialize).
+    // In place, it can stay active (see skipReinitialize). Suspended, not
+    // closed: the focus inside and the trap's return target survive.
     if (!this.patchSafe || this.positionedElement?.options.usePortal) {
-      this.suspendedForPatch = !!this.positionedElement?.active;
-      this.positionedElement?.deactivate();
+      this.suspendedForPatch = !!this.positionedElement?.suspend();
     }
   }
 

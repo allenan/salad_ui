@@ -23,7 +23,7 @@ defmodule SaladUI.RadioGroupTest do
   end
 
   describe "radio_group_item/1" do
-    test "renders native radio for label association" do
+    test "renders a radio button the label names, with a hidden native radio beside it" do
       assigns = %{}
 
       html =
@@ -34,8 +34,10 @@ defmodule SaladUI.RadioGroupTest do
         </div>
         """)
 
-      assert html =~ ~s(<input type="radio" id="monthly" value="monthly")
-      assert html =~ ~s(<label)
+      assert html =~ ~r/<button type="button" role="radio" id="monthly"/
+      assert html =~ ~s(aria-checked="false")
+      assert html =~ ~r/<input type="radio" data-slot="radio-group-input" value="monthly"[^>]*aria-hidden="true"/
+      refute html =~ ~r/<input[^>]*id="monthly"/
       assert html =~ ~s(for="monthly")
     end
   end

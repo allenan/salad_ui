@@ -106,6 +106,11 @@ defmodule SaladUI.RadioGroup do
 
   @doc """
   Individual radio button in a radio group.
+
+  As in shadcn/ui (Radix), the item is a `<button role="radio">` carrying
+  `id`, so `<.label for={id}>` names it and clicking the label picks it. A
+  hidden native radio beside it (`aria-hidden`, out of the tab order) carries
+  the value into the form and its `phx-change`.
   """
   attr :id, :string, required: true
   attr :value, :string, required: true
@@ -115,12 +120,18 @@ defmodule SaladUI.RadioGroup do
 
   def radio_group_item(assigns) do
     ~H"""
-    <div
+    <button
+      type="button"
+      role="radio"
+      id={@id}
       data-part="item"
       data-slot="radio-group-item"
       data-value={@value}
+      value={@value}
       data-state="unchecked"
+      aria-checked="false"
       data-disabled={to_string(@disabled)}
+      disabled={@disabled}
       class={
         classes([
           "group/item",
@@ -132,7 +143,6 @@ defmodule SaladUI.RadioGroup do
       tabindex="-1"
       {@rest}
     >
-      <input type="radio" id={@id} value={@value} disabled={@disabled} class="sr-only" tabindex="-1" />
       <span
         data-slot="radio-group-indicator"
         class="absolute inset-0 hidden group-data-[state=checked]/item:block"
@@ -152,7 +162,16 @@ defmodule SaladUI.RadioGroup do
           <circle cx="12" cy="12" r="10"></circle>
         </svg>
       </span>
-    </div>
+    </button>
+    <input
+      type="radio"
+      data-slot="radio-group-input"
+      value={@value}
+      disabled={@disabled}
+      aria-hidden="true"
+      tabindex="-1"
+      class="pointer-events-none absolute m-0 size-4 -translate-x-full opacity-0"
+    />
     """
   end
 end

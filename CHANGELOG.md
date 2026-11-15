@@ -652,6 +652,28 @@ for status and known gaps. Every new JS-backed component is registered in
   `aria-hidden-focus` and `page-has-heading-one` results on the page behind
   an open dialog or menu (expected, as with Radix).
 
+**Focus and patches from downstream use**
+- `radio_group_item` is a `<button role="radio">` carrying `id`, as in
+  shadcn/Radix, with a hidden native radio beside it for the form. A
+  `<.label for={id}>` names it and clicking the label picks it with one
+  `change` event. Before, a label click fired two, and while the form was
+  locked by the first, LiveView patched a copy of the form that still had
+  ids the script had made up for the items and labels, and dropped them: the
+  group lost its items and labels. The script no longer makes up ids on
+  server-rendered radio markup. Markup from before (a locally installed
+  `radio_group_item`, the radio inside a `<div>`) still works and also fires
+  one `change`. Enter no longer picks an item (WAI-ARIA, as Radix).
+- A dialog's (and popover's, sheet's) first focus skips controls that are not
+  rendered: a closed popover inside it, such as an `emoji_picker`'s search
+  box ahead of the field, took first focus and nothing got it. A hidden
+  `[autofocus]` is skipped too, and Tab loops over the visible controls only.
+- A portaled `popover` patched while open keeps its focus and Escape. Moving
+  the content back for the patch dropped focus to `<body>`, so Escape (heard
+  on the content) did nothing and closing returned focus nowhere. The
+  popover now suspends its focus trap across the patch, refocuses the
+  control that had focus, and still returns focus to the trigger on close.
+  `PositionedElement` and `FocusTrap` have `suspend()`/`resume()` for this.
+
 # 0.14.0
 
 **Changes**

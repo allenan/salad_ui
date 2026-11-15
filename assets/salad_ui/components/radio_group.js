@@ -44,6 +44,13 @@ class RadioGroupComponent extends Component {
             ArrowDown: () => this.navigateItem("next"),
             Home: () => this.navigateItem("first"),
             End: () => this.navigateItem("last"),
+            // Enter does not check a radio (WAI-ARIA; Radix prevents it
+            // too), though a <button> would click on it.
+            Enter: (event) => {
+              if (event.target.closest?.('[data-part="item"]')) {
+                event.preventDefault();
+              }
+            },
           },
           mouseMap: {
             item: {
@@ -81,10 +88,6 @@ class RadioGroupComponent extends Component {
     this.items.forEach((item) => {
       const collectionItem = this.registry.add(item);
       this.selection.initializeItem(collectionItem);
-
-      // Set initial ID if not present
-      assignId(item, `${this.el.id}-item-${item.getAttribute("data-value")}`);
-
       this.syncItemAccessibleLabel(item);
     });
 
@@ -92,14 +95,33 @@ class RadioGroupComponent extends Component {
     this.updateItemStates();
   }
 
+  /**
+   * The native radio that carries the item's value into the form: beside
+   * the item (`<button role="radio">`, as rendered now) or, in markup from
+   * before that (a locally installed copy), inside it.
+   */
+  inputFor(item) {
+    const inside = item.querySelector('input[type="radio"]');
+    if (inside) return inside;
+    const next = item.nextElementSibling;
+    return next?.matches('input[type="radio"]') ? next : null;
+  }
+
+  // Older markup only: the item was a <div> around the native radio, which
+  // labels pointed at, so the item borrowed their text by id. A
+  // <button role="radio"> is labelled by <label for> itself, and no id is made
+  // up on server-rendered nodes (a patch can drop nodes whose ids it does not
+  // know).
   syncItemAccessibleLabel(item) {
     if (
+      item.labels ||
       item.hasAttribute("aria-label") ||
       item.hasAttribute("aria-labelledby")
     ) {
       return;
     }
 
+    assignId(item, `${this.el.id}-item-${item.getAttribute("data-value")}`);
     const input = item.querySelector('input[type="radio"]');
     if (!input?.id) return;
 
@@ -122,10 +144,13 @@ class RadioGroupComponent extends Component {
     const item = event.currentTarget;
     if (item.getAttribute("data-disabled") === "true") return;
 
-    this.selectItem(item);
+    // Older markup: a click on a label reaches the native radio inside the
+    // item, and the browser fires its change event itself.
+    const nativeChange = event.target === this.inputFor(item);
+    this.selectItem(item, { dispatchChange: !nativeChange });
   }
 
-  selectItem(item) {
+  selectItem(item, { dispatchChange = true } = {}) {
     const value = item.getAttribute("data-value");
     const previousValue = this.selection.getValue();
 
@@ -139,7 +164,7 @@ class RadioGroupComponent extends Component {
 
       this.selection.select(collectionItem);
       this.updateItemStates();
-      this.dispatchFormEvents(item);
+      if (dispatchChange) this.dispatchFormEvents(item);
 
       // Emit value changed event
       this.pushEvent("value-changed", {
@@ -150,7 +175,7 @@ class RadioGroupComponent extends Component {
   }
 
   dispatchFormEvents(item) {
-    const input = item.querySelector('input[type="radio"]');
+    const input = this.inputFor(item);
     if (!input) return;
 
     input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -177,7 +202,7 @@ class RadioGroupComponent extends Component {
       item.setAttribute("tabindex", isSelected ? "0" : "-1");
 
       // Update native radio input if present
-      const input = item.querySelector('input[type="radio"]');
+      const input = this.inputFor(item);
       if (input) {
         input.checked = isSelected;
         input.disabled = isDisabled;
