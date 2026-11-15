@@ -280,3 +280,84 @@ test("Escape in a command_dialog's input closes the dialog", () => {
   command.destroy();
   dialog.destroy();
 });
+
+function buildServerResults({ options = null, inputHook = null } = {}) {
+  document.body.innerHTML = `
+    <div id="command" data-component="command" data-part="root"
+         ${options ? `data-options='${JSON.stringify(options)}'` : ""}>
+      <input data-part="input" ${inputHook ? `id="q" phx-hook="${inputHook}"` : ""} />
+      <div data-part="empty" data-visible="false">No results</div>
+      <div data-part="list" role="listbox">
+        <div data-part="group" id="pages">
+          <button data-part="item" id="calendar">Calendar</button>
+          <button data-part="item" id="pinned" data-force-mount="true">Pinned</button>
+        </div>
+        <div data-part="group" id="messages" data-force-mount="true">
+          <button data-part="item" id="m1">lunch on friday?</button>
+        </div>
+        <div data-part="group" id="empty-forced" data-force-mount="true"></div>
+      </div>
+    </div>
+  `;
+  const el = document.getElementById("command");
+  const component = new CommandComponent(el, null);
+  component.setupEvents();
+  const input = el.querySelector('[data-part="input"]');
+  const search = (value) => {
+    input.value = value;
+    input.dispatchEvent(new window.Event("input", { bubbles: true }));
+  };
+  const visible = (id) =>
+    document.getElementById(id).getAttribute("data-visible");
+  return { component, el, input, search, visible };
+}
+
+test("force-mounted items and groups show whatever the query (cmdk forceMount)", () => {
+  const { component, search, visible } = buildServerResults();
+
+  search("standup");
+  assert.equal(visible("calendar"), "false");
+  assert.equal(visible("pinned"), "true");
+  assert.equal(visible("m1"), "true");
+  assert.equal(visible("messages"), "true");
+  assert.equal(visible("pages"), "true");
+  assert.equal(visible("empty-forced"), "true");
+  // Results are showing: no "No results".
+  assert.equal(
+    document.querySelector('[data-part="empty"]').getAttribute("data-visible"),
+    "false",
+  );
+  // The first shown item is highlighted.
+  assert.equal(
+    document.getElementById("pinned").getAttribute("data-selected"),
+    "true",
+  );
+
+  component.destroy();
+});
+
+test("shouldFilter: false leaves filtering to the server", () => {
+  const { component, search, visible } = buildServerResults({
+    options: { shouldFilter: false },
+  });
+
+  search("standup");
+  assert.equal(visible("calendar"), "true");
+  assert.equal(visible("m1"), "true");
+
+  component.destroy();
+});
+
+test("an input with its own phx-hook is still the command's input", () => {
+  const { component, el, search, visible } = buildServerResults({
+    inputHook: "SearchDebounce",
+  });
+
+  assert.equal(component.input, el.querySelector("#q"));
+  search("cal");
+  assert.equal(visible("calendar"), "true");
+  search("zzz");
+  assert.equal(visible("calendar"), "false");
+
+  component.destroy();
+});

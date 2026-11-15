@@ -703,6 +703,16 @@ for status and known gaps. Every new JS-backed component is registered in
   `data-salad-tooltip` triggers. The check is per interaction, so a mouse
   or trackpad on the same tablet still opens them on hover, and keyboard
   focus still opens them.
+- `command` handles server-side results, as cmdk does. `should_filter={false}`
+  on `command`/`command_dialog` turns client filtering off.
+  `force_mount` on `command_group`/`command_item` keeps that group's items,
+  or that item, shown whatever the query while the rest are still filtered.
+  Before, any row whose text lacked the query was hidden, so server search
+  results had to repeat the query in a hidden span.
+- A component part that carries an app's own `phx-hook` (a `command_input`
+  with a debounce hook) is still that component's part. Before, the command
+  ignored such an input and never filtered. A nested SaladUI component is
+  still skipped, as is anything rendered inside the hooked part.
 
 # 0.14.0
 

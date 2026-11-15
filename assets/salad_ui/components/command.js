@@ -1,6 +1,13 @@
 import Component from "../core/component.js";
 import SaladUI from "../index.js";
 
+// cmdk's `forceMount`: an item shown whatever the query, set on the item or
+// inherited from its group.
+function isForceMounted(item) {
+  if (item.dataset.forceMount === "true") return true;
+  return item.closest('[data-part="group"]')?.dataset.forceMount === "true";
+}
+
 /**
  * CommandComponent for SaladUI
  * Implements filtering, keyboard navigation, and selection for a command palette/list.
@@ -133,10 +140,17 @@ class CommandComponent extends Component {
   handleSearch = () => {
     const query = this.input?.value.trim().toLowerCase() || "";
 
-    // Filter items
+    // Filter items, unless filtering is off (`shouldFilter: false`, as in
+    // cmdk: the server filters) or the item or its group is force-mounted
+    // (server-side results under client-filtered commands).
+    const filtering = this.options?.shouldFilter !== false;
     this.items.forEach((item) => {
       const text = item.textContent.trim().toLowerCase();
-      const visible = query === "" || text.includes(query);
+      const visible =
+        !filtering ||
+        query === "" ||
+        isForceMounted(item) ||
+        text.includes(query);
       item.setAttribute("data-visible", visible ? "true" : "false");
     });
 
@@ -150,10 +164,9 @@ class CommandComponent extends Component {
 
     this.groups.forEach((group) => {
       const visibleOptions = group.querySelectorAll("[data-visible='true']");
-      group.setAttribute(
-        "data-visible",
-        visibleOptions.length > 0 ? "true" : "false",
-      );
+      const visible =
+        visibleOptions.length > 0 || group.dataset.forceMount === "true";
+      group.setAttribute("data-visible", visible ? "true" : "false");
     });
 
     // Like cmdk, separators only make sense between unfiltered groups.
