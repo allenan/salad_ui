@@ -74,6 +74,41 @@ class FocusTrap {
     // Bind methods that will be used as event handlers
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleFocusIn = this.handleFocusIn.bind(this);
+    this.handleMutations = this.handleMutations.bind(this);
+  }
+
+  /**
+   * A LiveView patch removed the focused control (a "Join" button replaced
+   * by "Leave"): focus fell to <body>, outside the trap, where keys such as
+   * Escape go unheard. Put it back on the trapped element, as Radix's
+   * FocusScope does.
+   */
+  handleMutations(mutations) {
+    if (!this.active || !this.element?.isConnected) return;
+    const focused = document.activeElement;
+    if (focused && focused !== document.body) return;
+    if (!mutations.some((mutation) => mutation.removedNodes.length > 0)) return;
+    this.focusElement();
+  }
+
+  /** Focus the trapped element itself, making it focusable if need be. */
+  focusElement() {
+    if (!this.element.hasAttribute("tabindex")) {
+      this.element.setAttribute("tabindex", "-1");
+    }
+    this.element.focus({ preventScroll: true });
+  }
+
+  observeRemovals() {
+    if (this.options.contain === false) return;
+    const Observer = this.element.ownerDocument?.defaultView?.MutationObserver;
+    if (typeof Observer !== "function") return;
+    this.observer ??= new Observer(this.handleMutations);
+    this.observer.observe(this.element, { childList: true, subtree: true });
+  }
+
+  stopObservingRemovals() {
+    this.observer?.disconnect();
   }
 
   /** The element focus counts as inside of (see the `scope` option). */
@@ -111,6 +146,7 @@ class FocusTrap {
     // Set up event listener for keyboard navigation
     this.element.addEventListener("keydown", this.handleKeyDown);
     document.addEventListener("focusin", this.handleFocusIn, true);
+    this.observeRemovals();
 
     // Focus the first focusable element or the element itself
     this.setInitialFocus();
@@ -127,6 +163,7 @@ class FocusTrap {
     // Remove event listeners
     this.element.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("focusin", this.handleFocusIn, true);
+    this.stopObservingRemovals();
 
     const previouslyFocused = this.previouslyFocused;
     const previouslyFocusedId = this.previouslyFocusedId;
@@ -203,6 +240,7 @@ class FocusTrap {
     if (!this.active) return;
     this.element.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("focusin", this.handleFocusIn, true);
+    this.stopObservingRemovals();
     this.active = false;
     this.suspended = true;
   }
@@ -214,6 +252,7 @@ class FocusTrap {
     this.active = true;
     this.element.addEventListener("keydown", this.handleKeyDown);
     document.addEventListener("focusin", this.handleFocusIn, true);
+    this.observeRemovals();
   }
 
   /**

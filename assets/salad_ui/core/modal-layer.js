@@ -489,6 +489,14 @@ export class ModalLayer {
     return this.entry !== null;
   }
 
+  /**
+   * Whether this is the top layer of the stack (nothing opened above it,
+   * modal or not): the one a key with nowhere else to go belongs to.
+   */
+  get topmost() {
+    return this.entry !== null && stack[stack.length - 1] === this.entry;
+  }
+
   /** Whether the layer currently blocks the page. */
   get blocking() {
     return Boolean(this.modal && this.entry?.blocking);

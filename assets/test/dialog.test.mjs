@@ -510,3 +510,82 @@ test("focus returns to the node a patch replaced the opener with (same id)", asy
   await waitFor(() => document.activeElement === replacement);
   component.destroy();
 });
+
+test("a patch that removes the focused control puts focus back on the panel, and Escape closes", async () => {
+  const { component, trigger, panel } = buildDialog();
+  click(trigger);
+  await wait(60);
+
+  const join = document.getElementById("dialog-action");
+  join.focus();
+  assert.equal(document.activeElement, join);
+
+  // The server swaps "Join" for "Leave" (a new node, a different id).
+  const leave = document.createElement("button");
+  leave.id = "dialog-leave";
+  join.replaceWith(leave);
+  assert.equal(document.activeElement, document.body);
+
+  await waitFor(() => document.activeElement === panel);
+
+  panel.dispatchEvent(
+    new window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+  assert.equal(component.state, "closed");
+  component.destroy();
+});
+
+test("Escape with focus on <body> closes the top open dialog only", async () => {
+  const outer = buildDialog({ id: "outer" });
+  click(outer.trigger);
+  await wait(60);
+
+  // A second dialog opened above it (appended: buildDialog replaces <body>).
+  const innerRoot = outer.el.cloneNode(true);
+  innerRoot.id = "inner";
+  innerRoot
+    .querySelectorAll("[id]")
+    .forEach((node) => node.removeAttribute("id"));
+  document.body.appendChild(innerRoot);
+  const inner = registry.create("dialog", innerRoot, outer.hookContext);
+  inner.transition("open");
+  await wait(60);
+
+  document.activeElement.blur();
+  assert.equal(document.activeElement, document.body);
+  const escape = () => {
+    const event = new window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(event);
+    return event;
+  };
+
+  assert.equal(escape().defaultPrevented, true);
+  assert.equal(inner.state, "closed");
+  assert.equal(outer.component.state, "open");
+
+  inner.destroy();
+  document.activeElement.blur();
+  escape();
+  assert.equal(outer.component.state, "closed");
+  outer.component.destroy();
+});
+
+test("Escape on <body> leaves a dialog with closeOnEscape off open", async () => {
+  const { component, trigger } = buildDialog({ closeOnEscape: false });
+  click(trigger);
+  await wait(60);
+  document.activeElement.blur();
+  document.body.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  );
+  assert.equal(component.state, "open");
+  component.destroy();
+});
