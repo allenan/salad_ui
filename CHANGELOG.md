@@ -673,6 +673,20 @@ for status and known gaps. Every new JS-backed component is registered in
   popover now suspends its focus trap across the patch, refocuses the
   control that had focus, and still returns focus to the trigger on close.
   `PositionedElement` and `FocusTrap` have `suspend()`/`resume()` for this.
+- Closing a dialog (or sheet, alert dialog) returns focus in more cases:
+  - closed by a click on the overlay: the click left focus on the container
+    around the panel, which counted as "not lost", so focus stayed there and
+    fell to `<body>` when the dialog was patched away. Focus anywhere in the
+    dialog now counts (the new `scope` option of `FocusTrap`);
+  - removed by the server while open (a live action patched away by a
+    `<.link patch>` or `push_patch`) with `return-focus` set: the target was
+    looked up through the destroyed instance and never found;
+  - opened from a menu item: focus went back to the item, hidden by then. It
+    now goes to the control outside that last took focus while the dialog
+    was open (the menu's button, which the closing menu focused);
+  - opened from an element the close's patch replaced: the new node with the
+    same id gets focus.
+  Focus returns only to a rendered element, then falls back as before.
 
 # 0.14.0
 

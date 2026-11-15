@@ -60,6 +60,11 @@ class FocusTrap {
       // element. A popover traps its positioner but names its content (the
       // dialog, which listens for Escape), as Radix focuses the content.
       fallbackFocus: null,
+      // The element (or a function returning it) that counts as "inside"
+      // when deciding whether focus was lost on close. Defaults to the
+      // trapped element; a dialog passes its root, so focus on the overlay
+      // container a click outside left it on still returns to the opener.
+      scope: null,
       ...options,
     };
 
@@ -68,6 +73,26 @@ class FocusTrap {
 
     // Bind methods that will be used as event handlers
     this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleFocusIn = this.handleFocusIn.bind(this);
+  }
+
+  /** The element focus counts as inside of (see the `scope` option). */
+  scopeElement() {
+    const { scope } = this.options ?? {};
+    return (typeof scope === "function" ? scope() : scope) || this.element;
+  }
+
+  /**
+   * While active, remember the last control outside that took focus: a menu
+   * that opened this (a dialog from a menu item) hands focus back to its
+   * button as it closes, and that button is where focus returns once the
+   * item it was opened from is hidden.
+   */
+  handleFocusIn(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || target === document.body) return;
+    if (this.scopeElement()?.contains(target)) return;
+    this.lastOutsideFocus = target;
   }
 
   /**
@@ -76,12 +101,16 @@ class FocusTrap {
   activate() {
     if (this.active) return;
 
-    // Store currently focused element to restore later
+    // Store currently focused element to restore later; its id finds the
+    // node a LiveView patch may replace it with.
     this.previouslyFocused = document.activeElement;
+    this.previouslyFocusedId = this.previouslyFocused?.id || null;
+    this.lastOutsideFocus = null;
     this.active = true;
 
     // Set up event listener for keyboard navigation
     this.element.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener("focusin", this.handleFocusIn, true);
 
     // Focus the first focusable element or the element itself
     this.setInitialFocus();
@@ -97,10 +126,14 @@ class FocusTrap {
 
     // Remove event listeners
     this.element.removeEventListener("keydown", this.handleKeyDown);
+    document.removeEventListener("focusin", this.handleFocusIn, true);
 
     const previouslyFocused = this.previouslyFocused;
-    const container = this.element;
+    const previouslyFocusedId = this.previouslyFocusedId;
+    const lastOutsideFocus = this.lastOutsideFocus;
+    const container = this.scopeElement();
     const fallback = this.options.returnFocus;
+    const preferFallback = this.options.preferReturnFocus;
     // Read now: destroy() clears the options before the timer runs.
     const selector = this.options.focusableSelector;
 
@@ -119,35 +152,46 @@ class FocusTrap {
       );
     };
 
-    if (
-      this.isRestorable(previouslyFocused) &&
-      !this.options.preferReturnFocus
-    ) {
-      // Restored even when the opener is scrolled out of view, as Radix does;
-      // otherwise focus would fall to <body>.
-      setTimeout(() => {
-        if (
-          typeof document === "undefined" ||
-          !document.body.contains(previouslyFocused)
-        ) {
-          return;
-        }
-        if (focusLost()) previouslyFocused.focus();
-      }, 0);
-    } else if (fallback) {
-      // Nothing was focused at open (a dialog the server opened), or the app
-      // named a target: go to the fallback.
-      setTimeout(() => {
-        if (typeof document === "undefined") return;
-        const target = focusTarget(
-          typeof fallback === "function" ? fallback() : fallback,
-          selector,
-        );
-        if (target && focusLost()) target.focus();
-      }, 0);
-    }
+    // Where focus goes, decided when it goes (the close may have patched
+    // the page): the opener, still on the page and rendered (restored even
+    // when scrolled out of view, as Radix does); else the node a patch
+    // replaced it with (same id); else the control outside that last took
+    // focus while open (the button of the menu it was opened from); else the
+    // fallback. An app's `return-focus` (preferReturnFocus) comes first.
+    const restorable = (el) =>
+      this.isRestorable(el) && isVisible(el) ? el : null;
+    const fallbackTarget = () =>
+      fallback
+        ? restorable(
+            focusTarget(
+              typeof fallback === "function" ? fallback() : fallback,
+              selector,
+            ),
+          )
+        : null;
+    const pick = () => {
+      if (preferFallback) {
+        const target = fallbackTarget();
+        if (target) return target;
+      }
+      return (
+        restorable(previouslyFocused) ||
+        (previouslyFocusedId &&
+          restorable(document.getElementById(previouslyFocusedId))) ||
+        restorable(lastOutsideFocus) ||
+        fallbackTarget()
+      );
+    };
+
+    setTimeout(() => {
+      if (typeof document === "undefined") return;
+      if (!focusLost()) return;
+      pick()?.focus();
+    }, 0);
 
     this.previouslyFocused = null;
+    this.previouslyFocusedId = null;
+    this.lastOutsideFocus = null;
     this.active = false;
   }
 
@@ -158,6 +202,7 @@ class FocusTrap {
   suspend() {
     if (!this.active) return;
     this.element.removeEventListener("keydown", this.handleKeyDown);
+    document.removeEventListener("focusin", this.handleFocusIn, true);
     this.active = false;
     this.suspended = true;
   }
@@ -168,6 +213,7 @@ class FocusTrap {
     this.suspended = false;
     this.active = true;
     this.element.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener("focusin", this.handleFocusIn, true);
   }
 
   /**
