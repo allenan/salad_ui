@@ -171,6 +171,12 @@ test("closeButton renders a close button that dismisses; a toast's own value win
   );
   assert.ok(close);
   assert.equal(close.getAttribute("aria-label"), "Close toast");
+  // Sonner's size: a 20px circle with a 12px X, a wider hit area on touch.
+  assert.ok(close.classList.contains("size-5"));
+  assert.ok(close.classList.contains("pointer-coarse:after:-inset-3"));
+  const x = close.querySelector("svg");
+  assert.equal(x.getAttribute("width"), "12");
+  assert.equal(x.getAttribute("height"), "12");
   close.click();
   await wait(550);
   assert.equal(cardFor(viewport, id), null);
@@ -1190,8 +1196,8 @@ test("the close button sits on the inline-end corner in both directions", () => 
 
   const classes = component.buildCloseTrigger("t1").className.split(/\s+/);
   assert.ok(classes.includes("end-0"));
-  assert.ok(classes.includes("translate-x-1/2"));
-  assert.ok(classes.includes("rtl:-translate-x-1/2"));
+  assert.ok(classes.includes("translate-x-[35%]"));
+  assert.ok(classes.includes("rtl:-translate-x-[35%]"));
   assert.ok(!classes.includes("right-0"));
 
   component.destroy();

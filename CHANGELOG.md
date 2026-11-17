@@ -713,6 +713,11 @@ for status and known gaps. Every new JS-backed component is registered in
   with a debounce hook) is still that component's part. Before, the command
   ignored such an input and never filtered. A nested SaladUI component is
   still skipped, as is anything rendered inside the hooked part.
+- The toast close button is Sonner's size: a 20px circle with a 12px X in
+  full `foreground`, `bg-muted` on hover, and overhanging the card's
+  inline-end corner by 35%. It was 12px, with a 6px X at half opacity. An
+  invisible `::after` widens the hit area to 28px, and to 44px on a coarse
+  pointer.
 
 # 0.14.0
 

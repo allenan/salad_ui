@@ -78,9 +78,14 @@ const CARD_BASE_CLASSES = [
   "data-[state=dismissing]:data-[position^=bottom]:translate-y-full",
 ].join(" ");
 
+// Sonner's close button: a 20px circle with a 12px X, overhanging the
+// card's corner by 35% (here the inline-end corner). An invisible ::after
+// widens the hit area to 28px, and to 44px on a coarse pointer.
 const CLOSE_TRIGGER_CLASSES =
-  "absolute end-0 top-0 -translate-y-1/2 translate-x-1/2 rtl:-translate-x-1/2 rounded-full p-0.5 flex items-center justify-center text-foreground/50 transition-colors " +
-  "bg-background border border-border hover:text-foreground " +
+  "absolute end-0 top-0 z-10 flex size-5 items-center justify-center rounded-full p-0 " +
+  "-translate-y-[35%] translate-x-[35%] rtl:-translate-x-[35%] " +
+  "border border-border bg-background text-foreground transition-colors hover:bg-muted " +
+  "after:absolute after:-inset-1 after:content-[''] pointer-coarse:after:-inset-3 " +
   "focus-visible:outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
 const ACTION_BUTTON_CLASSES =
@@ -873,8 +878,8 @@ class ToastComponent extends Component {
     button.setAttribute("aria-label", "Close toast");
     if (!dismissible) button.dataset.disabled = "true";
     button.innerHTML =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6" viewBox="0 0 24 24" ' +
-      'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" ' +
+      'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       '<path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
     button.addEventListener("click", () => {
       if (this.stack.get(id)?.dismissible === false) return;
